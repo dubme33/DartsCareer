@@ -1,0 +1,119 @@
+:root {
+    --primary-color: #2c3e50;
+    --accent-green: #27ae60;
+    --accent-red: #c0392b;
+    --text-color: #ecf0f1;
+    --bg-color: #1a1a2e;
+}
+
+body {
+    margin: 0;
+    padding: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-height: 100vh;
+}
+
+header {
+    width: 100%;
+    background-color: var(--primary-color);
+    padding: 15px 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-sizing: border-box;
+    border-bottom: 4px solid var(--accent-red);
+}
+
+#game-title {
+    margin: 0;
+    color: var(--accent-green);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+.language-selector button {
+    background-color: #34495e;
+    color: white;
+    border: 1px solid var(--text-color);
+    padding: 5px 10px;
+    margin-left: 5px;
+    cursor: pointer;
+    border-radius: 3px;
+    transition: 0.3s;
+}
+
+.language-selector button:hover {
+    background-color: var(--accent-green);
+}
+
+.screen {
+    display: none;
+    width: 100%;
+    max-width: 600px;
+    background: #16213e;
+    margin-top: 40px;
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 10px 20px rgba(0,0,0,0.5);
+    border: 1px solid #0f3460;
+}
+
+.screen.active {
+    display: block;
+}
+
+h2 {
+    text-align: center;
+    margin-top: 0;
+    color: var(--accent-green);
+    border-bottom: 2px solid var(--accent-red);
+    padding-bottom: 10px;
+}
+
+.form-group {
+    margin-bottom: 20px;
+    display: flex;
+    flex-direction: column;
+}
+
+.form-group label {
+    margin-bottom: 8px;
+    font-weight: bold;
+}
+
+.form-group input, .form-group select {
+    padding: 10px;
+    border: none;
+    border-radius: 5px;
+    background-color: #0f3460;
+    color: white;
+    font-size: 16px;
+}
+
+.form-group input:focus, .form-group select:focus {
+    outline: 2px solid var(--accent-green);
+}
+
+.action-btn {
+    width: 100%;
+    padding: 15px;
+    background-color: var(--accent-red);
+    color: white;
+    border: none;
+    border-radius: 5px;
+    font-size: 18px;
+    font-weight: bold;
+    cursor: pointer;
+    text-transform: uppercase;
+    transition: 0.3s;
+}
+
+.action-btn:hover {
+    background-color: #e74c3c;
+    transform: scale(1.02);
+}
