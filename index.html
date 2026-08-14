@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pl">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -743,10 +743,12 @@
 
         // --- 2. INICJALIZACJA GRY ---
         window.onload = function() {
-            if(typeof pdcPlayers !== 'undefined') initPlayersForm();
-            updateDateDisplay();
+    changeLanguage('en'); // <--- DODAJ TĘ LINIJKĘ TUTAJ
 
-            const selectNationality = document.getElementById('nationality');
+    if(typeof pdcPlayers !== 'undefined') initPlayersForm();
+    updateDateDisplay();
+
+    const selectNationality = document.getElementById('nationality');
             if(selectNationality) {
                 countries.forEach(country => {
                     const opt = document.createElement('option');
