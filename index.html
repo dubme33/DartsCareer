@@ -54,7 +54,7 @@
         .form-group label { margin-bottom: 8px; font-weight: bold; }
         .form-group input, .form-group select { padding: 10px; border: none; border-radius: 5px; background-color: var(--border-color); color: white; font-size: 16px; }
         
-        .action-btn { width: 100%; padding: 15px; background-color: var(--accent-red); color: white; border: none; border-radius: 5px; font-size: 18px; font-weight: bold; cursor: pointer; text-transform: uppercase; transition: 0.3s; margin-top: 10px;}
+        .action-btn { width: 100%; padding: 15px; background-color: var(--accent-red); color: white; border: none; border-radius: 5px; font-size: 18px; font-weight: bold; cursor: pointer; text-transform: uppercase; transition: 0.3s; margin-top: 10px; box-sizing: border-box; }
         .action-btn:hover { background-color: #e74c3c; transform: scale(1.02); }
         .action-btn.green { background-color: var(--accent-green); }
         .action-btn.green:hover { background-color: #2ecc71; }
@@ -157,6 +157,54 @@
         }
         .bracket-match.player-match { border: 2px solid var(--accent-green); background: #1a1a2e; box-shadow: 0 0 10px var(--accent-green); }
         .bracket-vs { color: var(--accent-red); font-weight: bold; font-size: 12px; margin: 0 15px; }
+        /* Poprawki widoku meczu dla urządzeń mobilnych */
+@media (max-width: 768px) {
+    /* Ustawia tablice wyników jedna pod drugą */
+    .score-board {
+        flex-direction: column;
+        gap: 10px;
+        padding: 10px;
+    }
+    /* Pozwala każdemu z graczy zająć 100% szerokości telefonu */
+    .score-col {
+        width: 100%;
+        padding: 10px;
+    }
+    /* Minimalnie pomniejsza zdjęcia, aby dać więcej "oddechu" tekstom */
+    .score-photo {
+        width: 80px;
+        height: 110px;
+        margin: 0 10px;
+    }
+    /* Zmniejsza rozmiar głównych cyfr wyniku */
+    .score-display {
+        font-size: 42px;
+    }
+    /* Pozwala długim imionom przełamywać się na dwa rzędy, zamiast wyjeżdżać */
+    .score-info h4 {
+        font-size: 15px;
+        flex-wrap: wrap;
+    }
+    /* BEZWZGLĘDNIE blokuje przewijanie strony na boki */
+    body {
+        overflow-x: hidden;
+    }
+
+    /* Zmienia układ górnego paska na pionowy */
+    header {
+        flex-direction: column;
+        align-items: center;
+        gap: 15px; 
+        padding: 15px 10px;
+        height: auto;
+    }
+
+    /* Jeśli logo i przyciski wewnątrz headera nadal wystają, też je centrujemy */
+    .logo-container {
+        flex-direction: column;
+        gap: 10px;
+    }
+}
     </style>
 </head>
 <body>
@@ -189,13 +237,14 @@
             <div class="form-group"><label id="t-nat">Narodowość:</label> <select id="nationality" required></select></div>
             <div class="form-group">
                 <label id="t-pot">Potencjał:</label>
-                <select id="potential" required>
+                <select id="potential" required onchange="updatePotentialHint()">
                     <option value="weak" id="t-opt-1">Słaby</option>
                     <option value="medium" id="t-opt-2" selected>Średni</option>
                     <option value="good" id="t-opt-3">Dobry</option>
                     <option value="very_good" id="t-opt-4">Bardzo dobry</option>
                     <option value="goat">GOAT</option>
                 </select>
+                <small id="potential-hint" style="color: var(--accent-green); margin-top: 5px; font-weight: bold;">Początkowy OVR: ~55</small>
             </div>
             <div class="form-group">
                 <label for="favorite-double" id="t-fav-double">Ulubiony double:</label>
@@ -222,6 +271,8 @@
             <input type="file" id="mod-upload" accept=".zip" style="display: none;" onchange="loadMod(event)">
         </div>
         <button id="t-btn-load" class="action-btn" onclick="loadGame()" style="background-color: #e67e22; border-color: #d35400;">📂 Wczytaj zapisaną grę</button>
+        <label id="t-btn-import" for="start-import-upload" class="action-btn" style="background-color: #d35400; border-color: #e67e22; cursor: pointer; display: block; text-align: center; margin-top: 10px;">⬆️ Wgraj zapis z pliku (.JSON)</label>
+        <input type="file" id="start-import-upload" accept=".json" style="display: none;" onchange="importSaveFromFile(event)">
 
         <!-- Sekcja Społecznościowa na ekranie startowym -->
         <hr style="border-color: #0f3460; margin: 30px 0;">
@@ -320,6 +371,26 @@
             <div class="menu-tile" onclick="loadGame()" style="background-color: #e67e22; border-color: #d35400;">
                 <h3 id="t-load-title" style="color: white;">📂 Wczytaj grę</h3>
                 <p id="t-load-desc" style="color: #ecf0f1;">Wróć do ostatniego zapisu.</p>
+            </div>
+
+            <div class="menu-tile" onclick="exportSaveToFile()" style="background-color: #1e8449; border-color: #27ae60;">
+                <h3 id="t-export-title" style="color: white;">⬇️ Pobierz plik zapisu</h3>
+                <p id="t-export-desc" style="color: #ecf0f1;">Zabezpiecz karierę na swoim dysku.</p>
+            </div>
+            
+            <div class="menu-tile" style="background-color: #d35400; border-color: #e67e22; padding: 0;">
+                <label for="hub-import-upload" style="display: block; cursor: pointer; padding: 20px; height: 100%; box-sizing: border-box;">
+                    <h3 id="t-import-title" style="color: white; border: none; margin: 0 0 10px 0; font-size: 18px;">⬆️ Wgraj plik zapisu</h3>
+                    <p id="t-import-desc" style="color: #ecf0f1; margin: 0; font-size: 13px;">Przywróć karierę z pliku .JSON.</p>
+                </label>
+                <input type="file" id="hub-import-upload" accept=".json" style="display: none;" onchange="importSaveFromFile(event)">
+            </div>
+
+            <!-- Ostrzeżenie na pełną szerokość -->
+            <div style="grid-column: 1 / -1; text-align: center; margin: 10px 0; background: rgba(241, 196, 15, 0.1); border: 1px dashed #f1c40f; padding: 10px; border-radius: 5px;">
+                <p id="t-save-warn" style="color: #f1c40f; font-size: 14px; font-weight: bold; margin: 0;">
+                    ⚠️ Pamięć przeglądarki jest ulotna! Przed dłuższą przerwą zalecamy pobranie pliku zapisu na dysk.
+                </p>
             </div>
 
             <div class="menu-tile" style="background-color: #8e44ad; border-color: #9b59b6; padding: 0;">
@@ -700,7 +771,7 @@
     </main>
     <!-- STOPKA AUTORSKA -->
     <footer style="width: 100%; text-align: center; padding: 25px 15px; margin-top: auto; color: #7f8c8d; font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 2px;">
-        <div style="margin-bottom: 5px; color: #bdc3c7;">V. 1.0</div>
+        <div style="margin-bottom: 5px; color: #bdc3c7;">V. 1.0.1</div>
         powered by dubme
     </footer>
 
@@ -775,6 +846,21 @@
                 selectSector.innerHTML += `<option value="50">50 (Inner Bull)</option>`;
             }
 
+            const selectMultiplier = document.getElementById('aim-multiplier');
+            if (selectSector && selectMultiplier) {
+                selectSector.addEventListener('change', function() {
+                    if (this.value === "25") {
+                        selectMultiplier.value = "1";
+                        selectMultiplier.disabled = true;
+                    } else if (this.value === "50") {
+                        selectMultiplier.value = "2";
+                        selectMultiplier.disabled = true;
+                    } else {
+                        selectMultiplier.disabled = false;
+                    }
+                });
+            }
+
             const favoriteDoubleSelect = document.getElementById('favorite-double');
             if (favoriteDoubleSelect) {
                 favoriteDoubleSelect.innerHTML = "";
@@ -790,6 +876,23 @@
                 });
             }
         };
+
+        function updatePotentialHint() {
+            const val = document.getElementById('potential').value;
+            let ovr = 55;
+            if (val === 'weak') ovr = 45;
+            else if (val === 'medium') ovr = 55;
+            else if (val === 'good') ovr = 65;
+            else if (val === 'very_good') ovr = 75;
+            else if (val === 'goat') ovr = 82;
+            
+            const hintEl = document.getElementById('potential-hint');
+            if (hintEl) {
+                // Tłumaczenie dla różnych języków
+                let prefix = currentLang === 'pl' ? 'Początkowy OVR:' : (currentLang === 'de' ? 'Start-OVR:' : (currentLang === 'nl' ? 'Start-OVR:' : 'Starting OVR:'));
+                hintEl.innerText = `${prefix} ~${ovr}`;
+            }
+        }
 
         function initPlayersForm() {
             pdcPlayers.forEach(p => {
@@ -1241,6 +1344,14 @@
         "t-gear": "sprzęt",
         "t-email-newyear-sub": "Nowy Sezon!",
         "t-email-newyear-body": "Witamy w nowym roku! Twój ranking Players Championship został całkowicie zresetowany. Czas zacząć zbierać punkty od nowa i walczyć o udział w finałach!",
+        "t-export-title": "⬇️ Pobierz plik zapisu",
+        "t-export-desc": "Zabezpiecz karierę na swoim dysku.",
+        "t-import-title": "⬆️ Wgraj plik zapisu",
+        "t-import-desc": "Przywróć karierę z pliku .JSON.",
+        "t-save-warn": "⚠️ Pamięć przeglądarki jest ulotna! Przed dłuższą przerwą zalecamy pobranie pliku zapisu na dysk.",
+        "t-btn-import": "⬆️ Wgraj zapis z pliku (.JSON)",
+        "t-alert-import-ok": "Zapis poprawnie wczytany z pliku!",
+        "t-alert-import-err": "Błąd! Niepoprawny plik zapisu.",
     },
     en: {
         // ANGIELSKIE TŁUMACZENIA
@@ -1603,6 +1714,14 @@
         "t-gear": "gear",
         "t-email-newyear-sub": "New Season!",
         "t-email-newyear-body": "Welcome to the new year! Your Players Championship ranking has been completely reset to zero. It's time to start collecting points again!",
+        "t-export-title": "⬇️ Download Save File",
+        "t-export-desc": "Secure your career on your drive.",
+        "t-import-title": "⬆️ Upload Save File",
+        "t-import-desc": "Restore your career from a .JSON file.",
+        "t-save-warn": "⚠️ Browser memory is volatile! Before taking a long break, we recommend downloading your save file.",
+        "t-btn-import": "⬆️ Upload save file (.JSON)",
+        "t-alert-import-ok": "Save successfully loaded from file!",
+        "t-alert-import-err": "Error! Invalid save file.",
     },
     de: {
         // NIEMIECKIE TŁUMACZENIA
@@ -1960,6 +2079,14 @@
         "t-gear": "Ausrüstung",
         "t-email-newyear-sub": "Neue Saison!",
         "t-email-newyear-body": "Willkommen im neuen Jahr! Dein Players Championship-Ranking wurde komplett zurückgesetzt. Es ist Zeit, wieder Punkte zu sammeln!",
+        "t-export-title": "⬇️ Spielstand herunterladen",
+        "t-export-desc": "Sichere deine Karriere auf deiner Festplatte.",
+        "t-import-title": "⬆️ Spielstand hochladen",
+        "t-import-desc": "Stelle deine Karriere aus einer .JSON-Datei wieder her.",
+        "t-save-warn": "⚠️ Der Browserspeicher ist flüchtig! Vor einer längeren Pause empfehlen wir, den Spielstand auf deine Festplatte herunterzuladen.",
+        "t-btn-import": "⬆️ Spielstand aus Datei laden (.JSON)",
+        "t-alert-import-ok": "Spielstand erfolgreich aus der Datei geladen!",
+        "t-alert-import-err": "Fehler! Ungültige Speicherdatei.",
     },
     nl: {
         // HOLENDERSKIE TŁUMACZENIA
@@ -1978,7 +2105,7 @@
         "t-btn-continue": "Ga naar carrière",
         "t-vol": "🔊 Volume:",
         "t-photo": "📷 Foto",
-        "t-energy": "Uithoudingsvermogen",
+        "t-energy": "Energie",
         "t-doubles": "Doubles",
         "t-budget": "Budget",
         "t-date": "📅 Datum:",
@@ -2327,6 +2454,14 @@
         "t-gear": "uitrusting",
         "t-email-newyear-sub": "Nieuw Seizoen!",
         "t-email-newyear-body": "Welkom in het nieuwe jaar! Je Players Championship ranking is volledig gereset. Tijd om weer punten te verzamelen!",
+        "t-export-title": "⬇️ Opslagbestand downloaden",
+        "t-export-desc": "Beveilig je carrière op je harde schijf.",
+        "t-import-title": "⬆️ Opslagbestand uploaden",
+        "t-import-desc": "Herstel je carrière vanuit een .JSON-bestand.",
+        "t-save-warn": "⚠️ Het browsergeheugen is vluchtig! We raden aan om je opslagbestand te downloaden voordat je een lange pauze neemt.",
+        "t-btn-import": "⬆️ Opslagbestand laden (.JSON)",
+        "t-alert-import-ok": "Opslagbestand succesvol geladen!",
+        "t-alert-import-err": "Fout! Ongeldig opslagbestand.",
     }
 };
 // --- FUNKCJA POMOCNICZA DO DYNAMICZNYCH TEKSTÓW ---
@@ -2366,6 +2501,10 @@
                     opt.text = dict[opt.value] || opt.value;
                 });
             }
+            // Aktualizacja tekstu potencjału po zmianie języka
+            if (document.getElementById('screen-create-player').classList.contains('active')) {
+                updatePotentialHint();
+            }
         }
         function showScreen(screenId) {
             // Wyciszamy wszystkie dźwięki meczowe przy wychodzeniu z meczu
@@ -2384,7 +2523,14 @@
 
         document.getElementById('create-player-form').addEventListener('submit', function(e) {
             e.preventDefault();
-            let ovr = document.getElementById('potential').value === 'goat' ? 82 : (document.getElementById('potential').value === 'very_good' ? 75 : 55);
+            
+            const potVal = document.getElementById('potential').value;
+            let ovr = 55;
+            if (potVal === 'weak') ovr = 45;
+            else if (potVal === 'medium') ovr = 55;
+            else if (potVal === 'good') ovr = 65;
+            else if (potVal === 'very_good') ovr = 75;
+            else if (potVal === 'goat') ovr = 82;
             
             player = {
                 name: document.getElementById('firstName').value + " " + document.getElementById('lastName').value,
@@ -4225,17 +4371,19 @@
 
             let st = currentMatch.stats; let newScore = currentScore - points;
 
+            let isAimingAtFinishingDouble = (targetMult === 2 && (currentScore <= 40 || (currentScore === 50 && targetSec === 25)));
+
             if (isP1) {
                 st.p1TotalDarts++; st.p1LegDarts++;
                 if (st.p1LegDarts <= 9 && newScore >= 0) { st.p1First9Score += points; st.p1First9Darts++; }
-                if (currentScore <= 50 && targetMult === 2 && points > 0) {
+                if (isAimingAtFinishingDouble) {
                     st.p1DoubleAttempts++;
                     if (newScore === 0 && hitMult === 2) st.p1DoubleHits++;
                 }
             } else {
                 st.p2TotalDarts++; st.p2LegDarts++;
                 if (st.p2LegDarts <= 9 && newScore >= 0) { st.p2First9Score += points; st.p2First9Darts++; }
-                if (currentScore <= 50 && targetMult === 2 && points > 0) {
+                if (isAimingAtFinishingDouble) {
                     st.p2DoubleAttempts++;
                     if (newScore === 0 && hitMult === 2) st.p2DoubleHits++;
                 }
@@ -4455,8 +4603,40 @@
         }
 
         function calculateThrow(targetSector, targetMult, stats) {
+            // Dedykowana logika dla środka tarczy (Outer / Inner Bull)
+            if (targetSector === 25) {
+                let stat = targetMult === 2 ? stats.doubles : stats.scoring;
+                stat = clamp(stat - 10, 20, 95);
+                let roll = Math.random() * 100;
+
+                if (targetMult === 2) {
+                    // Celowanie w 50 (Inner Bull)
+                    let bullHitChance = clamp(stat * 0.35, 10, 45);
+                    let outerHitChance = bullHitChance + 35; // Pudło ląduje w Outer Bull (25)
+
+                    if (roll <= bullHitChance) {
+                        return { sector: 25, mult: 2 }; // Trafienie 50 (D-Bull)
+                    } else if (roll <= outerHitChance) {
+                        return { sector: 25, mult: 1 }; // Trafienie 25 (Outer Bull)
+                    } else {
+                        // Duże pudło ląduje w pojedynczym sąsiadującym sektorze
+                        return { sector: dartboardOrder[Math.floor(Math.random() * 20)], mult: 1 };
+                    }
+                } else {
+                    // Celowanie w 25 (Outer Bull)
+                    let outerHitChance = clamp(stat * 0.55, 20, 65);
+                    if (roll <= outerHitChance) {
+                        return { sector: 25, mult: 1 };
+                    } else if (roll <= outerHitChance + 10) {
+                        return { sector: 25, mult: 2 }; // Przypadkowe trafienie w 50
+                    } else {
+                        return { sector: dartboardOrder[Math.floor(Math.random() * 20)], mult: 1 };
+                    }
+                }
+            }
+
+            // Standardowe sektory 1-20
             let stat = targetMult === 2 ? stats.doubles : stats.scoring;
-            if (targetSector === 25) stat -= 15;
             stat = clamp(stat, 25, 100);
             let hitMult = targetMult, hitSector = targetSector, roll = Math.random() * 100;
             const isFavoriteDouble = targetMult === 2 && stats.favoriteDouble === targetSector;
@@ -4482,12 +4662,8 @@
                 } else if (roll <= targetSingleChance) {
                     hitMult = 1;
                 } else { 
-                    // NOWOŚĆ: Wyjątek dla Bullseye! Pudło zawsze leci w losowy sektor.
-                    if (targetSector === 25) {
-                        hitSector = getAdjacentSector(25); // To daje losowy sektor 1-20
-                        hitMult = 1; // Zawsze singiel
-                    } else if (Math.random() < 0.58) {
-                        hitSector = 0; hitMult = 0; // Fura (poza tarczą) dla innych podwójnych
+                    if (Math.random() < 0.58) {
+                        hitSector = 0; hitMult = 0; // Poza tarczą
                     } else { 
                         hitSector = getAdjacentSector(targetSector); 
                         hitMult = Math.random() < 0.15 ? 2 : 1;
@@ -4580,7 +4756,6 @@
                 angle = Math.random() * 2 * Math.PI; 
                 if (hitMult === 2) radius = Math.random() * 6;
                 else if (hitMult === 1) radius = 6 + Math.random() * 9;
-                // NOWOŚĆ: Jeśli jakimś cudem rzut w Bulla da 0 pkt (np. bounce-out), narysuj lotkę daleko poza tarczą, a nie w środku.
                 else radius = 133 + Math.random() * 20; 
             }
             else {
@@ -4590,6 +4765,8 @@
                 if (hitMult === 3) radius = 71 + Math.random() * 8; 
                 else if (hitMult === 2) radius = 121 + Math.random() * 7; 
                 else if (hitMult === 0) radius = 133 + Math.random() * 9;
+                // --- NOWOŚĆ: Rzut w bulla, który wylądował w innym sektorze (singlu) ---
+                else if (targetSec === 25) radius = 18 + Math.random() * 25; 
                 else if (targetMult === 3) radius = Math.random() < 0.55 ? 59 + Math.random() * 9 : 81 + Math.random() * 11;
                 else if (targetMult === 2) radius = 106 + Math.random() * 12;
                 else radius = 92 + Math.random() * 24;
@@ -4647,6 +4824,41 @@
             } else {
                 alert(t('t-alert-load-fail'));
             }
+        }
+
+        // --- ZAPIS I ODCZYT Z FIZYCZNEGO PLIKU (.JSON) ---
+        function exportSaveToFile() {
+            const gameState = {
+                player: player, pdcPlayers: pdcPlayers, tournamentDatabase: tournamentDatabase,
+                currentDate: currentDate.getTime(), emails: emails, unreadMailsCount: unreadMailsCount
+            };
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(gameState));
+            const dlAnchorNode = document.createElement('a');
+            dlAnchorNode.setAttribute("href", dataStr);
+            dlAnchorNode.setAttribute("download", `darts_career_save_${new Date().getTime()}.json`);
+            document.body.appendChild(dlAnchorNode);
+            dlAnchorNode.click();
+            dlAnchorNode.remove();
+        }
+
+        function importSaveFromFile(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const gameState = JSON.parse(e.target.result);
+                    // Od razu nadpisujemy zapis w przeglądarce, żeby działało jak główny zapis
+                    localStorage.setItem('dartsCareerSave', JSON.stringify(gameState));
+                    // Odpalamy standardową funkcję wczytywania, która ładnie odświeży wszystko na ekranie
+                    loadGame(); 
+                    alert(t('t-alert-import-ok') || "Zapis poprawnie wczytany z pliku!");
+                } catch(err) {
+                    alert(t('t-alert-import-err') || "Błąd! Niepoprawny plik zapisu.");
+                }
+            };
+            reader.readAsText(file);
+            event.target.value = ''; // Resetujemy pole, aby można było wgrać ten sam plik drugi raz
         }
 
     // --- SYSTEM SPONSORÓW ---
