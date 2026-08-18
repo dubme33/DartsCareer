@@ -183,27 +183,44 @@ const tournamentDatabase = [
     // --- LUTY (Miesiąc 1) ---
     { name: "Pro Players Cup 1", month: 1, day: 3, format: "legs", minOvr: 0, city: "Wigan", country: "Anglia" },
     { name: "Pro Players Cup 2", month: 1, day: 4, format: "legs", minOvr: 0, city: "Wigan", country: "Anglia" },
+    { name: "Global Darts League - Night 1", month: 1, day: 5, city: "Newcastle", country: "Anglia", minOvr: 0, format: "501" },
+    { name: "Global Darts League - Night 2", month: 1, day: 12, city: "Antwerpia", country: "Belgia", minOvr: 0, format: "501" },
+    { name: "Global Darts League - Night 3", month: 1, day: 19, city: "Glasgow", country: "Szkocja", minOvr: 0, format: "501" },
     { name: "Continental Tour 1", month: 1, day: 20, endDay: 22, format: "legs", minOvr: 55, city: "Kraków", country: "Polska" },
+    { name: "Global Darts League - Night 4", month: 1, day: 26, city: "Belfast", country: "Irlandia Północna", minOvr: 0, format: "501" },
     { name: "Continental Tour 2", month: 1, day: 27, endDay: 29, format: "legs", minOvr: 55, city: "Wieze", country: "Belgia" },
 
     // --- MARZEC (Miesiąc 2) ---
+    { name: "Global Darts League - Night 5", month: 2, day: 5, city: "Cardiff", country: "Walia", minOvr: 0, format: "501" },
     { name: "British Open", month: 2, day: 6, endDay: 8, format: "legs", minOvr: 0, city: "Minehead", country: "Anglia" },
     { name: "Pro Players Cup 3", month: 2, day: 10, format: "legs", minOvr: 0, city: "Leicester", country: "Anglia" },
     { name: "Pro Players Cup 4", month: 2, day: 11, format: "legs", minOvr: 0, city: "Leicester", country: "Anglia" },
+    { name: "Global Darts League - Night 6", month: 2, day: 12, city: "Nottingham", country: "Anglia", minOvr: 0, format: "501" },
     { name: "Continental Tour 3", month: 2, day: 13, endDay: 15, format: "legs", minOvr: 55, city: "Göttingen", country: "Niemcy" },
     { name: "Continental Tour 4", month: 2, day: 18, endDay: 20, format: "legs", minOvr: 55, city: "Monachium", country: "Niemcy" },
+    { name: "Global Darts League - Night 7", month: 2, day: 19, city: "Dublin", country: "Irlandia", minOvr: 0, format: "501" },
     { name: "Continental Tour 5", month: 2, day: 25, endDay: 27, format: "legs", minOvr: 55, city: "Riesa", country: "Niemcy" },
+    { name: "Global Darts League - Night 8", month: 2, day: 26, city: "Berlin", country: "Niemcy", minOvr: 0, format: "501" },
 
     // --- KWIECIEŃ (Miesiąc 3) ---
+    { name: "Global Darts League - Night 9", month: 3, day: 2, city: "Manchester", country: "Anglia", minOvr: 0, format: "501" },
     { name: "Pro Players Cup 5", month: 3, day: 8, format: "legs", minOvr: 0, city: "Hildesheim", country: "Niemcy" },
     { name: "Pro Players Cup 6", month: 3, day: 9, format: "legs", minOvr: 0, city: "Hildesheim", country: "Niemcy" },
+    { name: "Global Darts League - Night 10", month: 3, day: 9, city: "Brighton", country: "Anglia", minOvr: 0, format: "501" },
     { name: "Continental Tour 6", month: 3, day: 15, endDay: 17, format: "legs", minOvr: 55, city: "Sindelfingen", country: "Niemcy" },
+    { name: "Global Darts League - Night 11", month: 3, day: 16, city: "Rotterdam", country: "Holandia", minOvr: 0, format: "501" },
+    { name: "Global Darts League - Night 12", month: 3, day: 23, city: "Liverpool", country: "Anglia", minOvr: 0, format: "501" },
+    { name: "Global Darts League - Night 13", month: 3, day: 30, city: "Aberdeen", country: "Szkocja", minOvr: 0, format: "501" },
     
     // --- MAJ (Miesiąc 4) ---
     { name: "Pro Players Cup 7", month: 4, day: 4, format: "legs", minOvr: 0, city: "Hildesheim", country: "Niemcy" },
     { name: "Pro Players Cup 8", month: 4, day: 5, format: "legs", minOvr: 0, city: "Hildesheim", country: "Niemcy" },
+    { name: "Global Darts League - Night 14", month: 4, day: 7, city: "Leeds", country: "Anglia", minOvr: 0, format: "501" },
     { name: "Continental Tour 7", month: 4, day: 8, endDay: 10, format: "legs", minOvr: 55, city: "Graz", country: "Austria" },
+    { name: "Global Darts League - Night 15", month: 4, day: 14, city: "Birmingham", country: "Anglia", minOvr: 0, format: "501" },
     { name: "Continental Tour 8", month: 4, day: 21, endDay: 23, format: "legs", minOvr: 55, city: "Leverkusen", country: "Niemcy" },
+    { name: "Global Darts League - Night 16", month: 4, day: 21, city: "Sheffield", country: "Anglia", minOvr: 0, format: "501" },
+    { name: "Global Darts League - Play-offs", month: 4, day: 28, city: "Londyn", country: "Anglia", minOvr: 0, format: "501" },
 
     // --- CZERWIEC (Miesiąc 5) ---
     { name: "Pro Players Cup 9", month: 5, day: 11, format: "legs", minOvr: 0, city: "Hildesheim", country: "Niemcy" },
