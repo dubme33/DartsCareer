@@ -57,6 +57,22 @@ function initCareerChronicle() {
             return true;
         }
 
+        // Najwyższy checkout, podobnie jak średnia, jest jednym aktualnym rekordem kariery.
+        function getCurrentCareerBestCheckout() {
+            initCareerStats();
+            initCareerChronicle();
+
+            const storedCheckout = Number(player.careerStats.highestCheckout);
+            const chronicleCheckout = player.careerChronicle
+                .filter(event => event.type === 'checkout')
+                .reduce((best, event) => Math.max(best, Number(event.value) || 0), 0);
+            const bestCheckout = Math.max(Number.isFinite(storedCheckout) ? storedCheckout : 0, chronicleCheckout);
+            const roundedCheckout = Math.round(bestCheckout);
+
+            player.careerStats.highestCheckout = roundedCheckout;
+            return roundedCheckout;
+        }
+
         function getChronicleDate(timestamp) {
             const date = new Date(timestamp);
             if (!Number.isFinite(date.getTime())) return '';
@@ -110,13 +126,22 @@ function initCareerChronicle() {
 
             const list = document.getElementById('chronicle-list');
             const bestAverage = getCurrentCareerBestAverage();
+            const bestCheckout = getCurrentCareerBestCheckout();
             let averageRecordShown = false;
+            let checkoutRecordShown = false;
             const events = [...player.careerChronicle]
                 .sort((first, second) => (second.timestamp || 0) - (first.timestamp || 0))
                 .filter(event => {
-                    if (event.type !== 'average') return true;
-                    if (Number(event.value).toFixed(2) !== bestAverage.toFixed(2) || averageRecordShown) return false;
-                    averageRecordShown = true;
+                    if (event.type === 'average') {
+                        if (Number(event.value).toFixed(2) !== bestAverage.toFixed(2) || averageRecordShown) return false;
+                        averageRecordShown = true;
+                        return true;
+                    }
+                    if (event.type === 'checkout') {
+                        if (Math.round(Number(event.value) || 0) !== bestCheckout || checkoutRecordShown) return false;
+                        checkoutRecordShown = true;
+                        return true;
+                    }
                     return true;
                 });
             if (events.length === 0) {
@@ -155,7 +180,7 @@ function initCareerChronicle() {
             if (typeof initCareerStats === 'function') initCareerStats();
 
             document.getElementById('trophy-avg').innerText = getCurrentCareerBestAverage().toFixed(2);
-            document.getElementById('trophy-checkout').innerText = player.careerStats.highestCheckout;
+            document.getElementById('trophy-checkout').innerText = getCurrentCareerBestCheckout();
             document.getElementById('trophy-180s').innerText = player.careerStats.total180s;
             document.getElementById('trophy-9darters').innerText = player.careerStats.nineDarters || 0;
 
@@ -291,7 +316,14 @@ function initCareerChronicle() {
             if (!isCareerActive) {
                 if (modData.pdcPlayers) {
                     pdcPlayers.length = 0;
-                    modData.pdcPlayers.forEach(candidate => pdcPlayers.push({ ...candidate }));
+                    modData.pdcPlayers.forEach((candidate, index) => pdcPlayers.push({
+                        ...candidate,
+                        // Łączy zawodnika moda z odpowiadającym mu wpisem bazowym,
+                        // aby przy kolejnym wczytaniu nie powstała druga kopia.
+                        defaultTemplateIndex: Number.isInteger(candidate.defaultTemplateIndex)
+                            ? candidate.defaultTemplateIndex
+                            : index
+                    }));
                     normalizePlayerIds(pdcPlayers, player);
                     initPlayersForm();
                 }
@@ -317,8 +349,16 @@ function initCareerChronicle() {
                             ['name', 'sourceName', 'birthYear', 'country', 'hasTourCard', 'favoriteDouble'].forEach(field => {
                                 if (modPlayer[field] !== undefined) candidate[field] = modPlayer[field];
                             });
+                            if (!Number.isInteger(candidate.defaultTemplateIndex) && candidate === indexedCandidate) {
+                                candidate.defaultTemplateIndex = index;
+                            }
                         } else {
-                            pdcPlayers.push({ ...modPlayer });
+                            pdcPlayers.push({
+                                ...modPlayer,
+                                defaultTemplateIndex: Number.isInteger(modPlayer.defaultTemplateIndex)
+                                    ? modPlayer.defaultTemplateIndex
+                                    : index
+                            });
                         }
                     });
                     normalizePlayerIds(pdcPlayers, player);

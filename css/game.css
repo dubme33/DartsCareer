@@ -540,7 +540,9 @@
         .world-cup-group-row { display: flex; justify-content: space-between; gap: 6px; padding: 4px 0; color: #bdc3c7; font-size: 12px; }
         .world-cup-player-team { color: #f1c40f; font-weight: bold; }
         .world-cup-mini-matches { margin-top: 7px; padding-top: 6px; border-top: 1px solid rgba(189, 195, 199, 0.18); }
-        .world-cup-mini-match { display: flex; justify-content: space-between; gap: 5px; font-size: 11px; color: #7f8c8d; }
+        .world-cup-mini-match { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; column-gap: 8px; font-size: 11px; color: #7f8c8d; }
+        .world-cup-mini-home { text-align: right; }
+        .world-cup-mini-away { text-align: left; }
         .world-cup-mini-match strong { color: #ecf0f1; }
         .score-photo.world-cup-flag-photo { object-fit: contain; padding: 14px; box-sizing: border-box; border-color: var(--accent-green); background: #16213e; }
         .world-cup-qualifications { margin: 0 0 16px; padding: 12px; border: 1px solid var(--border-color); border-radius: 8px; background: rgba(22, 33, 62, 0.65); }

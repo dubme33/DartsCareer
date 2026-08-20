@@ -8,14 +8,83 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
     
     // --- SYSTEM ZAPISU I WCZYTYWANIA GRY ---
 
+        function getWorldCupPlayerSaveReference(candidate) {
+            if (!candidate || typeof candidate !== 'object') return candidate;
+
+            // Kwalifikanci spoza bazy zawodników nie mają odpowiednika do odtworzenia po
+            // wczytaniu, więc zachowujemy ich pełne, niewielkie obiekty.
+            if (candidate.isWorldCupGuest) return { ...candidate };
+
+            return getPlayerSaveReference(candidate);
+        }
+
+        function getPlayerSaveReference(candidate) {
+            if (!candidate || typeof candidate !== 'object') return candidate;
+            if (candidate.isBye) return { ...candidate };
+
+            const knownPlayers = [player, ...(Array.isArray(pdcPlayers) ? pdcPlayers : [])];
+            const savedPlayer = knownPlayers.find(known => samePlayer(known, candidate));
+
+            // Zawodnicy z bazy są już zapisani w player/pdcPlayers. Ponowne zapisywanie
+            // ich historii w drabince, tabeli ligi i zespołach tylko zużywa localStorage.
+            if (!savedPlayer) return { ...candidate };
+            return {
+                id: savedPlayer.id,
+                name: savedPlayer.name,
+                country: savedPlayer.country
+            };
+        }
+
+        function getActiveTournamentSaveReference(tournament) {
+            if (!isPlainObject(tournament)) return tournament || null;
+            return {
+                name: tournament.name,
+                month: tournament.month,
+                day: tournament.day,
+                specialType: tournament.specialType
+            };
+        }
+
+        function getSaveStateWithoutProfileMedia(gameState) {
+            return {
+                ...gameState,
+                player: {
+                    ...gameState.player,
+                    photo: '',
+                    walkon: null
+                }
+            };
+        }
+
+        function getWorldCupStateForSave(state) {
+            if (!isPlainObject(state)) return null;
+            return {
+                ...state,
+                teams: Array.isArray(state.teams)
+                    ? state.teams.map(team => ({
+                        ...team,
+                        players: Array.isArray(team.players)
+                            ? team.players.map(getWorldCupPlayerSaveReference)
+                            : []
+                    }))
+                    : []
+            };
+        }
+
         function buildGameState() {
             return {
                 version: 2,
                 player, pdcPlayers, tournamentDatabase,
-                currentDate: currentDate.getTime(), emails, unreadMailsCount, gdlTable,
-                activeTournament, tournamentRound, tournamentBracket, preTournamentRanks,
+                currentDate: currentDate.getTime(), emails, unreadMailsCount,
+                gdlTable: Array.isArray(gdlTable)
+                    ? gdlTable.map(row => isPlainObject(row) ? { ...row, player: getPlayerSaveReference(row.player) } : row)
+                    : [],
+                activeTournament: getActiveTournamentSaveReference(activeTournament),
+                tournamentRound,
+                tournamentBracket: Array.isArray(tournamentBracket) ? tournamentBracket.map(getPlayerSaveReference) : [],
+                preTournamentRanks,
                 lastTournamentResults, currentRoundHTML,
-                worldCupState: typeof worldCupState !== 'undefined' ? worldCupState : null,
+                worldCupState: typeof worldCupState !== 'undefined' ? getWorldCupStateForSave(worldCupState) : null,
                 worldMastersState: typeof worldMastersState !== 'undefined' ? worldMastersState : null,
                 playerLifecycleState: typeof playerLifecycleState !== 'undefined' ? playerLifecycleState : null
             };
@@ -59,17 +128,59 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
             return matchingAi.length === 1 ? matchingAi[0] : savedPlayer;
         }
 
+        function getDefaultMergeRating(candidate) {
+            const rating = Number(candidate?.baseOvr ?? candidate?.ovr ?? candidate?.overall);
+            return Number.isFinite(rating) ? rating : null;
+        }
+
+        function isModReplacementForDefaultPlayer(template, templateIndex) {
+            const candidate = pdcPlayers[templateIndex];
+            if (!candidate || candidate.isNewgen || candidate.isBye) return false;
+
+            const hasSameName = candidate.name === template.name && candidate.country === template.country;
+            if (hasSameName) return false;
+
+            // Nowe mody oznaczają pozycję zawodnika w bazie. Dla starszych zapisów
+            // stosujemy bezpieczną migrację: ten sam slot, kraj i zbliżony OVR.
+            if (candidate.defaultTemplateIndex === templateIndex) return true;
+            if (candidate.country !== template.country) return false;
+
+            const candidateRating = getDefaultMergeRating(candidate);
+            const templateRating = getDefaultMergeRating(template);
+            return candidateRating !== null && templateRating !== null && Math.abs(candidateRating - templateRating) <= 12;
+        }
+
+        function removeDefaultDuplicatesFromModSave() {
+            if (typeof defaultPdcPlayerTemplates === 'undefined' || !Array.isArray(defaultPdcPlayerTemplates)) return;
+
+            // W starszych zapisach po modzie prawdziwe nazwisko było już na pozycji
+            // bazowego zawodnika, a podczas wczytywania gra dopisywała obok jego
+            // domyślną wersję. Usuwamy wyłącznie takie później dopisane kopie.
+            defaultPdcPlayerTemplates.forEach((template, templateIndex) => {
+                if (!isModReplacementForDefaultPlayer(template, templateIndex)) return;
+                const defaultKey = `${template.name}|${template.country}`;
+                for (let playerIndex = pdcPlayers.length - 1; playerIndex >= 0; playerIndex--) {
+                    if (playerIndex === templateIndex) continue;
+                    const candidate = pdcPlayers[playerIndex];
+                    if (`${candidate?.name}|${candidate?.country}` === defaultKey) {
+                        pdcPlayers.splice(playerIndex, 1);
+                    }
+                }
+            });
+        }
+
         function mergeNewDefaultPlayersIntoSave() {
             if (typeof defaultPdcPlayerTemplates === 'undefined' || !Array.isArray(defaultPdcPlayerTemplates)) return;
+            removeDefaultDuplicatesFromModSave();
             const retiredPlayerKeys = new Set(typeof playerLifecycleState !== 'undefined' && Array.isArray(playerLifecycleState.retiredPlayerKeys)
                 ? playerLifecycleState.retiredPlayerKeys
                 : []);
             const existingPlayers = new Set([...pdcPlayers, player]
                 .filter(Boolean)
                 .map(candidate => `${candidate.name}|${candidate.country}`));
-            defaultPdcPlayerTemplates.forEach(template => {
+            defaultPdcPlayerTemplates.forEach((template, templateIndex) => {
                 const key = `${template.name}|${template.country}`;
-                if (existingPlayers.has(key) || retiredPlayerKeys.has(key)) return;
+                if (existingPlayers.has(key) || retiredPlayerKeys.has(key) || isModReplacementForDefaultPlayer(template, templateIndex)) return;
                 pdcPlayers.push({
                     ...template,
                     historyPT: {},
@@ -133,26 +244,39 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
         }
 
         function saveGame(isAutoSave = false) {
+            let gameState = null;
             try {
-                localStorage.setItem('dartsCareerSave', JSON.stringify(buildGameState()));
+                gameState = buildGameState();
+                localStorage.setItem('dartsCareerSave', JSON.stringify(gameState));
                 if (!isAutoSave) alert(t('t-alert-save-ok'));
                 return true;
             } catch (error) {
                 console.error('Nie udało się zapisać kariery.', error);
-                if (!isAutoSave) alert('Nie udało się zapisać kariery. Zmniejsz rozmiar zdjęcia lub muzyki profilu i spróbuj ponownie.');
-                return false;
+
+                if (!gameState) {
+                    if (!isAutoSave) alert('Nie udało się przygotować zapisu kariery. Pobierz plik .JSON, aby nie utracić postępów.');
+                    return false;
+                }
+
+                // Zdjęcie i muzyka są wyłącznie elementami wizualnymi. Jeżeli to one
+                // przekraczają limit localStorage, zachowujemy całą karierę bez nich.
+                try {
+                    localStorage.setItem('dartsCareerSave', JSON.stringify(getSaveStateWithoutProfileMedia(gameState)));
+                    console.warn('Kariera została zapisana bez zdjęcia i muzyki profilu z powodu limitu localStorage.');
+                    if (!isAutoSave) alert('Kariera została zapisana. W zapisie przeglądarki pominięto tylko zdjęcie i muzykę profilu, bo przekraczały limit pamięci. Aby zachować je również, pobierz plik .JSON.');
+                    return true;
+                } catch (fallbackError) {
+                    console.error('Nie udało się zapisać także odchudzonej kariery.', fallbackError);
+                    if (!isAutoSave) alert('Nie udało się zapisać kariery w pamięci przeglądarki. Pobierz plik .JSON, aby nie utracić postępów.');
+                    return false;
+                }
             }
         }
 
-        function loadGame(showFeedback = true) {
-            const saveData = localStorage.getItem('dartsCareerSave');
-            if (!saveData) {
-                if (showFeedback) alert(t('t-alert-load-fail'));
-                return false;
-            }
-
+        // Restores an already parsed save. Keeping this separate lets a downloaded
+        // .JSON save be loaded even when the browser's local storage is full.
+        function restoreGameState(gameState, showFeedback = true) {
             try {
-                const gameState = JSON.parse(saveData);
                 validateGameState(gameState);
 
                 player = gameState.player;
@@ -210,6 +334,8 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
                         if (Array.isArray(team.players)) team.players = team.players.map(resolveLoadedPlayer);
                         team.containsPlayer = Array.isArray(team.players) && team.players.some(candidate => isCurrentPlayer(candidate));
                     });
+                    if (typeof repairWorldCupTeamRosters === 'function') repairWorldCupTeamRosters();
+                    if (typeof rebuildCompletedWorldCupCalendarHistory === 'function') rebuildCompletedWorldCupCalendarHistory();
                 }
                 if (typeof restoreWorldMastersState === 'function') restoreWorldMastersState(gameState.worldMastersState);
 
@@ -226,6 +352,22 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
                 updateDateDisplay(); updateMailBadge(); updateHub(); showScreen('screen-hub');
                 if (showFeedback) alert(t('t-alert-load-ok'));
                 return true;
+            } catch (error) {
+                console.error('Nie udało się wczytać kariery.', error);
+                if (showFeedback) alert('Nie udało się wczytać zapisu. Plik jest uszkodzony lub nie pochodzi z tej wersji gry.');
+                return false;
+            }
+        }
+
+        function loadGame(showFeedback = true) {
+            const saveData = localStorage.getItem('dartsCareerSave');
+            if (!saveData) {
+                if (showFeedback) alert(t('t-alert-load-fail'));
+                return false;
+            }
+
+            try {
+                return restoreGameState(JSON.parse(saveData), showFeedback);
             } catch (error) {
                 console.error('Nie udało się wczytać kariery.', error);
                 if (showFeedback) alert('Nie udało się wczytać zapisu. Plik jest uszkodzony lub nie pochodzi z tej wersji gry.');
@@ -253,9 +395,18 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
             reader.onload = function(e) {
                 try {
                     const gameState = JSON.parse(e.target.result);
-                    validateGameState(gameState);
-                    localStorage.setItem('dartsCareerSave', JSON.stringify(gameState));
-                    if (loadGame(false)) alert(t('t-alert-import-ok') || 'Zapis poprawnie wczytany z pliku!');
+                    if (!restoreGameState(gameState, false)) throw new Error('Nie udało się odtworzyć zapisu.');
+
+                    // The restored state is saved again through buildGameState(),
+                    // which stores a compact World Cup state instead of duplicate
+                    // player histories. A failed local save must not invalidate a
+                    // correct .JSON file or interrupt the current session.
+                    const savedLocally = saveGame(true);
+                    if (savedLocally) {
+                        alert(t('t-alert-import-ok') || 'Zapis poprawnie wczytany z pliku!');
+                    } else {
+                        alert('Zapis został wczytany z pliku, ale pamięć przeglądarki jest pełna. Możesz grać dalej — po zakończeniu pobierz nowy plik .JSON, aby zachować postęp.');
+                    }
                 } catch(error) {
                     console.error('Nie udało się zaimportować zapisu.', error);
                     alert(t('t-alert-import-err') || 'Błąd! Niepoprawny plik zapisu.');
@@ -719,9 +870,13 @@ async function updateProfileWalkon(event) {
         }
 
         function simulateTurnFast(isP1) {
-            let pObj = isP1 ? player : currentMatch.opponent;
-            let statsObj = isP1 ? (typeof getBoostedPlayerStats === 'function' ? getBoostedPlayerStats() : player) : pObj;
-            statsObj = applyRivalryMatchModifier(statsObj, isP1);
+            const isDoublesMatch = Boolean(currentMatch.isDoubles && typeof getDoublesCurrentThrower === 'function');
+            const pObj = isDoublesMatch
+                ? getDoublesCurrentThrower(isP1)
+                : (isP1 ? player : currentMatch.opponent);
+            const isCareerThrower = isP1 && (!isDoublesMatch || (typeof isCurrentPlayer === 'function' && isCurrentPlayer(pObj)));
+            let statsObj = isCareerThrower && typeof getBoostedPlayerStats === 'function' ? getBoostedPlayerStats() : pObj;
+            statsObj = applyRivalryMatchModifier(statsObj, isCareerThrower);
             let startScore = isP1 ? currentMatch.p1Score : currentMatch.p2Score;
             let currentScore = startScore;
             let st = currentMatch.stats;
@@ -786,12 +941,14 @@ async function updateProfileWalkon(event) {
                 if (currentScore === 0 && hitMult === 2) {
                     if (isP1) {
                         st.p1HighCheckout = Math.max(st.p1HighCheckout || 0, turnScore);
-                        initCareerStats();
-                        if (turnScore > (player.careerStats.highestCheckout || 0)) {
-                            player.careerStats.highestCheckout = turnScore;
-                            addCareerChronicleEvent('checkout', { value: turnScore });
+                        if (isCareerThrower) {
+                            initCareerStats();
+                            if (turnScore > (player.careerStats.highestCheckout || 0)) {
+                                player.careerStats.highestCheckout = turnScore;
+                                addCareerChronicleEvent('checkout', { value: turnScore });
+                            }
+                            if (turnScore >= 100) player.careerStats.tonPlusCheckouts = (player.careerStats.tonPlusCheckouts || 0) + 1;
                         }
-                        if (turnScore >= 100) player.careerStats.tonPlusCheckouts = (player.careerStats.tonPlusCheckouts || 0) + 1;
                     } else {
                         st.p2HighCheckout = Math.max(st.p2HighCheckout || 0, turnScore);
                     }
@@ -803,8 +960,10 @@ async function updateProfileWalkon(event) {
             if (dartsThrown === 3 && turnScore === 180) {
                 if (isP1) {
                     st.p1OneEighties++;
-                    initCareerStats();
-                    player.careerStats.total180s++;
+                    if (isCareerThrower) {
+                        initCareerStats();
+                        player.careerStats.total180s++;
+                    }
                 } else {
                     st.p2OneEighties++;
                 }
@@ -818,7 +977,7 @@ async function updateProfileWalkon(event) {
             let setWasWon = false;
 
             // Szybka symulacja musi zapisać idealny leg tak samo jak zwykłe rzucanie.
-            if (isP1 && st.p1LegDarts === 9) {
+            if (isP1 && !currentMatch.isDoubles && st.p1LegDarts === 9) {
                 triggerNineDarterAlert();
                 checkAchievements('9darter');
             }
@@ -848,6 +1007,10 @@ async function updateProfileWalkon(event) {
 
             if (setWasWon) { currentMatch.p1Legs = 0; currentMatch.p2Legs = 0; }
 
+            if (currentMatch.isDoubles) {
+                const winningSide = isP1 ? 'p1' : 'p2';
+                currentMatch.doublesThrower[winningSide] = currentMatch.doublesThrower[winningSide] === 0 ? 1 : 0;
+            }
             currentMatch.turn = (currentMatch.totalLegsPlayed % 2 === 0) ? currentMatch.startingPlayer : (currentMatch.startingPlayer === 'p1' ? 'p2' : 'p1');
             currentMatch.dartsThrown = 0; currentTurnScore = 0; drawnDarts = [];
         }
@@ -884,6 +1047,10 @@ async function updateProfileWalkon(event) {
                     legWon = true;
                     handleFastLegWin(currentMatch.turn === 'p1');
                     break;
+                }
+                if (currentMatch.isDoubles) {
+                    const currentSide = currentMatch.turn;
+                    currentMatch.doublesThrower[currentSide] = currentMatch.doublesThrower[currentSide] === 0 ? 1 : 0;
                 }
                 currentMatch.turn = currentMatch.turn === 'p1' ? 'p2' : 'p1';
                 if (currentMatch.turn === 'p1') currentMatch.p1TurnStartScore = currentMatch.p1Score;

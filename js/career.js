@@ -689,7 +689,14 @@ function showScreen(screenId) {
                         players: escapeHtml((tour.worldCupWinner.players || []).join(' / '))
                     })}`
                     : tour.historyLogs;
-                document.getElementById('results-content').innerHTML = dynamicWorldCupHistory;
+                const detailedWorldCupHistory = tour.specialType === 'worldCup' && tour.worldCupWinner &&
+                    typeof buildWorldCupTournamentHistory === 'function' &&
+                    typeof worldCupState !== 'undefined' && worldCupState?.completed
+                    ? buildWorldCupTournamentHistory(tour.worldCupWinner)
+                    : '';
+                // Nowe podsumowania World Cup zawierają pełną fazę grupową i pucharową.
+                // Dla starych zapisów bez tego szczegółowego logu zostawiamy krótki komunikat o mistrzu.
+                document.getElementById('results-content').innerHTML = detailedWorldCupHistory || tour.historyLogs || dynamicWorldCupHistory;
                 document.getElementById('t-btn-next-round').style.display = 'none';
                 document.getElementById('t-btn-tour-back').style.display = 'block';
                 document.getElementById('results-modal').style.display = 'flex';

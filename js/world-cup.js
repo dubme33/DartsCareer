@@ -16,8 +16,8 @@ const WORLD_CUP_TRANSLATIONS = {
         regionalQualifiers: 'Kwalifikacje regionalne', groupStage: 'Faza grupowa', last16: 'Top 16', quarterFinal: 'Ćwierćfinał', semiFinal: 'Półfinał', final: 'Finał', knockoutStage: 'Faza pucharowa',
         group: 'Grupa {label}', qualified: 'AWANS', winsAbbreviation: 'W', methodRanking: 'awans z rankingu', methodEvent: 'kwalifikator regionalny', placeOne: 'miejsce', placeMany: 'miejsca',
         qualificationHeading: 'Droga do {tournament}', qualificationSummary: '33 reprezentacje otrzymały bezpośredni awans. Pozostałych 7 miejsc wyłaniają kwalifikacje regionalne.', qualificationMatchIntro: 'Mecze kwalifikacyjne są rozgrywane do 4 wygranych legów. Twoją reprezentację prowadzisz osobiście.', groupIntro: '40 reprezentacji · gra wyłącznie deblowa · zwycięzca każdej grupy awansuje do Top 16.', knockoutIntro: '{directSeeds} rozstawione reprezentacje dołączyły do {groupWinners} zwycięzców grup.',
-        playMatch: 'Zagraj: {team1} — {team2}', simulateQualifications: 'Symuluj pozostałe kwalifikacje', simulateNextStage: 'Symuluj dalszy etap {tournament}', matchTitle: '{tournament} — {round} · do {legs} legów',
-        historyWinner: 'Zwycięzca: {country} ({players})', winnerAlert: '🏆 Zdobywasz {tournament} dla reprezentacji {country}!', otherWinnerAlert: '🏆 {tournament} wygrywa reprezentacja {country}!'
+        playMatch: 'Zagraj: {team1} — {team2}', simulateQualifications: 'Symuluj pozostałe kwalifikacje', simulateNextStage: 'Symuluj dalszy etap {tournament}', simulateOtherMatches: 'Symuluj pozostałe mecze AI', matchTitle: '{tournament} — {round} · do {legs} legów',
+        historyWinner: 'Zwycięzca: {country} ({players})', historyGroups: 'Faza grupowa', historyGroupWinner: 'Zwycięzca grupy: {country}', historyKnockout: 'Faza pucharowa', historyChampion: 'Mistrz: {country}', winnerAlert: '🏆 Zdobywasz {tournament} dla reprezentacji {country}!', otherWinnerAlert: '🏆 {tournament} wygrywa reprezentacja {country}!'
     },
     en: {
         tournamentName: 'Nations Cup', qualifierTournamentName: 'Nations Cup Qualifiers', qualifierAsian: 'Asian Tour Qualifier', qualifierNordic: 'Nordic & Baltic Rankings', qualifierLatin: 'Latin America & Caribbean Qualifier', qualifierAfrican: 'African Darts Group Qualifier',
@@ -30,8 +30,8 @@ const WORLD_CUP_TRANSLATIONS = {
         regionalQualifiers: 'Regional qualifiers', groupStage: 'Group stage', last16: 'Last 16', quarterFinal: 'Quarter-final', semiFinal: 'Semi-final', final: 'Final', knockoutStage: 'Knockout stage',
         group: 'Group {label}', qualified: 'QUALIFIED', winsAbbreviation: 'W', methodRanking: 'ranking qualification', methodEvent: 'regional qualifier', placeOne: 'place', placeMany: 'places',
         qualificationHeading: 'Road to the {tournament}', qualificationSummary: '33 national teams received direct entry. Regional qualifiers determine the remaining 7 places.', qualificationMatchIntro: 'Qualifier matches are first to 4 legs. You manage your national team personally.', groupIntro: '40 national teams · doubles only · each group winner advances to the Last 16.', knockoutIntro: '{directSeeds} seeded national teams joined {groupWinners} group winners.',
-        playMatch: 'Play: {team1} — {team2}', simulateQualifications: 'Simulate remaining qualifiers', simulateNextStage: 'Simulate next {tournament} stage', matchTitle: '{tournament} — {round} · first to {legs} legs',
-        historyWinner: 'Winner: {country} ({players})', winnerAlert: '🏆 You win the {tournament} for {country}!', otherWinnerAlert: '🏆 {country} win the {tournament}!'
+        playMatch: 'Play: {team1} — {team2}', simulateQualifications: 'Simulate remaining qualifiers', simulateNextStage: 'Simulate next {tournament} stage', simulateOtherMatches: 'Simulate remaining AI matches', matchTitle: '{tournament} — {round} · first to {legs} legs',
+        historyWinner: 'Winner: {country} ({players})', historyGroups: 'Group stage', historyGroupWinner: 'Group winner: {country}', historyKnockout: 'Knockout stage', historyChampion: 'Champions: {country}', winnerAlert: '🏆 You win the {tournament} for {country}!', otherWinnerAlert: '🏆 {country} win the {tournament}!'
     },
     de: {
         tournamentName: 'Nationenpokal', qualifierTournamentName: 'Nationenpokal-Qualifikation', qualifierAsian: 'Asian-Tour-Qualifikation', qualifierNordic: 'Nordic-&-Baltic-Rangliste', qualifierLatin: 'Latin-America-&-Caribbean-Qualifikation', qualifierAfrican: 'African-Darts-Group-Qualifikation',
@@ -44,8 +44,8 @@ const WORLD_CUP_TRANSLATIONS = {
         regionalQualifiers: 'Regionale Qualifikationen', groupStage: 'Gruppenphase', last16: 'Letzte 16', quarterFinal: 'Viertelfinale', semiFinal: 'Halbfinale', final: 'Finale', knockoutStage: 'K.-o.-Phase',
         group: 'Gruppe {label}', qualified: 'QUALIFIZIERT', winsAbbreviation: 'S', methodRanking: 'Qualifikation über die Rangliste', methodEvent: 'regionale Qualifikation', placeOne: 'Platz', placeMany: 'Plätze',
         qualificationHeading: 'Der Weg zum {tournament}', qualificationSummary: '33 Nationalteams erhielten einen direkten Startplatz. Regionale Qualifikationen vergeben die übrigen 7 Plätze.', qualificationMatchIntro: 'Qualifikationsspiele werden bis 4 gewonnene Legs gespielt. Du führst deine Nationalmannschaft selbst.', groupIntro: '40 Nationalteams · nur Doppel · jeder Gruppensieger erreicht die Letzten 16.', knockoutIntro: '{directSeeds} gesetzte Nationalteams treffen auf {groupWinners} Gruppensieger.',
-        playMatch: 'Spielen: {team1} — {team2}', simulateQualifications: 'Restliche Qualifikationen simulieren', simulateNextStage: 'Nächste Phase des {tournament} simulieren', matchTitle: '{tournament} — {round} · bis {legs} gewonnene Legs',
-        historyWinner: 'Sieger: {country} ({players})', winnerAlert: '🏆 Du gewinnst den {tournament} für {country}!', otherWinnerAlert: '🏆 {country} gewinnt den {tournament}!'
+        playMatch: 'Spielen: {team1} — {team2}', simulateQualifications: 'Restliche Qualifikationen simulieren', simulateNextStage: 'Nächste Phase des {tournament} simulieren', simulateOtherMatches: 'Übrige KI-Spiele simulieren', matchTitle: '{tournament} — {round} · bis {legs} gewonnene Legs',
+        historyWinner: 'Sieger: {country} ({players})', historyGroups: 'Gruppenphase', historyGroupWinner: 'Gruppensieger: {country}', historyKnockout: 'K.-o.-Phase', historyChampion: 'Meister: {country}', winnerAlert: '🏆 Du gewinnst den {tournament} für {country}!', otherWinnerAlert: '🏆 {country} gewinnt den {tournament}!'
     },
     nl: {
         tournamentName: 'Landentoernooi', qualifierTournamentName: 'Kwalificaties Landentoernooi', qualifierAsian: 'Kwalificatie Asian Tour', qualifierNordic: 'Nordic & Baltic-ranglijst', qualifierLatin: 'Kwalificatie Latin America & Caribbean', qualifierAfrican: 'Kwalificatie African Darts Group',
@@ -58,8 +58,8 @@ const WORLD_CUP_TRANSLATIONS = {
         regionalQualifiers: 'Regionale kwalificaties', groupStage: 'Groepsfase', last16: 'Laatste 16', quarterFinal: 'Kwartfinale', semiFinal: 'Halve finale', final: 'Finale', knockoutStage: 'Knock-outfase',
         group: 'Groep {label}', qualified: 'GEKWALIFICEERD', winsAbbreviation: 'W', methodRanking: 'kwalificatie via ranglijst', methodEvent: 'regionale kwalificatie', placeOne: 'plaats', placeMany: 'plaatsen',
         qualificationHeading: 'Weg naar het {tournament}', qualificationSummary: '33 nationale teams kregen directe plaatsing. Regionale kwalificaties bepalen de overige 7 plaatsen.', qualificationMatchIntro: 'Kwalificatiewedstrijden gaan tot 4 gewonnen legs. Je leidt je nationale ploeg zelf.', groupIntro: '40 nationale teams · alleen dubbels · iedere groepswinnaar gaat door naar de Laatste 16.', knockoutIntro: '{directSeeds} geplaatste nationale teams voegen zich bij {groupWinners} groepswinnaars.',
-        playMatch: 'Spelen: {team1} — {team2}', simulateQualifications: 'Overige kwalificaties simuleren', simulateNextStage: 'Volgende fase van het {tournament} simuleren', matchTitle: '{tournament} — {round} · eerste tot {legs} legs',
-        historyWinner: 'Winnaar: {country} ({players})', winnerAlert: '🏆 Je wint het {tournament} voor {country}!', otherWinnerAlert: '🏆 {country} wint het {tournament}!'
+        playMatch: 'Spelen: {team1} — {team2}', simulateQualifications: 'Overige kwalificaties simuleren', simulateNextStage: 'Volgende fase van het {tournament} simuleren', simulateOtherMatches: 'Overige AI-wedstrijden simuleren', matchTitle: '{tournament} — {round} · eerste tot {legs} legs',
+        historyWinner: 'Winnaar: {country} ({players})', historyGroups: 'Groepsfase', historyGroupWinner: 'Groepswinnaar: {country}', historyKnockout: 'Knock-outfase', historyChampion: 'Kampioen: {country}', winnerAlert: '🏆 Je wint het {tournament} voor {country}!', otherWinnerAlert: '🏆 {country} wint het {tournament}!'
     }
 };
 
@@ -163,16 +163,37 @@ function getWorldCupFlagUrl(country) {
     return `https://flagcdn.com/w160/${flags[country]}.png`;
 }
 
+const WORLD_CUP_PLAYER_NAME_ALIASES = {
+    'garry anders': 'garry anderson',
+    'michele turetti': 'michele turetta'
+};
+
+function getWorldCupPlayerIdentity(candidate) {
+    if (!candidate || typeof candidate !== 'object') return '';
+    if (candidate.isWorldCupGuest && candidate.id) return candidate.id;
+
+    // Zapisane kariery mogą zawierać stare, zduplikowane wpisy bazy z różnymi ID.
+    // Dla reprezentacji nazwisko i kraj wyznaczają jednego prawdziwego zawodnika.
+    const rawName = String(candidate.name || '').trim().toLocaleLowerCase('pl');
+    const name = WORLD_CUP_PLAYER_NAME_ALIASES[rawName] || rawName;
+    const country = String(candidate.country || '').trim().toLocaleLowerCase('pl');
+    return name && country ? `${name}|${country}` : String(candidate.id || '');
+}
+
 function getWorldCupRankedPlayers() {
-    const candidates = [...(Array.isArray(pdcPlayers) ? pdcPlayers : []), player]
+    const candidates = [player, ...(Array.isArray(pdcPlayers) ? pdcPlayers : [])]
         .filter(candidate => candidate && !candidate.isBye);
-    const seen = new Set();
-    return candidates.filter(candidate => {
-        const key = candidate.id || `${candidate.name}|${candidate.country}`;
-        if (seen.has(key)) return false;
-        seen.add(key);
-        return true;
-    }).sort((first, second) => {
+    const uniquePlayers = new Map();
+    candidates.forEach(candidate => {
+        const key = getWorldCupPlayerIdentity(candidate);
+        if (!key) return;
+
+        const alreadyAdded = uniquePlayers.get(key);
+        // Jeżeli gracz kariery ma identyczne dane jak wpis bazy, to on ma pierwszeństwo.
+        if (!alreadyAdded || candidate === player || isCurrentPlayer(candidate)) uniquePlayers.set(key, candidate);
+    });
+
+    return [...uniquePlayers.values()].sort((first, second) => {
         const rankingDifference = (second.prizeMoney || 0) - (first.prizeMoney || 0);
         if (rankingDifference !== 0) return rankingDifference;
         // Przy równych zerowych zarobkach zawodnik kariery ma pierwszeństwo,
@@ -181,6 +202,50 @@ function getWorldCupRankedPlayers() {
         if (careerPlayerDifference !== 0) return careerPlayerDifference;
         return String(first.name || '').localeCompare(String(second.name || ''), 'pl');
     });
+}
+
+function repairWorldCupTeamRosters() {
+    if (!worldCupState || !Array.isArray(worldCupState.teams)) return false;
+
+    const rankedPlayers = getWorldCupRankedPlayers();
+    let changed = false;
+
+    worldCupState.teams.forEach((team, countryIndex) => {
+        if (!team || !team.country) return;
+        const currentPlayers = Array.isArray(team.players) ? team.players : [];
+        let teamChanged = !Array.isArray(team.players);
+        const uniquePlayers = [];
+        const playerKeys = new Set();
+
+        currentPlayers.forEach(candidate => {
+            const key = getWorldCupPlayerIdentity(candidate);
+            if (!candidate || !key || playerKeys.has(key) || uniquePlayers.length >= 2) {
+                changed = true;
+                teamChanged = true;
+                return;
+            }
+            playerKeys.add(key);
+            uniquePlayers.push(candidate);
+        });
+
+        const replacements = rankedPlayers.filter(candidate =>
+            candidate.country === team.country && !playerKeys.has(getWorldCupPlayerIdentity(candidate))
+        );
+        while (uniquePlayers.length < 2) {
+            const replacement = replacements.shift() || createWorldCupQualifier(team.country, uniquePlayers.length + 1, countryIndex);
+            uniquePlayers.push(replacement);
+            playerKeys.add(getWorldCupPlayerIdentity(replacement));
+            changed = true;
+            teamChanged = true;
+        }
+
+        if (teamChanged || currentPlayers.length !== uniquePlayers.length || currentPlayers.some((candidate, index) => candidate !== uniquePlayers[index])) {
+            team.players = uniquePlayers;
+        }
+        team.containsPlayer = uniquePlayers.some(candidate => isCurrentPlayer(candidate));
+    });
+
+    return changed;
 }
 
 function createWorldCupQualifier(country, slot, countryIndex) {
@@ -412,7 +477,7 @@ function buildWorldCupState() {
     const uniqueTeams = [...new Map(allTeams.map(team => [team.id, team])).values()];
 
     return {
-        version: 3,
+        version: 4,
         qualifications: {
             automaticTeamIds: automaticTeams.map(team => team.id),
             events
@@ -422,6 +487,7 @@ function buildWorldCupState() {
         directSeeds: [],
         groups: [],
         knockout: null,
+        knockoutHistory: [],
         payouts: {},
         pendingMatchId: null,
         completed: false
@@ -592,6 +658,104 @@ function completeWorldCupGroupStage() {
     worldCupState.knockout = { round: 16, matches };
 }
 
+function archiveWorldCupKnockoutRound(round) {
+    if (!worldCupState || !round || !Array.isArray(round.matches) || !round.matches.every(match => match.played)) return;
+    if (!Array.isArray(worldCupState.knockoutHistory)) worldCupState.knockoutHistory = [];
+
+    const archivedRound = {
+        round: round.round,
+        matches: round.matches.map(match => ({
+            team1Id: match.team1Id,
+            team2Id: match.team2Id,
+            played: true,
+            winnerId: match.winnerId,
+            score1: match.score1,
+            score2: match.score2
+        }))
+    };
+    const existingIndex = worldCupState.knockoutHistory.findIndex(entry => entry.round === archivedRound.round);
+    if (existingIndex >= 0) worldCupState.knockoutHistory[existingIndex] = archivedRound;
+    else worldCupState.knockoutHistory.push(archivedRound);
+}
+
+function getWorldCupHistoryRoundLabel(round) {
+    const key = ({ 16: 'last16', 8: 'quarterFinal', 4: 'semiFinal', 2: 'final' })[round];
+    return key ? trWorldCup(key) : trWorldCup('knockoutStage');
+}
+
+function getWorldCupHistoryTeamLabel(teamId) {
+    const team = getWorldCupTeam(teamId);
+    return team ? escapeHtml(getWorldCupCountryName(team.country)) : '—';
+}
+
+function buildWorldCupTournamentHistory(winner) {
+    if (!worldCupState) return '';
+
+    const groupHistory = (worldCupState.groups || []).map(group => {
+        const standings = group.standings?.length ? group.standings : getWorldCupGroupStandings(group);
+        const groupWinnerTeam = standings[0] ? getWorldCupTeam(standings[0].teamId) : null;
+        const groupWinner = groupWinnerTeam ? getWorldCupCountryName(groupWinnerTeam.country) : '—';
+        const rows = standings.map((row, index) => {
+            const emphasis = index === 0 ? ' style="color:var(--accent-green); font-weight:bold;"' : '';
+            return `<li${emphasis}>${index + 1}. ${getWorldCupHistoryTeamLabel(row.teamId)} <small>· ${row.wins}${trWorldCup('winsAbbreviation')} · ${row.legsWon}-${row.legsLost}</small></li>`;
+        }).join('');
+        const matches = (group.matches || []).map(match => {
+            const score = match.played ? `${match.score1}:${match.score2}` : '—';
+            return `<div>${getWorldCupHistoryTeamLabel(match.team1Id)} <strong>${score}</strong> ${getWorldCupHistoryTeamLabel(match.team2Id)}</div>`;
+        }).join('');
+        return `<section style="margin:12px 0; padding:10px; background:#16213e; border:1px solid #2c3e50; border-radius:6px;">
+            <h4 style="margin:0 0 6px;">${escapeHtml(trWorldCup('group', { label: group.label }))}</h4>
+            <p style="margin:0 0 7px; color:var(--accent-green);"><strong>${escapeHtml(trWorldCup('historyGroupWinner', { country: groupWinner }))}</strong></p>
+            <ol style="margin:0 0 8px; padding-left:22px;">${rows}</ol>
+            <div style="font-size:12px; color:#bdc3c7; line-height:1.55;">${matches}</div>
+        </section>`;
+    }).join('');
+
+    const roundsBySize = new Map();
+    (worldCupState.knockoutHistory || []).forEach(round => roundsBySize.set(round.round, round));
+    if (worldCupState.knockout?.round && !roundsBySize.has(worldCupState.knockout.round)) {
+        roundsBySize.set(worldCupState.knockout.round, worldCupState.knockout);
+    }
+    const knockoutHistory = [...roundsBySize.values()]
+        .sort((first, second) => second.round - first.round)
+        .map(round => {
+            const matches = (round.matches || []).map(match => {
+                const score = Number.isFinite(Number(match.score1)) && Number.isFinite(Number(match.score2))
+                    ? `${match.score1}:${match.score2}`
+                    : '—';
+                return `<div style="padding:4px 0; border-bottom:1px solid #2c3e50;">${getWorldCupHistoryTeamLabel(match.team1Id)} <strong style="color:#f1c40f;">${score}</strong> ${getWorldCupHistoryTeamLabel(match.team2Id)}</div>`;
+            }).join('');
+            return `<section style="margin:12px 0;"><h4 style="margin:0 0 6px; color:var(--accent-green);">${escapeHtml(getWorldCupHistoryRoundLabel(round.round))}</h4>${matches}</section>`;
+        }).join('');
+
+    const championCountry = winner?.country ? getWorldCupCountryName(winner.country) : '—';
+    return `<section class="world-cup-history">
+        <h3 style="margin:0 0 10px;">🏆 ${escapeHtml(getWorldCupTournamentDisplayName())}</h3>
+        <p style="margin:0 0 16px; font-size:16px; color:var(--accent-green);"><strong>${escapeHtml(trWorldCup('historyChampion', { country: championCountry }))}</strong></p>
+        <h3 style="margin:0 0 8px;">${escapeHtml(trWorldCup('historyGroups'))}</h3>
+        ${groupHistory || '<p>—</p>'}
+        <h3 style="margin:18px 0 8px;">${escapeHtml(trWorldCup('historyKnockout'))}</h3>
+        ${knockoutHistory || '<p>—</p>'}
+    </section>`;
+}
+
+function rebuildCompletedWorldCupCalendarHistory() {
+    if (!worldCupState?.completed || !Array.isArray(tournamentDatabase)) return false;
+    const tournament = tournamentDatabase.find(candidate => candidate.specialType === 'worldCup');
+    if (!tournament) return false;
+
+    let winner = tournament.worldCupWinner || null;
+    if (!winner) {
+        const finalMatch = worldCupState.knockout?.matches?.find(match => match.winnerId);
+        const winnerTeam = finalMatch ? getWorldCupTeam(finalMatch.winnerId) : null;
+        if (winnerTeam) winner = { country: winnerTeam.country, players: winnerTeam.players.map(candidate => candidate.name) };
+    }
+    if (!winner?.country) return false;
+
+    tournament.historyLogs = buildWorldCupTournamentHistory(winner);
+    return true;
+}
+
 function getWorldCupPendingMatch() {
     if (!worldCupState || !worldCupState.pendingMatchId) return null;
     const allMatches = worldCupState.phase === 'qualifications'
@@ -685,77 +849,36 @@ function completeWorldCupQualifierCalendarEvent() {
     if (typeof showScreen === 'function') showScreen('screen-hub');
 }
 
-function advanceWorldCup() {
-    if (!worldCupState || worldCupState.completed) return;
+function getCurrentWorldCupStageMatches() {
+    if (!worldCupState) return [];
+    if (worldCupState.phase === 'qualifications') return getWorldCupQualificationMatches();
+    if (worldCupState.phase === 'groups') return worldCupState.groups.flatMap(group => group.matches);
+    return worldCupState.knockout?.matches || [];
+}
 
-    if (worldCupState.phase === 'qualifications') {
-        const qualificationMatches = getWorldCupQualificationMatches();
-        for (const match of qualificationMatches) {
-            if (match.played) continue;
-            const team1 = getWorldCupTeam(match.team1Id);
-            const team2 = getWorldCupTeam(match.team2Id);
-            if (!worldCupState.skipPlayerMatches && (teamContainsCareerPlayer(team1) || teamContainsCareerPlayer(team2))) {
-                worldCupState.pendingMatchId = match.id;
-                showWorldCupOverview();
-                return;
-            }
-            simulateWorldCupMatch(match);
-        }
-        completeWorldCupQualifications();
-        // Kwalifikacje są osobną pozycją w kalendarzu. Główna część Pucharu
-        // Narodów rusza dopiero w terminie turnieju, więc nie przechodzimy tu
-        // automatycznie do fazy grupowej.
-        const qualifierCalendarEvent = isWorldCupQualifierTournament();
-        completeWorldCupQualifierCalendarEvent();
-        // Zgodność ze starym zapisem, który rozpoczął główny turniej, zanim
-        // kwalifikacje dostały własną datę w kalendarzu.
-        if (!qualifierCalendarEvent) advanceWorldCup();
-        return;
-    }
-
-    if (worldCupState.phase === 'groups') {
-        const groupMatches = worldCupState.groups.flatMap(group => group.matches);
-        for (const match of groupMatches) {
-            if (match.played) continue;
-            const team1 = getWorldCupTeam(match.team1Id);
-            const team2 = getWorldCupTeam(match.team2Id);
-            if (!worldCupState.skipPlayerMatches && (teamContainsCareerPlayer(team1) || teamContainsCareerPlayer(team2))) {
-                worldCupState.pendingMatchId = match.id;
-                showWorldCupOverview();
-                return;
-            }
-            simulateWorldCupMatch(match);
-        }
-        completeWorldCupGroupStage();
-        advanceWorldCup();
-        return;
-    }
-
-    const currentRound = worldCupState.knockout;
-    for (const match of currentRound.matches) {
-        if (match.played) continue;
+function getWorldCupCareerMatchInCurrentStage() {
+    return getCurrentWorldCupStageMatches().find(match => {
+        if (match.played) return false;
         const team1 = getWorldCupTeam(match.team1Id);
         const team2 = getWorldCupTeam(match.team2Id);
-        if (!worldCupState.skipPlayerMatches && (teamContainsCareerPlayer(team1) || teamContainsCareerPlayer(team2))) {
-            worldCupState.pendingMatchId = match.id;
-            showWorldCupOverview();
-            return;
-        }
-        simulateWorldCupMatch(match);
-    }
+        return teamContainsCareerPlayer(team1) || teamContainsCareerPlayer(team2);
+    }) || null;
+}
 
+function completeWorldCupKnockoutRound(currentRound) {
     const losingStage = currentRound.round === 16 ? 'last16' : currentRound.round === 8 ? 'quarterFinal' : currentRound.round === 4 ? 'semiFinal' : 'runnerUp';
     const losingPrize = WORLD_CUP_PRIZES[losingStage];
     currentRound.matches.forEach(match => {
         const loserId = match.winnerId === match.team1Id ? match.team2Id : match.team1Id;
         awardWorldCupTeamPrize(loserId, losingPrize, losingStage);
     });
+    archiveWorldCupKnockoutRound(currentRound);
 
     const winners = currentRound.matches.map(match => getWorldCupTeam(match.winnerId));
     if (winners.length === 1) {
         awardWorldCupTeamPrize(winners[0].id, WORLD_CUP_PRIZES.winner, 'winner', true);
         finishWorldCupTournament(winners[0]);
-        return;
+        return false;
     }
 
     const nextRound = currentRound.round / 2;
@@ -765,7 +888,76 @@ function advanceWorldCup() {
         matches.push(createWorldCupMatch(winners[index], winners[index + 1], nextStage));
     }
     worldCupState.knockout = { round: nextRound, matches };
-    advanceWorldCup();
+    return true;
+}
+
+function simulateWorldCupCurrentStage(showOverview = true, onlyAIMatches = false) {
+    if (!worldCupState || worldCupState.completed) return false;
+
+    const careerMatch = !worldCupState.skipPlayerMatches && getWorldCupCareerMatchInCurrentStage();
+    if (careerMatch && !onlyAIMatches) {
+        worldCupState.pendingMatchId = careerMatch.id;
+        if (showOverview) showWorldCupOverview();
+        return false;
+    }
+
+    getCurrentWorldCupStageMatches()
+        .filter(match => !match.played)
+        .filter(match => {
+            if (!onlyAIMatches) return true;
+            return !teamContainsCareerPlayer(getWorldCupTeam(match.team1Id)) && !teamContainsCareerPlayer(getWorldCupTeam(match.team2Id));
+        })
+        .forEach(simulateWorldCupMatch);
+
+    const remainingCareerMatch = !worldCupState.skipPlayerMatches && getWorldCupCareerMatchInCurrentStage();
+    if (remainingCareerMatch) {
+        worldCupState.pendingMatchId = remainingCareerMatch.id;
+        if (typeof saveGame === 'function') saveGame(true);
+        if (showOverview) showWorldCupOverview();
+        return true;
+    }
+
+    if (worldCupState.phase === 'qualifications') {
+        completeWorldCupQualifications();
+        // Kwalifikacje mają osobny termin w kalendarzu. Po ich domknięciu nie
+        // uruchamiamy automatycznie turnieju głównego z innego dnia.
+        if (isWorldCupQualifierTournament()) {
+            completeWorldCupQualifierCalendarEvent();
+            return false;
+        }
+    } else if (worldCupState.phase === 'groups') {
+        completeWorldCupGroupStage();
+    } else {
+        const tournamentContinues = completeWorldCupKnockoutRound(worldCupState.knockout);
+        if (!tournamentContinues) return false;
+    }
+
+    if (typeof saveGame === 'function') saveGame(true);
+    if (showOverview) showWorldCupOverview();
+    return true;
+}
+
+function simulateSkippedWorldCup() {
+    const qualifierCalendarEvent = isWorldCupQualifierTournament();
+    let safety = 0;
+    while (worldCupState && !worldCupState.completed && safety < 6) {
+        const phaseBefore = worldCupState.phase;
+        simulateWorldCupCurrentStage(false);
+        safety++;
+        if (qualifierCalendarEvent || worldCupState.completed || worldCupState.phase === phaseBefore) break;
+    }
+}
+
+function advanceWorldCup() {
+    if (!worldCupState || worldCupState.completed) return;
+    if (worldCupState.skipPlayerMatches) {
+        simulateSkippedWorldCup();
+        return;
+    }
+
+    const careerMatch = getWorldCupCareerMatchInCurrentStage();
+    worldCupState.pendingMatchId = careerMatch ? careerMatch.id : null;
+    showWorldCupOverview();
 }
 
 function getWorldCupRoundLabel() {
@@ -774,6 +966,14 @@ function getWorldCupRoundLabel() {
     if (worldCupState.phase === 'groups') return trWorldCup('groupStage');
     const key = ({ 16: 'last16', 8: 'quarterFinal', 4: 'semiFinal', 2: 'final' })[worldCupState.knockout.round];
     return key ? trWorldCup(key) : trWorldCup('knockoutStage');
+}
+
+function renderWorldCupMiniMatch(firstCountry, score, secondCountry) {
+    return `<div class="world-cup-mini-match">
+        <span class="world-cup-mini-home">${escapeHtml(getWorldCupCountryName(firstCountry))}</span>
+        <strong>${score}</strong>
+        <span class="world-cup-mini-away">${escapeHtml(getWorldCupCountryName(secondCountry))}</span>
+    </div>`;
 }
 
 function renderWorldCupGroup(group) {
@@ -788,7 +988,7 @@ function renderWorldCupGroup(group) {
         const team1 = getWorldCupTeam(match.team1Id);
         const team2 = getWorldCupTeam(match.team2Id);
         const score = match.played ? `${match.score1}:${match.score2}` : '—';
-        return `<div class="world-cup-mini-match">${escapeHtml(getWorldCupCountryName(team1.country))} <strong>${score}</strong> ${escapeHtml(getWorldCupCountryName(team2.country))}</div>`;
+        return renderWorldCupMiniMatch(team1.country, score, team2.country);
     }).join('');
     return `<section class="world-cup-group"><h4>${trWorldCup('group', { label: group.label })}</h4>${rows}<div class="world-cup-mini-matches">${matches}</div></section>`;
 }
@@ -809,7 +1009,11 @@ function renderWorldCupQualifications() {
                     <span>${index + 1}. ${getFlagImg(getCountry(row.teamId))} ${escapeHtml(getWorldCupCountryName(getCountry(row.teamId)))} <small>${row.wins}${trWorldCup('winsAbbreviation')} · ${row.legsWon}-${row.legsLost}</small></span>
                     <strong>${qualifiedIds.has(row.teamId) ? trWorldCup('qualified') : '—'}</strong>
                 </li>`).join('');
-                const matches = group.matches.map(match => `<div class="world-cup-mini-match">${escapeHtml(getWorldCupCountryName(getCountry(match.team1Id)))} <strong>${match.played ? `${match.score1}:${match.score2}` : '—'}</strong> ${escapeHtml(getWorldCupCountryName(getCountry(match.team2Id)))}</div>`).join('');
+                const matches = group.matches.map(match => renderWorldCupMiniMatch(
+                    getCountry(match.team1Id),
+                    match.played ? `${match.score1}:${match.score2}` : '—',
+                    getCountry(match.team2Id)
+                )).join('');
                 return `<div class="world-cup-qualifier-group"><h5>${trWorldCup('group', { label: group.label })}</h5><ol>${rows}</ol><div class="world-cup-mini-matches">${matches}</div></div>`;
             }).join('');
         const methodLabel = event.method === 'ranking' ? trWorldCup('methodRanking') : trWorldCup('methodEvent');
@@ -850,7 +1054,17 @@ function showWorldCupOverview() {
                 <div style="flex:1;text-align:left;">${getFlagImg(team2.country)} ${escapeHtml(getWorldCupTeamLabel(team2))}</div>
             </div>`;
         }).join('');
-        list.innerHTML = `<p class="world-cup-intro">${trWorldCup('knockoutIntro', { directSeeds: worldCupState.directSeeds.length, groupWinners: 12 })}</p>${rows}`;
+        const archivedRounds = [...(worldCupState.knockoutHistory || [])]
+            .sort((first, second) => second.round - first.round)
+            .map(round => {
+                const matches = round.matches.map(match => {
+                    const team1 = getWorldCupTeam(match.team1Id);
+                    const team2 = getWorldCupTeam(match.team2Id);
+                    return renderWorldCupMiniMatch(team1.country, `${match.score1}:${match.score2}`, team2.country);
+                }).join('');
+                return `<section class="world-cup-previous-round"><h4>${escapeHtml(getWorldCupHistoryRoundLabel(round.round))}</h4>${matches}</section>`;
+            }).join('');
+        list.innerHTML = `<p class="world-cup-intro">${trWorldCup('knockoutIntro', { directSeeds: worldCupState.directSeeds.length, groupWinners: 12 })}</p>${archivedRounds}<h3 style="margin:14px 0 8px;">${escapeHtml(getWorldCupHistoryRoundLabel(worldCupState.knockout.round))}</h3>${rows}`;
     }
 
     if (pending) {
@@ -859,14 +1073,16 @@ function showWorldCupOverview() {
         playButton.style.display = 'block';
         playButton.innerText = trWorldCup('playMatch', { team1: getWorldCupCountryName(team1.country), team2: getWorldCupCountryName(team2.country) });
         playButton.onclick = startWorldCupPendingMatch;
-        simulateButton.style.display = 'none';
+        simulateButton.style.display = 'block';
+        simulateButton.innerText = trWorldCup('simulateOtherMatches');
+        simulateButton.onclick = () => simulateWorldCupCurrentStage(true, true);
     } else {
         playButton.style.display = 'none';
         simulateButton.style.display = 'block';
         simulateButton.innerText = worldCupState.phase === 'qualifications'
             ? trWorldCup('simulateQualifications')
             : trWorldCup('simulateNextStage', { tournament: getWorldCupTournamentDisplayName() });
-        simulateButton.onclick = advanceWorldCup;
+        simulateButton.onclick = () => simulateWorldCupCurrentStage(true);
     }
     modal.style.display = 'flex';
 }
@@ -888,7 +1104,8 @@ function startWorldCupTournament() {
     if (!isWorldCupTournament()) return;
     const shouldCreateState = !worldCupState || worldCupState.completed;
     if (shouldCreateState) worldCupState = buildWorldCupState();
-    if (shouldCreateState) {
+    const rostersRepaired = repairWorldCupTeamRosters();
+    if (shouldCreateState || rostersRepaired) {
         sendWorldCupSelectionEmail();
         if (typeof saveGame === 'function') saveGame(true);
     }
@@ -908,7 +1125,8 @@ function startWorldCupQualifiers() {
     if (!isWorldCupQualifierTournament()) return;
     const shouldCreateState = !worldCupState || worldCupState.completed;
     if (shouldCreateState) worldCupState = buildWorldCupState();
-    if (shouldCreateState) {
+    const rostersRepaired = repairWorldCupTeamRosters();
+    if (shouldCreateState || rostersRepaired) {
         sendWorldCupSelectionEmail();
         if (typeof saveGame === 'function') saveGame(true);
     }
@@ -956,6 +1174,7 @@ function isCareerPlayerThrowing(isP1) {
 }
 
 function startWorldCupMatch(match) {
+    repairWorldCupTeamRosters();
     const team1 = getWorldCupTeam(match.team1Id);
     const team2 = getWorldCupTeam(match.team2Id);
     const playerTeam = teamContainsCareerPlayer(team1) ? team1 : team2;
@@ -996,8 +1215,8 @@ function startWorldCupMatch(match) {
     document.getElementById('score-photo-p2').src = getWorldCupFlagUrl(opponentTeam.country);
     document.getElementById('score-photo-p1').classList.add('world-cup-flag-photo');
     document.getElementById('score-photo-p2').classList.add('world-cup-flag-photo');
-    document.getElementById('t-btn-sim-leg').style.display = 'none';
-    document.getElementById('t-btn-sim-match').style.display = 'none';
+    document.getElementById('t-btn-sim-leg').style.display = '';
+    document.getElementById('t-btn-sim-match').style.display = '';
     updateScores();
     updateMatchStatsUI();
     setTurnUI();
@@ -1038,7 +1257,7 @@ function finishWorldCupTournament(winner) {
             country: winner.country,
             players: winner.players.map(candidate => candidate.name)
         };
-        activeTournament.historyLogs = `<strong>${getWorldCupTournamentDisplayName()}</strong><br>${trWorldCup('historyWinner', { country: escapeHtml(getWorldCupCountryName(winner.country)), players: escapeHtml(winner.players.map(candidate => candidate.name).join(' / ')) })}`;
+        activeTournament.historyLogs = buildWorldCupTournamentHistory(winner);
     }
     const careerPlayerWon = teamContainsCareerPlayer(winner);
     if (careerPlayerWon) {
@@ -1051,6 +1270,8 @@ function finishWorldCupTournament(winner) {
         ? trWorldCup('winnerAlert', { tournament: getWorldCupTournamentDisplayName(), country: getWorldCupCountryName(winner.country) })
         : trWorldCup('otherWinnerAlert', { tournament: getWorldCupTournamentDisplayName(), country: getWorldCupCountryName(winner.country) }));
     activeTournament = null;
+    const bracketModal = document.getElementById('bracket-modal');
+    if (bracketModal) bracketModal.style.display = 'none';
     const tile = document.getElementById('tile-tournament');
     if (tile) tile.style.display = 'none';
     updateHub();
