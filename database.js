@@ -920,8 +920,7 @@ const interviewsDB = [
                 outcome_pl: "Zyskujesz reputację największego antybohatera i showmana w tourze!", outcome_en: "You cement your status as the premier anti-hero and ultimate entertainer of the tour!", outcome_de: "Du festigst deinen Ruf als charismatischer Anti-Held der Darts-Welt!", outcome_nl: "Je vestigt je status als de ultieme antiheld en showman van het circuit!"
             }
         ]
-    }
-    /
+    },
     {
         title_pl: "🎤 Studio Cloud Sports", title_en: "🎤 Cloud Sports Studio", title_de: "🎤 Cloud Sports Studio", title_nl: "🎤 Cloud Sports Studio",
         desc_pl: "Ekspert pyta: 'Twój styl rzutu wydaje się bardzo dynamiczny i agresywny. Czy to celowa taktyka zastraszania rywali?'",
