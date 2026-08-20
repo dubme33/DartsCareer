@@ -1,0 +1,131 @@
+function playerThrow() {
+            let tSec = parseInt(document.getElementById('aim-sector').value); 
+            let tMult = parseInt(document.getElementById('aim-multiplier').value);
+            if (tSec === 50) { tSec = 25; tMult = 2; } else if (tSec === 25) { tMult = 1; }
+
+            let boostedPlayer = { ...player };
+            let bStats = typeof getBoostedPlayerStats === 'function' ? getBoostedPlayerStats() : null;
+            if(bStats) { boostedPlayer.scoring = bStats.scoring; boostedPlayer.doubles = bStats.doubles; }
+            boostedPlayer = applyRivalryMatchModifier(boostedPlayer, true);
+
+            if (currentMatch && currentMatch.p1Momentum !== undefined) {
+                boostedPlayer.scoring += (currentMatch.p1Momentum * 2.5); 
+                boostedPlayer.doubles += (currentMatch.p1Momentum * 2.5);
+            }
+
+            let result = calculateThrow(tSec, tMult, boostedPlayer); 
+            processThrow(true, tSec, tMult, result.sector, result.mult);
+        }
+
+        function aiTurn() {
+            if (!currentMatch || currentMatch.dartsThrown >= 3) return;
+            const isP1 = currentMatch.turn === 'p1';
+            if (!isP1 && currentMatch.turn !== 'p2') return;
+            if (!currentMatch.isDoubles && isP1) return;
+            if (currentMatch.isDoubles && isP1 && isCareerPlayerThrowing(true)) return;
+            
+            let score = isP1 ? currentMatch.p1Score : currentMatch.p2Score;
+            let isDIDO = activeTournament && activeTournament.format === 'DIDO';
+            let dartsLeft = 3 - currentMatch.dartsThrown;
+            
+            // AI używa teraz jednej, wspólnej logiki ze wszystkimi wyjątkami!
+            let aim = getOptimalAim(score, isDIDO, dartsLeft);
+            
+            const aiPlayer = currentMatch.isDoubles ? getDoublesCurrentThrower(isP1) : currentMatch.opponent;
+            let aiStats = { ...aiPlayer };
+            const momentum = isP1 ? currentMatch.p1Momentum : currentMatch.p2Momentum;
+            if (currentMatch && momentum !== undefined) {
+                aiStats.scoring += (momentum * 2.5);
+                aiStats.doubles += (momentum * 2.5);
+            }
+
+            let result = calculateThrow(aim.sector, aim.mult, aiStats); 
+            processThrow(isP1, aim.sector, aim.mult, result.sector, result.mult);
+        }
+
+        function getAdjacentSector(sector) {
+            if (sector === 25) return dartboardOrder[Math.floor(Math.random()*20)];
+            let idx = dartboardOrder.indexOf(sector);
+            idx += (Math.random() < 0.5 ? -1 : 1);
+            if (idx < 0) idx = 19; if (idx > 19) idx = 0;
+            return dartboardOrder[idx];
+        }
+
+        function calculateThrow(targetSector, targetMult, stats) {
+            // Dedykowana logika dla środka tarczy (Outer / Inner Bull)
+            if (targetSector === 25) {
+                let stat = targetMult === 2 ? stats.doubles : stats.scoring;
+                stat = clamp(stat - 10, 20, 95);
+                let roll = Math.random() * 100;
+
+                if (targetMult === 2) {
+                    // Celowanie w 50 (Inner Bull)
+                    let bullHitChance = clamp(stat * 0.35, 10, 45);
+                    let outerHitChance = bullHitChance + 35; // Pudło ląduje w Outer Bull (25)
+
+                    if (roll <= bullHitChance) {
+                        return { sector: 25, mult: 2 }; // Trafienie 50 (D-Bull)
+                    } else if (roll <= outerHitChance) {
+                        return { sector: 25, mult: 1 }; // Trafienie 25 (Outer Bull)
+                    } else {
+                        // Duże pudło ląduje w pojedynczym sąsiadującym sektorze
+                        return { sector: dartboardOrder[Math.floor(Math.random() * 20)], mult: 1 };
+                    }
+                } else {
+                    // Celowanie w 25 (Outer Bull)
+                    let outerHitChance = clamp(stat * 0.55, 20, 65);
+                    if (roll <= outerHitChance) {
+                        return { sector: 25, mult: 1 };
+                    } else if (roll <= outerHitChance + 10) {
+                        return { sector: 25, mult: 2 }; // Przypadkowe trafienie w 50
+                    } else {
+                        return { sector: dartboardOrder[Math.floor(Math.random() * 20)], mult: 1 };
+                    }
+                }
+            }
+
+            // Standardowe sektory 1-20
+            let stat = targetMult === 2 ? stats.doubles : stats.scoring;
+            stat = clamp(stat, 25, 100);
+            let hitMult = targetMult, hitSector = targetSector, roll = Math.random() * 100;
+            const isFavoriteDouble = targetMult === 2 && stats.favoriteDouble === targetSector;
+
+            if (targetMult === 3) {
+                const tripleHitChance = clamp(stat * 0.42, 12, 48);
+                const targetSingleChance = Math.min(98, tripleHitChance + 65); 
+                
+                if (roll <= tripleHitChance) { 
+                    hitMult = 3; 
+                } else if (roll <= targetSingleChance) { 
+                    hitMult = 1; 
+                } else { 
+                    hitSector = getAdjacentSector(targetSector); 
+                    hitMult = Math.random() < 0.10 ? 3 : 1; 
+                }
+            } else if (targetMult === 2) {
+                const doubleHitChance = clamp(stat * 0.45 + (isFavoriteDouble ? 5 : 0), 12, 52);
+                
+                // ZMNIEJSZONO z 55 na 25. Teraz lotka wpada w singla tylko w ok. 25% przypadków pudeł.
+                const targetSingleChance = Math.min(90, doubleHitChance + 25);
+                
+                if (roll <= doubleHitChance) {
+                    hitMult = 2;
+                } else if (roll <= targetSingleChance) {
+                    hitMult = 1; // Wpadło tuż pod drutem w dużego singla
+                } else { 
+                    // Zwiększona szansa na rzut poza tarczę przy pudle
+                if (Math.random() < 0.90) {
+                    hitSector = 0; hitMult = 0; // Teraz aż 90% pudeł ląduje CAŁKOWICIE poza tarczą (Fura na 0)
+                } else { 
+                    hitSector = getAdjacentSector(targetSector); 
+                    hitMult = Math.random() < 0.30 ? 2 : 1;
+                }
+                }
+            } else {
+                if (roll <= Math.min(99, stat + 22)) { hitMult = 1; }
+                else { hitSector = getAdjacentSector(targetSector); hitMult = 1; }
+            }
+            return { sector: hitSector, mult: hitMult };
+        }
+
+        
