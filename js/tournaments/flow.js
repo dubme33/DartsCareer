@@ -27,13 +27,18 @@ function skipActiveTournament() {
                 const expectedOpeningRound = isWorldMastersActiveTournament && typeof getWorldMastersTournamentRound === 'function'
                     ? getWorldMastersTournamentRound(activeTournament)
                     : null;
+                const staleWorldMastersOpeningDraw = typeof shouldRefreshWorldMastersEventField === 'function'
+                    && shouldRefreshWorldMastersEventField(activeTournament);
                 const malformedOpeningWorldMastersDraw = expectedOpeningRound === tournamentRound && (
-                    tournamentBracket.length !== expectedOpeningRound || tournamentBracket.some(candidate => !candidate || candidate.isBye)
+                    tournamentBracket.length !== expectedOpeningRound
+                    || tournamentBracket.some(candidate => !candidate || candidate.isBye)
+                    || staleWorldMastersOpeningDraw
                 );
 
                 // Starsze zapisy mogły zachować niepełną drabinkę po emeryturze
-                // lokalnego uczestnika. Nie wznawiamy takiej drabinki — tworzymy ją
-                // ponownie z dostępnymi zastępcami.
+                // lokalnego uczestnika albo nierozpoczętą obsadę sprzed zmiany
+                // zasad zaproszeń. Nie wznawiamy takiej drabinki — tworzymy ją
+                // ponownie z dostępnymi zastępcami i aktualną regułą OOM.
                 if (!malformedOpeningWorldMastersDraw) {
                     showBracket();
                     return;

@@ -3,6 +3,10 @@ let worldMastersState = null;
 const WORLD_MASTERS_SERIES_NAME = 'Global Masters';
 const WORLD_MASTERS_FINALS_NAME = 'Global Masters Finals';
 const WORLD_MASTERS_FINALS_QUALIFIER_NAME = 'Global Masters Finals Qualifier';
+const WORLD_MASTERS_INVITATION_RULE = 'top-14-oom-random-8';
+const WORLD_MASTERS_LEGACY_EVENT_NAMES = {
+    atlantic: ['US Masters']
+};
 
 const WORLD_MASTERS_TRANSLATIONS = {
     pl: {
@@ -56,8 +60,8 @@ const WORLD_MASTERS_EVENTS = [
     { id: 'arabian', name: 'Arabian Masters', month: 0, day: 19, endDay: 20, city: 'Rijad', country: 'Arabia Saudyjska', regionCountries: ['Bahrajn', 'Filipiny', 'Japonia', 'Singapur', 'Hongkong', 'Indie'], localPriority: ['Alexis Toylen', 'Motomu Sakaii', 'Laurent Ilogan', 'Ryu Asemoto', 'Paul Limm', 'Man Lok Leun', 'Tomoya Gote', 'Nitin Kumor'] },
     { id: 'northern', name: 'Northern Masters', month: 5, day: 5, endDay: 6, city: 'Kopenhaga', country: 'Dania', regionCountries: ['Dania', 'Szwecja', 'Norwegia', 'Łotwa', 'Litwa', 'Finlandia', 'Islandia'], localPriority: ['Mads Ramza', 'Jeff de Giraffe', 'Cor Dekar', 'Oscar Lucasi', 'Darius Labana', 'Viktor Tingren', 'Andreas Harrison', 'Daniel Larssen'] },
     { id: 'atlantic', name: 'Atlantic Masters', month: 5, day: 25, endDay: 26, city: 'Nowy Jork', country: 'USA', regionCountries: ['USA', 'Kanada'], localPriority: ['Jim Longe', 'Alex Spellar', 'Davy Cameran', 'Leon Gates', 'Garry Mayson', 'Fred Kreuger', 'Adam Sevado', 'Braydon Hale'] },
-    { id: 'aotearoa', name: 'Aotearoa Masters', month: 7, day: 14, endDay: 15, city: 'Auckland', country: 'Nowa Zelandia', regionCountries: ['Nowa Zelandia', 'Australia'], forceInvite: 'Damian Heat', localPriority: ['Adam Leeke', 'Simon Whitler', 'Ben Robbin', 'Johnny Tatta', 'Mark Cleven', 'Kayden Mils', 'Haupai Puhu', 'Raymond Smyth'] },
-    { id: 'southern', name: 'Southern Masters', month: 7, day: 21, endDay: 22, city: 'Wollongong', country: 'Australia', regionCountries: ['Australia', 'Nowa Zelandia'], forceInvite: 'Damian Heat', localPriority: ['Adam Leeke', 'Simon Whitler', 'Raymond Smyth', 'Brody Kling', 'Tim Puse', 'Joe Comit', 'Mal Cumin', 'Ben Robbin'] }
+    { id: 'aotearoa', name: 'Aotearoa Masters', month: 7, day: 14, endDay: 15, city: 'Auckland', country: 'Nowa Zelandia', regionCountries: ['Nowa Zelandia', 'Australia'], localPriority: ['Adam Leeke', 'Simon Whitler', 'Ben Robbin', 'Johnny Tatta', 'Mark Cleven', 'Kayden Mils', 'Haupai Puhu', 'Raymond Smyth'] },
+    { id: 'southern', name: 'Southern Masters', month: 7, day: 21, endDay: 22, city: 'Wollongong', country: 'Australia', regionCountries: ['Australia', 'Nowa Zelandia'], localPriority: ['Adam Leeke', 'Simon Whitler', 'Raymond Smyth', 'Brody Kling', 'Tim Puse', 'Joe Comit', 'Mal Cumin', 'Ben Robbin'] }
 ];
 
 const WORLD_MASTERS_CALENDAR = [
@@ -246,11 +250,10 @@ function createWorldMastersEventField(event) {
         return true;
     };
 
-    const forcedPlayer = event.forceInvite
-        ? allPlayers.find(candidate => (candidate.sourceName || candidate.name) === event.forceInvite)
-        : null;
-    addCandidate(invited, forcedPlayer);
-    shuffleWorldMasters(tourCardPlayers).some(candidate => {
+    // Każdy turniej World Series ma ośmiu zaproszonych z losowania wśród
+    // aktualnego Top 14 Order of Merit. Nie losujemy z całej puli Tour Card.
+    const topOomCandidates = tourCardPlayers.slice(0, 14);
+    shuffleWorldMasters(topOomCandidates).some(candidate => {
         if (invited.length < 8) addCandidate(invited, candidate);
         return invited.length === 8;
     });
@@ -307,10 +310,21 @@ function createWorldMastersEventField(event) {
     return {
         invitedKeys: invited.map(getWorldMastersPlayerKey),
         localKeys: locals.map(getWorldMastersPlayerKey),
+        invitationRule: WORLD_MASTERS_INVITATION_RULE,
         completed: false,
         matchKeys: [],
         winnerAwarded: false
     };
+}
+
+function shouldRefreshWorldMastersEventField(tournament) {
+    if (!isWorldMastersTournament(tournament)) return false;
+    const event = getWorldMastersEvent(tournament);
+    const existingField = event ? ensureWorldMastersState().events[event.id] : null;
+    return Boolean(existingField
+        && !existingField.completed
+        && !existingField.matchKeys?.length
+        && existingField.invitationRule !== WORLD_MASTERS_INVITATION_RULE);
 }
 
 function ensureWorldMastersEventField(tournament) {
@@ -318,7 +332,8 @@ function ensureWorldMastersEventField(tournament) {
     if (!event) return null;
     const state = ensureWorldMastersState();
     const existingField = state.events[event.id];
-    if (existingField && (existingField.completed || existingField.matchKeys?.length || isWorldMastersEventFieldPlayable(existingField))) {
+    const usesCurrentInvitationRule = existingField?.invitationRule === WORLD_MASTERS_INVITATION_RULE;
+    if (existingField && (existingField.completed || existingField.matchKeys?.length || (usesCurrentInvitationRule && isWorldMastersEventFieldPlayable(existingField)))) {
         return existingField;
     }
 
@@ -569,7 +584,12 @@ function concludeWorldMastersFinalsQualifierEvent(showOutcome = true) {
 function migrateWorldMastersCalendar() {
     if (!Array.isArray(tournamentDatabase)) return;
     WORLD_MASTERS_CALENDAR.forEach(template => {
-        const existing = tournamentDatabase.find(tournament => tournament.specialType === template.specialType && (template.worldMastersEvent ? tournament.worldMastersEvent === template.worldMastersEvent : true))
+        // Zapisy sprzed przebudowy cyklu nazywały amerykański event „US Masters”.
+        // Najpierw odnajdujemy taki historyczny wpis, aby nie dodać drugiego turnieju
+        // na ten sam dzień i zachować jego historię oraz stan aktywnej drabinki.
+        const legacyNames = WORLD_MASTERS_LEGACY_EVENT_NAMES[template.worldMastersEvent] || [];
+        const existing = tournamentDatabase.find(tournament => legacyNames.includes(tournament.name))
+            || tournamentDatabase.find(tournament => tournament.specialType === template.specialType && (template.worldMastersEvent ? tournament.worldMastersEvent === template.worldMastersEvent : true))
             || tournamentDatabase.find(tournament => tournament.name === template.name);
         if (existing) {
             Object.assign(existing, { ...template, name: existing.name || template.name, completed: Boolean(existing.completed), historyLogs: existing.historyLogs || '' });

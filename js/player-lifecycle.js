@@ -1,6 +1,7 @@
 let playerLifecycleState = {
     lastProcessedYear: null,
-    retiredPlayerKeys: []
+    retiredPlayerKeys: [],
+    retiredPlayerNames: []
 };
 
 const PLAYER_LIFECYCLE_TRANSLATIONS = {
@@ -55,9 +56,17 @@ function trPlayerLifecycle(key, values = {}) {
 
 function ensurePlayerLifecycleState() {
     if (!playerLifecycleState || typeof playerLifecycleState !== 'object') {
-        playerLifecycleState = { lastProcessedYear: null, retiredPlayerKeys: [] };
+        playerLifecycleState = { lastProcessedYear: null, retiredPlayerKeys: [], retiredPlayerNames: [] };
     }
     if (!Array.isArray(playerLifecycleState.retiredPlayerKeys)) playerLifecycleState.retiredPlayerKeys = [];
+    if (!Array.isArray(playerLifecycleState.retiredPlayerNames)) {
+        playerLifecycleState.retiredPlayerNames = playerLifecycleState.retiredPlayerKeys
+            .map(key => getLifecyclePlayerNameKey(String(key).split('|')[0]))
+            .filter(Boolean);
+    }
+    playerLifecycleState.retiredPlayerNames = [...new Set(playerLifecycleState.retiredPlayerNames
+        .map(getLifecyclePlayerNameKey)
+        .filter(Boolean))];
     if (!Number.isInteger(playerLifecycleState.lastProcessedYear)) playerLifecycleState.lastProcessedYear = null;
     return playerLifecycleState;
 }
@@ -65,7 +74,12 @@ function ensurePlayerLifecycleState() {
 function restorePlayerLifecycleState(savedState) {
     playerLifecycleState = {
         lastProcessedYear: Number.isInteger(savedState?.lastProcessedYear) ? savedState.lastProcessedYear : null,
-        retiredPlayerKeys: Array.isArray(savedState?.retiredPlayerKeys) ? [...new Set(savedState.retiredPlayerKeys)] : []
+        retiredPlayerKeys: Array.isArray(savedState?.retiredPlayerKeys) ? [...new Set(savedState.retiredPlayerKeys)] : [],
+        retiredPlayerNames: Array.isArray(savedState?.retiredPlayerNames)
+            ? [...new Set(savedState.retiredPlayerNames)]
+            : (Array.isArray(savedState?.retiredPlayerKeys)
+                ? savedState.retiredPlayerKeys.map(key => getLifecyclePlayerNameKey(String(key).split('|')[0])).filter(Boolean)
+                : [])
     };
     return ensurePlayerLifecycleState();
 }
@@ -74,9 +88,14 @@ function getLifecyclePlayerKey(candidate) {
     return `${candidate?.name || ''}|${candidate?.country || ''}`;
 }
 
+function getLifecyclePlayerNameKey(candidate) {
+    const name = typeof candidate === 'string' ? candidate : candidate?.name;
+    return String(name || '').trim().replace(/\s+/g, ' ').toLocaleLowerCase('pl');
+}
+
 function getRetirementChance(age) {
-    if (!Number.isInteger(age) || age < 45) return 0;
-    return Math.min(100, (age - 44) * 5);
+    if (!Number.isInteger(age) || age < 46) return 0;
+    return Math.min(100, (age - 45) * 2.5);
 }
 
 function getAnnualDecline(age) {
@@ -236,6 +255,8 @@ function processAnnualPlayerLifecycle(completedYear) {
             retiredIds.add(candidate.id);
             const key = getLifecyclePlayerKey(candidate);
             if (!state.retiredPlayerKeys.includes(key)) state.retiredPlayerKeys.push(key);
+            const nameKey = getLifecyclePlayerNameKey(candidate);
+            if (nameKey && !state.retiredPlayerNames.includes(nameKey)) state.retiredPlayerNames.push(nameKey);
             return;
         }
         if (age !== null) applyAnnualAgeDecline(candidate, age);

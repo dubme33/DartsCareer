@@ -243,12 +243,30 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
             const retiredPlayerKeys = new Set(typeof playerLifecycleState !== 'undefined' && Array.isArray(playerLifecycleState.retiredPlayerKeys)
                 ? playerLifecycleState.retiredPlayerKeys
                 : []);
+            const getRetiredNameKey = candidate => typeof getLifecyclePlayerNameKey === 'function'
+                ? getLifecyclePlayerNameKey(candidate)
+                : String(typeof candidate === 'string' ? candidate : candidate?.name || '').trim().replace(/\s+/g, ' ').toLocaleLowerCase('pl');
+            const retiredPlayerNames = new Set(typeof playerLifecycleState !== 'undefined' && Array.isArray(playerLifecycleState.retiredPlayerNames)
+                ? playerLifecycleState.retiredPlayerNames.map(getRetiredNameKey).filter(Boolean)
+                : [...retiredPlayerKeys].map(key => getRetiredNameKey(String(key).split('|')[0])).filter(Boolean));
+
+            // Starsze zapisy lub mody mogły zmienić kraj zawodnika po jego emeryturze.
+            // Wtedy klucz „imię|kraj” nie wystarczał i domyślna wersja wracała do gry.
+            // Usuwamy takiego wskrzeszonego zawodnika, zanim dołączymy nowe wpisy bazy.
+            if (retiredPlayerKeys.size || retiredPlayerNames.size) {
+                const activePlayers = pdcPlayers.filter(candidate => {
+                    const playerKey = `${candidate?.name || ''}|${candidate?.country || ''}`;
+                    return !retiredPlayerKeys.has(playerKey) && !retiredPlayerNames.has(getRetiredNameKey(candidate));
+                });
+                if (activePlayers.length !== pdcPlayers.length) pdcPlayers.splice(0, pdcPlayers.length, ...activePlayers);
+            }
+
             const existingPlayers = new Set([...pdcPlayers, player]
                 .filter(Boolean)
                 .map(candidate => `${candidate.name}|${candidate.country}`));
             defaultPdcPlayerTemplates.forEach((template, templateIndex) => {
                 const key = `${template.name}|${template.country}`;
-                if (existingPlayers.has(key) || retiredPlayerKeys.has(key) || isModReplacementForDefaultPlayer(template, templateIndex)) return;
+                if (existingPlayers.has(key) || retiredPlayerKeys.has(key) || retiredPlayerNames.has(getRetiredNameKey(template)) || isModReplacementForDefaultPlayer(template, templateIndex)) return;
                 pdcPlayers.push({
                     ...template,
                     historyPT: {},
@@ -918,6 +936,27 @@ async function updateProfileWalkon(event) {
 
     // --- 8. SILNIK BŁYSKAWICZNEJ SYMULACJI (FAST-FORWARD) ---
 
+        // Ustawienia po wysokim wyniku. Kluczem jest bieżący wynik i liczba lotek
+        // w ręku, dzięki czemu AI nie wraca automatycznie na T20 po trafieniu
+        // pierwszego, świadomie wybranego singla. Każda sekwencja prowadzi do
+        // wygodnego finiszu (167-170, 164 lub 160), jeśli zaplanowane pola wejdą.
+        const HIGH_SCORE_SETUP_AIMS = {
+            '233:3': { sector: 19, mult: 1 }, '214:2': { sector: 19, mult: 1 }, '195:1': { sector: 25, mult: 1 },
+            '259:3': { sector: 19, mult: 1 }, '240:2': { sector: 20, mult: 1 }, '220:1': { sector: 20, mult: 3 },
+            '265:3': { sector: 19, mult: 1 }, '246:2': { sector: 19, mult: 1 },
+            '269:3': { sector: 19, mult: 1 }, '250:2': { sector: 20, mult: 3 }, '190:1': { sector: 20, mult: 1 },
+            '302:3': { sector: 18, mult: 1 }, '284:2': { sector: 20, mult: 3 }, '224:1': { sector: 20, mult: 3 },
+            '303:3': { sector: 19, mult: 3 },
+            '305:3': { sector: 18, mult: 1 }, '287:2': { sector: 20, mult: 3 }, '227:1': { sector: 20, mult: 3 },
+            '306:3': { sector: 19, mult: 1 },
+            '308:3': { sector: 18, mult: 1 }, '290:2': { sector: 20, mult: 3 }, '230:1': { sector: 20, mult: 3 },
+            '309:3': { sector: 19, mult: 1 }
+        };
+
+        function getHighScoreSetupAim(score, dartsLeft) {
+            return HIGH_SCORE_SETUP_AIMS[`${score}:${dartsLeft}`] || null;
+        }
+
         function getOptimalAim(score, isDIDO, dartsLeft = 3) {
             if (isDIDO && score === 501) return { sector: 20, mult: 2 };
             
@@ -937,6 +976,8 @@ async function updateProfileWalkon(event) {
             if (score <= 40 && score % 2 === 0) return { sector: score/2, mult: 2 };
             if (score <= 40) return { sector: 1, mult: 1 }; 
             if (score < 60) return { sector: 10, mult: 1 };
+            const highScoreSetupAim = getHighScoreSetupAim(score, dartsLeft);
+            if (highScoreSetupAim) return highScoreSetupAim;
             return { sector: 20, mult: 3 };
         }
 
