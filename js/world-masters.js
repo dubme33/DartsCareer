@@ -200,39 +200,129 @@ function getWorldMastersTourCardPlayers() {
         .sort((first, second) => (Number(second.prizeMoney) || 0) - (Number(first.prizeMoney) || 0) || (Number(second.ovr) || 0) - (Number(first.ovr) || 0));
 }
 
-function ensureWorldMastersEventField(tournament) {
-    const event = getWorldMastersEvent(tournament);
-    if (!event) return null;
-    const state = ensureWorldMastersState();
-    if (state.events[event.id]) return state.events[event.id];
+function completeWorldMastersFieldKeys(preferredKeys, targetSize, excludedKeys = []) {
+    const selected = new Set(excludedKeys);
+    const result = [];
+    const addCandidate = candidate => {
+        const key = getWorldMastersPlayerKey(candidate);
+        if (!candidate || !key || selected.has(key) || result.length >= targetSize) return;
+        selected.add(key);
+        result.push(key);
+    };
 
-    const topSixteen = getWorldMastersTourCardPlayers().slice(0, 16);
-    const forcedPlayer = event.forceInvite ? getWorldMastersAllPlayers().find(candidate => (candidate.sourceName || candidate.name) === event.forceInvite) : null;
+    resolveWorldMastersPlayers(preferredKeys).forEach(addCandidate);
+    getWorldMastersTourCardPlayers().forEach(addCandidate);
+    getWorldMastersAllPlayers()
+        .slice()
+        .sort((first, second) => (Number(second.prizeMoney) || 0) - (Number(first.prizeMoney) || 0) || (Number(second.ovr) || 0) - (Number(first.ovr) || 0))
+        .forEach(addCandidate);
+    return result;
+}
+
+function getWorldMastersEventFieldPlayers(field) {
+    return {
+        invited: resolveWorldMastersPlayers(field?.invitedKeys),
+        locals: resolveWorldMastersPlayers(field?.localKeys)
+    };
+}
+
+function isWorldMastersEventFieldPlayable(field) {
+    if (!field) return false;
+    const { invited, locals } = getWorldMastersEventFieldPlayers(field);
+    const playerKeys = [...invited, ...locals].map(getWorldMastersPlayerKey);
+    return invited.length === 8 && locals.length === 8 && new Set(playerKeys).size === 16;
+}
+
+function createWorldMastersEventField(event) {
+    const allPlayers = getWorldMastersAllPlayers();
+    const tourCardPlayers = getWorldMastersTourCardPlayers();
     const invited = [];
-    if (forcedPlayer) invited.push(forcedPlayer);
-    shuffleWorldMasters(topSixteen.filter(candidate => !invited.includes(candidate))).some(candidate => {
-        if (invited.length < 8) invited.push(candidate);
+    const selectedKeys = new Set();
+    const addCandidate = (list, candidate) => {
+        const key = getWorldMastersPlayerKey(candidate);
+        if (!candidate || !key || selectedKeys.has(key)) return false;
+        list.push(candidate);
+        selectedKeys.add(key);
+        return true;
+    };
+
+    const forcedPlayer = event.forceInvite
+        ? allPlayers.find(candidate => (candidate.sourceName || candidate.name) === event.forceInvite)
+        : null;
+    addCandidate(invited, forcedPlayer);
+    shuffleWorldMasters(tourCardPlayers).some(candidate => {
+        if (invited.length < 8) addCandidate(invited, candidate);
         return invited.length === 8;
     });
 
-    const preferredLocals = event.localPriority.map(name => getWorldMastersAllPlayers().find(candidate => (candidate.sourceName || candidate.name) === name)).filter(Boolean);
-    const regionalLocals = getWorldMastersAllPlayers().filter(candidate => event.regionCountries.includes(candidate.country));
-    const localCandidates = [];
-    const addLocal = candidate => {
-        if (candidate && !invited.includes(candidate) && !localCandidates.includes(candidate)) localCandidates.push(candidate);
-    };
-    if (typeof player !== 'undefined' && player && event.regionCountries.includes(player.country)) addLocal(player);
-    preferredLocals.forEach(addLocal);
-    regionalLocals.sort((first, second) => (Number(second.ovr) || 0) - (Number(first.ovr) || 0)).forEach(addLocal);
-    const locals = localCandidates.slice(0, 8);
+    // Awaryjnie uzupełniamy ósemkę gwiazd całą dostępną bazą. Dzięki temu
+    // emerytura zaproszonego zawodnika nie może zostawić niepełnej drabinki.
+    allPlayers
+        .slice()
+        .sort((first, second) => (Number(second.prizeMoney) || 0) - (Number(first.prizeMoney) || 0) || (Number(second.ovr) || 0) - (Number(first.ovr) || 0))
+        .some(candidate => {
+            if (invited.length < 8) addCandidate(invited, candidate);
+            return invited.length === 8;
+        });
 
-    const field = {
+    const locals = [];
+    const localCandidates = [];
+    const localKeys = new Set();
+    const addLocalCandidate = candidate => {
+        const key = getWorldMastersPlayerKey(candidate);
+        if (!candidate || !key || selectedKeys.has(key) || localKeys.has(key)) return;
+        localCandidates.push(candidate);
+        localKeys.add(key);
+    };
+
+    if (typeof player !== 'undefined' && player && event.regionCountries.includes(player.country)) addLocalCandidate(player);
+    event.localPriority
+        .map(name => allPlayers.find(candidate => (candidate.sourceName || candidate.name) === name))
+        .filter(Boolean)
+        .forEach(addLocalCandidate);
+    allPlayers
+        .filter(candidate => event.regionCountries.includes(candidate.country))
+        .sort((first, second) => (Number(second.ovr) || 0) - (Number(first.ovr) || 0))
+        .forEach(addLocalCandidate);
+
+    localCandidates.forEach(candidate => {
+        if (locals.length < 8) addCandidate(locals, candidate);
+    });
+
+    // Zastępca spoza regionu jest lepszy niż puste miejsce w drabince. To jest
+    // istotne zwłaszcza kilka sezonów po rozpoczęciu kariery, gdy lokalni weterani
+    // mogli już zakończyć karierę.
+    shuffleWorldMasters(tourCardPlayers).some(candidate => {
+        if (locals.length < 8) addCandidate(locals, candidate);
+        return locals.length === 8;
+    });
+    allPlayers
+        .slice()
+        .sort((first, second) => (Number(second.ovr) || 0) - (Number(first.ovr) || 0))
+        .some(candidate => {
+            if (locals.length < 8) addCandidate(locals, candidate);
+            return locals.length === 8;
+        });
+
+    return {
         invitedKeys: invited.map(getWorldMastersPlayerKey),
         localKeys: locals.map(getWorldMastersPlayerKey),
         completed: false,
         matchKeys: [],
         winnerAwarded: false
     };
+}
+
+function ensureWorldMastersEventField(tournament) {
+    const event = getWorldMastersEvent(tournament);
+    if (!event) return null;
+    const state = ensureWorldMastersState();
+    const existingField = state.events[event.id];
+    if (existingField && (existingField.completed || existingField.matchKeys?.length || isWorldMastersEventFieldPlayable(existingField))) {
+        return existingField;
+    }
+
+    const field = createWorldMastersEventField(event);
     state.events[event.id] = field;
     return field;
 }
@@ -269,7 +359,9 @@ function buildWorldMastersTournamentDraw(tournament, participants = getWorldMast
 
 function getWorldMastersAutomaticFinalistKeys() {
     const ranking = getWorldMastersRankingRows();
-    const worldSeriesKeys = ranking.slice(0, 24).map(row => row.key);
+    // W tabeli mogą pozostać stare wpisy zawodników, którzy zakończyli karierę.
+    // Do finałów bierzemy wyłącznie graczy, którzy nadal są w bazie.
+    const worldSeriesKeys = ranking.filter(row => row.player).slice(0, 24).map(row => row.key);
     const selected = new Set(worldSeriesKeys);
     const oomKeys = getWorldMastersTourCardPlayers().filter(candidate => !selected.has(getWorldMastersPlayerKey(candidate))).slice(0, 4).map(getWorldMastersPlayerKey);
     return { worldSeriesKeys, oomKeys };
@@ -277,11 +369,21 @@ function getWorldMastersAutomaticFinalistKeys() {
 
 function getWorldMastersFinalsQualifierParticipants() {
     const state = ensureWorldMastersState();
-    if (state.finalsQualifier?.participantKeys) return resolveWorldMastersPlayers(state.finalsQualifier.participantKeys);
     const automatic = getWorldMastersAutomaticFinalistKeys();
     const automaticKeys = new Set([...automatic.worldSeriesKeys, ...automatic.oomKeys]);
-    const participantKeys = getWorldMastersTourCardPlayers().filter(candidate => !automaticKeys.has(getWorldMastersPlayerKey(candidate))).slice(0, 16).map(getWorldMastersPlayerKey);
-    state.finalsQualifier = { participantKeys, qualifiedKeys: [], completed: false };
+    const existingQualifier = state.finalsQualifier;
+    if (existingQualifier?.participantKeys && existingQualifier.completed) {
+        return resolveWorldMastersPlayers(existingQualifier.participantKeys);
+    }
+
+    const preferredKeys = existingQualifier?.participantKeys || getWorldMastersTourCardPlayers().map(getWorldMastersPlayerKey);
+    const participantKeys = completeWorldMastersFieldKeys(preferredKeys, 16, automaticKeys);
+    state.finalsQualifier = {
+        ...(existingQualifier || {}),
+        participantKeys,
+        qualifiedKeys: Array.isArray(existingQualifier?.qualifiedKeys) ? existingQualifier.qualifiedKeys : [],
+        completed: false
+    };
     return resolveWorldMastersPlayers(participantKeys);
 }
 
@@ -304,15 +406,30 @@ function autoCompleteWorldMastersFinalsQualifier() {
 
 function getWorldMastersFinalsField() {
     const state = ensureWorldMastersState();
-    if (state.finals?.participantKeys) return { ...state.finals, participants: resolveWorldMastersPlayers(state.finals.participantKeys) };
+    if (state.finals?.participantKeys && state.finals.completed) {
+        return { ...state.finals, participants: resolveWorldMastersPlayers(state.finals.participantKeys) };
+    }
+    if (state.finals?.participantKeys && resolveWorldMastersPlayers(state.finals.participantKeys).length === 32) {
+        return { ...state.finals, participants: resolveWorldMastersPlayers(state.finals.participantKeys) };
+    }
+
     const automatic = getWorldMastersAutomaticFinalistKeys();
-    let qualifierKeys = state.finalsQualifier?.completed ? state.finalsQualifier.qualifiedKeys : autoCompleteWorldMastersFinalsQualifier().map(getWorldMastersPlayerKey);
-    const selected = new Set([...automatic.worldSeriesKeys, ...automatic.oomKeys]);
-    qualifierKeys = qualifierKeys.filter(key => !selected.has(key)).slice(0, 4);
+    const worldSeriesKeys = completeWorldMastersFieldKeys(automatic.worldSeriesKeys, 24);
+    const selected = new Set(worldSeriesKeys);
+    const oomKeys = completeWorldMastersFieldKeys(automatic.oomKeys, 4, selected);
+    oomKeys.forEach(key => selected.add(key));
+
+    const preferredQualifierKeys = state.finalsQualifier?.completed
+        ? state.finalsQualifier.qualifiedKeys
+        : autoCompleteWorldMastersFinalsQualifier().map(getWorldMastersPlayerKey);
+    const qualifierKeys = completeWorldMastersFieldKeys(preferredQualifierKeys, 4, selected);
     qualifierKeys.forEach(key => selected.add(key));
-    const fallbackKeys = getWorldMastersTourCardPlayers().map(getWorldMastersPlayerKey).filter(key => !selected.has(key));
-    const participantKeys = [...automatic.worldSeriesKeys, ...automatic.oomKeys, ...qualifierKeys, ...fallbackKeys].slice(0, 32);
-    state.finals = { worldSeriesKeys: automatic.worldSeriesKeys, oomKeys: automatic.oomKeys, qualifierKeys, participantKeys, completed: false };
+
+    const participantKeys = completeWorldMastersFieldKeys(
+        [...worldSeriesKeys, ...oomKeys, ...qualifierKeys, ...getWorldMastersTourCardPlayers().map(getWorldMastersPlayerKey)],
+        32
+    );
+    state.finals = { worldSeriesKeys, oomKeys, qualifierKeys, participantKeys, completed: false };
     return { ...state.finals, participants: resolveWorldMastersPlayers(participantKeys) };
 }
 

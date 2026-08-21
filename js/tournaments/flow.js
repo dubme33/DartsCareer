@@ -19,8 +19,27 @@ function skipActiveTournament() {
             }
             // --- ZABEZPIECZENIE: Jeśli turniej już trwa (drabinka jest wygenerowana), to tylko ją pokazujemy i kontynuujemy grę! ---
             if (tournamentBracket && tournamentBracket.length > 1) {
-                showBracket();
-                return;
+                const isWorldMastersActiveTournament = typeof isWorldMastersTournament === 'function' && (
+                    isWorldMastersTournament(activeTournament) ||
+                    isWorldMastersFinalsTournament(activeTournament) ||
+                    isWorldMastersFinalsQualifierTournament(activeTournament)
+                );
+                const expectedOpeningRound = isWorldMastersActiveTournament && typeof getWorldMastersTournamentRound === 'function'
+                    ? getWorldMastersTournamentRound(activeTournament)
+                    : null;
+                const malformedOpeningWorldMastersDraw = expectedOpeningRound === tournamentRound && (
+                    tournamentBracket.length !== expectedOpeningRound || tournamentBracket.some(candidate => !candidate || candidate.isBye)
+                );
+
+                // Starsze zapisy mogły zachować niepełną drabinkę po emeryturze
+                // lokalnego uczestnika. Nie wznawiamy takiej drabinki — tworzymy ją
+                // ponownie z dostępnymi zastępcami.
+                if (!malformedOpeningWorldMastersDraw) {
+                    showBracket();
+                    return;
+                }
+                tournamentBracket = [];
+                if (activeTournament) activeTournament.simulationForm = null;
             }
 
             let tName = activeTournament.name;

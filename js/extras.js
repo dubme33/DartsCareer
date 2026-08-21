@@ -324,6 +324,8 @@ function initCareerChronicle() {
                             ? candidate.defaultTemplateIndex
                             : index
                     }));
+                    if (typeof applyKnownPlayerCorrections === 'function') applyKnownPlayerCorrections(pdcPlayers);
+                    if (typeof deduplicatePdcPlayers === 'function') deduplicatePdcPlayers();
                     normalizePlayerIds(pdcPlayers, player);
                     initPlayersForm();
                 }
@@ -361,6 +363,8 @@ function initCareerChronicle() {
                             });
                         }
                     });
+                    if (typeof applyKnownPlayerCorrections === 'function') applyKnownPlayerCorrections(pdcPlayers);
+                    if (typeof deduplicatePdcPlayers === 'function') deduplicatePdcPlayers();
                     normalizePlayerIds(pdcPlayers, player);
                 }
                 if (modData.tournamentDatabase) {

@@ -8,6 +8,10 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
     
     // --- SYSTEM ZAPISU I WCZYTYWANIA GRY ---
 
+        // Podczas migracji starego zapisu dwa wpisy tego samego zawodnika mogą mieć
+        // różne ID. Mapa pozwala nadal odtworzyć ich referencje w drabinkach i tabelach.
+        let pdcPlayerIdAliases = new Map();
+
         function getWorldCupPlayerSaveReference(candidate) {
             if (!candidate || typeof candidate !== 'object') return candidate;
 
@@ -119,7 +123,13 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
             if (!savedPlayer || savedPlayer.isBye) return savedPlayer;
 
             const allPlayers = [player, ...pdcPlayers];
-            const byId = allPlayers.find(candidate => samePlayer(candidate, savedPlayer));
+            const resolvedId = savedPlayer.id && pdcPlayerIdAliases.has(savedPlayer.id)
+                ? pdcPlayerIdAliases.get(savedPlayer.id)
+                : savedPlayer.id;
+            const playerReference = resolvedId && resolvedId !== savedPlayer.id
+                ? { ...savedPlayer, id: resolvedId }
+                : savedPlayer;
+            const byId = allPlayers.find(candidate => samePlayer(candidate, playerReference));
             if (byId) return byId;
 
             // Migracja zapisów sprzed wprowadzenia ID. W nowych zapisach działa wyłącznie ścieżka ID.
@@ -169,8 +179,66 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
             });
         }
 
+        function getPdcPlayerDuplicateKey(candidate) {
+            if (!candidate || candidate.isBye) return '';
+            const normalize = value => String(value || '')
+                .trim()
+                .replace(/\s+/g, ' ')
+                .toLocaleLowerCase('pl');
+            const name = normalize(candidate.name);
+            const country = normalize(candidate.country);
+            return name && country ? `${name}|${country}` : '';
+        }
+
+        function mergeDuplicatePdcPlayerData(keeper, duplicate) {
+            // Zachowujemy dane z głównego wpisu, ale uzupełniamy brakujące elementy
+            // (np. historię sezonu albo zdjęcie dodane przez mod).
+            ['historyPT', 'historyMain'].forEach(field => {
+                if (!isPlainObject(duplicate[field])) return;
+                if (!isPlainObject(keeper[field])) keeper[field] = {};
+                Object.entries(duplicate[field]).forEach(([key, value]) => {
+                    if (keeper[field][key] === undefined) keeper[field][key] = value;
+                });
+            });
+
+            Object.entries(duplicate).forEach(([key, value]) => {
+                if (keeper[key] === undefined || keeper[key] === null || keeper[key] === '') keeper[key] = value;
+            });
+        }
+
+        function deduplicatePdcPlayers() {
+            if (!Array.isArray(pdcPlayers)) return 0;
+
+            const playersByKey = new Map();
+            const uniquePlayers = [];
+            let removedCount = 0;
+
+            pdcPlayers.forEach(candidate => {
+                const key = getPdcPlayerDuplicateKey(candidate);
+                if (!key || !playersByKey.has(key)) {
+                    if (key) playersByKey.set(key, candidate);
+                    uniquePlayers.push(candidate);
+                    return;
+                }
+
+                const keeper = playersByKey.get(key);
+                mergeDuplicatePdcPlayerData(keeper, candidate);
+                if (candidate.id && keeper.id && candidate.id !== keeper.id) {
+                    pdcPlayerIdAliases.set(candidate.id, keeper.id);
+                }
+                removedCount++;
+            });
+
+            if (removedCount > 0) {
+                pdcPlayers.splice(0, pdcPlayers.length, ...uniquePlayers);
+            }
+            return removedCount;
+        }
+
         function mergeNewDefaultPlayersIntoSave() {
-            if (typeof defaultPdcPlayerTemplates === 'undefined' || !Array.isArray(defaultPdcPlayerTemplates)) return;
+            if (typeof defaultPdcPlayerTemplates === 'undefined' || !Array.isArray(defaultPdcPlayerTemplates)) {
+                return deduplicatePdcPlayers();
+            }
             removeDefaultDuplicatesFromModSave();
             const retiredPlayerKeys = new Set(typeof playerLifecycleState !== 'undefined' && Array.isArray(playerLifecycleState.retiredPlayerKeys)
                 ? playerLifecycleState.retiredPlayerKeys
@@ -192,6 +260,7 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
                 });
                 existingPlayers.add(key);
             });
+            return deduplicatePdcPlayers();
         }
 
         function migrateWorldCupCalendar() {
@@ -285,6 +354,7 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
                 if (!player.historyPT) player.historyPT = {};
                 if (!player.historyMain) player.historyMain = {};
 
+                pdcPlayerIdAliases = new Map();
                 pdcPlayers.length = 0;
                 gameState.pdcPlayers.forEach(candidate => {
                     if (!candidate.historyPT) candidate.historyPT = {};
@@ -294,6 +364,7 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
                 if (typeof restorePlayerLifecycleState === 'function') restorePlayerLifecycleState(gameState.playerLifecycleState);
                 mergeNewDefaultPlayersIntoSave();
                 if (typeof applyWorldCupNonRankingStatus === 'function') applyWorldCupNonRankingStatus(pdcPlayers);
+                if (typeof applyKnownPlayerCorrections === 'function') applyKnownPlayerCorrections([player, ...pdcPlayers]);
                 applyKnownPlayerBirthYears([player, ...pdcPlayers]);
                 normalizePlayerIds(pdcPlayers, player);
 

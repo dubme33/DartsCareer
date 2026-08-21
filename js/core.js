@@ -412,26 +412,26 @@
         function getTournamentSimulationProfile(tournament = activeTournament) {
             const name = (tournament?.name || '').toLowerCase();
             const profile = {
-                key: 'standard', ratingScale: 25, formSpread: 3, matchNoise: 1.5,
-                underdogHotChance: 0.05, hotRunMin: 3, hotRunRange: 3,
-                favoriteColdChance: 0.04, coldRunMin: 2, coldRunRange: 3, maxForm: 7
+                key: 'standard', ratingScale: 28, formSpread: 4, matchNoise: 2.2,
+                underdogHotChance: 0.09, hotRunMin: 3, hotRunRange: 4, underdogRank: 24,
+                favoriteColdChance: 0.06, coldRunMin: 2, coldRunRange: 3, favoriteRank: 12, maxForm: 9
             };
 
             // Krótsze turnieje są bardziej podatne na „dzień konia” zawodnika.
             if ((name.includes('players championship') || name.includes('pro players cup')) && !name.includes('final')) {
-                return { ...profile, key: 'floor', ratingScale: 30, formSpread: 5, matchNoise: 2.5, underdogHotChance: 0.10, hotRunMin: 4, hotRunRange: 4, favoriteColdChance: 0.08, coldRunMin: 3, coldRunRange: 3, maxForm: 10 };
+                return { ...profile, key: 'floor', ratingScale: 32, formSpread: 5.5, matchNoise: 3.1, underdogHotChance: 0.14, hotRunMin: 4, hotRunRange: 5, underdogRank: 20, favoriteColdChance: 0.10, coldRunMin: 3, coldRunRange: 3, favoriteRank: 16, maxForm: 11 };
             }
             if (name.includes('european tour') || name.includes('continental tour')) {
-                return { ...profile, key: 'european', ratingScale: 28, formSpread: 4, matchNoise: 2, underdogHotChance: 0.08, hotRunMin: 4, hotRunRange: 3, favoriteColdChance: 0.06, coldRunMin: 2, coldRunRange: 3, maxForm: 9 };
+                return { ...profile, key: 'european', ratingScale: 30, formSpread: 4.5, matchNoise: 2.7, underdogHotChance: 0.11, hotRunMin: 4, hotRunRange: 4, underdogRank: 24, favoriteColdChance: 0.08, coldRunMin: 3, coldRunRange: 3, favoriteRank: 14, maxForm: 10 };
             }
             if (name.includes('uk open') || name.includes('british open') || name.includes('european championship') || name.includes('continental championship')) {
-                return { ...profile, key: 'open', ratingScale: 27, formSpread: 4, matchNoise: 2, underdogHotChance: 0.07, hotRunMin: 3, hotRunRange: 3, favoriteColdChance: 0.05, coldRunMin: 2, coldRunRange: 3, maxForm: 8 };
+                return { ...profile, key: 'open', ratingScale: 30, formSpread: 4.5, matchNoise: 2.6, underdogHotChance: 0.10, hotRunMin: 3, hotRunRange: 4, underdogRank: 24, favoriteColdChance: 0.07, coldRunMin: 2, coldRunRange: 3, favoriteRank: 14, maxForm: 10 };
             }
             if (name.includes('global darts league') || name.includes('premier')) {
-                return { ...profile, key: 'league', ratingScale: 22, formSpread: 2, matchNoise: 1, underdogHotChance: 0.02, hotRunMin: 2, hotRunRange: 2, favoriteColdChance: 0.02, coldRunMin: 2, coldRunRange: 2, maxForm: 4 };
+                return { ...profile, key: 'league', ratingScale: 23, formSpread: 2.5, matchNoise: 1.2, underdogHotChance: 0.035, hotRunMin: 2, hotRunRange: 3, underdogRank: 18, favoriteColdChance: 0.03, coldRunMin: 2, coldRunRange: 2, favoriteRank: 8, maxForm: 5 };
             }
             if (name.includes('world darts championship') || name.includes('global darts championship') || name.includes('matchplay') || name.includes('grand prix') || name.includes('champion\'s slam') || name.includes('grand slam') || name.includes('finals')) {
-                return { ...profile, key: 'major', ratingScale: 23, formSpread: 2, matchNoise: 1, underdogHotChance: 0.03, hotRunMin: 2, hotRunRange: 2, favoriteColdChance: 0.03, coldRunMin: 2, coldRunRange: 2, maxForm: 5 };
+                return { ...profile, key: 'major', ratingScale: 25.5, formSpread: 3, matchNoise: 1.6, underdogHotChance: 0.055, hotRunMin: 3, hotRunRange: 3, underdogRank: 24, favoriteColdChance: 0.045, coldRunMin: 2, coldRunRange: 2, favoriteRank: 12, maxForm: 7 };
             }
             return profile;
         }
@@ -464,12 +464,13 @@
                 const rank = rankByKey.get(key) || rankedPlayers.length;
                 let modifier = (Math.random() + Math.random() - 1) * profile.formSpread;
 
-                // Zawodnicy spoza Top 30 częściej mogą zagrać turniej życia,
-                // a ścisła czołówka czasem trafia na słabszy weekend.
-                if (rank > 30 && Math.random() < profile.underdogHotChance) {
+                // Zawodnicy spoza rozstawionej czołówki częściej mogą zagrać turniej życia,
+                // a ścisła czołówka czasem trafia na słabszy weekend. Parametry zależą
+                // od rangi turnieju, aby Majory nie zamieniły się w loterię.
+                if (rank > profile.underdogRank && Math.random() < profile.underdogHotChance) {
                     modifier += profile.hotRunMin + (Math.random() * profile.hotRunRange);
                 }
-                if (rank <= 12 && Math.random() < profile.favoriteColdChance) {
+                if (rank <= profile.favoriteRank && Math.random() < profile.favoriteColdChance) {
                     modifier -= profile.coldRunMin + (Math.random() * profile.coldRunRange);
                 }
 

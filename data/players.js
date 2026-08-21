@@ -280,6 +280,25 @@ const pdcPlayers = [
 // Zawodnicy dopisani wyłącznie po to, aby utworzyć pełną pulę reprezentacji
 // Pucharu Narodów, nie mają karty PDC. Nie biorą więc udziału w indywidualnym
 // rankingu ani w turniejach rankingowych; pozostają dostępni dla reprezentacji.
+// Korekty danych, które obowiązują również zawodników podmienionych przez mod.
+// Pozwalają naprawić pojedynczy błąd w bazie bez wymuszania nowej wersji moda.
+const playerDatabaseCorrections = {
+    'adam leek': { country: 'Australia' },
+    'adam leeke': { country: 'Australia' }
+};
+
+function applyKnownPlayerCorrections(players) {
+    if (!Array.isArray(players)) return;
+    players.forEach(candidate => {
+        if (!candidate || candidate.isBye) return;
+        const name = String(candidate.name || '').trim().toLocaleLowerCase('pl');
+        const correction = playerDatabaseCorrections[name];
+        if (correction) Object.assign(candidate, correction);
+    });
+}
+
+applyKnownPlayerCorrections(pdcPlayers);
+
 const worldCupRosterStartIndex = pdcPlayers.findIndex(candidate => candidate.name === 'Jani Havis' && candidate.country === 'Finlandia');
 const worldCupNonRankingPlayerKeys = new Set(
     worldCupRosterStartIndex >= 0
