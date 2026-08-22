@@ -95,6 +95,12 @@ const checkoutGuide = {
                 if (round === 4) return { type: 'legs', legsToWin: 17 };
                 return { type: 'legs', legsToWin: 18 };
             }
+            if (name.includes("Grand Prix")) {
+                // World Grand Prix: all legs are best of five under the tournament's DIDO rules.
+                // Round 1: Bo3 sets; R2/QF: Bo5; SF: Bo9; Final: Bo11.
+                const setsToWin = round === 32 ? 2 : (round === 16 || round === 8) ? 3 : round === 4 ? 5 : 6;
+                return { type: 'sets', setsToWin, legsPerSet: 3 };
+            }
             if (name.includes("Grand Slam") || name.includes("Champion's Slam")) {
                 if (round === 32) return { type: 'legs', legsToWin: 5 };
                 if (round === 16) return { type: 'legs', legsToWin: 10 };

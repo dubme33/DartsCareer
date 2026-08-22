@@ -128,9 +128,13 @@
         }
 
         const AGE_DEVELOPMENT_PROFILES = Object.freeze({
-            young: { growthMultiplier: 1.65, declineMultiplier: 0.8 },
+            // AI prospects improve the fastest. Young career players still develop
+            // above the normal rate, but cannot outpace the simulated AI by training.
+            young: { growthMultiplier: 1.65, careerGrowthMultiplier: 1.25, declineMultiplier: 0.8 },
             prime: { growthMultiplier: 1, declineMultiplier: 1 },
-            veteran: { growthMultiplier: 0.45, declineMultiplier: 1.7 }
+            // Veterans should improve more slowly and decline a little faster,
+            // without causing established players to collapse after one season.
+            veteran: { growthMultiplier: 0.85, declineMultiplier: 1.1 }
         });
 
         function getAgeDevelopmentProfile(candidate, referenceDate = currentDate) {
@@ -145,8 +149,12 @@
             const numericChange = Number(change);
             if (!Number.isFinite(numericChange) || numericChange === 0) return 0;
             const profile = getAgeDevelopmentProfile(candidate, referenceDate);
+            const isCareerPlayer = typeof isCurrentPlayer === 'function' && isCurrentPlayer(candidate);
+            const growthMultiplier = isCareerPlayer && Number.isFinite(profile.careerGrowthMultiplier)
+                ? profile.careerGrowthMultiplier
+                : profile.growthMultiplier;
             return numericChange > 0
-                ? numericChange * profile.growthMultiplier
+                ? numericChange * growthMultiplier
                 : numericChange * profile.declineMultiplier;
         }
 

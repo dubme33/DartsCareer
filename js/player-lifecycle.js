@@ -299,7 +299,8 @@ function getNewgenStartingOverall() {
 
 function createAnnualNewgen(year, existingNames) {
     const overall = getNewgenStartingOverall();
-    const age = 17 + Math.floor(Math.random() * 6);
+    // New professionals can break through later too, not only as teenagers.
+    const age = 17 + Math.floor(Math.random() * 19); // 17–35 inclusive
     const scoring = Math.max(40, Math.min(99, overall + (Math.floor(Math.random() * 5) - 1)));
     const doubles = Math.max(40, Math.min(99, overall + (Math.floor(Math.random() * 5) - 3)));
     const name = createFictionalNewgenName(existingNames);
