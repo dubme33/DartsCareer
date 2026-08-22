@@ -1,7 +1,9 @@
 let playerLifecycleState = {
     lastProcessedYear: null,
     retiredPlayerKeys: [],
-    retiredPlayerNames: []
+    retiredPlayerNames: [],
+    retiredPlayerIds: [],
+    retiredTemplateIndexes: []
 };
 
 const PLAYER_LIFECYCLE_TRANSLATIONS = {
@@ -56,7 +58,7 @@ function trPlayerLifecycle(key, values = {}) {
 
 function ensurePlayerLifecycleState() {
     if (!playerLifecycleState || typeof playerLifecycleState !== 'object') {
-        playerLifecycleState = { lastProcessedYear: null, retiredPlayerKeys: [], retiredPlayerNames: [] };
+        playerLifecycleState = { lastProcessedYear: null, retiredPlayerKeys: [], retiredPlayerNames: [], retiredPlayerIds: [], retiredTemplateIndexes: [] };
     }
     if (!Array.isArray(playerLifecycleState.retiredPlayerKeys)) playerLifecycleState.retiredPlayerKeys = [];
     if (!Array.isArray(playerLifecycleState.retiredPlayerNames)) {
@@ -67,7 +69,15 @@ function ensurePlayerLifecycleState() {
     playerLifecycleState.retiredPlayerNames = [...new Set(playerLifecycleState.retiredPlayerNames
         .map(getLifecyclePlayerNameKey)
         .filter(Boolean))];
+    if (!Array.isArray(playerLifecycleState.retiredPlayerIds)) playerLifecycleState.retiredPlayerIds = [];
+    playerLifecycleState.retiredPlayerIds = [...new Set(playerLifecycleState.retiredPlayerIds
+        .filter(id => typeof id === 'string' && id.trim()))];
+    if (!Array.isArray(playerLifecycleState.retiredTemplateIndexes)) playerLifecycleState.retiredTemplateIndexes = [];
+    playerLifecycleState.retiredTemplateIndexes = [...new Set(playerLifecycleState.retiredTemplateIndexes
+        .map(Number)
+        .filter(index => Number.isInteger(index) && index >= 0))];
     if (!Number.isInteger(playerLifecycleState.lastProcessedYear)) playerLifecycleState.lastProcessedYear = null;
+    hydrateRetiredTemplateIndexes(playerLifecycleState);
     return playerLifecycleState;
 }
 
@@ -79,7 +89,13 @@ function restorePlayerLifecycleState(savedState) {
             ? [...new Set(savedState.retiredPlayerNames)]
             : (Array.isArray(savedState?.retiredPlayerKeys)
                 ? savedState.retiredPlayerKeys.map(key => getLifecyclePlayerNameKey(String(key).split('|')[0])).filter(Boolean)
-                : [])
+                : []),
+        retiredPlayerIds: Array.isArray(savedState?.retiredPlayerIds)
+            ? [...new Set(savedState.retiredPlayerIds)]
+            : [],
+        retiredTemplateIndexes: Array.isArray(savedState?.retiredTemplateIndexes)
+            ? [...new Set(savedState.retiredTemplateIndexes)]
+            : []
     };
     return ensurePlayerLifecycleState();
 }
@@ -93,13 +109,98 @@ function getLifecyclePlayerNameKey(candidate) {
     return String(name || '').trim().replace(/\s+/g, ' ').toLocaleLowerCase('pl');
 }
 
+function getLifecycleTemplateIndex(candidate) {
+    if (!candidate || candidate.isBye) return null;
+    if (Number.isInteger(candidate.defaultTemplateIndex) && candidate.defaultTemplateIndex >= 0) {
+        return candidate.defaultTemplateIndex;
+    }
+    if (typeof defaultPdcPlayerTemplates === 'undefined' || !Array.isArray(defaultPdcPlayerTemplates)) return null;
+
+    const candidateNames = [candidate.sourceName, candidate.name]
+        .map(getLifecyclePlayerNameKey)
+        .filter(Boolean);
+    if (!candidateNames.length) return null;
+    const candidateCountry = String(candidate.country || '').trim().toLocaleLowerCase('pl');
+    const matchingIndex = defaultPdcPlayerTemplates.findIndex(template => {
+        const sameName = candidateNames.includes(getLifecyclePlayerNameKey(template));
+        const templateCountry = String(template?.country || '').trim().toLocaleLowerCase('pl');
+        return sameName && (!candidateCountry || !templateCountry || candidateCountry === templateCountry);
+    });
+    return matchingIndex >= 0 ? matchingIndex : null;
+}
+
+function hydrateRetiredTemplateIndexes(state = playerLifecycleState) {
+    if (!state || typeof state !== 'object' || typeof pdcPlayers === 'undefined') return [];
+    const retiredKeys = new Set(Array.isArray(state.retiredPlayerKeys) ? state.retiredPlayerKeys : []);
+    const retiredNames = new Set((Array.isArray(state.retiredPlayerNames) ? state.retiredPlayerNames : [])
+        .map(getLifecyclePlayerNameKey)
+        .filter(Boolean));
+    if (!retiredKeys.size && !retiredNames.size) return state.retiredTemplateIndexes || [];
+
+    const matchesRetiredIdentity = candidate => {
+        if (!candidate || candidate.isBye) return false;
+        const templateIndex = getLifecycleTemplateIndex(candidate);
+        const sourceTemplate = Number.isInteger(templateIndex) && Array.isArray(defaultPdcPlayerTemplates)
+            ? defaultPdcPlayerTemplates[templateIndex]
+            : null;
+        const identities = [candidate, sourceTemplate].filter(Boolean);
+        const keys = identities.flatMap(identity => [identity.name, identity.sourceName]
+            .filter(Boolean)
+            .map(name => `${name}|${identity.country || ''}`));
+        const names = identities.flatMap(identity => [identity.name, identity.sourceName].map(getLifecyclePlayerNameKey));
+        return keys.some(key => retiredKeys.has(key)) || names.some(name => retiredNames.has(name));
+    };
+    const indexes = new Set(Array.isArray(state.retiredTemplateIndexes) ? state.retiredTemplateIndexes : []);
+    const ids = new Set(Array.isArray(state.retiredPlayerIds) ? state.retiredPlayerIds : []);
+    const candidates = [
+        ...(Array.isArray(defaultPdcPlayerTemplates) ? defaultPdcPlayerTemplates : []),
+        ...(Array.isArray(pdcPlayers) ? pdcPlayers : [])
+    ];
+    candidates.filter(matchesRetiredIdentity).forEach(candidate => {
+        const index = getLifecycleTemplateIndex(candidate);
+        if (Number.isInteger(index) && index >= 0) indexes.add(index);
+        if (typeof candidate.id === 'string' && candidate.id.trim()) ids.add(candidate.id);
+    });
+    state.retiredTemplateIndexes = [...indexes];
+    state.retiredPlayerIds = [...ids];
+    return state.retiredTemplateIndexes;
+}
+
+function isRetiredPlayer(candidate, templateIndex = getLifecycleTemplateIndex(candidate), state = ensurePlayerLifecycleState()) {
+    if (!candidate || candidate.isBye) return false;
+    const retiredKeys = new Set(state.retiredPlayerKeys);
+    const retiredNames = new Set(state.retiredPlayerNames);
+    const retiredIds = new Set(state.retiredPlayerIds);
+    const retiredTemplateIndexes = new Set(state.retiredTemplateIndexes);
+    const keys = [candidate.name, candidate.sourceName]
+        .filter(Boolean)
+        .map(name => `${name}|${candidate.country || ''}`);
+    const names = [candidate.name, candidate.sourceName].map(getLifecyclePlayerNameKey);
+    return (typeof candidate.id === 'string' && retiredIds.has(candidate.id))
+        || (Number.isInteger(templateIndex) && retiredTemplateIndexes.has(templateIndex))
+        || keys.some(key => retiredKeys.has(key))
+        || names.some(name => retiredNames.has(name));
+}
+
+function removeRetiredPlayersFromPool(players = (typeof pdcPlayers !== 'undefined' ? pdcPlayers : null)) {
+    if (!Array.isArray(players)) return 0;
+    const initialCount = players.length;
+    const state = ensurePlayerLifecycleState();
+    const activePlayers = players.filter(candidate => candidate && !candidate.isBye && !isRetiredPlayer(candidate, undefined, state));
+    if (activePlayers.length !== players.length) players.splice(0, players.length, ...activePlayers);
+    return initialCount - activePlayers.length;
+}
+
 function getRetirementChance(age) {
     if (!Number.isInteger(age) || age < 46) return 0;
     return Math.min(100, (age - 45) * 2.5);
 }
 
 function getAnnualDecline(age) {
-    if (!Number.isInteger(age) || age <= 45) return 0;
+    if (!Number.isInteger(age) || age <= 40) return 0;
+    // Weterani zaczynają tracić część poziomu już po czterdziestce.
+    // Po 46. roku życia spadek wyraźnie przyspiesza.
+    if (age <= 45) return 0.5;
     return 1 + Math.floor((age - 46) / 3);
 }
 
@@ -111,16 +212,20 @@ function getPlayerLifecycleRankings() {
 }
 
 function applyAnnualAgeDecline(candidate, age) {
-    const decline = getAnnualDecline(age);
+    const baseDecline = getAnnualDecline(age);
+    const decline = typeof scalePlayerDevelopmentChange === 'function'
+        ? -scalePlayerDevelopmentChange(candidate, -baseDecline)
+        : baseDecline;
     if (!decline) return 0;
 
-    const clampRating = value => Math.max(40, Math.min(99, Math.round(value)));
+    const clampBaseRating = value => Math.max(40, Math.min(99, Number(value) || 40));
+    const clampDisplayedRating = value => Math.max(40, Math.min(99, Math.round(Number(value) || 40)));
     const baseOvr = Number(candidate.baseOvr ?? candidate.ovr ?? candidate.overall) || 55;
     const baseScoring = Number(candidate.baseScoring ?? candidate.scoring) || baseOvr;
     const baseDoubles = Number(candidate.baseDoubles ?? candidate.doubles) || baseOvr;
-    candidate.baseOvr = clampRating(baseOvr - decline);
-    candidate.baseScoring = clampRating(baseScoring - decline);
-    candidate.baseDoubles = clampRating(baseDoubles - decline);
+    candidate.baseOvr = clampBaseRating(baseOvr - decline);
+    candidate.baseScoring = clampBaseRating(baseScoring - decline);
+    candidate.baseDoubles = clampBaseRating(baseDoubles - decline);
     candidate.form = Number.isFinite(Number(candidate.form)) ? Number(candidate.form) : 0;
 
     if (typeof applyForm === 'function') {
@@ -130,10 +235,26 @@ function applyAnnualAgeDecline(candidate, age) {
         candidate.scoring = candidate.baseScoring + candidate.form;
         candidate.doubles = candidate.baseDoubles + candidate.form;
     }
-    candidate.ovr = clampRating(candidate.ovr);
-    candidate.scoring = clampRating(candidate.scoring);
-    candidate.doubles = clampRating(candidate.doubles);
+    candidate.ovr = clampDisplayedRating(candidate.ovr);
+    candidate.scoring = clampDisplayedRating(candidate.scoring);
+    candidate.doubles = clampDisplayedRating(candidate.doubles);
     candidate.overall = candidate.ovr;
+    return decline;
+}
+
+function applyCareerAnnualAgeDecline(age) {
+    if (!player || player.isBye) return 0;
+    const baseDecline = getAnnualDecline(age);
+    const decline = typeof scalePlayerDevelopmentChange === 'function'
+        ? -scalePlayerDevelopmentChange(player, -baseDecline)
+        : baseDecline;
+    if (!decline) return 0;
+
+    const clampStat = value => Math.max(40, Math.min(100, Number(value) || 40));
+    player.scoring = clampStat((Number(player.scoring) || 55) - decline);
+    player.doubles = clampStat((Number(player.doubles) || 55) - decline);
+    player.overall = Math.round((player.scoring * 0.6) + (player.doubles * 0.4));
+    player.ovr = player.overall;
     return decline;
 }
 
@@ -196,6 +317,7 @@ function createAnnualNewgen(year, existingNames) {
         prizeMoney: 0,
         proTourPrizeMoney: 0,
         pcPrizeMoney: 0,
+        europeanTourPrizeMoney: 0,
         baseOvr: overall,
         baseScoring: scoring,
         baseDoubles: doubles,
@@ -253,10 +375,17 @@ function processAnnualPlayerLifecycle(completedYear) {
                 rank: rankingByPlayer.get(candidate.id || getLifecyclePlayerKey(candidate)) || null
             });
             retiredIds.add(candidate.id);
+            if (typeof candidate.id === 'string' && candidate.id.trim() && !state.retiredPlayerIds.includes(candidate.id)) {
+                state.retiredPlayerIds.push(candidate.id);
+            }
             const key = getLifecyclePlayerKey(candidate);
             if (!state.retiredPlayerKeys.includes(key)) state.retiredPlayerKeys.push(key);
             const nameKey = getLifecyclePlayerNameKey(candidate);
             if (nameKey && !state.retiredPlayerNames.includes(nameKey)) state.retiredPlayerNames.push(nameKey);
+            const templateIndex = getLifecycleTemplateIndex(candidate);
+            if (Number.isInteger(templateIndex) && !state.retiredTemplateIndexes.includes(templateIndex)) {
+                state.retiredTemplateIndexes.push(templateIndex);
+            }
             return;
         }
         if (age !== null) applyAnnualAgeDecline(candidate, age);
@@ -267,6 +396,8 @@ function processAnnualPlayerLifecycle(completedYear) {
     if (player && Array.isArray(player.activeRivalIds) && retiredIds.size) {
         player.activeRivalIds = player.activeRivalIds.filter(id => !retiredIds.has(id));
     }
+    const careerPlayerAge = Number.isInteger(player?.birthYear) ? newSeasonYear - player.birthYear : null;
+    if (careerPlayerAge !== null) applyCareerAnnualAgeDecline(careerPlayerAge);
 
     const newgenCount = Math.max(2 + Math.floor(Math.random() * 3), retirements.length);
     const existingNames = new Set([...pdcPlayers, player].filter(Boolean).map(candidate => candidate.name));

@@ -62,6 +62,59 @@
         <div class="changelog-box">
             <h3>📢 What's New / Changelog</h3>
 
+            <!-- UPDATE V1.2.4 -->
+            <div class="changelog-version-badge">v1.2.4 · Deeper Career, Better Darts</div>
+
+            <div class="changelog-grid">
+                <div class="cl-item">
+                    <span class="cl-tag tweak">Career Balance</span>
+                    <span class="cl-title">📈 Slower, Capped Progression</span>
+                    <p class="cl-desc">Random events and training now produce steadier growth. Training costs more stamina, gives less progress, is limited to two sessions per week, and every stat is capped at 100. Age now matters too: under-25s develop faster, 25–40s progress normally, and 41+ players improve more slowly while declining faster.</p>
+                </div>
+
+                <div class="cl-item">
+                    <span class="cl-tag feature">Major Formats</span>
+                    <span class="cl-title">🏆 Authentic Grand Slam & World Championship Rules</span>
+                    <p class="cl-desc">The Grand Slam now uses sixteen groups of three before a 16-player knockout, while the World Championship applies its deciding-set, win-by-two and sudden-death rules from round one.</p>
+                </div>
+
+                <div class="cl-item">
+                    <span class="cl-tag feature">Rankings</span>
+                    <span class="cl-title">💶 European Tour Order of Merit</span>
+                    <p class="cl-desc">European Championship qualification now comes from a season-long European Tour Order of Merit. The ProTour ranking has also been corrected to use a rolling 52-week window.</p>
+                </div>
+
+                <div class="cl-item">
+                    <span class="cl-tag tweak">AI & Simulation</span>
+                    <span class="cl-title">🎯 More Volatile, More Human Darts</span>
+                    <p class="cl-desc">AI players can produce exceptional 110+ averages, including capable underdogs on a great day. Players Championship and European Tour events now create more believable upsets, hot streaks and off-days, with more natural throw timing.</p>
+                </div>
+
+                <div class="cl-item">
+                    <span class="cl-tag tweak">Players Championship</span>
+                    <span class="cl-title">🚫 Top Players Can Skip Floor Events</span>
+                    <p class="cl-desc">Top-16 AI players now occasionally withdraw from Players Championship events, allowing the next eligible players in the Order of Merit to take their places.</p>
+                </div>
+
+                <div class="cl-item">
+                    <span class="cl-tag fix">World Cup</span>
+                    <span class="cl-title">🌍 Fairer Draws & Real Teams</span>
+                    <p class="cl-desc">World Cup seeding now produces balanced bracket halves. The database also adds Shane Sawyer for the Bahamas alongside Rashad Sweeting, while preserving World Cup-only eligibility.</p>
+                </div>
+
+                <div class="cl-item">
+                    <span class="cl-tag fix">Database</span>
+                    <span class="cl-title">🪪 Safer Real-Name Careers</span>
+                    <p class="cl-desc">Starting a career as a real player can no longer create an AI duplicate. Corrected player nationalities and identity mappings also apply consistently with or without a real-names mod.</p>
+                </div>
+
+                <div class="cl-item">
+                    <span class="cl-tag fix">Save System</span>
+                    <span class="cl-title">👋 Retirement-Safe Mods & Draws</span>
+                    <p class="cl-desc">Retired AI players cannot be restored by a mod or a saved draw. Older saves are migrated safely, replacing unavailable entrants before they can generate NaN averages or invalid 6–0 results.</p>
+                </div>
+            </div>
+
             <!-- AKTUALIZACJA V1.2.3 -->
             <div class="changelog-version-badge">v1.2.3 · Smarter Tours & Career Logic</div>
 
@@ -786,6 +839,7 @@
             <button id="btn-rank-main" class="action-btn green" style="flex: 1; min-width: 130px; font-size: 12px; padding: 10px; margin-top: 0;" onclick="showPdcRankings('main')">Główny Ranking</button>
             <button id="btn-rank-pt" class="action-btn" style="flex: 1; min-width: 130px; font-size: 12px; padding: 10px; background: #34495e; margin-top: 0;" onclick="showPdcRankings('protour')">Ranking Pro Series</button>
             <button id="btn-rank-pc" class="action-btn" style="flex: 1; min-width: 130px; font-size: 12px; padding: 10px; background: #34495e; margin-top: 0;" onclick="showPdcRankings('pc')">Ranking Players Cup</button>
+            <button id="btn-rank-et" class="action-btn" style="flex: 1; min-width: 150px; font-size: 12px; padding: 10px; background: #34495e; margin-top: 0;" onclick="showPdcRankings('europeanTour')">European Tour OOM</button>
             <button id="btn-rank-gdl" class="action-btn" style="flex: 1; min-width: 130px; font-size: 12px; padding: 10px; background: #8e44ad; margin-top: 0;" onclick="showPdcRankings('gdl')">Tabela GDL</button>
             <button id="btn-rank-world-masters" class="action-btn" style="flex: 1; min-width: 150px; font-size: 12px; padding: 10px; background: #8e44ad; margin-top: 0;" onclick="showPdcRankings('worldMasters')">Tabela Global Masters</button>
         </div>
@@ -997,7 +1051,8 @@
 <!-- EKRAN TRENINGU -->
     <main id="screen-training" class="screen">
         <h2 id="t-train-title">🎯 Baza Treningowa</h2>
-        <p id="t-train-desc" style="text-align: center; color: #bdc3c7; margin-bottom: 25px;">Każda sesja treningowa przesuwa kalendarz o 1 dzień. Posiadany sprzęt przyspiesza postęp!</p>
+        <p id="t-train-desc" style="text-align: center; color: #bdc3c7; margin-bottom: 8px;">Każda sesja treningowa przesuwa kalendarz o 1 dzień. Posiadany sprzęt przyspiesza postęp!</p>
+        <p id="train-weekly-limit" style="text-align: center; color: var(--accent-yellow); margin: 0 0 25px; font-size: 14px;"></p>
         
         <div style="display: flex; gap: 20px; flex-wrap: wrap; justify-content: center;">
             <!-- Trening Scoringu -->
@@ -1033,7 +1088,7 @@
     </main>
     <!-- STOPKA AUTORSKA -->
     <footer style="width: 100%; text-align: center; padding: 25px 15px; margin-top: auto; color: #7f8c8d; font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 2px;">
-        <div style="margin-bottom: 5px; color: #bdc3c7;">V. 1.2.3</div>
+        <div style="margin-bottom: 5px; color: #bdc3c7;">V. 1.2.4</div>
         powered by dubme<br>
         <a href="mailto:dartscareer@gmail.com" style="color: #bdc3c7; text-decoration: none; text-transform: lowercase; display: inline-block; margin-top: 5px;">dartscareer@gmail.com</a>
     </footer>
@@ -1047,6 +1102,7 @@
     <script src="data/interviews.js"></script>
     <script src="data/random-events.js"></script>
     <script src="js/core.js"></script>
+    <script src="js/european-tour.js"></script>
     <script src="js/i18n.js"></script>
     <script src="js/player-lifecycle.js"></script>
     <script src="js/career.js"></script>
@@ -1055,6 +1111,7 @@
     <script src="js/tournaments/rules.js"></script>
     <script src="js/match/intro.js"></script>
     <script src="js/tournaments/rewards.js"></script>
+    <script src="js/grand-slam.js"></script>
     <script src="js/tournaments/flow.js"></script>
     <script src="js/world-cup.js"></script>
     <script src="js/continental-qualifiers.js"></script>

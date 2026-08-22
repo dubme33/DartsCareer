@@ -132,7 +132,7 @@ function startMatch(vsAI) {
             } else {
                 document.getElementById('score-col-player').classList.toggle('active-turn', currentMatch.turn === 'p1'); document.getElementById('score-col-ai').classList.toggle('active-turn', currentMatch.turn === 'p2');
                 document.getElementById('player-controls').style.opacity = "0.5"; document.getElementById('throw-btn').disabled = true;
-                window.aiTimeout = setTimeout(aiTurn, 1000);
+                window.aiTimeout = setTimeout(aiTurn, 1200);
             }
         }
 
@@ -212,6 +212,23 @@ function startMatch(vsAI) {
 
             // Przechodzimy do rozstrzygnięcia
             if (currentMatch.isTournament && activeTournament) {
+                if (typeof isGrandSlamCareerGroupMatch === 'function' && isGrandSlamCareerGroupMatch(currentMatch)) {
+                    const grandSlamOutcome = finishGrandSlamCareerGroupMatch(isP1Winner, currentMatch);
+                    currentMatch = null;
+                    if (typeof updateHub === 'function') updateHub();
+                    showScreen('screen-hub');
+
+                    if (grandSlamOutcome?.phase === 'knockout') {
+                        alert(grandSlamOutcome.playerAdvanced
+                            ? 'Wygrywasz swoją grupę Grand Slam i awansujesz do Last 16!'
+                            : 'Nie wygrywasz swojej grupy Grand Slam. Faza pucharowa będzie kontynuowana przez AI.');
+                        showBracket();
+                    } else {
+                        showGrandSlamGroups();
+                    }
+                    saveGame(true);
+                    return;
+                }
                 const specialTournamentOutcome = advanceTournament(isP1Winner);
 
                 if (specialTournamentOutcome === true) {

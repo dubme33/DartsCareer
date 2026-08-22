@@ -148,6 +148,12 @@ const WORLD_CUP_PRIZES = {
     groupThird: 5000
 };
 
+const WORLD_CUP_KNOCKOUT_DRAW_VERSION = 2;
+const WORLD_CUP_KNOCKOUT_SEED_ORDER = [
+    [1, 16], [8, 9], [4, 13], [5, 12],
+    [2, 15], [7, 10], [3, 14], [6, 11]
+];
+
 function isWorldCupTournament(tournament = activeTournament) {
     return Boolean(tournament && (tournament.specialType === 'worldCup' ||
         tournament.name === WORLD_CUP_TOURNAMENT_NAME || tournament.name === WORLD_CUP_LEGACY_NAME));
@@ -477,7 +483,7 @@ function buildWorldCupState() {
     const uniqueTeams = [...new Map(allTeams.map(team => [team.id, team])).values()];
 
     return {
-        version: 4,
+        version: 5,
         qualifications: {
             automaticTeamIds: automaticTeams.map(team => team.id),
             events
@@ -636,26 +642,64 @@ function getWorldCupSeasonResultStage(stage) {
     return stageKey ? getWorldCupPayoutLabel(stageKey) : storedStage;
 }
 
+function getWorldCupOpeningKnockoutContenders() {
+    if (!worldCupState || !Array.isArray(worldCupState.groups)) return null;
+
+    const contendersBySeed = new Map();
+    worldCupState.directSeeds.map(getWorldCupTeam).filter(Boolean).forEach((team, index) => {
+        const seed = Number.isInteger(Number(team.seed)) ? Number(team.seed) : index + 1;
+        contendersBySeed.set(seed, team);
+    });
+
+    worldCupState.groups.forEach((group, index) => {
+        const standings = group.standings?.length ? group.standings : getWorldCupGroupStandings(group);
+        const winner = standings[0] ? getWorldCupTeam(standings[0].teamId) : null;
+        const seededTeam = getWorldCupTeam(group.teamIds?.[0]);
+        const seed = Number.isInteger(Number(seededTeam?.seed)) ? Number(seededTeam.seed) : index + 5;
+        if (winner) contendersBySeed.set(seed, winner);
+    });
+
+    return contendersBySeed.size === 16 ? contendersBySeed : null;
+}
+
+function buildWorldCupOpeningKnockoutMatches() {
+    const contendersBySeed = getWorldCupOpeningKnockoutContenders();
+    if (!contendersBySeed) return [];
+
+    const matches = WORLD_CUP_KNOCKOUT_SEED_ORDER.map(([firstSeed, secondSeed]) => {
+        const firstTeam = contendersBySeed.get(firstSeed);
+        const secondTeam = contendersBySeed.get(secondSeed);
+        return firstTeam && secondTeam ? createWorldCupMatch(firstTeam, secondTeam, 'last16') : null;
+    });
+
+    return matches.every(Boolean) ? matches : [];
+}
+
+function repairWorldCupOpeningKnockoutDraw() {
+    const knockout = worldCupState?.knockout;
+    if (!knockout || knockout.round !== 16 || knockout.drawVersion === WORLD_CUP_KNOCKOUT_DRAW_VERSION) return false;
+    if (knockout.matches?.some(match => match.played || match.winnerId)) return false;
+
+    const matches = buildWorldCupOpeningKnockoutMatches();
+    if (matches.length !== 8) return false;
+
+    worldCupState.knockout = { round: 16, matches, drawVersion: WORLD_CUP_KNOCKOUT_DRAW_VERSION };
+    worldCupState.pendingMatchId = null;
+    return true;
+}
+
 function completeWorldCupGroupStage() {
-    const groupWinners = [];
     worldCupState.groups.forEach(group => {
         const standings = getWorldCupGroupStandings(group);
         group.standings = standings;
-        groupWinners.push(standings[0].teamId);
         awardWorldCupTeamPrize(standings[1].teamId, WORLD_CUP_PRIZES.groupSecond, 'groupSecond');
         awardWorldCupTeamPrize(standings[2].teamId, WORLD_CUP_PRIZES.groupThird, 'groupThird');
     });
 
-    const directSeeds = worldCupState.directSeeds.map(getWorldCupTeam);
-    const winners = groupWinners.map(getWorldCupTeam);
-    const matches = [];
-    directSeeds.forEach((team, index) => matches.push(createWorldCupMatch(team, winners[index], 'last16')));
-    for (let index = 4; index < winners.length; index += 2) {
-        matches.push(createWorldCupMatch(winners[index], winners[index + 1], 'last16'));
-    }
+    const matches = buildWorldCupOpeningKnockoutMatches();
 
     worldCupState.phase = 'knockout';
-    worldCupState.knockout = { round: 16, matches };
+    worldCupState.knockout = { round: 16, matches, drawVersion: WORLD_CUP_KNOCKOUT_DRAW_VERSION };
 }
 
 function archiveWorldCupKnockoutRound(round) {
@@ -1105,7 +1149,8 @@ function startWorldCupTournament() {
     const shouldCreateState = !worldCupState || worldCupState.completed;
     if (shouldCreateState) worldCupState = buildWorldCupState();
     const rostersRepaired = repairWorldCupTeamRosters();
-    if (shouldCreateState || rostersRepaired) {
+    const knockoutDrawRepaired = repairWorldCupOpeningKnockoutDraw();
+    if (shouldCreateState || rostersRepaired || knockoutDrawRepaired) {
         sendWorldCupSelectionEmail();
         if (typeof saveGame === 'function') saveGame(true);
     }
@@ -1126,7 +1171,8 @@ function startWorldCupQualifiers() {
     const shouldCreateState = !worldCupState || worldCupState.completed;
     if (shouldCreateState) worldCupState = buildWorldCupState();
     const rostersRepaired = repairWorldCupTeamRosters();
-    if (shouldCreateState || rostersRepaired) {
+    const knockoutDrawRepaired = repairWorldCupOpeningKnockoutDraw();
+    if (shouldCreateState || rostersRepaired || knockoutDrawRepaired) {
         sendWorldCupSelectionEmail();
         if (typeof saveGame === 'function') saveGame(true);
     }

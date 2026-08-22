@@ -127,12 +127,94 @@
             return date.getFullYear() - birthYear;
         }
 
+        const AGE_DEVELOPMENT_PROFILES = Object.freeze({
+            young: { growthMultiplier: 1.65, declineMultiplier: 0.8 },
+            prime: { growthMultiplier: 1, declineMultiplier: 1 },
+            veteran: { growthMultiplier: 0.45, declineMultiplier: 1.7 }
+        });
+
+        function getAgeDevelopmentProfile(candidate, referenceDate = currentDate) {
+            const age = getPlayerAge(candidate, referenceDate);
+            if (!Number.isInteger(age)) return AGE_DEVELOPMENT_PROFILES.prime;
+            if (age < 25) return AGE_DEVELOPMENT_PROFILES.young;
+            if (age >= 41) return AGE_DEVELOPMENT_PROFILES.veteran;
+            return AGE_DEVELOPMENT_PROFILES.prime;
+        }
+
+        function scalePlayerDevelopmentChange(candidate, change, referenceDate = currentDate) {
+            const numericChange = Number(change);
+            if (!Number.isFinite(numericChange) || numericChange === 0) return 0;
+            const profile = getAgeDevelopmentProfile(candidate, referenceDate);
+            return numericChange > 0
+                ? numericChange * profile.growthMultiplier
+                : numericChange * profile.declineMultiplier;
+        }
+
         function samePlayer(first, second) {
             return Boolean(first && second && first.id && second.id && first.id === second.id);
         }
 
+        const playerNameAliases = Object.freeze({
+            // W starszych zapisach nazwisko Sebastiana Białeckiego było zapisane z literówką.
+            'sebastian bielicki': 'sebastian bialecki'
+        });
+
+        function normalizePlayerIdentityPart(value) {
+            return String(value || '')
+                .trim()
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .replace(/ł/gi, 'l')
+                .replace(/\s+/g, ' ')
+                .toLocaleLowerCase('pl');
+        }
+
+        function getCanonicalPlayerIdentityKey(candidate) {
+            if (!candidate || candidate.isBye) return '';
+            // Mod może podmienić nazwę wyświetlaną, zachowując sourceName jako
+            // stabilne powiązanie z zawodnikiem z bazy podstawowej.
+            const rawName = normalizePlayerIdentityPart(candidate.sourceName || candidate.name);
+            const name = playerNameAliases[rawName] || rawName;
+            const country = normalizePlayerIdentityPart(candidate.country);
+            return name && country ? `${name}|${country}` : '';
+        }
+
+        function isCareerPlayerDuplicate(candidate, careerPlayer = player) {
+            if (!candidate || !careerPlayer || candidate.isBye || careerPlayer.isBye) return false;
+            if (samePlayer(candidate, careerPlayer)) return true;
+            const candidateKey = getCanonicalPlayerIdentityKey(candidate);
+            const careerKey = getCanonicalPlayerIdentityKey(careerPlayer);
+            return Boolean(candidateKey && careerKey && candidateKey === careerKey);
+        }
+
+        function removeCareerPlayerFromAiPool() {
+            if (!Array.isArray(pdcPlayers) || !player) return 0;
+            const initialCount = pdcPlayers.length;
+            const remainingPlayers = pdcPlayers.filter(candidate => !isCareerPlayerDuplicate(candidate));
+            if (remainingPlayers.length !== initialCount) {
+                pdcPlayers.splice(0, pdcPlayers.length, ...remainingPlayers);
+            }
+            return initialCount - remainingPlayers.length;
+        }
+
+        function repairCareerTournamentBracket(bracket) {
+            if (!Array.isArray(bracket)) return bracket;
+
+            let careerPlayerIncluded = false;
+            return bracket.map(candidate => {
+                if (!isCareerPlayerDuplicate(candidate)) return candidate;
+                if (!careerPlayerIncluded) {
+                    careerPlayerIncluded = true;
+                    return player;
+                }
+                return { name: '(BYE)', isBye: true, country: 'Brak', ovr: 0, overall: 0 };
+            });
+        }
+
         function isCurrentPlayer(candidate) {
-            return samePlayer(candidate, player);
+            // ID jest podstawowym identyfikatorem, ale stare zapisy mogły mieć
+            // własny wpis kariery i wpis AI tej samej osoby pod różnymi ID.
+            return isCareerPlayerDuplicate(candidate);
         }
 
         function renderOpponentOptions() {
@@ -143,7 +225,7 @@
             pdcPlayers.forEach((candidate, index) => {
                 const option = document.createElement('option');
                 option.value = index;
-                option.textContent = `${candidate.name} (OVR: ${candidate.ovr})`;
+                option.textContent = `${candidate.name} (OVR: ${getDisplayedOvr(candidate)})`;
                 opponentSelect.appendChild(option);
             });
         }
@@ -335,11 +417,12 @@
         function initPlayersForm() {
             normalizePlayerIds(pdcPlayers, player);
             pdcPlayers.forEach(p => {
+                enforcePlayerRatingLimits(p);
                 p.baseOvr = p.ovr;
                 p.baseScoring = p.scoring;
                 p.baseDoubles = p.doubles;
                 p.form = Math.floor(Math.random() * 5) - 2; 
-                // NOWOŚĆ: Historia dla 1-rocznego PT i 2-letniego OOM
+                // Historia ProTour (52 tygodnie) i 2-letniego głównego OOM.
                 p.historyPT = {}; 
                 p.historyMain = {};
                 applyForm(p);
@@ -348,9 +431,10 @@
         }
 
         function applyForm(p) {
-            p.ovr = p.baseOvr + p.form;
-            p.scoring = p.baseScoring + p.form;
-            p.doubles = p.baseDoubles + p.form;
+            const form = Number.isFinite(Number(p.form)) ? Math.round(Number(p.form)) : 0;
+            p.ovr = clamp(Math.round(p.baseOvr) + form, 40, 99);
+            p.scoring = clamp(Math.round(p.baseScoring) + form, 40, 100);
+            p.doubles = clamp(Math.round(p.baseDoubles) + form, 40, 100);
         }
 
         function updateAllPlayersForm() {
@@ -381,6 +465,27 @@
             return Math.round(isCurrentPlayer(p) ? player.overall : p.ovr);
         }
 
+        function enforcePlayerRatingLimits(candidate) {
+            if (!candidate || candidate.isBye) return;
+
+            const clampRating = (value, min, max, fallback) => {
+                const numericValue = Number(value);
+                return Number.isFinite(numericValue)
+                    ? clamp(Math.round(numericValue), min, max)
+                    : fallback;
+            };
+
+            const overall = clampRating(candidate.ovr ?? candidate.overall, 40, 99, 55);
+            candidate.ovr = overall;
+            if (Object.prototype.hasOwnProperty.call(candidate, 'overall')) candidate.overall = overall;
+            candidate.scoring = clampRating(candidate.scoring, 40, 100, overall);
+            candidate.doubles = clampRating(candidate.doubles, 40, 100, overall);
+
+            if (Object.prototype.hasOwnProperty.call(candidate, 'baseOvr')) candidate.baseOvr = clampRating(candidate.baseOvr, 40, 99, overall);
+            if (Object.prototype.hasOwnProperty.call(candidate, 'baseScoring')) candidate.baseScoring = clampRating(candidate.baseScoring, 40, 100, candidate.scoring);
+            if (Object.prototype.hasOwnProperty.call(candidate, 'baseDoubles')) candidate.baseDoubles = clampRating(candidate.baseDoubles, 40, 100, candidate.doubles);
+        }
+
         function ensureBaseRatings(p) {
             if (typeof p.baseOvr !== 'number') p.baseOvr = p.ovr;
             if (typeof p.baseScoring !== 'number') p.baseScoring = p.scoring;
@@ -389,23 +494,24 @@
 
         function changeTournamentOverall(p, delta) {
             if (!p || !Number.isFinite(delta)) return;
+            const ageAdjustedDelta = scalePlayerDevelopmentChange(p, delta);
 
             if (isCurrentPlayer(p)) {
                 const previous = player.overall;
-                player.overall = clamp(previous + delta, 45, 99);
+                player.overall = clamp(previous + ageAdjustedDelta, 45, 99);
                 const appliedDelta = player.overall - previous;
                 player.ovr = player.overall;
                 player.scoring = clamp(player.scoring + appliedDelta, 45, 100);
-                player.doubles = clamp(player.doubles + appliedDelta, 40, 99);
+                player.doubles = clamp(player.doubles + appliedDelta, 40, 100);
                 return;
             }
 
             ensureBaseRatings(p);
             const previous = p.baseOvr;
-            p.baseOvr = clamp(previous + delta, 45, 99);
+            p.baseOvr = clamp(previous + ageAdjustedDelta, 45, 99);
             const appliedDelta = p.baseOvr - previous;
             p.baseScoring = clamp(p.baseScoring + appliedDelta, 45, 100);
-            p.baseDoubles = clamp(p.baseDoubles + appliedDelta, 40, 99);
+            p.baseDoubles = clamp(p.baseDoubles + appliedDelta, 40, 100);
             applyForm(p);
         }
 
@@ -419,10 +525,12 @@
 
             // Krótsze turnieje są bardziej podatne na „dzień konia” zawodnika.
             if ((name.includes('players championship') || name.includes('pro players cup')) && !name.includes('final')) {
-                return { ...profile, key: 'floor', ratingScale: 32, formSpread: 5.5, matchNoise: 3.1, underdogHotChance: 0.14, hotRunMin: 4, hotRunRange: 5, underdogRank: 20, favoriteColdChance: 0.10, coldRunMin: 3, coldRunRange: 3, favoriteRank: 16, maxForm: 11 };
+                return { ...profile, key: 'floor', ratingScale: 36, formSpread: 6.5, matchNoise: 4.2, underdogHotChance: 0.18, hotRunMin: 5, hotRunRange: 6, underdogRank: 16, favoriteColdChance: 0.13, coldRunMin: 3, coldRunRange: 4, favoriteRank: 16, maxForm: 14 };
             }
             if (name.includes('european tour') || name.includes('continental tour')) {
-                return { ...profile, key: 'european', ratingScale: 30, formSpread: 4.5, matchNoise: 2.7, underdogHotChance: 0.11, hotRunMin: 4, hotRunRange: 4, underdogRank: 24, favoriteColdChance: 0.08, coldRunMin: 3, coldRunRange: 3, favoriteRank: 14, maxForm: 10 };
+                // European Tour sprzyja niespodziankom, ale jest nieco bardziej
+                // przewidywalny od turniejów podłogowych.
+                return { ...profile, key: 'european', ratingScale: 33, formSpread: 5.3, matchNoise: 3.4, underdogHotChance: 0.14, hotRunMin: 4, hotRunRange: 5, underdogRank: 20, favoriteColdChance: 0.09, coldRunMin: 3, coldRunRange: 3, favoriteRank: 14, maxForm: 11 };
             }
             if (name.includes('uk open') || name.includes('british open') || name.includes('european championship') || name.includes('continental championship')) {
                 return { ...profile, key: 'open', ratingScale: 30, formSpread: 4.5, matchNoise: 2.6, underdogHotChance: 0.10, hotRunMin: 3, hotRunRange: 4, underdogRank: 24, favoriteColdChance: 0.07, coldRunMin: 2, coldRunRange: 3, favoriteRank: 14, maxForm: 10 };
@@ -445,6 +553,29 @@
             const key = getSimulationPlayerKey(candidate);
             const form = activeTournament?.simulationForm?.[key];
             return Number.isFinite(form) ? form : 0;
+        }
+
+        // Pojedynczy wyjątkowy mecz jest czymś innym niż forma na cały turniej.
+        // AI od 80 OVR może zagrać mecz życia, lecz zawodnicy z czołówki robią to
+        // zauważalnie częściej. Nie zmienia to ich trwałych ocen.
+        function rollAiPeakMatchPerformance(candidate, random = Math.random) {
+            const overall = Number(candidate?.ovr ?? candidate?.overall) || 0;
+            const isCareerPlayer = typeof isCurrentPlayer === 'function' && isCurrentPlayer(candidate);
+            if (!candidate || candidate.isBye || isCareerPlayer || overall < 80) return null;
+
+            const isElite = overall >= 88;
+            const chance = isElite
+                ? Math.min(0.08, 0.018 + ((overall - 88) * 0.007))
+                : Math.min(0.016, 0.003 + ((overall - 80) * 0.0015));
+            if (random() >= chance) return null;
+
+            return {
+                ratingBoost: isElite ? 3 + (random() * 2) : 5 + (random() * 2),
+                accuracyBoost: isElite ? 8 + (random() * 5) : 13 + (random() * 5),
+                averageFloor: isElite
+                    ? Math.min(120, 105 + ((overall - 88) * 0.8) + (random() * 3))
+                    : Math.min(116, 108 + ((overall - 80) * 0.35) + (random() * 3))
+            };
         }
 
         // Forma jest losowana raz na cały turniej. Dzięki temu niżej notowany gracz,

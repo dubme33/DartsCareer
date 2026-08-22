@@ -101,6 +101,16 @@ function checkAchievements(type, data = null) {
 
             const winnerName = currentMatch.isDoubles ? getDoublesTeamName(isP1) : (isP1 ? player.name : currentMatch.opponent.name);
             logThrow(`⚡ ${winnerName} ${t('t-log-sd-win')}`, isP1 ? 'hit' : 'ai');
+
+            // W mistrzostwach świata sudden death rozstrzyga ostatni, decydujący set.
+            // Dopiero teraz dopisujemy go do wyniku meczu — nie do zwykłego licznika legów.
+            if (currentMatch.suddenDeathDecidesSet) {
+                if (isP1) currentMatch.p1Sets++;
+                else currentMatch.p2Sets++;
+                currentMatch.suddenDeathDecidesSet = false;
+                logThrow(`🏆 ${winnerName} ${t('t-log-wins-set')}`, isP1 ? 'hit' : 'ai');
+            }
+
             currentMatch.suddenDeath = null;
             if (isP1) checkAchievements('sudden_death'); // <--- DODANE TUTAJ
             finishMatch(isP1, winnerName);
@@ -141,7 +151,7 @@ function checkAchievements(type, data = null) {
 
             if (!isP1) {
                 clearTimeout(window.aiTimeout);
-                window.aiTimeout = setTimeout(aiTurn, 1000);
+                window.aiTimeout = setTimeout(aiTurn, 1200);
             }
         }
 
@@ -166,18 +176,33 @@ function checkAchievements(type, data = null) {
                 currentMatch.p2Legs++;
             }
 
-            // 3. Sprawdzanie wygranej w formacie setowym (np. Mistrzostwa Świata)
-            if (isSetMatch && (currentMatch.p1Legs >= currentMatch.matchFormat.legsPerSet || currentMatch.p2Legs >= currentMatch.matchFormat.legsPerSet)) {
+            const format = currentMatch.matchFormat || {};
+            const isDecidingSet = isSetMatch && format.decidingSetWinByTwo &&
+                currentMatch.p1Sets === format.setsToWin - 1 &&
+                currentMatch.p2Sets === format.setsToWin - 1;
+            const legDifference = Math.abs(currentMatch.p1Legs - currentMatch.p2Legs);
+            const setHasLegWinner = currentMatch.p1Legs >= format.legsPerSet || currentMatch.p2Legs >= format.legsPerSet;
+            const setWonByRequiredMargin = !isDecidingSet || legDifference >= 2;
+
+            // 3. Sprawdzanie wygranej w formacie setowym. W decydującym secie MŚ
+            // wymagane są dwa legi przewagi, więc wynik 3:2 nie kończy jeszcze seta.
+            if (isSetMatch && setHasLegWinner && setWonByRequiredMargin) {
                 setWasWon = true;
                 if (isP1) currentMatch.p1Sets++;
                 else currentMatch.p2Sets++;
                 logThrow(`🏆 ${currentMatch.isDoubles ? getDoublesTeamName(isP1) : (isP1 ? player.name : currentMatch.opponent.name)} ${t('t-log-wins-set')}`, isP1 ? 'hit' : 'ai');
             }
 
-            // 4. Sprawdzanie nagłej śmierci (Sudden Death) np. w World Matchplay
-            if (currentMatch.matchFormat && currentMatch.matchFormat.suddenDeathAt &&
-                currentMatch.p1Legs === currentMatch.matchFormat.suddenDeathAt &&
-                currentMatch.p2Legs === currentMatch.matchFormat.suddenDeathAt) {
+            const decidingSetReachedSuddenDeath = isDecidingSet && format.decidingSetSuddenDeathAt &&
+                currentMatch.p1Legs === format.decidingSetSuddenDeathAt &&
+                currentMatch.p2Legs === format.decidingSetSuddenDeathAt;
+            const legMatchReachedSuddenDeath = format.suddenDeathAt &&
+                currentMatch.p1Legs === format.suddenDeathAt &&
+                currentMatch.p2Legs === format.suddenDeathAt;
+
+            // 4. Sudden death w zwykłym meczu legowym lub przy 5:5 w decydującym secie MŚ.
+            if (decidingSetReachedSuddenDeath || legMatchReachedSuddenDeath) {
+                currentMatch.suddenDeathDecidesSet = decidingSetReachedSuddenDeath;
                 updateScores(); // Odświeżamy wynik przed nagłą śmiercią
                 startSuddenDeath();
                 return true;
@@ -363,7 +388,7 @@ function checkAchievements(type, data = null) {
                 setTimeout(() => endTurn(), 100);
             } else if (!isP1 || (currentMatch.isDoubles && !isCareerPlayerThrowing(isP1))) {
                 clearTimeout(window.aiTimeout); // Czyścimy przed kolejnym rzutem
-                window.aiTimeout = setTimeout(() => aiTurn(), 400); 
+                window.aiTimeout = setTimeout(() => aiTurn(), 1000); 
             }
         }
 

@@ -55,7 +55,7 @@ const pdcPlayers = [
     { name: "Mensa Sulovic", country: "Austria", ovr: 75, scoring: 76, doubles: 74, prizeMoney: 161250, proTourPrizeMoney: 55750, pcPrizeMoney: 0 },
     { name: "Brendon Dolans", country: "Irlandia Północna", ovr: 75, scoring: 75, doubles: 75, prizeMoney: 156750, proTourPrizeMoney: 44500, pcPrizeMoney: 0 },
     { name: "Ian Wight", country: "Anglia", ovr: 74, scoring: 75, doubles: 73, prizeMoney: 153750, proTourPrizeMoney: 42750, pcPrizeMoney: 0 },
-    { name: "Sebastian Bielicki", country: "Polska", ovr: 74, scoring: 75, doubles: 73, prizeMoney: 145000, proTourPrizeMoney: 84500, pcPrizeMoney: 0 },
+    { name: "Sebastian Bialecki", country: "Polska", ovr: 74, scoring: 75, doubles: 73, prizeMoney: 145000, proTourPrizeMoney: 84500, pcPrizeMoney: 0 },
     { name: "Karl Seldacek", country: "Czechy", ovr: 74, scoring: 74, doubles: 74, prizeMoney: 144500, proTourPrizeMoney: 80000, pcPrizeMoney: 0 },
     { name: "Rich Venstry", country: "Holandia", ovr: 74, scoring: 75, doubles: 73, prizeMoney: 143500, proTourPrizeMoney: 71000, pcPrizeMoney: 0 },
     { name: "Kean Bar", country: "Irlandia", ovr: 73, scoring: 74, doubles: 72, prizeMoney: 141500, proTourPrizeMoney: 47500, pcPrizeMoney: 0 },

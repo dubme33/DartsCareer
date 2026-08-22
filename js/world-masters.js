@@ -3,7 +3,7 @@ let worldMastersState = null;
 const WORLD_MASTERS_SERIES_NAME = 'Global Masters';
 const WORLD_MASTERS_FINALS_NAME = 'Global Masters Finals';
 const WORLD_MASTERS_FINALS_QUALIFIER_NAME = 'Global Masters Finals Qualifier';
-const WORLD_MASTERS_INVITATION_RULE = 'top-14-oom-random-8';
+const WORLD_MASTERS_INVITATION_RULE = 'top-14-oom-balanced-8';
 const WORLD_MASTERS_LEGACY_EVENT_NAMES = {
     atlantic: ['US Masters']
 };
@@ -237,6 +237,19 @@ function isWorldMastersEventFieldPlayable(field) {
     return invited.length === 8 && locals.length === 8 && new Set(playerKeys).size === 16;
 }
 
+function getWorldMastersInvitationCounts(candidates) {
+    const candidateKeys = new Set(candidates.map(getWorldMastersPlayerKey).filter(Boolean));
+    const counts = new Map([...candidateKeys].map(key => [key, 0]));
+    const state = ensureWorldMastersState();
+
+    Object.values(state.events).forEach(field => {
+        (field?.invitedKeys || []).forEach(key => {
+            if (counts.has(key)) counts.set(key, counts.get(key) + 1);
+        });
+    });
+    return counts;
+}
+
 function createWorldMastersEventField(event) {
     const allPlayers = getWorldMastersAllPlayers();
     const tourCardPlayers = getWorldMastersTourCardPlayers();
@@ -250,10 +263,18 @@ function createWorldMastersEventField(event) {
         return true;
     };
 
-    // Każdy turniej World Series ma ośmiu zaproszonych z losowania wśród
-    // aktualnego Top 14 Order of Merit. Nie losujemy z całej puli Tour Card.
+    // Każdy turniej World Series ma ośmiu zaproszonych z aktualnego Top 14
+    // Order of Merit. Pierwszeństwo mają zawodnicy z najmniejszą liczbą
+    // wcześniejszych zaproszeń w sezonie; losowanie rozstrzyga tylko remisy.
+    // Dzięki temu ten sam gracz z Top 14 nie może być pomijany przez cały rok.
     const topOomCandidates = tourCardPlayers.slice(0, 14);
-    shuffleWorldMasters(topOomCandidates).some(candidate => {
+    const invitationCounts = getWorldMastersInvitationCounts(topOomCandidates);
+    const balancedTopOomCandidates = shuffleWorldMasters(topOomCandidates)
+        .sort((first, second) => (
+            (invitationCounts.get(getWorldMastersPlayerKey(first)) || 0)
+            - (invitationCounts.get(getWorldMastersPlayerKey(second)) || 0)
+        ));
+    balancedTopOomCandidates.some(candidate => {
         if (invited.length < 8) addCandidate(invited, candidate);
         return invited.length === 8;
     });

@@ -55,7 +55,7 @@ const pdcPlayers = [
     { name: "Mensa Sulovic", country: "Austria", ovr: 75, scoring: 76, doubles: 74, prizeMoney: 161250, proTourPrizeMoney: 55750, pcPrizeMoney: 0 },
     { name: "Brendon Dolans", country: "Irlandia Północna", ovr: 75, scoring: 75, doubles: 75, prizeMoney: 156750, proTourPrizeMoney: 44500, pcPrizeMoney: 0 },
     { name: "Ian Wight", country: "Anglia", ovr: 74, scoring: 75, doubles: 73, prizeMoney: 153750, proTourPrizeMoney: 42750, pcPrizeMoney: 0 },
-    { name: "Sebastian Bielicki", country: "Polska", ovr: 74, scoring: 75, doubles: 73, prizeMoney: 145000, proTourPrizeMoney: 84500, pcPrizeMoney: 0 },
+    { name: "Sebastian Bialecki", country: "Polska", ovr: 74, scoring: 75, doubles: 73, prizeMoney: 145000, proTourPrizeMoney: 84500, pcPrizeMoney: 0 },
     { name: "Karl Seldacek", country: "Czechy", ovr: 74, scoring: 74, doubles: 74, prizeMoney: 144500, proTourPrizeMoney: 80000, pcPrizeMoney: 0 },
     { name: "Rich Venstry", country: "Holandia", ovr: 74, scoring: 75, doubles: 73, prizeMoney: 143500, proTourPrizeMoney: 71000, pcPrizeMoney: 0 },
     { name: "Kean Bar", country: "Irlandia", ovr: 73, scoring: 74, doubles: 72, prizeMoney: 141500, proTourPrizeMoney: 47500, pcPrizeMoney: 0 },
@@ -130,7 +130,7 @@ const pdcPlayers = [
     { name: "Nate Potter", country: "Anglia", ovr: 60, scoring: 61, doubles: 59, prizeMoney: 13000, proTourPrizeMoney: 13000, pcPrizeMoney: 0 },
     { name: "Henry Ward", country: "Anglia", ovr: 60, scoring: 60, doubles: 60, prizeMoney: 13000, proTourPrizeMoney: 13000, pcPrizeMoney: 0 },
     { name: "Stefan Belmondo", country: "Szwajcaria", ovr: 60, scoring: 61, doubles: 59, prizeMoney: 12750, proTourPrizeMoney: 12000, pcPrizeMoney: 0 },
-    { name: "Yorik Hofens", country: "Belgia", ovr: 60, scoring: 60, doubles: 60, prizeMoney: 12500, proTourPrizeMoney: 12500, pcPrizeMoney: 0 },
+    { name: "Yorik Hofens", country: "Niemcy", ovr: 60, scoring: 60, doubles: 60, prizeMoney: 12500, proTourPrizeMoney: 12500, pcPrizeMoney: 0 },
     { name: "Pascal Rupp", country: "Niemcy", ovr: 60, scoring: 61, doubles: 59, prizeMoney: 12250, proTourPrizeMoney: 9500, pcPrizeMoney: 0 },
     { name: "Sam Price", country: "Anglia", ovr: 60, scoring: 60, doubles: 60, prizeMoney: 10750, proTourPrizeMoney: 10750, pcPrizeMoney: 0 },
     { name: "Karl Sneyd", country: "Anglia", ovr: 60, scoring: 61, doubles: 59, prizeMoney: 10500, proTourPrizeMoney: 10500, pcPrizeMoney: 0 },
@@ -165,7 +165,7 @@ const pdcPlayers = [
     { name: "Jamie Van de Weerd", country: "Holandia", ovr: 55, scoring: 56, doubles: 54, prizeMoney: 2000, proTourPrizeMoney: 2000, pcPrizeMoney: 0 },
     { name: "Michael Smejda", country: "Czechy", ovr: 55, scoring: 56, doubles: 54, prizeMoney: 2000, proTourPrizeMoney: 2000, pcPrizeMoney: 0 },
     { name: "Mika Varila", country: "Finlandia", ovr: 55, scoring: 56, doubles: 54, prizeMoney: 2000, proTourPrizeMoney: 2000, pcPrizeMoney: 0 },
-    { name: "Adrian Dudziak", country: "Polska", ovr: 55, scoring: 56, doubles: 54, prizeMoney: 2000, proTourPrizeMoney: 2000, pcPrizeMoney: 0 },
+    { name: "Adrian Dudziak", country: "Słowacja", ovr: 55, scoring: 56, doubles: 54, prizeMoney: 2000, proTourPrizeMoney: 2000, pcPrizeMoney: 0 },
     { name: "Gabor Varaljay", country: "Słowacja", ovr: 55, scoring: 56, doubles: 54, prizeMoney: 2000, proTourPrizeMoney: 2000, pcPrizeMoney: 0 },
     { name: "Jano Sliacky", country: "Słowacja", ovr: 55, scoring: 56, doubles: 54, prizeMoney: 2000, proTourPrizeMoney: 2000, pcPrizeMoney: 0 },
     { name: "Jaro Holub", country: "Słowacja", ovr: 55, scoring: 56, doubles: 54, prizeMoney: 2000, proTourPrizeMoney: 2000, pcPrizeMoney: 0 },
@@ -245,9 +245,9 @@ const pdcPlayers = [
     { name: "Diogo Portal", country: "Brazylia", ovr: 59, scoring: 60, doubles: 58, prizeMoney: 15000, proTourPrizeMoney: 15000, pcPrizeMoney: 0, birthYear: 1988 },
     { name: "Artur Valler", country: "Brazylia", ovr: 56, scoring: 57, doubles: 55, prizeMoney: 9000, proTourPrizeMoney: 9000, pcPrizeMoney: 0, birthYear: 1992 },
 
-    // Bahamy: fikcyjny odpowiednik zawodnika widocznego w zgłoszeniu oraz jego partner reprezentacyjny.
-    { name: "Rashan Sweeten", country: "Bahamy", ovr: 62, scoring: 63, doubles: 61, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0, birthYear: 1990 },
-    { name: "Darian Baines", country: "Bahamy", ovr: 56, scoring: 57, doubles: 55, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0, birthYear: 1995 },
+    // Bahamy: rzeczywista para reprezentacyjna dostępna wyłącznie dla World Cup of Darts.
+    { name: "Rashad Sweeting", country: "Bahamy", ovr: 62, scoring: 63, doubles: 61, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0, birthYear: 1990 },
+    { name: "Shane Sawyer", country: "Bahamy", ovr: 56, scoring: 57, doubles: 55, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0, birthYear: 1995 },
 
     // --- Global Masters: regionalni kwalifikanci i zaproszeni z imprez 2026 ---
     // Są to fikcyjne odpowiedniki zawodników; jako goście cyklu nie mają kart PDC.
@@ -284,7 +284,16 @@ const pdcPlayers = [
 // Pozwalają naprawić pojedynczy błąd w bazie bez wymuszania nowej wersji moda.
 const playerDatabaseCorrections = {
     'adam leek': { country: 'Australia' },
-    'adam leeke': { country: 'Australia' }
+    'adam leeke': { country: 'Australia' },
+    'sebastian bielicki': { name: 'Sebastian Bialecki' },
+    'adrian dudziak': { country: 'Słowacja' },
+    'adrian dudek': { country: 'Słowacja' },
+    'yorik hofens': { country: 'Niemcy' },
+    'yorick hofkens': { country: 'Niemcy' },
+    'rashan sweeten': { name: 'Rashad Sweeting', country: 'Bahamy' },
+    'rashad sweeting': { country: 'Bahamy' },
+    'darian baines': { name: 'Shane Sawyer', country: 'Bahamy' },
+    'shane sawyer': { country: 'Bahamy' }
 };
 
 function applyKnownPlayerCorrections(players) {

@@ -9,8 +9,8 @@ function playerThrow() {
             boostedPlayer = applyRivalryMatchModifier(boostedPlayer, true);
 
             if (currentMatch && currentMatch.p1Momentum !== undefined) {
-                boostedPlayer.scoring += (currentMatch.p1Momentum * 2.5); 
-                boostedPlayer.doubles += (currentMatch.p1Momentum * 2.5);
+                boostedPlayer.scoring = Math.min(100, boostedPlayer.scoring + (currentMatch.p1Momentum * 2.5));
+                boostedPlayer.doubles = Math.min(100, boostedPlayer.doubles + (currentMatch.p1Momentum * 2.5));
             }
 
             let result = calculateThrow(tSec, tMult, boostedPlayer); 
@@ -33,10 +33,14 @@ function playerThrow() {
             
             const aiPlayer = currentMatch.isDoubles ? getDoublesCurrentThrower(isP1) : currentMatch.opponent;
             let aiStats = { ...aiPlayer };
+            const peakAccuracyBoost = !currentMatch.isDoubles
+                ? (currentMatch.opponentPeakPerformance?.accuracyBoost || 0)
+                : 0;
+            aiStats.peakMatchAccuracyBoost = peakAccuracyBoost;
             const momentum = isP1 ? currentMatch.p1Momentum : currentMatch.p2Momentum;
             if (currentMatch && momentum !== undefined) {
-                aiStats.scoring += (momentum * 2.5);
-                aiStats.doubles += (momentum * 2.5);
+                aiStats.scoring = Math.min(100, aiStats.scoring + (momentum * 2.5));
+                aiStats.doubles = Math.min(100, aiStats.doubles + (momentum * 2.5));
             }
 
             let result = calculateThrow(aim.sector, aim.mult, aiStats); 
@@ -86,12 +90,12 @@ function playerThrow() {
 
             // Standardowe sektory 1-20
             let stat = targetMult === 2 ? stats.doubles : stats.scoring;
-            stat = clamp(stat, 25, 100);
+            stat = clamp(stat + (Number(stats.peakMatchAccuracyBoost) || 0), 25, 110);
             let hitMult = targetMult, hitSector = targetSector, roll = Math.random() * 100;
             const isFavoriteDouble = targetMult === 2 && stats.favoriteDouble === targetSector;
 
             if (targetMult === 3) {
-                const tripleHitChance = clamp(stat * 0.42, 12, 48);
+                const tripleHitChance = clamp(stat * 0.42, 12, 54);
                 const targetSingleChance = Math.min(98, tripleHitChance + 65); 
                 
                 if (roll <= tripleHitChance) { 
@@ -103,7 +107,7 @@ function playerThrow() {
                     hitMult = Math.random() < 0.10 ? 3 : 1; 
                 }
             } else if (targetMult === 2) {
-                const doubleHitChance = clamp(stat * 0.45 + (isFavoriteDouble ? 5 : 0), 12, 52);
+                const doubleHitChance = clamp(stat * 0.45 + (isFavoriteDouble ? 5 : 0), 12, 57);
                 
                 // ZMNIEJSZONO z 55 na 25. Teraz lotka wpada w singla tylko w ok. 25% przypadków pudeł.
                 const targetSingleChance = Math.min(90, doubleHitChance + 25);

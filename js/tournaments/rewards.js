@@ -66,6 +66,7 @@ function getPrizeMoney(tName, round, won) {
             if (typeof p.prizeMoney !== 'number' || isNaN(p.prizeMoney)) p.prizeMoney = 0;
             if (typeof p.proTourPrizeMoney !== 'number' || isNaN(p.proTourPrizeMoney)) p.proTourPrizeMoney = 0;
             if (typeof p.pcPrizeMoney !== 'number' || isNaN(p.pcPrizeMoney)) p.pcPrizeMoney = 0;
+            if (typeof p.europeanTourPrizeMoney !== 'number' || isNaN(p.europeanTourPrizeMoney)) p.europeanTourPrizeMoney = 0;
 
             // Turnieje nierankingowe: nagroda trafia wyłącznie do budżetu gracza.
             if (tName.includes("Global Darts League") || tName.includes("Premier")) {
@@ -80,17 +81,22 @@ function getPrizeMoney(tName, round, won) {
             if (!p.historyPT) p.historyPT = {};
             if (!p.historyMain) p.historyMain = {};
 
-            const isProTour = tName.includes("European Tour") || tName.includes("Continental Tour") || 
-                              tName.includes("Players Championship") || tName.includes("Pro Players Cup") || 
-                              tName.includes("Darts Open") || tName.includes("Trophy") || tName.includes("Championship");
-            
-            const isPC = (tName.includes("Players Championship") || tName.includes("Pro Players Cup")) && !tName.includes("Finals");
+            const isProTour = typeof isProTourRankingTournament === 'function'
+                ? isProTourRankingTournament(tName)
+                : (tName.includes("European Tour") || tName.includes("Continental Tour") ||
+                    ((tName.includes("Players Championship") || tName.includes("Pro Players Cup")) && !tName.includes("Final")));
+            const isPC = typeof isPlayersChampionshipTournament === 'function'
+                ? isPlayersChampionshipTournament(tName)
+                : ((tName.includes("Players Championship") || tName.includes("Pro Players Cup")) && !tName.includes("Final"));
 
-            // --- 1. RANKING PROTOUR (Kroczący 12-miesięczny / 1-roczny) ---
+            // --- 1. RANKING PROTOUR (kroczące 52 tygodnie) ---
             if (isProTour) {
-                let defendedPT = p.historyPT[tName] !== undefined ? p.historyPT[tName] : Math.round(p.proTourPrizeMoney / 30);
-                p.proTourPrizeMoney = Math.max(0, p.proTourPrizeMoney - defendedPT) + amount;
-                p.historyPT[tName] = amount; 
+                if (typeof awardProTourOrderOfMeritPrizeMoney === 'function') {
+                    awardProTourOrderOfMeritPrizeMoney(p, amount, tName, typeof currentDate !== 'undefined' ? currentDate : null);
+                } else {
+                    p.proTourPrizeMoney += amount;
+                    p.historyPT[tName] = (Number(p.historyPT[tName]) || 0) + amount;
+                }
             }
 
             // --- 2. GŁÓWNY ORDER OF MERIT (Kroczący 24-miesięczny / 2-letni) ---
@@ -107,6 +113,12 @@ function getPrizeMoney(tName, round, won) {
             if (isPC) {
                 // Nie bronimy tu żadnych punktów - one tylko rosną przez cały rok.
                 p.pcPrizeMoney += amount;
+            }
+
+            // European Tour OOM jest osobną, sezonową klasyfikacją służącą
+            // wyłącznie do kwalifikacji do European Championship.
+            if (typeof awardEuropeanTourOrderOfMeritPrizeMoney === 'function') {
+                awardEuropeanTourOrderOfMeritPrizeMoney(p, amount, tName);
             }
 
             if (isCurrentPlayer(p)) player.budget += amount;

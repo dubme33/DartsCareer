@@ -324,6 +324,7 @@ function initCareerChronicle() {
                             ? candidate.defaultTemplateIndex
                             : index
                     }));
+                    if (typeof removeRetiredPlayersFromPool === 'function') removeRetiredPlayersFromPool(pdcPlayers);
                     if (typeof applyKnownPlayerCorrections === 'function') applyKnownPlayerCorrections(pdcPlayers);
                     if (typeof deduplicatePdcPlayers === 'function') deduplicatePdcPlayers();
                     normalizePlayerIds(pdcPlayers, player);
@@ -337,8 +338,33 @@ function initCareerChronicle() {
                 // Podczas trwającej kariery pozostawiamy wyniki, OVR i identyfikatory zawodników.
                 if (modData.pdcPlayers) {
                     const playersBySourceName = new Map(pdcPlayers.map(candidate => [candidate.sourceName || candidate.name, candidate]));
+                    const normalizeSourceName = value => String(value || '').trim().replace(/\s+/g, ' ').toLocaleLowerCase('pl');
+                    const careerSourceName = normalizeSourceName(player.sourceName || player.name);
+                    if (!Number.isInteger(player.defaultTemplateIndex) && Array.isArray(defaultPdcPlayerTemplates)) {
+                        const inferredTemplateIndex = defaultPdcPlayerTemplates.findIndex(template => (
+                            normalizeSourceName(template?.name) === careerSourceName &&
+                            normalizeSourceName(template?.country) === normalizeSourceName(player.country)
+                        ));
+                        if (inferredTemplateIndex >= 0) player.defaultTemplateIndex = inferredTemplateIndex;
+                    }
+                    const careerTemplateIndex = Number.isInteger(player.defaultTemplateIndex)
+                        ? player.defaultTemplateIndex
+                        : null;
                     modData.pdcPlayers.forEach((modPlayer, index) => {
                         const sourceName = modPlayer.sourceName || modPlayer.name;
+                        const templateIndex = Number.isInteger(modPlayer.defaultTemplateIndex)
+                            ? modPlayer.defaultTemplateIndex
+                            : index;
+                        const isCareerPlayerEntry = templateIndex === careerTemplateIndex || (
+                            Boolean(careerSourceName) && normalizeSourceName(sourceName) === careerSourceName
+                        );
+                        if (isCareerPlayerEntry) {
+                            ['name', 'sourceName', 'birthYear', 'country', 'hasTourCard', 'favoriteDouble'].forEach(field => {
+                                if (modPlayer[field] !== undefined) player[field] = modPlayer[field];
+                            });
+                            player.defaultTemplateIndex = templateIndex;
+                            return;
+                        }
                         const indexedCandidate = pdcPlayers[index];
                         const candidate = playersBySourceName.get(sourceName) || (
                             indexedCandidate &&
@@ -363,9 +389,17 @@ function initCareerChronicle() {
                             });
                         }
                     });
+                    // Mod nie może wskrzesić zawodnika usuniętego przez system
+                    // emerytur — nawet gdy jego prawdziwe nazwisko różni się od
+                    // bazowego pseudonimu.
+                    if (typeof removeRetiredPlayersFromPool === 'function') removeRetiredPlayersFromPool(pdcPlayers);
                     if (typeof applyKnownPlayerCorrections === 'function') applyKnownPlayerCorrections(pdcPlayers);
                     if (typeof deduplicatePdcPlayers === 'function') deduplicatePdcPlayers();
+                    if (typeof removeCareerPlayerFromAiPool === 'function') removeCareerPlayerFromAiPool();
                     normalizePlayerIds(pdcPlayers, player);
+                    if (typeof repairRetiredTournamentBracket === 'function' && Array.isArray(tournamentBracket)) {
+                        tournamentBracket = repairRetiredTournamentBracket(tournamentBracket);
+                    }
                 }
                 if (modData.tournamentDatabase) {
                     const tournamentsBySourceName = new Map(tournamentDatabase.map(tournament => [tournament.sourceName || tournament.name, tournament]));
@@ -417,6 +451,7 @@ function initCareerChronicle() {
             const btnRankMain = document.getElementById('btn-rank-main'); if (btnRankMain) btnRankMain.innerText = 'PDC Order of Merit';
             const btnRankPt = document.getElementById('btn-rank-pt'); if (btnRankPt) btnRankPt.innerText = 'ProTour OOM';
             const btnRankPc = document.getElementById('btn-rank-pc'); if (btnRankPc) btnRankPc.innerText = 'Players Champ OOM';
+            const btnRankEt = document.getElementById('btn-rank-et'); if (btnRankEt) btnRankEt.innerText = 'European Tour OOM';
             const screenCalH2 = document.querySelector('#screen-calendar h2'); if (screenCalH2) screenCalH2.innerText = 'Kalendarz Sezonu PDC';
             if (isCareerActive) updateHub();
         }

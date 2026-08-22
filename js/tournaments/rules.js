@@ -80,7 +80,13 @@ const checkoutGuide = {
             }
             if (name.includes("World Darts Championship") || name.includes("Global Darts Championship")) {
                 const setsToWin = round >= 64 ? 3 : round >= 16 ? 4 : round === 8 ? 5 : round === 4 ? 6 : 7;
-                return { type: 'sets', setsToWin, legsPerSet: 3 };
+                return {
+                    type: 'sets',
+                    setsToWin,
+                    legsPerSet: 3,
+                    decidingSetWinByTwo: true,
+                    decidingSetSuddenDeathAt: 5
+                };
             }
             if (name.includes("World Matchplay") || name.includes("Matchplay")) {
                 if (round === 32) return { type: 'legs', legsToWin: 10, winByTwo: true, suddenDeathAt: 12 };
@@ -109,6 +115,11 @@ const checkoutGuide = {
                 if (round >= 8) return { type: 'legs', legsToWin: 10 };
                 return { type: 'legs', legsToWin: 11 };
             }
+            if (typeof isEuropeanChampionshipTournament === 'function' && isEuropeanChampionshipTournament(tournament)) {
+                if (round === 32) return { type: 'legs', legsToWin: 6 };
+                if (round === 16 || round === 8) return { type: 'legs', legsToWin: 10 };
+                return { type: 'legs', legsToWin: 11 };
+            }
             if (name.includes("(ET") || name.includes("European Tour") || name.includes("Continental Tour")) {
                 if (round >= 8) return { type: 'legs', legsToWin: 6 };
                 if (round === 4) return { type: 'legs', legsToWin: 7 };
@@ -119,7 +130,13 @@ const checkoutGuide = {
         }
 
         function getMatchFormatLabel(format) {
-            if (format.type === 'sets') return `${t('t-fmt-sets-1')} ${format.setsToWin} ${t('t-fmt-sets-2')} ${format.legsPerSet} ${t('t-fmt-sets-3')}`;
+            if (format.type === 'sets') {
+                let label = `${t('t-fmt-sets-1')} ${format.setsToWin} ${t('t-fmt-sets-2')} ${format.legsPerSet} ${t('t-fmt-sets-3')}`;
+                if (format.decidingSetWinByTwo) {
+                    label += `; ${t('t-fmt-deciding-set-sd')} ${format.decidingSetSuddenDeathAt}:${format.decidingSetSuddenDeathAt}`;
+                }
+                return label;
+            }
             let label = `${t('t-fmt-legs-1')} ${format.legsToWin} ${t('t-fmt-legs-2')}`;
             if (format.winByTwo) label += `, przewaga 2 legów; nagła śmierć przy ${format.suddenDeathAt}:${format.suddenDeathAt}`; // tę część na razie zostawmy, w przyszłości można ją łatwo rozbudować
             return label;

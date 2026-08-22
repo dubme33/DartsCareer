@@ -90,6 +90,7 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
                 lastTournamentResults, currentRoundHTML,
                 worldCupState: typeof worldCupState !== 'undefined' ? getWorldCupStateForSave(worldCupState) : null,
                 worldMastersState: typeof worldMastersState !== 'undefined' ? worldMastersState : null,
+                grandSlamState: typeof getGrandSlamStateForSave === 'function' ? getGrandSlamStateForSave() : null,
                 playerLifecycleState: typeof playerLifecycleState !== 'undefined' ? playerLifecycleState : null
             };
         }
@@ -121,6 +122,10 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
 
         function resolveLoadedPlayer(savedPlayer) {
             if (!savedPlayer || savedPlayer.isBye) return savedPlayer;
+            // Referencja z drabinki może wskazywać na zawodnika usuniętego po
+            // emeryturze. Nie zwracamy wtedy niepełnego obiektu { id, name,
+            // country }, bo nie ma on statystyk potrzebnych do symulacji meczu.
+            if (typeof isRetiredPlayer === 'function' && isRetiredPlayer(savedPlayer)) return null;
 
             const allPlayers = [player, ...pdcPlayers];
             const resolvedId = savedPlayer.id && pdcPlayerIdAliases.has(savedPlayer.id)
@@ -136,6 +141,31 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
             if (savedPlayer.name === player.name) return player;
             const matchingAi = pdcPlayers.filter(candidate => candidate.name === savedPlayer.name);
             return matchingAi.length === 1 ? matchingAi[0] : savedPlayer;
+        }
+
+        function repairRetiredTournamentBracket(bracket) {
+            if (!Array.isArray(bracket)) return [];
+            const getIdentity = candidate => {
+                if (!candidate || candidate.isBye) return '';
+                if (candidate.id) return `id:${candidate.id}`;
+                if (typeof getCanonicalPlayerIdentityKey === 'function') return getCanonicalPlayerIdentityKey(candidate);
+                return `${candidate.name || ''}|${candidate.country || ''}`;
+            };
+            const usedIdentities = new Set(bracket.map(getIdentity).filter(Boolean));
+            const isUnavailable = candidate => !candidate
+                || (typeof isRetiredPlayer === 'function' && isRetiredPlayer(candidate));
+            const replacements = (Array.isArray(pdcPlayers) ? pdcPlayers : [])
+                .filter(candidate => candidate && !candidate.isBye && candidate.hasTourCard !== false && !isUnavailable(candidate))
+                .sort((first, second) => (Number(second.prizeMoney) || 0) - (Number(first.prizeMoney) || 0)
+                    || (Number(second.ovr) || 0) - (Number(first.ovr) || 0));
+
+            return bracket.map(candidate => {
+                if (!isUnavailable(candidate)) return candidate;
+                const replacement = replacements.find(candidate => !usedIdentities.has(getIdentity(candidate)));
+                if (!replacement) return { name: 'BYE', isBye: true };
+                usedIdentities.add(getIdentity(replacement));
+                return replacement;
+            });
         }
 
         function getDefaultMergeRating(candidate) {
@@ -181,6 +211,9 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
 
         function getPdcPlayerDuplicateKey(candidate) {
             if (!candidate || candidate.isBye) return '';
+            if (typeof getCanonicalPlayerIdentityKey === 'function') {
+                return getCanonicalPlayerIdentityKey(candidate);
+            }
             const normalize = value => String(value || '')
                 .trim()
                 .replace(/\s+/g, ' ')
@@ -250,10 +283,12 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
                 ? playerLifecycleState.retiredPlayerNames.map(getRetiredNameKey).filter(Boolean)
                 : [...retiredPlayerKeys].map(key => getRetiredNameKey(String(key).split('|')[0])).filter(Boolean));
 
-            // Starsze zapisy lub mody mogły zmienić kraj zawodnika po jego emeryturze.
-            // Wtedy klucz „imię|kraj” nie wystarczał i domyślna wersja wracała do gry.
-            // Usuwamy takiego wskrzeszonego zawodnika, zanim dołączymy nowe wpisy bazy.
-            if (retiredPlayerKeys.size || retiredPlayerNames.size) {
+            // Starsze zapisy lub mody mogły zmienić imię albo kraj zawodnika po
+            // jego emeryturze. Najpierw usuwamy go z bieżącej puli, a następnie
+            // nie pozwalamy domyślnej bazie dopisać go ponownie.
+            if (typeof removeRetiredPlayersFromPool === 'function') {
+                removeRetiredPlayersFromPool(pdcPlayers);
+            } else if (retiredPlayerKeys.size || retiredPlayerNames.size) {
                 const activePlayers = pdcPlayers.filter(candidate => {
                     const playerKey = `${candidate?.name || ''}|${candidate?.country || ''}`;
                     return !retiredPlayerKeys.has(playerKey) && !retiredPlayerNames.has(getRetiredNameKey(candidate));
@@ -261,16 +296,35 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
                 if (activePlayers.length !== pdcPlayers.length) pdcPlayers.splice(0, pdcPlayers.length, ...activePlayers);
             }
 
+            const getIdentityKey = candidate => typeof getCanonicalPlayerIdentityKey === 'function'
+                ? getCanonicalPlayerIdentityKey(candidate)
+                : `${candidate?.name || ''}|${candidate?.country || ''}`;
+            const normalizedName = value => String(value || '').trim().replace(/\s+/g, ' ').toLocaleLowerCase('pl');
+            const careerSourceName = normalizedName(player?.sourceName);
+            const isCareerPlayerTemplate = (template, templateIndex) => {
+                if (!player || !template) return false;
+                if (Number.isInteger(player.defaultTemplateIndex)) {
+                    return player.defaultTemplateIndex === templateIndex;
+                }
+                // Zapis kariery utworzony w starszej wersji moda nie musi mieć
+                // indeksu, ale może nadal przechowywać nazwę wpisu źródłowego.
+                return Boolean(careerSourceName && normalizedName(template.name) === careerSourceName);
+            };
             const existingPlayers = new Set([...pdcPlayers, player]
                 .filter(Boolean)
-                .map(candidate => `${candidate.name}|${candidate.country}`));
+                .map(getIdentityKey)
+                .filter(Boolean));
             defaultPdcPlayerTemplates.forEach((template, templateIndex) => {
-                const key = `${template.name}|${template.country}`;
-                if (existingPlayers.has(key) || retiredPlayerKeys.has(key) || retiredPlayerNames.has(getRetiredNameKey(template)) || isModReplacementForDefaultPlayer(template, templateIndex)) return;
+                const key = getIdentityKey(template);
+                const isRetiredTemplate = typeof isRetiredPlayer === 'function'
+                    ? isRetiredPlayer(template, templateIndex)
+                    : (retiredPlayerKeys.has(key) || retiredPlayerNames.has(getRetiredNameKey(template)));
+                if (existingPlayers.has(key) || isRetiredTemplate || isCareerPlayerTemplate(template, templateIndex) || isModReplacementForDefaultPlayer(template, templateIndex)) return;
                 pdcPlayers.push({
                     ...template,
                     historyPT: {},
                     historyMain: {},
+                    europeanTourPrizeMoney: 0,
                     baseOvr: template.ovr,
                     baseScoring: template.scoring,
                     baseDoubles: template.doubles,
@@ -381,10 +435,15 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
                 });
                 if (typeof restorePlayerLifecycleState === 'function') restorePlayerLifecycleState(gameState.playerLifecycleState);
                 mergeNewDefaultPlayersIntoSave();
-                if (typeof applyWorldCupNonRankingStatus === 'function') applyWorldCupNonRankingStatus(pdcPlayers);
                 if (typeof applyKnownPlayerCorrections === 'function') applyKnownPlayerCorrections([player, ...pdcPlayers]);
+                if (typeof applyWorldCupNonRankingStatus === 'function') applyWorldCupNonRankingStatus(pdcPlayers);
                 applyKnownPlayerBirthYears([player, ...pdcPlayers]);
+                if (typeof removeCareerPlayerFromAiPool === 'function') removeCareerPlayerFromAiPool();
                 normalizePlayerIds(pdcPlayers, player);
+                if (typeof enforcePlayerRatingLimits === 'function') {
+                    enforcePlayerRatingLimits(player);
+                    pdcPlayers.forEach(candidate => enforcePlayerRatingLimits(candidate));
+                }
 
                 tournamentDatabase.length = 0;
                 gameState.tournamentDatabase.forEach(tournament => tournamentDatabase.push(tournament));
@@ -392,6 +451,12 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
                 if (typeof migrateContinentalTourQualifiersCalendar === 'function') migrateContinentalTourQualifiersCalendar();
                 if (typeof migrateWorldMastersCalendar === 'function') migrateWorldMastersCalendar();
                 currentDate = new Date(gameState.currentDate);
+                if (typeof migrateEuropeanTourOrderOfMeritFromHistory === 'function') {
+                    migrateEuropeanTourOrderOfMeritFromHistory([player, ...pdcPlayers], tournamentDatabase);
+                }
+                if (typeof migrateProTourOrderOfMeritFromHistory === 'function') {
+                    migrateProTourOrderOfMeritFromHistory([player, ...pdcPlayers], tournamentDatabase, currentDate);
+                }
                 initAllPlayerSeasonStats();
                 emails = Array.isArray(gameState.emails) ? gameState.emails : [];
                 unreadMailsCount = Number.isFinite(gameState.unreadMailsCount) ? gameState.unreadMailsCount : 0;
@@ -411,10 +476,23 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
                     ? tournamentDatabase.find(tournament => tournament.name === savedTournament.name && tournament.month === savedTournament.month && tournament.day === savedTournament.day) || savedTournament
                     : null;
                 tournamentRound = Number.isFinite(gameState.tournamentRound) ? gameState.tournamentRound : 32;
-                preTournamentRanks = isPlainObject(gameState.preTournamentRanks) ? gameState.preTournamentRanks : { main: 0, pt: 0, pc: 0 };
+                const savedPreTournamentRanks = isPlainObject(gameState.preTournamentRanks) ? gameState.preTournamentRanks : {};
+                preTournamentRanks = {
+                    main: Number(savedPreTournamentRanks.main) || 0,
+                    pt: Number(savedPreTournamentRanks.pt) || 0,
+                    pc: Number(savedPreTournamentRanks.pc) || 0,
+                    et: Number(savedPreTournamentRanks.et) || 0
+                };
                 lastTournamentResults = typeof gameState.lastTournamentResults === 'string' ? gameState.lastTournamentResults : '';
                 currentRoundHTML = typeof gameState.currentRoundHTML === 'string' ? gameState.currentRoundHTML : '';
                 tournamentBracket = (gameState.tournamentBracket || []).map(resolveLoadedPlayer);
+                if (typeof repairRetiredTournamentBracket === 'function') {
+                    tournamentBracket = repairRetiredTournamentBracket(tournamentBracket);
+                }
+                if (typeof repairCareerTournamentBracket === 'function') {
+                    tournamentBracket = repairCareerTournamentBracket(tournamentBracket);
+                }
+                if (typeof restoreGrandSlamState === 'function') restoreGrandSlamState(gameState.grandSlamState);
                 worldCupState = gameState.worldCupState && isPlainObject(gameState.worldCupState)
                     ? gameState.worldCupState
                     : null;
@@ -742,9 +820,9 @@ function getBoostedPlayerStats() {
     else if (player.stamina < 70) sPenalty = -1;
 
     return {
-        overall: Math.round(player.overall) + b.o + sPenalty,
-        scoring: Math.max(40, Math.round(player.scoring) + b.s + sPenalty),
-        doubles: Math.max(40, Math.round(player.doubles) + b.d + sPenalty),
+        overall: Math.min(100, Math.max(40, Math.round(player.overall) + b.o + sPenalty)),
+        scoring: Math.min(100, Math.max(40, Math.round(player.scoring) + b.s + sPenalty)),
+        doubles: Math.min(100, Math.max(40, Math.round(player.doubles) + b.d + sPenalty)),
         bonusStr: b.o > 0 ? `(+${b.o} ${t('t-gear')})` : '',
         staminaPenalty: sPenalty
     };
@@ -821,7 +899,8 @@ function getBoostedPlayerStats() {
                 box.innerHTML = html;
             });
 
-            document.getElementById('shop-training-eff').innerText = `${effTotal}%`;
+            const effectiveTrainingBonus = Math.min(effTotal, TRAINING_CONFIG.equipmentBonusCap);
+            document.getElementById('shop-training-eff').innerText = `${effectiveTrainingBonus}% / ${TRAINING_CONFIG.equipmentBonusCap}%`;
             showScreen('screen-shop');
         }
 
@@ -865,15 +944,85 @@ async function updateProfileWalkon(event) {
         }
 
 // --- 7. MODUŁ TRENINGU ---
-        
+
+        const TRAINING_CONFIG = Object.freeze({
+            weeklyLimit: 2,
+            staminaCost: 25,
+            equipmentBonusCap: 50,
+            randomEventXpPerStatPoint: 12
+        });
+
+        function getTrainingWeekKey(date = currentDate) {
+            const calendarDate = date instanceof Date && !Number.isNaN(date.getTime())
+                ? new Date(date.getFullYear(), date.getMonth(), date.getDate())
+                : new Date();
+            const daysSinceMonday = (calendarDate.getDay() + 6) % 7;
+            calendarDate.setDate(calendarDate.getDate() - daysSinceMonday);
+
+            return `${calendarDate.getFullYear()}-${String(calendarDate.getMonth() + 1).padStart(2, '0')}-${String(calendarDate.getDate()).padStart(2, '0')}`;
+        }
+
+        function initTrainingLimit() {
+            if (!player) return;
+
+            const currentWeekKey = getTrainingWeekKey();
+            if (player.trainingWeekKey !== currentWeekKey) {
+                player.trainingWeekKey = currentWeekKey;
+                player.trainingSessionsThisWeek = 0;
+            } else {
+                const savedSessions = Number(player.trainingSessionsThisWeek);
+                player.trainingSessionsThisWeek = Number.isFinite(savedSessions)
+                    ? Math.max(0, Math.min(TRAINING_CONFIG.weeklyLimit, Math.floor(savedSessions)))
+                    : 0;
+            }
+        }
+
+        function getTrainingEquipmentBonus() {
+            let totalBonus = 0;
+            ['board', 'surround', 'light'].forEach(category => {
+                if (!player.equipment || !player.equipment[category]) return;
+                const item = shopDatabase[category].find(candidate => candidate.id === player.equipment[category]);
+                if (item) totalBonus += item.eff;
+            });
+
+            return Math.min(totalBonus, TRAINING_CONFIG.equipmentBonusCap);
+        }
+
         // Inicjalizacja pasków XP przy nowej grze/wczytaniu
         function initPlayerXP() {
             if (typeof player.scoringXP === 'undefined') player.scoringXP = 0;
             if (typeof player.doublesXP === 'undefined') player.doublesXP = 0;
         }
 
+        function awardPlayerStatXP(type, amount) {
+            initPlayerXP();
+
+            const isScoring = type === 'scoring';
+            const xpKey = isScoring ? 'scoringXP' : 'doublesXP';
+            const statKey = isScoring ? 'scoring' : 'doubles';
+            const normalizedAmount = Number(amount) || 0;
+            const startingXP = Number(player[xpKey]) || 0;
+            let nextXP = Math.max(0, startingXP + normalizedAmount);
+            let levelsGained = 0;
+
+            while (nextXP >= 100 && player[statKey] < 100) {
+                nextXP -= 100;
+                player[statKey] += 1;
+                levelsGained++;
+            }
+
+            player[xpKey] = player[statKey] >= 100 ? 0 : nextXP;
+            player.overall = Math.round((player.scoring * 0.6) + (player.doubles * 0.4));
+            player.ovr = player.overall;
+
+            return levelsGained;
+        }
+
         function showTrainingScreen() {
             initPlayerXP();
+            initTrainingLimit();
+            const sessionsThisWeek = player.trainingSessionsThisWeek;
+            const sessionsRemaining = TRAINING_CONFIG.weeklyLimit - sessionsThisWeek;
             
             document.getElementById('train-scoring-val').innerText = Math.round(player.scoring);
             document.getElementById('train-scoring-bar').style.width = `${player.scoringXP}%`;
@@ -883,53 +1032,53 @@ async function updateProfileWalkon(event) {
             document.getElementById('train-doubles-bar').style.width = `${player.doublesXP}%`;
             document.getElementById('train-doubles-xp').innerText = `${t('t-progress')} ${Math.floor(player.doublesXP)}/100 XP`;
 
+            const weeklyLimit = document.getElementById('train-weekly-limit');
+            if (weeklyLimit) {
+                weeklyLimit.innerText = t('t-train-weekly-limit')
+                    .replace('{used}', sessionsThisWeek)
+                    .replace('{limit}', TRAINING_CONFIG.weeklyLimit)
+                    .replace('{remaining}', sessionsRemaining);
+            }
+
+            ['t-train-sc-btn', 't-train-db-btn'].forEach(buttonId => {
+                const button = document.getElementById(buttonId);
+                if (button) button.disabled = sessionsRemaining <= 0;
+            });
+
             showScreen('screen-training');
         }
 
         function performTraining(type) {
             initPlayerXP();
-            if (player.stamina < 15) {
+            initTrainingLimit();
+            if (player.trainingSessionsThisWeek >= TRAINING_CONFIG.weeklyLimit) {
+                alert(t('t-alert-training-limit'));
+                return;
+            }
+            if (player.stamina < TRAINING_CONFIG.staminaCost) {
                 alert(t('t-alert-exhausted'));
                 return;
             }
 
-            player.stamina -= 15;
+            player.stamina -= TRAINING_CONFIG.staminaCost;
             let currentStat = type === 'scoring' ? player.scoring : player.doubles;
-            let baseXP = 25; 
+            let baseXP = 20;
             
-            if (currentStat >= 90) baseXP = 2;       
-            else if (currentStat >= 85) baseXP = 4;  
-            else if (currentStat >= 75) baseXP = 8;  
-            else if (currentStat >= 65) baseXP = 15; 
+            if (currentStat >= 90) baseXP = 1;
+            else if (currentStat >= 85) baseXP = 3;
+            else if (currentStat >= 75) baseXP = 6;
+            else if (currentStat >= 65) baseXP = 12;
 
-            let effTotal = 0;
-            ['board', 'surround', 'light'].forEach(cat => {
-                if(player.equipment && player.equipment[cat]) {
-                    let item = shopDatabase[cat].find(i => i.id === player.equipment[cat]);
-                    if(item) effTotal += item.eff;
-                }
-            });
+            const equipmentBonus = getTrainingEquipmentBonus();
+            const profMultiplier = 0.8 + (player.prof / 100) * 0.4; // 100 Profesjonalizmu daje 20% więcej XP za trening
+            const rawGainedXP = Math.max(1, baseXP + (Math.random() * 4 - 2)) * (1 + (equipmentBonus / 100)) * profMultiplier;
+            const gainedXP = typeof scalePlayerDevelopmentChange === 'function'
+                ? scalePlayerDevelopmentChange(player, rawGainedXP)
+                : rawGainedXP;
+            const levelsGained = awardPlayerStatXP(type, gainedXP);
+            if (levelsGained > 0) alert(type === 'scoring' ? t('t-alert-lvl-sc') : t('t-alert-lvl-db'));
 
-            let profMultiplier = 0.8 + (player.prof / 100) * 0.4; // 100 Profesjonalizmu daje 20% więcej XP za trening
-            let gainedXP = (baseXP + (Math.random() * 4 - 2)) * (1 + (effTotal / 100)) * profMultiplier;
-            
-            if (type === 'scoring') {
-                player.scoringXP += gainedXP;
-                if (player.scoringXP >= 100) {
-                    player.scoringXP -= 100;
-                    player.scoring += 1;
-                    alert(t('t-alert-lvl-sc'));
-                }
-            } else {
-                player.doublesXP += gainedXP;
-                if (player.doublesXP >= 100) {
-                    player.doublesXP -= 100;
-                    player.doubles += 1;
-                    alert(t('t-alert-lvl-db'));
-                }
-            }
-            player.overall = Math.round((player.scoring * 0.6) + (player.doubles * 0.4));
-            player.ovr = player.overall; 
+            player.trainingSessionsThisWeek += 1;
             advanceDay(); updateHub();
             if (document.getElementById('screen-training').classList.contains('active')) showTrainingScreen();
         }

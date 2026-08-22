@@ -56,7 +56,7 @@ const playerBirthYears = Object.freeze({
     "Mensa Sulovic": 1972,
     "Brendon Dolans": 1973,
     "Ian Wight": 1970,
-    "Sebastian Bielicki": 2003,
+    "Sebastian Bialecki": 2003,
     "Karl Seldacek": 1979,
     "Rich Venstry": 1981,
     "Kean Bar": 2002,

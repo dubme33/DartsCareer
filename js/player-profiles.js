@@ -151,9 +151,16 @@ function recordSeasonTournamentResult(candidate, tournament, details = {}) {
 }
 
 function getRankingPosition(candidate, type) {
-    const rankedPlayers = [...getCareerProfilePlayers()].sort((first, second) => {
+    const profilePlayers = [...getCareerProfilePlayers()];
+    if (type === 'protour' && typeof refreshProTourOrderOfMerit === 'function') {
+        refreshProTourOrderOfMerit(profilePlayers, currentDate);
+    }
+    const rankedPlayers = profilePlayers.sort((first, second) => {
         if (type === 'protour') return (second.proTourPrizeMoney || 0) - (first.proTourPrizeMoney || 0);
         if (type === 'pc') return (second.pcPrizeMoney || 0) - (first.pcPrizeMoney || 0);
+        if (type === 'europeanTour') return typeof compareEuropeanTourOrderOfMerit === 'function'
+            ? compareEuropeanTourOrderOfMerit(first, second)
+            : (second.europeanTourPrizeMoney || 0) - (first.europeanTourPrizeMoney || 0);
         return (second.prizeMoney || 0) - (first.prizeMoney || 0);
     });
     const index = rankedPlayers.findIndex(row => samePlayer(row, candidate));
@@ -223,6 +230,7 @@ function openPlayerProfile(playerId, rankingType = 'main') {
         [trPlayerProfile('orderOfMerit'), getRankingPosition(selectedPlayer, 'main')],
         [trPlayerProfile('proSeries'), getRankingPosition(selectedPlayer, 'protour')],
         [trPlayerProfile('playersCup'), getRankingPosition(selectedPlayer, 'pc')],
+        ['European Tour OOM', getRankingPosition(selectedPlayer, 'europeanTour')],
         [trPlayerProfile('gdl'), getGdlRankingPosition(selectedPlayer)]
     ];
 

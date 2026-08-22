@@ -26,12 +26,13 @@ function showScreen(screenId) {
             }
 
             const asNumber = (value, fallback) => Number.isFinite(Number(value)) ? Number(value) : fallback;
-            const overall = asNumber(selectedPlayer.ovr, 55);
-            const scoring = asNumber(selectedPlayer.scoring, overall);
-            const doubles = asNumber(selectedPlayer.doubles, overall);
+            const overall = Math.round(asNumber(selectedPlayer.ovr, 55));
+            const scoring = Math.round(asNumber(selectedPlayer.scoring, overall));
+            const doubles = Math.round(asNumber(selectedPlayer.doubles, overall));
             const prizeMoney = asNumber(selectedPlayer.prizeMoney, 0);
             const proTourPrizeMoney = asNumber(selectedPlayer.proTourPrizeMoney, 0);
             const pcPrizeMoney = asNumber(selectedPlayer.pcPrizeMoney, 0);
+            const europeanTourPrizeMoney = asNumber(selectedPlayer.europeanTourPrizeMoney, 0);
             const modPhoto = typeof moddedAssets !== 'undefined' ? moddedAssets.photos[selectedPlayer.name] : '';
             const modWalkon = typeof moddedAssets !== 'undefined' ? moddedAssets.music[selectedPlayer.name] : '';
 
@@ -42,6 +43,12 @@ function showScreen(screenId) {
             player = {
                 ...selectedPlayer,
                 id: selectedPlayer.id,
+                // Zachowujemy powiązanie z wpisem bazowym/moda. Dzięki temu po
+                // ponownym wczytaniu baza nie odtworzy tego samego zawodnika jako AI.
+                sourceName: selectedPlayer.sourceName || selectedPlayer.name,
+                defaultTemplateIndex: Number.isInteger(selectedPlayer.defaultTemplateIndex)
+                    ? selectedPlayer.defaultTemplateIndex
+                    : selectedIndex,
                 overall, ovr: overall, scoring, doubles,
                 baseOvr: overall, baseScoring: scoring, baseDoubles: doubles, form: 0,
                 favoriteDouble: asNumber(selectedPlayer.favoriteDouble, 20),
@@ -50,17 +57,21 @@ function showScreen(screenId) {
                 prof: Math.min(95, Math.max(55, Math.round(45 + (overall - 40) * 0.75))),
                 pop: Math.min(85, Math.max(20, Math.round(10 + (overall - 40) * 1.2))),
                 stamina: 100,
-                prizeMoney, proTourPrizeMoney, pcPrizeMoney,
+                prizeMoney, proTourPrizeMoney, pcPrizeMoney, europeanTourPrizeMoney,
                 photo: modPhoto || selectedPlayer.photo || '',
                 walkon: modWalkon || selectedPlayer.walkon || null,
                 historyPT: {}, historyMain: {},
                 activeSponsors: [], technicalPartner: null,
                 equipment: { board: 0, surround: 0, light: 0 },
                 scoringXP: 0, doublesXP: 0,
+                trainingWeekKey: null, trainingSessionsThisWeek: 0,
                 achievements: [],
                 careerStats: { highestAvg: 0, highestCheckout: 0, total180s: 0, nineDarters: 0, tonPlusCheckouts: 0, trophies: [] },
                 rivalries: {}, activeRivalIds: [], careerChronicle: []
             };
+
+            // Usuń także historyczne aliasy tego zawodnika, nie tylko dokładnie wybrany wpis.
+            if (typeof removeCareerPlayerFromAiPool === 'function') removeCareerPlayerFromAiPool();
 
             currentMatch = null;
             activeTournament = null;
@@ -71,6 +82,7 @@ function showScreen(screenId) {
             currentRoundHTML = '';
             preTournamentRanks = { main: 0, pt: 0, pc: 0 };
             gdlTable = [];
+            if (typeof resetGrandSlamState === 'function') resetGrandSlamState();
             emails = [];
             unreadMailsCount = 0;
 
@@ -108,10 +120,13 @@ function showScreen(screenId) {
                 birthYear: (currentDate instanceof Date ? currentDate.getFullYear() : 2026) - parseInt(document.getElementById('age').value, 10),
                 overall: ovr, ovr: ovr, scoring: ovr + 2, doubles: ovr - 2,
                 favoriteDouble: parseInt(document.getElementById('favorite-double').value),
-                budget: 150, prof: 50, pop: 20, 
+                budget: 150, prof: 50, pop: 20, stamina: 100,
                 prizeMoney: 30000, 
                 proTourPrizeMoney: 20000,
-                pcPrizeMoney: 0,      
+                pcPrizeMoney: 0,
+                europeanTourPrizeMoney: 0,
+                scoringXP: 0, doublesXP: 0,
+                trainingWeekKey: null, trainingSessionsThisWeek: 0,
                 photo: "", walkon: null,
                 historyPT: {},
                 historyMain: {},
@@ -119,6 +134,7 @@ function showScreen(screenId) {
                 activeRivalIds: [],
                 careerChronicle: []
             };
+            if (typeof resetGrandSlamState === 'function') resetGrandSlamState();
             initAllPlayerSeasonStats();
 
             const photoInput = document.getElementById('photoUpload');
@@ -465,6 +481,9 @@ function showScreen(screenId) {
             }
 
             currentDate.setDate(currentDate.getDate() + 1);
+            if (typeof refreshProTourOrderOfMerit === 'function') {
+                refreshProTourOrderOfMerit([...pdcPlayers, player], currentDate);
+            }
             updateDateDisplay();
 
             if(typeof player.stamina !== 'undefined') player.stamina = Math.min(100, player.stamina + 10); // Odzyskuje 10% dziennie 
@@ -491,7 +510,7 @@ function showScreen(screenId) {
                     generateOffers(); updateHub();
                 }
 
-                // 2. NOWOŚĆ: Reset rankingu Players Championship (1 stycznia)
+                // 2. Reset rankingów liczonych w roku kalendarzowym (1 stycznia)
                 if (currentDate.getMonth() === 0) {
                     const completedYear = currentDate.getFullYear() - 1;
                     addCareerChronicleEvent('season', {
@@ -506,6 +525,9 @@ function showScreen(screenId) {
                     player.pcPrizeMoney = 0;
                     if (typeof pdcPlayers !== 'undefined') {
                         pdcPlayers.forEach(p => p.pcPrizeMoney = 0);
+                    }
+                    if (typeof resetEuropeanTourOrderOfMerit === 'function') {
+                        resetEuropeanTourOrderOfMerit([...pdcPlayers, player]);
                     }
                     if (typeof tournamentDatabase !== 'undefined') {
                         tournamentDatabase.forEach(tournament => {
@@ -726,20 +748,31 @@ function showScreen(screenId) {
         
         btn.onclick = function() {
             if (choice.effect.budget) player.budget += choice.effect.budget;
-            if (choice.effect.scoring) player.scoring = clamp(player.scoring + choice.effect.scoring, 40, 99);
-            if (choice.effect.doubles) player.doubles = clamp(player.doubles + choice.effect.doubles, 40, 99);
+            const eventXpChanges = [];
+            if (choice.effect.scoring && typeof awardPlayerStatXP === 'function') {
+                const rawXpChange = choice.effect.scoring * TRAINING_CONFIG.randomEventXpPerStatPoint;
+                const xpChange = typeof scalePlayerDevelopmentChange === 'function'
+                    ? scalePlayerDevelopmentChange(player, rawXpChange)
+                    : rawXpChange;
+                awardPlayerStatXP('scoring', xpChange);
+                eventXpChanges.push(`${t('t-score')} XP ${xpChange > 0 ? '+' : ''}${Math.round(xpChange * 10) / 10}`);
+            }
+            if (choice.effect.doubles && typeof awardPlayerStatXP === 'function') {
+                const rawXpChange = choice.effect.doubles * TRAINING_CONFIG.randomEventXpPerStatPoint;
+                const xpChange = typeof scalePlayerDevelopmentChange === 'function'
+                    ? scalePlayerDevelopmentChange(player, rawXpChange)
+                    : rawXpChange;
+                awardPlayerStatXP('doubles', xpChange);
+                eventXpChanges.push(`${t('t-doubles')} XP ${xpChange > 0 ? '+' : ''}${Math.round(xpChange * 10) / 10}`);
+            }
             if (choice.effect.prof) player.prof = clamp((player.prof || 50) + choice.effect.prof, 0, 100);
             if (choice.effect.pop) player.pop = clamp((player.pop || 20) + choice.effect.pop, 0, 100);
             if (choice.effect.stamina) player.stamina = clamp(player.stamina + choice.effect.stamina, 0, 100);
             if (choice.effect.form) player.form = clamp((player.form || 0) + choice.effect.form, -5, 5);
 
-            if (choice.effect.scoring || choice.effect.doubles) {
-                player.overall = Math.round((player.scoring * 0.6) + (player.doubles * 0.4));
-                player.ovr = player.overall; 
-            }
-
             const outcomeMsg = choice[`outcome${langSuffix}`] || choice.outcome_pl;
-            alert(outcomeMsg);
+            const xpSummary = eventXpChanges.length > 0 ? `\n\n${t('t-event-xp-summary')}: ${eventXpChanges.join(' | ')}` : '';
+            alert(`${outcomeMsg}${xpSummary}`);
 
             updateHub();
             document.getElementById('event-modal').style.display = "none";
@@ -952,9 +985,14 @@ function showScreen(screenId) {
         }
 
         function showPdcRankings(type = 'main') {
+            if (type === 'protour' && typeof refreshProTourOrderOfMerit === 'function') {
+                refreshProTourOrderOfMerit([...pdcPlayers, player], currentDate);
+            }
             document.getElementById('btn-rank-main').style.background = type === 'main' ? 'var(--accent-green)' : '#34495e';
             document.getElementById('btn-rank-pt').style.background = type === 'protour' ? 'var(--accent-green)' : '#34495e';
             document.getElementById('btn-rank-pc').style.background = type === 'pc' ? 'var(--accent-green)' : '#34495e';
+            const btnEuropeanTour = document.getElementById('btn-rank-et');
+            if (btnEuropeanTour) btnEuropeanTour.style.background = type === 'europeanTour' ? 'var(--accent-green)' : '#34495e';
             
             // INTELIGENTNE WYKRYWANIE MODA (Sprawdza czy Littler jest w grze)
             let isModded = pdcPlayers.some(p => p.name === "Luke Littler");
@@ -1043,8 +1081,15 @@ function showScreen(screenId) {
             let sortedPlayers = combinedPlayers.sort((a, b) => {
                 if (type === 'protour') return b.proTourPrizeMoney - a.proTourPrizeMoney;
                 if (type === 'pc') return b.pcPrizeMoney - a.pcPrizeMoney;
+                if (type === 'europeanTour') return typeof compareEuropeanTourOrderOfMerit === 'function'
+                    ? compareEuropeanTourOrderOfMerit(a, b)
+                    : (b.europeanTourPrizeMoney || 0) - (a.europeanTourPrizeMoney || 0);
                 return b.prizeMoney - a.prizeMoney; 
             });
+
+            if (type === 'europeanTour') {
+                list.innerHTML = '<div style="border-bottom: 2px solid var(--accent-green); padding: 8px 10px; color: #bdc3c7; font-size: 12px; background: #0f3460;">European Tour Order of Merit · Top 32 kwalifikuje się do European Championship</div>';
+            }
             
             sortedPlayers.forEach((p, index) => {
                 let formVal = Math.round(p.form || 0);
@@ -1055,6 +1100,9 @@ function showScreen(screenId) {
                 let displayMoney = 0;
                 if (type === 'protour') displayMoney = p.proTourPrizeMoney;
                 else if (type === 'pc') displayMoney = p.pcPrizeMoney;
+                else if (type === 'europeanTour') displayMoney = typeof getEuropeanTourPrizeMoney === 'function'
+                    ? getEuropeanTourPrizeMoney(p)
+                    : (p.europeanTourPrizeMoney || 0);
                 else displayMoney = p.prizeMoney;
 
                 let formattedPrize = displayMoney.toLocaleString('en-GB');
@@ -1079,22 +1127,28 @@ function showScreen(screenId) {
         let tournamentRound = 32; 
         let tournamentBracket = [];
         let tournamentMatchHistory = [];
-        let preTournamentRanks = { main: 0, pt: 0, pc: 0 };
+        let preTournamentRanks = { main: 0, pt: 0, pc: 0, et: 0 };
         let lastTournamentResults = "";
         let currentRoundHTML = "";
 
         function getPlayerRank(type) {
             let combinedPlayers = [...pdcPlayers, player];
+            if (type === 'protour' && typeof refreshProTourOrderOfMerit === 'function') {
+                refreshProTourOrderOfMerit(combinedPlayers, currentDate);
+            }
             let sortedPlayers = combinedPlayers.sort((a, b) => {
                 if (type === 'protour') return b.proTourPrizeMoney - a.proTourPrizeMoney;
                 if (type === 'pc') return b.pcPrizeMoney - a.pcPrizeMoney;
+                if (type === 'europeanTour') return typeof compareEuropeanTourOrderOfMerit === 'function'
+                    ? compareEuropeanTourOrderOfMerit(a, b)
+                    : (b.europeanTourPrizeMoney || 0) - (a.europeanTourPrizeMoney || 0);
                 return b.prizeMoney - a.prizeMoney;
             });
             return sortedPlayers.findIndex(isCurrentPlayer) + 1;
         }
 
         function sendTournamentSummaryEmail(tName, prize, wonTournament) {
-            let postRanks = { main: getPlayerRank('main'), pt: getPlayerRank('protour'), pc: getPlayerRank('pc') };
+            let postRanks = { main: getPlayerRank('main'), pt: getPlayerRank('protour'), pc: getPlayerRank('pc'), et: getPlayerRank('europeanTour') };
 
             let rankChanges = "";
             let diffMain = preTournamentRanks.main - postRanks.main;
@@ -1109,6 +1163,14 @@ function showScreen(screenId) {
                 rankChanges += `${t('t-pro-rank')} #${postRanks.pt} `;
                 if (diffPt > 0) rankChanges += `<span style="color:var(--accent-green)">(+${diffPt} ⬆️)</span><br>`;
                 else if (diffPt < 0) rankChanges += `<span style="color:var(--accent-red)">(${Math.abs(diffPt)} ⬇️)</span><br>`;
+                else rankChanges += `(-)<br>`;
+            }
+
+            if (typeof isEuropeanTourTournament === 'function' && isEuropeanTourTournament(tName)) {
+                const diffEt = preTournamentRanks.et - postRanks.et;
+                rankChanges += `European Tour OOM: #${postRanks.et} `;
+                if (diffEt > 0) rankChanges += `<span style="color:var(--accent-green)">(+${diffEt} ⬆️)</span><br>`;
+                else if (diffEt < 0) rankChanges += `<span style="color:var(--accent-red)">(${Math.abs(diffEt)} ⬇️)</span><br>`;
                 else rankChanges += `(-)<br>`;
             }
 
