@@ -388,7 +388,7 @@ function checkAchievements(type, data = null) {
                 setTimeout(() => endTurn(), 100);
             } else if (!isP1 || (currentMatch.isDoubles && !isCareerPlayerThrowing(isP1))) {
                 clearTimeout(window.aiTimeout); // Czyścimy przed kolejnym rzutem
-                window.aiTimeout = setTimeout(() => aiTurn(), 1000); 
+                window.aiTimeout = setTimeout(() => aiTurn(), 650); 
             }
         }
 

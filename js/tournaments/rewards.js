@@ -40,6 +40,15 @@ function getPrizeMoney(tName, round, won) {
     } else if (tName.includes("Global Darts League") || tName.includes("Premier")) {
         if(won && round === 2) return 10000; // Tygodniowy bonus
         return 0; // Pozostali nic nie dostają co tydzień
+    } else if (tName.includes("European Championship") || tName.includes("Continental Championship")) {
+        // European Championship: 32-player fixed bracket, ranked in the main OOM.
+        if (won && round === 2) return 150000;
+        if (!won && round === 2) return 80000;
+        if (!won && round === 4) return 50000;
+        if (!won && round === 8) return 35000;
+        if (!won && round === 16) return 20000;
+        if (!won && round === 32) return 7500;
+        return 0;
     } else if (tName.includes("European Tour") || tName.includes("Continental Tour")) {
         // European / Continental Tour: drabinka 64 zawodników, z wolnymi losami dla 16 rozstawionych.
         if (won && round === 2) return 35000;
