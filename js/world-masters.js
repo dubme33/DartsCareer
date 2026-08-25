@@ -4,6 +4,8 @@ const WORLD_MASTERS_SERIES_NAME = 'Global Masters';
 const WORLD_MASTERS_FINALS_NAME = 'Global Masters Finals';
 const WORLD_MASTERS_FINALS_QUALIFIER_NAME = 'Global Masters Finals Qualifier';
 const WORLD_MASTERS_INVITATION_RULE = 'top-14-oom-balanced-8';
+const WORLD_MASTERS_FINALS_QUALIFIER_VERSION = 2;
+const WORLD_MASTERS_FINALS_QUALIFIER_PLACES = 4;
 const WORLD_MASTERS_LEGACY_EVENT_NAMES = {
     atlantic: ['US Masters']
 };
@@ -58,10 +60,10 @@ const WORLD_MASTERS_TRANSLATIONS = {
 const WORLD_MASTERS_EVENTS = [
     { id: 'desert', name: 'Desert Masters', month: 0, day: 15, endDay: 16, city: 'Sakhir', country: 'Bahrajn', regionCountries: ['Bahrajn', 'Filipiny', 'Japonia', 'Singapur', 'Hongkong'], localPriority: ['Alexis Toylen', 'Laurent Ilogan', 'Motomu Sakaii', 'Ryu Asemoto', 'Paul Limm', 'Man Lok Leun', 'Abdullah Seid', 'Basem Mahmud'] },
     { id: 'arabian', name: 'Arabian Masters', month: 0, day: 19, endDay: 20, city: 'Rijad', country: 'Arabia Saudyjska', regionCountries: ['Bahrajn', 'Filipiny', 'Japonia', 'Singapur', 'Hongkong', 'Indie'], localPriority: ['Alexis Toylen', 'Motomu Sakaii', 'Laurent Ilogan', 'Ryu Asemoto', 'Paul Limm', 'Man Lok Leun', 'Tomoya Gote', 'Nitin Kumor'] },
-    { id: 'northern', name: 'Northern Masters', month: 5, day: 5, endDay: 6, city: 'Kopenhaga', country: 'Dania', regionCountries: ['Dania', 'Szwecja', 'Norwegia', 'Łotwa', 'Litwa', 'Finlandia', 'Islandia'], localPriority: ['Mads Ramza', 'Jeff de Giraffe', 'Cor Dekar', 'Oscar Lucasi', 'Darius Labana', 'Viktor Tingren', 'Andreas Harrison', 'Daniel Larssen'] },
-    { id: 'atlantic', name: 'Atlantic Masters', month: 5, day: 25, endDay: 26, city: 'Nowy Jork', country: 'USA', regionCountries: ['USA', 'Kanada'], localPriority: ['Jim Longe', 'Alex Spellar', 'Davy Cameran', 'Leon Gates', 'Garry Mayson', 'Fred Kreuger', 'Adam Sevado', 'Braydon Hale'] },
-    { id: 'aotearoa', name: 'Aotearoa Masters', month: 7, day: 14, endDay: 15, city: 'Auckland', country: 'Nowa Zelandia', regionCountries: ['Nowa Zelandia', 'Australia'], localPriority: ['Adam Leeke', 'Simon Whitler', 'Ben Robbin', 'Johnny Tatta', 'Mark Cleven', 'Kayden Mils', 'Haupai Puhu', 'Raymond Smyth'] },
-    { id: 'southern', name: 'Southern Masters', month: 7, day: 21, endDay: 22, city: 'Wollongong', country: 'Australia', regionCountries: ['Australia', 'Nowa Zelandia'], localPriority: ['Adam Leeke', 'Simon Whitler', 'Raymond Smyth', 'Brody Kling', 'Tim Puse', 'Joe Comit', 'Mal Cumin', 'Ben Robbin'] }
+    { id: 'northern', name: 'Northern Masters', month: 5, day: 5, endDay: 6, city: 'Kopenhaga', country: 'Dania', regionCountries: ['Dania', 'Szwecja', 'Norwegia', 'Łotwa', 'Litwa', 'Finlandia', 'Islandia'], localPriority: ['Mads Ramza', 'Jeff de Giraffe', 'Cor Deckers', 'Oscar Lukas', 'Darius Labana', 'Victor Tingstrom', 'Andreas Harrison', 'Daniel Larssen'] },
+    { id: 'atlantic', name: 'Atlantic Masters', month: 5, day: 25, endDay: 26, city: 'Nowy Jork', country: 'USA', regionCountries: ['USA', 'Kanada'], localPriority: ['Jimmy Longley', 'Alex Spellar', 'Davy Cameran', 'Leon Gates', 'Garry Mayson', 'Fred Kreuger', 'Adam Sevado', 'Braydon Hale'] },
+    { id: 'aotearoa', name: 'Aotearoa Masters', month: 7, day: 14, endDay: 15, city: 'Auckland', country: 'Nowa Zelandia', regionCountries: ['Nowa Zelandia', 'Australia'], localPriority: ['Adam Leak', 'Simon Whitler', 'Ben Robbin', 'Johnny Tatta', 'Mark Cleven', 'Kayden Mils', 'Haupai Puhu', 'Raymond Smyth'] },
+    { id: 'southern', name: 'Southern Masters', month: 7, day: 21, endDay: 22, city: 'Wollongong', country: 'Australia', regionCountries: ['Australia', 'Nowa Zelandia'], localPriority: ['Adam Leak', 'Simon Whitler', 'Raymond Smyth', 'Brody Kling', 'Tim Puse', 'Joe Comit', 'Mal Cumin', 'Ben Robbin'] }
 ];
 
 const WORLD_MASTERS_CALENDAR = [
@@ -200,7 +202,7 @@ function resolveWorldMastersPlayers(keys) {
 }
 
 function getWorldMastersTourCardPlayers() {
-    return getWorldMastersAllPlayers().filter(candidate => candidate.hasTourCard !== false || isCurrentPlayer(candidate))
+    return getWorldMastersAllPlayers().filter(candidate => candidate.hasTourCard === true)
         .sort((first, second) => (Number(second.prizeMoney) || 0) - (Number(first.prizeMoney) || 0) || (Number(second.ovr) || 0) - (Number(first.ovr) || 0));
 }
 
@@ -374,6 +376,9 @@ function getWorldMastersTournamentParticipants(tournament = activeTournament) {
 }
 
 function getWorldMastersTournamentRound(tournament = activeTournament) {
+    if (isWorldMastersFinalsQualifierTournament(tournament)) {
+        return getWorldMastersFinalsQualifierOpeningRound(getWorldMastersFinalsQualifierParticipants().length);
+    }
     return isWorldMastersFinalsTournament(tournament) ? 32 : 16;
 }
 
@@ -390,6 +395,9 @@ function buildWorldMastersTournamentDraw(tournament, participants = getWorldMast
         const nonSeeds = shuffleWorldMasters(participants.filter(candidate => !seeds.includes(candidate)));
         return seeds.flatMap((seed, index) => [seed, nonSeeds[index]]).filter(Boolean);
     }
+    if (isWorldMastersFinalsQualifierTournament(tournament)) {
+        return buildWorldMastersFinalsQualifierDraw(participants);
+    }
     return shuffleWorldMasters(participants);
 }
 
@@ -403,34 +411,88 @@ function getWorldMastersAutomaticFinalistKeys() {
     return { worldSeriesKeys, oomKeys };
 }
 
-function getWorldMastersFinalsQualifierParticipants() {
-    const state = ensureWorldMastersState();
+function getWorldMastersFinalsQualifierEligiblePlayers() {
     const automatic = getWorldMastersAutomaticFinalistKeys();
     const automaticKeys = new Set([...automatic.worldSeriesKeys, ...automatic.oomKeys]);
+    return getWorldMastersTourCardPlayers()
+        .filter(candidate => !automaticKeys.has(getWorldMastersPlayerKey(candidate)));
+}
+
+function getWorldMastersFinalsQualifierOpeningRound(participantCount) {
+    let bracketSize = WORLD_MASTERS_FINALS_QUALIFIER_PLACES;
+    while (bracketSize < participantCount) bracketSize *= 2;
+    return bracketSize;
+}
+
+function createWorldMastersFinalsQualifierBye() {
+    return { name: '(BYE)', isBye: true, country: 'Brak', ovr: 0, overall: 0 };
+}
+
+function buildWorldMastersFinalsQualifierDraw(participants, random = Math.random) {
+    const entrants = (Array.isArray(participants) ? participants : [])
+        .filter(candidate => candidate && !candidate.isBye && candidate.hasTourCard === true);
+    for (let index = entrants.length - 1; index > 0; index--) {
+        const target = Math.floor(random() * (index + 1));
+        [entrants[index], entrants[target]] = [entrants[target], entrants[index]];
+    }
+    const bracketSize = getWorldMastersFinalsQualifierOpeningRound(entrants.length);
+    const byeCount = Math.max(0, bracketSize - entrants.length);
+    const draw = [];
+    let index = 0;
+
+    for (; index < byeCount && index < entrants.length; index++) {
+        draw.push(entrants[index], createWorldMastersFinalsQualifierBye());
+    }
+    for (; index < entrants.length; index += 2) {
+        draw.push(entrants[index], entrants[index + 1] || createWorldMastersFinalsQualifierBye());
+    }
+    while (draw.length < bracketSize) draw.push(createWorldMastersFinalsQualifierBye());
+    return draw;
+}
+
+function getWorldMastersFinalsQualifierParticipants() {
+    const state = ensureWorldMastersState();
     const existingQualifier = state.finalsQualifier;
-    if (existingQualifier?.participantKeys && existingQualifier.completed) {
+    const eligiblePlayers = getWorldMastersFinalsQualifierEligiblePlayers();
+    const eligibleKeys = eligiblePlayers.map(getWorldMastersPlayerKey);
+    const eligibleKeySet = new Set(eligibleKeys);
+    const usesCurrentRules = existingQualifier?.version === WORLD_MASTERS_FINALS_QUALIFIER_VERSION
+        && Array.isArray(existingQualifier.participantKeys)
+        && existingQualifier.participantKeys.length === eligibleKeys.length
+        && existingQualifier.participantKeys.every(key => eligibleKeySet.has(key));
+    if (usesCurrentRules) {
         return resolveWorldMastersPlayers(existingQualifier.participantKeys);
     }
 
-    const preferredKeys = existingQualifier?.participantKeys || getWorldMastersTourCardPlayers().map(getWorldMastersPlayerKey);
-    const participantKeys = completeWorldMastersFieldKeys(preferredKeys, 16, automaticKeys);
     state.finalsQualifier = {
         ...(existingQualifier || {}),
-        participantKeys,
-        qualifiedKeys: Array.isArray(existingQualifier?.qualifiedKeys) ? existingQualifier.qualifiedKeys : [],
+        version: WORLD_MASTERS_FINALS_QUALIFIER_VERSION,
+        participantKeys: eligibleKeys,
+        qualifiedKeys: Array.isArray(existingQualifier?.qualifiedKeys)
+            ? existingQualifier.qualifiedKeys.filter(key => eligibleKeySet.has(key)).slice(0, WORLD_MASTERS_FINALS_QUALIFIER_PLACES)
+            : [],
         completed: false
     };
-    return resolveWorldMastersPlayers(participantKeys);
+    return eligiblePlayers;
 }
 
 function completeWorldMastersFinalsQualifier(tournament, qualifiedPlayers) {
     const state = ensureWorldMastersState();
+    const eligibleKeys = new Set(getWorldMastersFinalsQualifierEligiblePlayers().map(getWorldMastersPlayerKey));
     const qualifier = state.finalsQualifier || { participantKeys: [], qualifiedKeys: [], completed: false };
-    qualifier.qualifiedKeys = qualifiedPlayers.map(getWorldMastersPlayerKey).slice(0, 4);
+    const uniqueKeys = [];
+    (Array.isArray(qualifiedPlayers) ? qualifiedPlayers : []).forEach(candidate => {
+        const key = getWorldMastersPlayerKey(candidate);
+        if (eligibleKeys.has(key) && !uniqueKeys.includes(key) && uniqueKeys.length < WORLD_MASTERS_FINALS_QUALIFIER_PLACES) {
+            uniqueKeys.push(key);
+        }
+    });
+    qualifier.version = WORLD_MASTERS_FINALS_QUALIFIER_VERSION;
+    qualifier.qualifiedKeys = uniqueKeys;
     qualifier.completed = true;
     state.finalsQualifier = qualifier;
-    if (tournament) tournament.worldMastersQualifiers = qualifier.qualifiedKeys;
-    sendWorldMastersFinalsQualifierEmail(qualifiedPlayers);
+    if (tournament) tournament.worldMastersQualifiers = [...qualifier.qualifiedKeys];
+    sendWorldMastersFinalsQualifierEmail(resolveWorldMastersPlayers(qualifier.qualifiedKeys));
 }
 
 function autoCompleteWorldMastersFinalsQualifier() {
@@ -458,7 +520,15 @@ function getWorldMastersFinalsField() {
     const preferredQualifierKeys = state.finalsQualifier?.completed
         ? state.finalsQualifier.qualifiedKeys
         : autoCompleteWorldMastersFinalsQualifier().map(getWorldMastersPlayerKey);
-    const qualifierKeys = completeWorldMastersFieldKeys(preferredQualifierKeys, 4, selected);
+    const qualifierKeys = [];
+    const addTourCardQualifier = candidate => {
+        const key = getWorldMastersPlayerKey(candidate);
+        if (!candidate || candidate.hasTourCard !== true || !key || selected.has(key)
+            || qualifierKeys.includes(key) || qualifierKeys.length >= WORLD_MASTERS_FINALS_QUALIFIER_PLACES) return;
+        qualifierKeys.push(key);
+    };
+    resolveWorldMastersPlayers(preferredQualifierKeys).forEach(addTourCardQualifier);
+    getWorldMastersFinalsQualifierEligiblePlayers().forEach(addTourCardQualifier);
     qualifierKeys.forEach(key => selected.add(key));
 
     const participantKeys = completeWorldMastersFieldKeys(
@@ -618,8 +688,6 @@ function migrateWorldMastersCalendar() {
             tournamentDatabase.push({ ...template, completed: false, historyLogs: '' });
         }
     });
-    const continentalThirteen = tournamentDatabase.find(tournament => tournament.name === 'Continental Tour 13');
-    if (continentalThirteen) Object.assign(continentalThirteen, { month: 8, day: 21, endDay: 23 });
 }
 
 function renderWorldMastersRanking(list) {

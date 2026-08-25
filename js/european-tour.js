@@ -100,7 +100,8 @@ function getPreviousProTourEventDate(tournamentName, referenceTime) {
 
     const referenceDate = new Date(referenceTime);
     const eventDay = Number.isInteger(tournament.endDay) ? tournament.endDay : tournament.day;
-    const eventDate = new Date(referenceDate.getFullYear(), tournament.month, eventDay);
+    const eventMonth = Number.isInteger(tournament.endMonth) ? tournament.endMonth : tournament.month;
+    const eventDate = new Date(referenceDate.getFullYear(), eventMonth, eventDay);
     if (eventDate.getTime() > referenceTime) eventDate.setFullYear(eventDate.getFullYear() - 1);
     return eventDate.getTime();
 }

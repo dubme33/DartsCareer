@@ -8,7 +8,7 @@ const PLAYER_PROFILE_TRANSLATIONS = {
         noPrize: 'bez nagrody', orderOfMerit: 'Order of Merit', proSeries: 'Pro Series', playersCup: 'Players Cup', gdl: 'GDL',
         noResults: 'Brak rozegranych turniejów w tym sezonie.', noHighlights: 'Największe sukcesy pojawią się po rozegraniu turniejów.',
         photoAlt: 'Zdjęcie zawodnika', photoPlaceholder: 'ZAWODNIK', profile: 'PROFIL ZAWODNIKA', age: 'Wiek', years: '{age} lat',
-        seasonHighestAverage: 'Najwyższa średnia sezonu', highlights: 'Największe sukcesy — sezon {year}', results: 'Wyniki wszystkich turniejów — sezon {year}', back: 'Wróć do rankingów'
+        seasonHighestAverage: 'Najwyższa średnia sezonu', highlights: 'Największe sukcesy — sezon {year}', results: 'Wyniki wszystkich turniejów — sezon {year}', back: 'Wróć do rankingów', tourCardHolder: 'POSIADACZ KARTY PDC', tourCardValid: 'ważna do końca {year}'
     },
     en: {
         winner: 'Champion', runnerUp: 'Runner-up', semiFinalist: 'Semi-finalist', quarterFinalist: 'Quarter-finalist',
@@ -16,7 +16,7 @@ const PLAYER_PROFILE_TRANSLATIONS = {
         noPrize: 'no prize money', orderOfMerit: 'Order of Merit', proSeries: 'Pro Series', playersCup: 'Players Cup', gdl: 'GDL',
         noResults: 'No tournaments played this season.', noHighlights: 'Major achievements will appear after tournaments are played.',
         photoAlt: 'Player photo', photoPlaceholder: 'PLAYER', profile: 'PLAYER PROFILE', age: 'Age', years: '{age} years old',
-        seasonHighestAverage: 'Highest season average', highlights: 'Major achievements — season {year}', results: 'All tournament results — season {year}', back: 'Back to rankings'
+        seasonHighestAverage: 'Highest season average', highlights: 'Major achievements — season {year}', results: 'All tournament results — season {year}', back: 'Back to rankings', tourCardHolder: 'PDC TOUR CARD HOLDER', tourCardValid: 'valid through {year}'
     },
     de: {
         winner: 'Sieger', runnerUp: 'Finalist', semiFinalist: 'Halbfinalist', quarterFinalist: 'Viertelfinalist',
@@ -24,7 +24,7 @@ const PLAYER_PROFILE_TRANSLATIONS = {
         noPrize: 'kein Preisgeld', orderOfMerit: 'Order of Merit', proSeries: 'Pro Series', playersCup: 'Players Cup', gdl: 'GDL',
         noResults: 'In dieser Saison wurden noch keine Turniere gespielt.', noHighlights: 'Die größten Erfolge erscheinen nach gespielten Turnieren.',
         photoAlt: 'Spielerfoto', photoPlaceholder: 'SPIELER', profile: 'SPIELERPROFIL', age: 'Alter', years: '{age} Jahre',
-        seasonHighestAverage: 'Höchster Saisonschnitt', highlights: 'Größte Erfolge — Saison {year}', results: 'Alle Turnierergebnisse — Saison {year}', back: 'Zurück zu den Ranglisten'
+        seasonHighestAverage: 'Höchster Saisonschnitt', highlights: 'Größte Erfolge — Saison {year}', results: 'Alle Turnierergebnisse — Saison {year}', back: 'Zurück zu den Ranglisten', tourCardHolder: 'PDC-TOUR-CARD-INHABER', tourCardValid: 'gültig bis Ende {year}'
     },
     nl: {
         winner: 'Winnaar', runnerUp: 'Finalist', semiFinalist: 'Halvefinalist', quarterFinalist: 'Kwartfinalist',
@@ -32,7 +32,7 @@ const PLAYER_PROFILE_TRANSLATIONS = {
         noPrize: 'geen prijzengeld', orderOfMerit: 'Order of Merit', proSeries: 'Pro Series', playersCup: 'Players Cup', gdl: 'GDL',
         noResults: 'Dit seizoen zijn nog geen toernooien gespeeld.', noHighlights: 'De grootste prestaties verschijnen na gespeelde toernooien.',
         photoAlt: 'Spelersfoto', photoPlaceholder: 'SPELER', profile: 'SPELERS­PROFIEL', age: 'Leeftijd', years: '{age} jaar',
-        seasonHighestAverage: 'Hoogste seizoensgemiddelde', highlights: 'Grootste prestaties — seizoen {year}', results: 'Alle toernooiresultaten — seizoen {year}', back: 'Terug naar de ranglijsten'
+        seasonHighestAverage: 'Hoogste seizoensgemiddelde', highlights: 'Grootste prestaties — seizoen {year}', results: 'Alle toernooiresultaten — seizoen {year}', back: 'Terug naar de ranglijsten', tourCardHolder: 'PDC TOUR CARD-HOUDER', tourCardValid: 'geldig tot eind {year}'
     }
 };
 
@@ -226,6 +226,10 @@ function openPlayerProfile(playerId, rankingType = 'main') {
     const highlights = getSeasonHighlights(results);
     const age = getPlayerAge(selectedPlayer);
     const overall = Math.round(Number(selectedPlayer.ovr ?? selectedPlayer.overall) || 0);
+    const tourCardExpirySeason = Number(selectedPlayer.tourCardExpiryYear) - 1;
+    const tourCardMarkup = selectedPlayer.hasTourCard === true
+        ? `<p style="display:inline-block; margin:8px 0 0; padding:5px 10px; border-radius:14px; background:#8e44ad; color:white; font-size:12px; font-weight:bold;">🎫 ${trPlayerProfile('tourCardHolder')}${Number.isInteger(tourCardExpirySeason) ? ` · ${trPlayerProfile('tourCardValid', { year: tourCardExpirySeason })}` : ''}</p>`
+        : '';
     const rankings = [
         [trPlayerProfile('orderOfMerit'), getRankingPosition(selectedPlayer, 'main')],
         [trPlayerProfile('proSeries'), getRankingPosition(selectedPlayer, 'protour')],
@@ -251,6 +255,7 @@ function openPlayerProfile(playerId, rankingType = 'main') {
             <p class="profile-eyebrow">${trPlayerProfile('profile')}</p>
             <h2>${getFlagImg(selectedPlayer.country)} ${escapeHtml(selectedPlayer.name)}</h2>
             <p class="profile-subtitle">${trPlayerProfile('age')}: <strong>${age === null ? '—' : trPlayerProfile('years', { age })}</strong> · Overall: <strong>${overall}</strong></p>
+            ${tourCardMarkup}
         </div>
     </section>
     <section class="profile-stat-grid">

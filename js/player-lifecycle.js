@@ -44,6 +44,11 @@ const NEWGEN_FIRST_NAMES = [
     'Marek', 'Neron', 'Oren', 'Pavel', 'Quinn', 'Riven', 'Soren', 'Taren', 'Ulric', 'Varek', 'Wylan', 'Zorin'
 ];
 
+const NEWGEN_FEMALE_FIRST_NAMES = [
+    'Ayla', 'Brina', 'Celia', 'Daria', 'Elara', 'Freya', 'Greta', 'Helena', 'Iona', 'Juna', 'Kira', 'Livia',
+    'Mara', 'Nadia', 'Orla', 'Petra', 'Rina', 'Selma', 'Talia', 'Vera', 'Willa', 'Zara'
+];
+
 const NEWGEN_LAST_NAMES = [
     'Ashmere', 'Barkett', 'Caldren', 'Dovrin', 'Eldmark', 'Fennor', 'Gravik', 'Haldane', 'Ironwood', 'Jaspert',
     'Kendric', 'Lornel', 'Marlowe', 'Norrick', 'Orvane', 'Pellor', 'Quenby', 'Ravell', 'Seldric', 'Tolland',
@@ -275,14 +280,15 @@ function pickNewgenCountry() {
     return globalCountries.length ? globalCountries[Math.floor(Math.random() * globalCountries.length)] : pickWeightedNewgenCountry();
 }
 
-function createFictionalNewgenName(existingNames) {
+function createFictionalNewgenName(existingNames, gender = 'male') {
+    const firstNames = gender === 'female' ? NEWGEN_FEMALE_FIRST_NAMES : NEWGEN_FIRST_NAMES;
     for (let attempt = 0; attempt < 100; attempt++) {
-        const first = NEWGEN_FIRST_NAMES[Math.floor(Math.random() * NEWGEN_FIRST_NAMES.length)];
+        const first = firstNames[Math.floor(Math.random() * firstNames.length)];
         const last = NEWGEN_LAST_NAMES[Math.floor(Math.random() * NEWGEN_LAST_NAMES.length)];
         const name = `${first} ${last}`;
         if (!existingNames.has(name)) return name;
     }
-    const first = NEWGEN_FIRST_NAMES[Math.floor(Math.random() * NEWGEN_FIRST_NAMES.length)];
+    const first = firstNames[Math.floor(Math.random() * firstNames.length)];
     const last = NEWGEN_LAST_NAMES[Math.floor(Math.random() * NEWGEN_LAST_NAMES.length)];
     let suffix = 2;
     while (existingNames.has(`${first} ${last} ${suffix}`)) suffix++;
@@ -303,11 +309,13 @@ function createAnnualNewgen(year, existingNames) {
     const age = 17 + Math.floor(Math.random() * 19); // 17–35 inclusive
     const scoring = Math.max(40, Math.min(99, overall + (Math.floor(Math.random() * 5) - 1)));
     const doubles = Math.max(40, Math.min(99, overall + (Math.floor(Math.random() * 5) - 3)));
-    const name = createFictionalNewgenName(existingNames);
+    const gender = Math.random() < 0.18 ? 'female' : 'male';
+    const name = createFictionalNewgenName(existingNames, gender);
     existingNames.add(name);
     return {
         id: createEntityId('newgen'),
         name,
+        gender,
         country: pickNewgenCountry(),
         birthYear: year - age,
         overall,
@@ -319,12 +327,22 @@ function createAnnualNewgen(year, existingNames) {
         proTourPrizeMoney: 0,
         pcPrizeMoney: 0,
         europeanTourPrizeMoney: 0,
+        hasTourCard: false,
+        tourCardSource: null,
+        tourCardStartYear: null,
+        tourCardExpiryYear: null,
+        tourCardCycleYear: typeof getPdcTourCardCycleYear === 'function' ? getPdcTourCardCycleYear(year) : year,
+        tourCardSystemVersion: typeof PDC_TOUR_CARD_SYSTEM_VERSION !== 'undefined' ? PDC_TOUR_CARD_SYSTEM_VERSION : 1,
         baseOvr: overall,
         baseScoring: scoring,
         baseDoubles: doubles,
         form: 0,
         historyPT: {},
         historyMain: {},
+        mainPrizeHistory: [],
+        mainOomHistoryVersion: typeof MAIN_ORDER_OF_MERIT_VERSION !== 'undefined'
+            ? MAIN_ORDER_OF_MERIT_VERSION
+            : 1,
         seasonStats: { year, highestAvg: 0, results: [] },
         isNewgen: true,
         joinedSeason: year

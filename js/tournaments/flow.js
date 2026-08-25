@@ -1,22 +1,35 @@
 const PLAYERS_CHAMPIONSHIP_FIELD_SIZE = 128;
 const PLAYERS_CHAMPIONSHIP_TOP_16_WITHDRAWAL_CHANCE = 0.15;
 
-function buildPlayersChampionshipField(oomRanked, random = Math.random) {
-    const baseField = oomRanked.slice(0, PLAYERS_CHAMPIONSHIP_FIELD_SIZE);
-    const replacementPool = oomRanked.slice(PLAYERS_CHAMPIONSHIP_FIELD_SIZE);
+function buildPlayersChampionshipField(cardHolders, replacementPoolOrRandom = [], random = Math.random) {
+    const legacyCall = typeof replacementPoolOrRandom === 'function';
+    const randomFn = legacyCall ? replacementPoolOrRandom : random;
+    const rankedCardHolders = [...(Array.isArray(cardHolders) ? cardHolders : [])].sort((a, b) =>
+        (Number(b?.prizeMoney) || 0) - (Number(a?.prizeMoney) || 0));
+    const replacementPool = legacyCall
+        ? rankedCardHolders.slice(PLAYERS_CHAMPIONSHIP_FIELD_SIZE)
+        : [...(Array.isArray(replacementPoolOrRandom) ? replacementPoolOrRandom : [])]
+            .filter(candidate => !rankedCardHolders.includes(candidate))
+            .sort((a, b) => (Number(b?.prizeMoney) || 0) - (Number(a?.prizeMoney) || 0));
+    const guaranteedCardField = rankedCardHolders.slice(0, PLAYERS_CHAMPIONSHIP_FIELD_SIZE);
+    const vacantPlaceCount = Math.max(0, PLAYERS_CHAMPIONSHIP_FIELD_SIZE - guaranteedCardField.length);
+    const vacancyReplacements = replacementPool.slice(0, vacantPlaceCount);
+    const baseField = [...guaranteedCardField, ...vacancyReplacements];
+    const remainingReplacementPool = replacementPool.slice(vacancyReplacements.length);
     const requestedWithdrawals = baseField
         .slice(0, 16)
-        .filter(candidate => !isCurrentPlayer(candidate) && random() < PLAYERS_CHAMPIONSHIP_TOP_16_WITHDRAWAL_CHANCE);
+        .filter(candidate => candidate?.hasTourCard === true && !isCurrentPlayer(candidate)
+            && randomFn() < PLAYERS_CHAMPIONSHIP_TOP_16_WITHDRAWAL_CHANCE);
 
     // Nie skracamy drabinki, gdy w bazie byłoby zbyt mało zastępców.
-    const withdrawnPlayers = requestedWithdrawals.slice(0, replacementPool.length);
+    const withdrawnPlayers = requestedWithdrawals.slice(0, remainingReplacementPool.length);
     const withdrawnSet = new Set(withdrawnPlayers);
-    const replacements = replacementPool.slice(0, withdrawnPlayers.length);
+    const replacements = remainingReplacementPool.slice(0, withdrawnPlayers.length);
 
     return {
         participants: [...baseField.filter(candidate => !withdrawnSet.has(candidate)), ...replacements],
         withdrawnPlayers,
-        replacements
+        replacements: [...vacancyReplacements, ...replacements]
     };
 }
 
@@ -29,6 +42,9 @@ function skipActiveTournament() {
         function startTournament() {
             if (!activeTournament) return;
             if (currentMatch && currentMatch.isTournament && currentMatch.p1Score !== undefined) {
+                if (typeof chargeTournamentParticipationStamina === 'function') {
+                    chargeTournamentParticipationStamina(activeTournament);
+                }
                 showScreen('screen-match'); return;
             }
             if (typeof isWorldCupTournament === 'function' && isWorldCupTournament(activeTournament)) {
@@ -69,12 +85,23 @@ function skipActiveTournament() {
                 const expectedOpeningRound = isWorldMastersActiveTournament && typeof getWorldMastersTournamentRound === 'function'
                     ? getWorldMastersTournamentRound(activeTournament)
                     : null;
+                const isWorldMastersFinalsQualifierDraw = typeof isWorldMastersFinalsQualifierTournament === 'function'
+                    && isWorldMastersFinalsQualifierTournament(activeTournament);
                 const staleWorldMastersOpeningDraw = typeof shouldRefreshWorldMastersEventField === 'function'
                     && shouldRefreshWorldMastersEventField(activeTournament);
                 const malformedOpeningWorldMastersDraw = expectedOpeningRound === tournamentRound && (
                     tournamentBracket.length !== expectedOpeningRound
-                    || tournamentBracket.some(candidate => !candidate || candidate.isBye)
+                    || tournamentBracket.some(candidate => !candidate || (
+                        candidate.isBye
+                            ? !isWorldMastersFinalsQualifierDraw
+                            : isWorldMastersFinalsQualifierDraw && candidate.hasTourCard !== true
+                    ))
                     || staleWorldMastersOpeningDraw
+                );
+                const staleWorldMastersFinalsQualifierDraw = isWorldMastersFinalsQualifierDraw && (
+                    tournamentBracket.some(candidate => candidate && !candidate.isBye && candidate.hasTourCard !== true)
+                    || ((!Array.isArray(tournamentMatchHistory) || tournamentMatchHistory.length === 0)
+                        && (tournamentRound !== expectedOpeningRound || tournamentBracket.length !== expectedOpeningRound))
                 );
                 const staleEuropeanChampionshipOpeningDraw = typeof isEuropeanChampionshipTournament === 'function'
                     && isEuropeanChampionshipTournament(activeTournament)
@@ -82,12 +109,38 @@ function skipActiveTournament() {
                     && tournamentBracket.length === 32
                     && (!Array.isArray(tournamentMatchHistory) || tournamentMatchHistory.length === 0)
                     && activeTournament.europeanChampionshipDrawVersion !== EUROPEAN_CHAMPIONSHIP_DRAW_VERSION;
+                const activeTournamentName = String(activeTournament?.name || '').toLowerCase();
+                const staleWorldChampionshipOpeningDraw = (
+                    activeTournamentName.includes('world darts championship')
+                    || activeTournamentName.includes('global darts championship')
+                ) && tournamentRound === 128
+                    && (!Array.isArray(tournamentMatchHistory) || tournamentMatchHistory.length === 0)
+                    && (
+                        tournamentBracket.some(candidate => candidate?.isBye)
+                        || activeTournament.worldChampionshipQualification?.version !== (
+                            typeof WORLD_CHAMPIONSHIP_QUALIFICATION_VERSION === 'number'
+                                ? WORLD_CHAMPIONSHIP_QUALIFICATION_VERSION
+                                : 1
+                        )
+                    );
+                const staleContinentalQualificationDraw = activeTournament?.specialType === 'continentalQualifier'
+                    && (!Array.isArray(tournamentMatchHistory) || tournamentMatchHistory.length === 0)
+                    && activeTournament.continentalQualificationVersion !== 2;
+                const staleQSchoolOpeningDraw = activeTournament?.specialType === 'pdcQSchool'
+                    && (!Array.isArray(tournamentMatchHistory) || tournamentMatchHistory.length === 0)
+                    && activeTournament.qSchoolDrawVersion !== (
+                        typeof PDC_QSCHOOL_DRAW_VERSION === 'number' ? PDC_QSCHOOL_DRAW_VERSION : 2
+                    );
 
                 // Starsze zapisy mogły zachować niepełną drabinkę po emeryturze
                 // lokalnego uczestnika albo nierozpoczętą obsadę sprzed zmiany
                 // zasad zaproszeń. Nie wznawiamy takiej drabinki — tworzymy ją
                 // ponownie z dostępnymi zastępcami i aktualną regułą OOM.
-                if (!malformedOpeningWorldMastersDraw && !staleEuropeanChampionshipOpeningDraw) {
+                if (!malformedOpeningWorldMastersDraw && !staleWorldMastersFinalsQualifierDraw && !staleEuropeanChampionshipOpeningDraw
+                    && !staleWorldChampionshipOpeningDraw && !staleContinentalQualificationDraw && !staleQSchoolOpeningDraw) {
+                    if (tournamentBracket.some(isCurrentPlayer) && typeof chargeTournamentParticipationStamina === 'function') {
+                        chargeTournamentParticipationStamina(activeTournament);
+                    }
                     showBracket();
                     return;
                 }
@@ -100,9 +153,15 @@ function skipActiveTournament() {
             let tournamentDisplayName = typeof getTournamentDisplayName === 'function'
                 ? getTournamentDisplayName(activeTournament)
                 : tName;
-            // Zawodnicy dodani wyłącznie do reprezentacji Pucharu Narodów nie mają
-            // kart PDC, dlatego nie trafiają do indywidualnych turniejów rankingowych.
-            let allPlayers = [...pdcPlayers.filter(candidate => candidate.hasTourCard !== false), player];
+            // Karta daje stały dostęp do Pro Touru. Gracz bez karty nadal pozostaje
+            // w rankingach i może wywalczyć telewizyjny turniej albo wejść jako rezerwowy.
+            let allPlayers = typeof getPdcTourCardPlayers === 'function'
+                ? getPdcTourCardPlayers(true)
+                : [...pdcPlayers, player].filter(candidate => candidate && candidate.hasTourCard !== false);
+            let tourCardPlayers = allPlayers.filter(candidate => candidate.hasTourCard === true)
+                .sort((a, b) => (Number(b.prizeMoney) || 0) - (Number(a.prizeMoney) || 0));
+            let nonCardPlayers = allPlayers.filter(candidate => candidate.hasTourCard !== true)
+                .sort((a, b) => (Number(b.prizeMoney) || 0) - (Number(a.prizeMoney) || 0));
             if (typeof refreshProTourOrderOfMerit === 'function') {
                 refreshProTourOrderOfMerit(allPlayers, currentDate);
             }
@@ -121,13 +180,32 @@ function skipActiveTournament() {
             const isEuropeanChampionship = typeof isEuropeanChampionshipTournament === 'function'
                 ? isEuropeanChampionshipTournament(activeTournament)
                 : (tNameLow.includes('european championship') || tNameLow.includes('continental championship'));
+            const isQSchoolEvent = typeof isPdcQSchoolTournament === 'function' && isPdcQSchoolTournament(activeTournament);
+            const isTourCardQualifierEvent = typeof isPdcTourCardQualifierTournament === 'function'
+                && isPdcTourCardQualifierTournament(activeTournament);
 
             let participants = [];
 
             // --- 1. WYBÓR UCZESTNIKÓW I ROZMIAR DRABINKI ---
             
             // Finały Play-offs
-            if ((tNameLow.includes("premier") || tNameLow.includes("global darts league")) && tNameLow.includes("play-off")) {
+            if (isTourCardQualifierEvent) {
+                participants = typeof getPdcTourCardQualifierParticipants === 'function'
+                    ? getPdcTourCardQualifierParticipants(activeTournament, allPlayers)
+                    : tourCardPlayers;
+                tournamentRound = typeof getPdcQSchoolOpeningRound === 'function'
+                    ? getPdcQSchoolOpeningRound(participants.length)
+                    : 128;
+
+            } else if (isQSchoolEvent) {
+                participants = typeof getPdcQSchoolParticipants === 'function'
+                    ? getPdcQSchoolParticipants(allPlayers)
+                    : nonCardPlayers;
+                tournamentRound = typeof getPdcQSchoolOpeningRound === 'function'
+                    ? getPdcQSchoolOpeningRound(participants.length)
+                    : 128;
+
+            } else if ((tNameLow.includes("premier") || tNameLow.includes("global darts league")) && tNameLow.includes("play-off")) {
                 if (!gdlTable || gdlTable.length === 0) {
                     oomRanked.slice(0, 4).forEach(p => gdlTable.push({ player: p, points: 0, nightsWon: 0, legsWon: 0, legsLost: 0 }));
                 }
@@ -148,7 +226,7 @@ function skipActiveTournament() {
                 tournamentRound = 8;
 
             } else if ((tNameLow.includes("players championship") || tNameLow.includes("pro players cup")) && !tNameLow.includes("final")) {
-                const playersChampionshipField = buildPlayersChampionshipField(oomRanked);
+                const playersChampionshipField = buildPlayersChampionshipField(tourCardPlayers, nonCardPlayers);
                 participants = playersChampionshipField.participants;
                 activeTournament.playersChampionshipWithdrawals = playersChampionshipField.withdrawnPlayers
                     .map(candidate => candidate.id || candidate.name);
@@ -165,20 +243,28 @@ function skipActiveTournament() {
             } else if (tNameLow.includes("players championship finals") || tNameLow.includes("pro players finals")) {
                 participants = pcRanked.slice(0, 64); tournamentRound = 64;
             } else if (tNameLow.includes("world darts championship") || tNameLow.includes("global darts championship")) {
-                let qualified = new Set();
-                oomRanked.slice(0, 32).forEach(p => qualified.add(p)); 
-                let ptIndex = 0;
-                while(qualified.size < 64 && ptIndex < ptRanked.length) { qualified.add(ptRanked[ptIndex]); ptIndex++; } 
-                let oomIndex = 0;
-                while(qualified.size < 96 && oomIndex < oomRanked.length) { qualified.add(oomRanked[oomIndex]); oomIndex++; } 
-                participants = Array.from(qualified); tournamentRound = 128;
+                const worldChampionshipCandidates = [
+                    ...(Array.isArray(pdcPlayers) ? pdcPlayers : []),
+                    ...(player?.name ? [player] : [])
+                ];
+                participants = typeof getWorldChampionshipQualificationField === 'function'
+                    ? getWorldChampionshipQualificationField(activeTournament, worldChampionshipCandidates, currentDate)
+                    : oomRanked.slice(0, 128);
+                tournamentRound = 128;
             } else if (tNameLow.includes("uk open") || tNameLow.includes("british open")) {
-                let qualified = new Set();
-                oomRanked.slice(0, 128).forEach(p => qualified.add(p)); 
-                participants = Array.from(qualified); tournamentRound = 128;
+                participants = tourCardPlayers.slice(0, 128);
+                if (participants.length < 128) {
+                    participants.push(...nonCardPlayers.slice(0, 128 - participants.length));
+                }
+                tournamentRound = 128;
             } else if (isContinentalQualifier) {
                 participants = getContinentalTourQualifierParticipants(activeTournament);
-                tournamentRound = 128;
+                tournamentRound = typeof getContinentalQualifierOpeningRound === 'function'
+                    ? getContinentalQualifierOpeningRound(activeTournament, participants.length)
+                    : participants.length;
+                activeTournament.continentalQualificationVersion = typeof CONTINENTAL_QUALIFICATION_VERSION === 'number'
+                    ? CONTINENTAL_QUALIFICATION_VERSION
+                    : 2;
             } else if (isContinentalMainEvent) {
                 const continentalField = getContinentalTourMainField(activeTournament);
                 participants = continentalField
@@ -186,11 +272,17 @@ function skipActiveTournament() {
                     : [];
                 tournamentRound = 64;
             } else if (tNameLow.includes("grand slam") || tNameLow.includes("champion's slam")) {
-                let qualified = new Set();
-                oomRanked.slice(0, 16).forEach(p => qualified.add(p)); 
-                let ptIndex = 0;
-                while(qualified.size < 48 && ptIndex < ptRanked.length) { qualified.add(ptRanked[ptIndex]); ptIndex++; }
-                participants = Array.from(qualified); 
+                const qualifiedField = typeof getPdcTourCardQualifiedMainField === 'function'
+                    ? getPdcTourCardQualifiedMainField(activeTournament, allPlayers)
+                    : null;
+                if (qualifiedField) participants = qualifiedField;
+                else {
+                    let qualified = new Set();
+                    oomRanked.slice(0, 16).forEach(p => qualified.add(p));
+                    let ptIndex = 0;
+                    while(qualified.size < 48 && ptIndex < ptRanked.length) { qualified.add(ptRanked[ptIndex]); ptIndex++; }
+                    participants = Array.from(qualified);
+                }
                 tournamentRound = 16; 
             } else if (tNameLow.includes("matchplay") || tNameLow.includes("grand prix")) {
                 let seeds = oomRanked.slice(0, 16);
@@ -216,10 +308,13 @@ function skipActiveTournament() {
             let playerInTournament = participants.some(isCurrentPlayer);
             
             if (isSkippingTournament && playerInTournament) {
-                const replacementRanking = isEuropeanChampionship ? etRanked : ptRanked;
-                let replacement = replacementRanking.find(p => !participants.includes(p) && !isCurrentPlayer(p));
-                if (!replacement) replacement = pdcPlayers[0];
-                participants = participants.map(p => isCurrentPlayer(p) ? replacement : p);
+                const replacementRanking = (isQSchoolEvent || isTourCardQualifierEvent || isContinentalQualifier || isWorldMastersFinalsQualifier)
+                    ? []
+                    : [...nonCardPlayers, ...(isEuropeanChampionship ? etRanked : ptRanked)];
+                const replacement = replacementRanking.find(p => !participants.includes(p) && !isCurrentPlayer(p));
+                participants = replacement
+                    ? participants.map(p => isCurrentPlayer(p) ? replacement : p)
+                    : participants.filter(p => !isCurrentPlayer(p));
                 playerInTournament = false;
             }
 
@@ -229,9 +324,13 @@ function skipActiveTournament() {
                 // Jeśli gracz celowo nacisnął "Odpuść", symulujemy cały turniej w tle
                 alert(t('t-alert-skip-tour').replace('{tour}', tournamentDisplayName));
                 isHeadlessSim = true;
-            } else if (isContinentalQualifier && !playerInTournament) {
-                // Gracze z Top 16 OOM / Top 16 ProTour są już w turnieju głównym.
-                // Ich kwalifikacje rozstrzygamy w tle, bez blokowania kalendarza.
+            } else if (isQSchoolEvent && !playerInTournament) {
+                // Posiadacz karty nie musi brać udziału w Q-Schoolu. Wyniki walki
+                // pozostałych zawodników rozstrzygamy automatycznie.
+                isHeadlessSim = true;
+            } else if (isTourCardQualifierEvent && !playerInTournament) {
+                // Brak karty albo bezpośrednia kwalifikacja wyłącza gracza z tego
+                // turnieju; wyniki pozostałych posiadaczy kart liczymy w tle.
                 isHeadlessSim = true;
             } else if (!playerInTournament) {
                 // Jeśli gracz się nie zakwalifikował, tylko o tym informujemy, 
@@ -240,6 +339,10 @@ function skipActiveTournament() {
             }
 
             isSkippingTournament = false;
+
+            if (playerInTournament && typeof chargeTournamentParticipationStamina === 'function') {
+                chargeTournamentParticipationStamina(activeTournament);
+            }
 
             lastTournamentResults = ""; 
             tournamentMatchHistory = [];
@@ -259,7 +362,20 @@ function skipActiveTournament() {
             }
 
             // --- 2. LOSOWANIE / ROZSTAWIENIE ---
-            if ((tNameLow.includes("premier") || tNameLow.includes("global darts league")) && !tNameLow.includes("play-off")) {
+            if (isTourCardQualifierEvent) {
+                participants = typeof buildPdcTourCardQualifierDraw === 'function'
+                    ? buildPdcTourCardQualifierDraw(participants)
+                    : shuffle(participants);
+                tournamentRound = participants.length;
+            } else if (isQSchoolEvent) {
+                participants = typeof buildPdcQSchoolDraw === 'function'
+                    ? buildPdcQSchoolDraw(participants)
+                    : shuffle(participants);
+                tournamentRound = participants.length;
+                activeTournament.qSchoolDrawVersion = typeof PDC_QSCHOOL_DRAW_VERSION === 'number'
+                    ? PDC_QSCHOOL_DRAW_VERSION
+                    : 2;
+            } else if ((tNameLow.includes("premier") || tNameLow.includes("global darts league")) && !tNameLow.includes("play-off")) {
                 participants = shuffle(participants);
             } else if ((tNameLow.includes("premier") || tNameLow.includes("global darts league")) && tNameLow.includes("play-off")) {
                 // Drabinka play-off już ustalona (1 vs 4, 2 vs 3)
@@ -295,7 +411,10 @@ function skipActiveTournament() {
                 participants = draw;
 
             } else if (isContinentalQualifier) {
-                participants = shuffle(participants);
+                participants = typeof buildContinentalQualifierDraw === 'function'
+                    ? buildContinentalQualifierDraw(activeTournament, participants)
+                    : shuffle(participants);
+                tournamentRound = participants.length;
 
             } else if (isContinentalMainEvent) {
                 let seeds = participants.slice(0, 16);
@@ -319,21 +438,9 @@ function skipActiveTournament() {
                     : shuffle(participants);
 
             } else if (tNameLow.includes("world darts championship") || tNameLow.includes("global darts championship")) {
-                let sortedByOOM = [...participants].sort((a,b) => b.prizeMoney - a.prizeMoney);
-                let seeds = sortedByOOM.slice(0, 32);
-                let unseeded = shuffle(sortedByOOM.slice(32)); 
-                let draw = new Array(128);
-                const wdcSeedOrder = [1, 32, 16, 17, 8, 25, 9, 24, 4, 29, 13, 20, 5, 28, 12, 21, 2, 31, 15, 18, 7, 26, 10, 23, 3, 30, 14, 19, 6, 27, 11, 22];
-                let unIndex = 0;
-                for (let i = 0; i < 32; i++) {
-                    let s = seeds[wdcSeedOrder[i] - 1]; 
-                    let boardStart = i * 4; 
-                    draw[boardStart] = s; 
-                    draw[boardStart + 1] = { name: "(BYE)", isBye: true, country: "Brak", ovr: 0, overall: 0 }; 
-                    draw[boardStart + 2] = unseeded[unIndex++]; 
-                    draw[boardStart + 3] = unseeded[unIndex++]; 
-                }
-                participants = draw;
+                participants = typeof buildWorldChampionshipDraw === 'function'
+                    ? buildWorldChampionshipDraw(participants)
+                    : shuffle(participants);
 
             } else if (isGrandSlamEvent) {
                 // Zwycięzcy 16 rzeczywistych grup są już rozstawieni przez
@@ -389,6 +496,14 @@ function skipActiveTournament() {
                 }
                 if (specialTournamentOutcome === 'worldMastersFinalsQualifier') {
                     concludeWorldMastersFinalsQualifierEvent(false);
+                    return;
+                }
+                if (specialTournamentOutcome === 'pdcQSchool') {
+                    concludePdcQSchoolEvent(false);
+                    return;
+                }
+                if (specialTournamentOutcome === 'pdcTourCardQualifier') {
+                    concludePdcTourCardQualifierEvent(false);
                     return;
                 }
                 
@@ -454,13 +569,53 @@ function skipActiveTournament() {
             if (outcomeMessage) alert(outcomeMessage);
             return { playerQualified, mainTournament };
         }
+
+        function concludePdcQSchoolEvent(showOutcome = true) {
+            if (typeof isPdcQSchoolTournament !== 'function' || !isPdcQSchoolTournament(activeTournament)) return null;
+            const qSchoolTournament = activeTournament;
+            const playerQualified = player?.hasTourCard === true && player.tourCardSource === 'qschool';
+            qSchoolTournament.completed = true;
+            qSchoolTournament.historyLogs = lastTournamentResults;
+            activeTournament = null;
+            tournamentBracket = [];
+            const tile = document.getElementById('tile-tournament');
+            if (tile) tile.style.display = 'none';
+            if (typeof updateHub === 'function') updateHub();
+            if (typeof saveGame === 'function') saveGame(true);
+            if (showOutcome && typeof getPdcTourCardOutcomeMessage === 'function') {
+                alert(getPdcTourCardOutcomeMessage(player));
+            }
+            return { playerQualified, tournament: qSchoolTournament };
+        }
+
+        function concludePdcTourCardQualifierEvent(showOutcome = true) {
+            if (typeof isPdcTourCardQualifierTournament !== 'function'
+                || !isPdcTourCardQualifierTournament(activeTournament)) return null;
+            const qualifierTournament = activeTournament;
+            const message = showOutcome && typeof getPdcTourCardQualifierOutcomeMessage === 'function'
+                ? getPdcTourCardQualifierOutcomeMessage(qualifierTournament, player)
+                : '';
+            qualifierTournament.completed = true;
+            qualifierTournament.historyLogs = lastTournamentResults;
+            activeTournament = null;
+            tournamentBracket = [];
+            const tile = document.getElementById('tile-tournament');
+            if (tile) tile.style.display = 'none';
+            if (typeof updateHub === 'function') updateHub();
+            if (typeof saveGame === 'function') saveGame(true);
+            if (message) alert(message);
+            return { tournament: qualifierTournament };
+        }
         
 
        function showBracket() {
             document.getElementById('t-btn-play-match').onclick = closeBracketAndPlay;
             document.getElementById('t-btn-sim-round').onclick = simulateNextRound;
-            document.getElementById('t-btn-play-match').innerText = 'Przejdź do meczu!';
-            document.getElementById('t-btn-sim-round').innerText = 'Symuluj Rundę (Mecze AI)';
+            const simulateTournamentButton = document.getElementById('t-btn-sim-tournament');
+            if (simulateTournamentButton) simulateTournamentButton.onclick = simulateRemainingTournament;
+            document.getElementById('t-btn-play-match').innerText = t('t-btn-play-match');
+            document.getElementById('t-btn-sim-round').innerText = t('t-btn-sim-round');
+            if (simulateTournamentButton) simulateTournamentButton.innerText = t('t-btn-sim-tournament');
             document.getElementById('bracket-title').innerText = `🏆 ${t('t-bracket')}: ${getRoundName(tournamentRound)}`;
             const list = document.getElementById('bracket-list'); list.innerHTML = "";
             
@@ -469,6 +624,18 @@ function skipActiveTournament() {
             for(let i = 0; i < tournamentBracket.length; i += 2) {
                 let p1 = tournamentBracket[i]; let p2 = tournamentBracket[i+1];
                 let isPlayerMatch = isCurrentPlayer(p1) || isCurrentPlayer(p2);
+                const watchedResult = typeof getSpectatedTournamentMatchResult === 'function'
+                    ? getSpectatedTournamentMatchResult(p1, p2, tournamentRound, false)
+                    : null;
+                const canWatchMatch = !isPlayerMatch && !p1?.isBye && !p2?.isBye;
+                const watchControl = watchedResult
+                    ? `<div style="display:flex; flex-direction:column; align-items:center; min-width:155px; gap:3px;">
+                        <button class="btn-sign" disabled style="background:#34495e; margin:0;">✓ ${watchedResult.p1Score}:${watchedResult.p2Score}</button>
+                        <small style="color:#bdc3c7;">${t('t-avg-short')} ${watchedResult.p1Avg} – ${watchedResult.p2Avg}</small>
+                    </div>`
+                    : (canWatchMatch
+                        ? `<button class="btn-sign" onclick="startSpectatingTournamentMatch(${i})" style="background:#8e44ad; margin:0; min-width:155px;">👁 ${t('t-btn-watch-match')}</button>`
+                        : '');
                 
                 if (isPlayerMatch) isPlayerInRound = true;
 
@@ -476,6 +643,7 @@ function skipActiveTournament() {
                     <div style="flex: 1; text-align: left;">${isCurrentPlayer(p1) ? getFlagImg(player.country) : getFlagImg(p1.country)} ${escapeHtml(p1.name)} <span style="color:#bdc3c7; font-size:12px;">(OVR ${getDisplayedOvr(p1)})</span></div>
                     <div class="bracket-vs" style="flex: 0 0 40px; text-align: center;">VS</div>
                     <div style="flex: 1; text-align: right;">${isCurrentPlayer(p2) ? getFlagImg(player.country) : getFlagImg(p2.country)} ${escapeHtml(p2.name)} <span style="color:#bdc3c7; font-size:12px;">(OVR ${getDisplayedOvr(p2)})</span></div>
+                    ${watchControl}
                 </div>`;
             }
 
@@ -483,9 +651,11 @@ function skipActiveTournament() {
             if (isPlayerInRound) {
                 document.getElementById('t-btn-play-match').style.display = 'block';
                 document.getElementById('t-btn-sim-round').style.display = 'none';
+                if (simulateTournamentButton) simulateTournamentButton.style.display = 'none';
             } else {
                 document.getElementById('t-btn-play-match').style.display = 'none';
                 document.getElementById('t-btn-sim-round').style.display = 'block';
+                if (simulateTournamentButton) simulateTournamentButton.style.display = 'block';
             }
 
             document.getElementById('bracket-modal').style.display = "flex";
@@ -503,6 +673,18 @@ function skipActiveTournament() {
             if (specialTournamentOutcome === 'worldMastersFinalsQualifier') {
                 document.getElementById('bracket-modal').style.display = 'none';
                 concludeWorldMastersFinalsQualifierEvent(true);
+                showTournamentEnd();
+                return;
+            }
+            if (specialTournamentOutcome === 'pdcQSchool') {
+                document.getElementById('bracket-modal').style.display = 'none';
+                concludePdcQSchoolEvent(true);
+                showTournamentEnd();
+                return;
+            }
+            if (specialTournamentOutcome === 'pdcTourCardQualifier') {
+                document.getElementById('bracket-modal').style.display = 'none';
+                concludePdcTourCardQualifierEvent(true);
                 showTournamentEnd();
                 return;
             }
@@ -672,7 +854,11 @@ function skipActiveTournament() {
             const isContinentalQualifier = typeof isContinentalQualifierTournament === 'function' && isContinentalQualifierTournament(activeTournament);
             const isWorldMastersEvent = typeof isWorldMastersTournament === 'function' && isWorldMastersTournament(activeTournament);
             const isWorldMastersFinalsQualifier = typeof isWorldMastersFinalsQualifierTournament === 'function' && isWorldMastersFinalsQualifierTournament(activeTournament);
-            let prize = isContinentalQualifier ? 0 : getPrizeMoney(activeTournament.name, tournamentRound, false);
+            const isQSchoolEvent = typeof isPdcQSchoolTournament === 'function' && isPdcQSchoolTournament(activeTournament);
+            const isTourCardQualifierEvent = typeof isPdcTourCardQualifierTournament === 'function'
+                && isPdcTourCardQualifierTournament(activeTournament);
+            const isNonPrizeQualifier = isContinentalQualifier || isWorldMastersFinalsQualifier || isQSchoolEvent || isTourCardQualifierEvent;
+            let prize = isNonPrizeQualifier ? 0 : getPrizeMoney(activeTournament.name, tournamentRound, false);
 
             let roundHeader = `<h4 style='color:var(--accent-green); margin:15px 0 5px 0; border-bottom: 1px solid var(--border-color); padding-bottom: 3px;'>${getRoundName(tournamentRound)}</h4>`;
             lastTournamentResults += roundHeader;
@@ -701,7 +887,7 @@ function skipActiveTournament() {
                         loser = isCurrentPlayer(p1) ? p1 : p2;
                     }
                     nextRoundBracket.push(winner);
-                    if (!isContinentalQualifier) awardPrizeMoney(loser, prize, activeTournament.name); 
+                    if (!isNonPrizeQualifier) awardPrizeMoney(loser, prize, activeTournament.name); 
                     applyTournamentRatingChange(winner, loser, tournamentRound);
 
                     let scoreStr = "W:O";
@@ -761,7 +947,9 @@ function skipActiveTournament() {
 
                 } else {
                     let format = getTournamentMatchFormat(activeTournament, tournamentRound);
-                    let matchRes = simulateAImatch(p1, p2, format);
+                    let matchRes = typeof resolveTournamentAiMatch === 'function'
+                        ? resolveTournamentAiMatch(p1, p2, format, tournamentRound)
+                        : simulateAImatch(p1, p2, format);
                     
                     winner = matchRes.winner; 
                     loser = matchRes.loser;
@@ -771,7 +959,7 @@ function skipActiveTournament() {
                     matchLScore = Math.min(matchRes.p1Score, matchRes.p2Score);
 
                     nextRoundBracket.push(winner);
-                    if (!isContinentalQualifier) awardPrizeMoney(loser, prize, activeTournament.name);
+                    if (!isNonPrizeQualifier) awardPrizeMoney(loser, prize, activeTournament.name);
                     applyTournamentRatingChange(winner, loser, tournamentRound);
 
                     let wAvg = winner === p1 ? matchRes.p1Avg : matchRes.p2Avg;
@@ -808,7 +996,7 @@ function skipActiveTournament() {
                     }
                 }
 
-                if (!isContinentalQualifier) {
+                if (!isNonPrizeQualifier) {
                     recordSeasonTournamentResult(loser, activeTournament, { round: tournamentRound, prizeMoney: prize });
                 }
 
@@ -832,7 +1020,11 @@ function skipActiveTournament() {
                 }
             } // Koniec pętli for
             tournamentBracket = nextRoundBracket; tournamentRound /= 2;
-            if (isContinentalQualifier && tournamentRound === 16) {
+            if (isContinentalQualifier && tournamentBracket.length <= (
+                typeof getContinentalQualifierPlaces === 'function'
+                    ? getContinentalQualifierPlaces(activeTournament)
+                    : 16
+            )) {
                 completeContinentalTourQualifier(activeTournament, tournamentBracket);
                 return true;
             }
@@ -841,6 +1033,21 @@ function skipActiveTournament() {
                     completeWorldMastersFinalsQualifier(activeTournament, tournamentBracket);
                 }
                 return 'worldMastersFinalsQualifier';
+            }
+            if (isQSchoolEvent && tournamentRound === 64) {
+                if (typeof completePdcQSchool === 'function') {
+                    completePdcQSchool(activeTournament, tournamentBracket, currentDate);
+                }
+                return 'pdcQSchool';
+            }
+            if (isTourCardQualifierEvent) {
+                const qualifyingPlaces = Math.max(1, Number(activeTournament.qualifyingPlaces) || 8);
+                if (tournamentRound === qualifyingPlaces) {
+                    if (typeof completePdcTourCardQualifier === 'function') {
+                        completePdcTourCardQualifier(activeTournament, tournamentBracket);
+                    }
+                    return 'pdcTourCardQualifier';
+                }
             }
             return false;
         }
@@ -866,7 +1073,7 @@ function skipActiveTournament() {
                 vsAI: true, opponent: opponent, 
                 p1Score: 501, p2Score: 501, p1Legs: 0, p2Legs: 0, p1Sets: 0, p2Sets: 0, totalLegsPlayed: 0,
                 legsToWin: matchFormat.type === 'sets' ? matchFormat.legsPerSet : matchFormat.legsToWin,
-                matchFormat: matchFormat, turn: starter, startingPlayer: starter, dartsThrown: 0, p1TurnStartScore: 501, p2TurnStartScore: 501, isTournament: true, isRivalryMatch: isRivalryMatch, rivalryModifier: rivalryModifier, opponentPeakPerformance,
+                matchFormat: matchFormat, turn: starter, startingPlayer: starter, dartsThrown: 0, isTurnLocked: false, p1TurnStartScore: 501, p2TurnStartScore: 501, isTournament: true, isRivalryMatch: isRivalryMatch, rivalryModifier: rivalryModifier, opponentPeakPerformance,
                 stats: { 
                     p1TotalDarts: 0, p1AccumulatedScore: 0, p1First9Score: 0, p1First9Darts: 0, p1LegDarts: 0, p1HighCheckout: 0, p1DoubleAttempts: 0, p1DoubleHits: 0, p1OneEighties: 0,
                     p2TotalDarts: 0, p2AccumulatedScore: 0, p2First9Score: 0, p2First9Darts: 0, p2LegDarts: 0, p2HighCheckout: 0, p2DoubleAttempts: 0, p2DoubleHits: 0, p2OneEighties: 0 

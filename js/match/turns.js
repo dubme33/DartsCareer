@@ -1,4 +1,9 @@
 function playerThrow() {
+            // Kliknięcia mogą już czekać w kolejce zdarzeń, gdy trzecia lotka
+            // kończy podejście. Nie pozwalamy im wejść do logiki punktacji.
+            if (!currentMatch || currentMatch.isSpectator || currentMatch.turn !== 'p1' || currentMatch.dartsThrown >= 3 || currentMatch.isTurnLocked) return;
+            if (currentMatch.isDoubles && !isCareerPlayerThrowing(true)) return;
+
             let tSec = parseInt(document.getElementById('aim-sector').value); 
             let tMult = parseInt(document.getElementById('aim-multiplier').value);
             if (tSec === 50) { tSec = 25; tMult = 2; } else if (tSec === 25) { tMult = 1; }
@@ -21,7 +26,7 @@ function playerThrow() {
             if (!currentMatch || currentMatch.dartsThrown >= 3) return;
             const isP1 = currentMatch.turn === 'p1';
             if (!isP1 && currentMatch.turn !== 'p2') return;
-            if (!currentMatch.isDoubles && isP1) return;
+            if (!currentMatch.isDoubles && isP1 && !currentMatch.isSpectator) return;
             if (currentMatch.isDoubles && isP1 && isCareerPlayerThrowing(true)) return;
             
             let score = isP1 ? currentMatch.p1Score : currentMatch.p2Score;
@@ -31,10 +36,20 @@ function playerThrow() {
             // AI używa teraz jednej, wspólnej logiki ze wszystkimi wyjątkami!
             let aim = getOptimalAim(score, isDIDO, dartsLeft);
             
-            const aiPlayer = currentMatch.isDoubles ? getDoublesCurrentThrower(isP1) : currentMatch.opponent;
+            const aiPlayer = currentMatch.isDoubles
+                ? getDoublesCurrentThrower(isP1)
+                : (currentMatch.isSpectator && isP1 ? currentMatch.spectatorP1 : currentMatch.opponent);
             let aiStats = { ...aiPlayer };
+            const tournamentForm = currentMatch.isSpectator && typeof getTournamentSimulationForm === 'function'
+                ? getTournamentSimulationForm(aiPlayer)
+                : 0;
+            aiStats.scoring = (Number(aiStats.scoring) || 0) + tournamentForm;
+            aiStats.doubles = (Number(aiStats.doubles) || 0) + tournamentForm;
+            const peakPerformance = currentMatch.isSpectator
+                ? (isP1 ? currentMatch.p1PeakPerformance : currentMatch.p2PeakPerformance)
+                : currentMatch.opponentPeakPerformance;
             const peakAccuracyBoost = !currentMatch.isDoubles
-                ? (currentMatch.opponentPeakPerformance?.accuracyBoost || 0)
+                ? (peakPerformance?.accuracyBoost || 0)
                 : 0;
             aiStats.peakMatchAccuracyBoost = peakAccuracyBoost;
             const momentum = isP1 ? currentMatch.p1Momentum : currentMatch.p2Momentum;

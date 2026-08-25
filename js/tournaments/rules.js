@@ -49,6 +49,12 @@ const checkoutGuide = {
         }
 
         function getRoundName(r) {
+            if (typeof isContinentalQualifierTournament === 'function'
+                && isContinentalQualifierTournament(typeof activeTournament !== 'undefined' ? activeTournament : null)
+                && typeof getContinentalQualifierPath === 'function'
+                && getContinentalQualifierPath(activeTournament) === 'card'
+                && [80, 40, 20, 10].includes(r)) return `Top ${r}`;
+            if(r === 256) return 'Last 256';
             if(r === 128) return t('t-r-128');
             if(r === 64) return t('t-r-64');
             if(r === 32) return t('t-r-32'); 
@@ -61,6 +67,13 @@ const checkoutGuide = {
 
         function getTournamentMatchFormat(tournament, round) {
             const name = tournament ? tournament.name : "";
+
+            if (typeof isPdcQSchoolTournament === 'function' && isPdcQSchoolTournament(tournament)) {
+                return { type: 'legs', legsToWin: 6 };
+            }
+            if (typeof isPdcTourCardQualifierTournament === 'function' && isPdcTourCardQualifierTournament(tournament)) {
+                return { type: 'legs', legsToWin: 6 };
+            }
 
             if (typeof isWorldMastersTournament === 'function' &&
                 (isWorldMastersTournament(tournament) || isWorldMastersFinalsTournament(tournament) || isWorldMastersFinalsQualifierTournament(tournament))) {

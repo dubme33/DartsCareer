@@ -164,7 +164,13 @@
 
         const playerNameAliases = Object.freeze({
             // W starszych zapisach nazwisko Sebastiana Białeckiego było zapisane z literówką.
-            'sebastian bielicki': 'sebastian bialecki'
+            'sebastian bielicki': 'sebastian bialecki',
+            // Kopie dodane dawniej do regionalnych składów reprezentacji.
+            'cor dekar': 'cor deckers',
+            'jim longe': 'jimmy longley',
+            'oscar lucasi': 'oscar lukas',
+            'viktor tingren': 'victor tingstrom',
+            'adam leeke': 'adam leak'
         });
 
         function normalizePlayerIdentityPart(value) {

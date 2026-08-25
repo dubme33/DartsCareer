@@ -444,6 +444,17 @@ function initCareerChronicle() {
                 player.technicalPartner.name = techNameMap[player.technicalPartner.name];
             }
 
+            if (typeof migrateMainOrderOfMeritFromHistory === 'function') {
+                migrateMainOrderOfMeritFromHistory(
+                    isCareerActive ? [player, ...pdcPlayers] : pdcPlayers,
+                    tournamentDatabase,
+                    currentDate
+                );
+            }
+            if (typeof migratePdcTourCardSystem === 'function') {
+                migratePdcTourCardSystem(isCareerActive ? [player, ...pdcPlayers] : pdcPlayers, currentDate);
+            }
+
             renderOpponentOptions();
             const tDescPlay = document.getElementById('t-desc-play'); if (tDescPlay) tDescPlay.innerText = 'Zmierz się z AI z PDC.';
             const tTilePdc = document.getElementById('t-tile-pdc'); if (tTilePdc) tTilePdc.innerText = '🏆 Baza PDC';

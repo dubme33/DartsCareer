@@ -60,7 +60,16 @@ function showScreen(screenId) {
                 prizeMoney, proTourPrizeMoney, pcPrizeMoney, europeanTourPrizeMoney,
                 photo: modPhoto || selectedPlayer.photo || '',
                 walkon: modWalkon || selectedPlayer.walkon || null,
-                historyPT: {}, historyMain: {},
+                historyPT: selectedPlayer.historyPT && typeof selectedPlayer.historyPT === 'object'
+                    ? { ...selectedPlayer.historyPT }
+                    : {},
+                historyMain: selectedPlayer.historyMain && typeof selectedPlayer.historyMain === 'object'
+                    ? { ...selectedPlayer.historyMain }
+                    : {},
+                mainPrizeHistory: Array.isArray(selectedPlayer.mainPrizeHistory)
+                    ? selectedPlayer.mainPrizeHistory.map(entry => ({ ...entry }))
+                    : [],
+                mainOomHistoryVersion: selectedPlayer.mainOomHistoryVersion,
                 activeSponsors: [], technicalPartner: null,
                 equipment: { board: 0, surround: 0, light: 0 },
                 scoringXP: 0, doublesXP: 0,
@@ -87,6 +96,12 @@ function showScreen(screenId) {
             unreadMailsCount = 0;
 
             normalizePlayerIds(pdcPlayers, player);
+            if (typeof refreshMainOrderOfMerit === 'function') {
+                refreshMainOrderOfMerit([...pdcPlayers, player], currentDate);
+            }
+            if (typeof migratePdcTourCardSystem === 'function') {
+                migratePdcTourCardSystem([...pdcPlayers, player], currentDate);
+            }
             initAllPlayerSeasonStats();
             initCareerStats();
             initCareerChronicle();
@@ -121,8 +136,8 @@ function showScreen(screenId) {
                 overall: ovr, ovr: ovr, scoring: ovr + 2, doubles: ovr - 2,
                 favoriteDouble: parseInt(document.getElementById('favorite-double').value),
                 budget: 150, prof: 50, pop: 20, stamina: 100,
-                prizeMoney: 30000, 
-                proTourPrizeMoney: 20000,
+                prizeMoney: 0,
+                proTourPrizeMoney: 0,
                 pcPrizeMoney: 0,
                 europeanTourPrizeMoney: 0,
                 scoringXP: 0, doublesXP: 0,
@@ -130,10 +145,22 @@ function showScreen(screenId) {
                 photo: "", walkon: null,
                 historyPT: {},
                 historyMain: {},
+                mainPrizeHistory: [],
+                mainOomHistoryVersion: typeof MAIN_ORDER_OF_MERIT_VERSION !== 'undefined'
+                    ? MAIN_ORDER_OF_MERIT_VERSION
+                    : 1,
                 rivalries: {},
                 activeRivalIds: [],
                 careerChronicle: []
             };
+            const startsWithTourCard = document.getElementById('start-with-tour-card')?.value === 'yes';
+            if (startsWithTourCard && typeof seedCareerPlayerIntoPdcTop64 === 'function') {
+                seedCareerPlayerIntoPdcTop64(player, [...pdcPlayers, player], currentDate);
+            } else if (typeof clearPdcTourCard === 'function' && typeof getPdcTourCardCycleYear === 'function') {
+                clearPdcTourCard(player, getPdcTourCardCycleYear(currentDate));
+            } else {
+                player.hasTourCard = startsWithTourCard;
+            }
             if (typeof resetGrandSlamState === 'function') resetGrandSlamState();
             initAllPlayerSeasonStats();
 
@@ -481,12 +508,23 @@ function showScreen(screenId) {
             }
 
             currentDate.setDate(currentDate.getDate() + 1);
+            if (typeof refreshMainOrderOfMerit === 'function') {
+                refreshMainOrderOfMerit([...pdcPlayers, player], currentDate);
+            }
             if (typeof refreshProTourOrderOfMerit === 'function') {
                 refreshProTourOrderOfMerit([...pdcPlayers, player], currentDate);
             }
             updateDateDisplay();
 
-            if(typeof player.stamina !== 'undefined') player.stamina = Math.min(100, player.stamina + 10); // Odzyskuje 10% dziennie 
+            if (typeof recoverDailyStamina === 'function') {
+                recoverDailyStamina(player);
+            } else {
+                // Awaryjna ścieżka dla przeglądarki, która ma jeszcze starszy
+                // plik modułu w pamięci podręcznej.
+                const currentStamina = Number.isFinite(Number(player.stamina)) ? Number(player.stamina) : 100;
+                player.stamina = Math.min(100, currentStamina + 5);
+            }
+            updateHub();
 
             // --- Wypłaty i reset na początku miesiąca/roku ---
             if (currentDate.getDate() === 1) {
@@ -522,6 +560,9 @@ function showScreen(screenId) {
                     if (typeof processAnnualPlayerLifecycle === 'function') {
                         processAnnualPlayerLifecycle(completedYear);
                     }
+                    if (typeof processPdcTourCardCycleStart === 'function') {
+                        processPdcTourCardCycleStart([...pdcPlayers, player], currentDate);
+                    }
                     player.pcPrizeMoney = 0;
                     if (typeof pdcPlayers !== 'undefined') {
                         pdcPlayers.forEach(p => p.pcPrizeMoney = 0);
@@ -533,6 +574,7 @@ function showScreen(screenId) {
                         tournamentDatabase.forEach(tournament => {
                             tournament.completed = false;
                             tournament.historyLogs = '';
+                            delete tournament.staminaChargedYear;
                         });
                     }
                     gdlTable = [];
@@ -548,7 +590,8 @@ function showScreen(screenId) {
 
             // --- Kwalifikacje do Ligi (1 lutego) ---
             if (currentDate.getMonth() === 1 && currentDate.getDate() === 1) {
-                let oomRanked = [...pdcPlayers.filter(candidate => candidate.hasTourCard !== false), player]
+                let oomRanked = [...pdcPlayers, player]
+                    .filter(candidate => typeof isPdcTourCardEligiblePlayer !== 'function' || isPdcTourCardEligiblePlayer(candidate))
                     .sort((a,b) => b.prizeMoney - a.prizeMoney);
                 gdlTable = [];
                 // Top 4 Order of Merit
@@ -570,7 +613,12 @@ function showScreen(screenId) {
             document.getElementById('tile-tournament').style.display = 'none';
 
             if (typeof tournamentDatabase !== 'undefined') {
-                const todayTournament = tournamentDatabase.find(t_tour => t_tour.month === currentDate.getMonth() && t_tour.day === currentDate.getDate());
+                const todayTournament = tournamentDatabase.find(t_tour =>
+                    t_tour.month === currentDate.getMonth()
+                    && t_tour.day === currentDate.getDate()
+                    && (typeof isTournamentScheduledForCareerYear !== 'function'
+                        || isTournamentScheduledForCareerYear(t_tour, currentDate.getFullYear()))
+                );
                 if (todayTournament) {
                     const tournamentDisplayName = typeof getTournamentDisplayName === 'function'
                         ? getTournamentDisplayName(todayTournament)
@@ -589,7 +637,15 @@ function showScreen(screenId) {
                     const playerHasDirectContinentalEntry = isContinentalQualifier
                         && typeof isCareerPlayerDirectlyQualifiedForContinentalTour === 'function'
                         && isCareerPlayerDirectlyQualifiedForContinentalTour(todayTournament);
-                    if (playerHasDirectContinentalEntry) {
+                    const cardHolderSkipsQSchool = typeof isPdcQSchoolTournament === 'function'
+                        && isPdcQSchoolTournament(todayTournament)
+                        && player?.hasTourCard === true;
+                    const playerSkipsTourCardQualifier = typeof isPdcTourCardQualifierTournament === 'function'
+                        && isPdcTourCardQualifierTournament(todayTournament)
+                        && (player?.hasTourCard !== true
+                            || (typeof isCareerPlayerAutomaticallyQualifiedForPdcCardQualifier === 'function'
+                                && isCareerPlayerAutomaticallyQualifiedForPdcCardQualifier(todayTournament)));
+                    if (playerHasDirectContinentalEntry || cardHolderSkipsQSchool || playerSkipsTourCardQualifier) {
                         // Zawodnik z miejsc rankingowych ma już gwarantowany start w
                         // turnieju głównym. Kwalifikacje rozstrzygamy w tle, aby nie
                         // blokowały mu kalendarza ani nie wymagały kliknięcia „Odpuść”.
@@ -679,6 +735,8 @@ function showScreen(screenId) {
 
             tournamentDatabase
                 .map((tour, idx) => ({ tour, idx }))
+                .filter(({ tour }) => typeof isTournamentScheduledForCareerYear !== 'function'
+                    || isTournamentScheduledForCareerYear(tour, currentDate.getFullYear()))
                 .sort((first, second) => first.tour.month - second.tour.month || first.tour.day - second.tour.day || first.idx - second.idx)
                 .forEach(({ tour, idx }) => {
                 let statusBadge = tour.completed 
@@ -686,7 +744,13 @@ function showScreen(screenId) {
                     : `<span style="color:var(--accent-green)">${t('t-scheduled')}</span>`;
                     
                 const year = currentDate.getFullYear();
-                let dateStr = tour.endDay ? `${tour.day}-${tour.endDay}.${(tour.month + 1).toString().padStart(2, '0')}.${year}` : `${tour.day}.${(tour.month + 1).toString().padStart(2, '0')}.${year}`;
+                const startMonth = (tour.month + 1).toString().padStart(2, '0');
+                const endMonth = ((Number.isInteger(tour.endMonth) ? tour.endMonth : tour.month) + 1).toString().padStart(2, '0');
+                let dateStr = tour.endDay
+                    ? (endMonth === startMonth
+                        ? `${tour.day}-${tour.endDay}.${startMonth}.${year}`
+                        : `${tour.day}.${startMonth}-${tour.endDay}.${endMonth}.${year}`)
+                    : `${tour.day}.${startMonth}.${year}`;
                 
                 list.innerHTML += `<div style="border-bottom:1px solid var(--border-color); padding:10px 0; display:flex; justify-content:space-between; align-items:center;">
                     <div>
@@ -720,6 +784,8 @@ function showScreen(screenId) {
                 // Dla starych zapisów bez tego szczegółowego logu zostawiamy krótki komunikat o mistrzu.
                 document.getElementById('results-content').innerHTML = detailedWorldCupHistory || tour.historyLogs || dynamicWorldCupHistory;
                 document.getElementById('t-btn-next-round').style.display = 'none';
+                const simulateTournamentButton = document.getElementById('t-btn-sim-tournament-results');
+                if (simulateTournamentButton) simulateTournamentButton.style.display = 'none';
                 document.getElementById('t-btn-tour-back').style.display = 'block';
                 document.getElementById('results-modal').style.display = 'flex';
             } else {
@@ -1107,10 +1173,13 @@ function showScreen(screenId) {
 
                 let formattedPrize = displayMoney.toLocaleString('en-GB');
                 let displayOvr = Math.round(p.ovr); 
+                const tourCardBadge = p.hasTourCard === true
+                    ? `<span title="${escapeHtml(typeof getPdcTourCardLabel === 'function' ? getPdcTourCardLabel(p) : 'Posiadacz karty PDC')}" style="display:inline-block; margin-left:6px; padding:2px 6px; border-radius:10px; background:#8e44ad; color:white; font-size:10px; font-weight:bold;">PDC CARD</span>`
+                    : '';
 
                 list.innerHTML += `<button type="button" class="ranking-player-row" data-player-id="${escapeHtml(p.id)}" style="border-bottom: 1px solid var(--border-color); ${bgStyle}">
                     <div>
-                        <strong>#${index + 1}</strong> ${getFlagImg(p.country)} ${escapeHtml(p.name)} 
+                        <strong>#${index + 1}</strong> ${getFlagImg(p.country)} ${escapeHtml(p.name)}${tourCardBadge}
                         <span style="color: #bdc3c7; font-size: 13px; margin-left: 5px;">OVR: ${displayOvr} ${formText}</span> ${isMe ? "<b>(TY)</b>" : ""}
                     </div>
                     <div style="color: #f1c40f; font-weight: bold;">

@@ -77,6 +77,7 @@ const playerBirthYears = Object.freeze({
     "Tom Pissel": 1987,
     "Daryll Pilgry": 1987,
     "Cor Deckers": 1987,
+    "Jimmy Longley": 1968,
     "Bo Graves": 2004,
     "Dominic Gruell": 2002,
     "Chris Kister": 1986,

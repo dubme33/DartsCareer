@@ -67,6 +67,7 @@ function checkAchievements(type, data = null) {
             currentMatch.suddenDeath = { p1Score: 0, p2Score: 0, p1Darts: 0, p2Darts: 0 };
             currentMatch.turn = 'p1';
             currentMatch.dartsThrown = 0;
+            currentMatch.isTurnLocked = false;
             currentTurnScore = 0;
             drawnDarts = [];
 
@@ -89,6 +90,7 @@ function checkAchievements(type, data = null) {
                     currentMatch.suddenDeath = { p1Score: 0, p2Score: 0, p1Darts: 0, p2Darts: 0 };
                     currentMatch.turn = 'p1';
                     currentMatch.dartsThrown = 0;
+                    currentMatch.isTurnLocked = false;
                     currentTurnScore = 0;
                     drawnDarts = [];
                     updateScores();
@@ -99,7 +101,11 @@ function checkAchievements(type, data = null) {
                 return;
             }
 
-            const winnerName = currentMatch.isDoubles ? getDoublesTeamName(isP1) : (isP1 ? player.name : currentMatch.opponent.name);
+            const winnerName = currentMatch.isDoubles
+                ? getDoublesTeamName(isP1)
+                : (typeof getCurrentSinglesMatchPlayerName === 'function'
+                    ? getCurrentSinglesMatchPlayerName(isP1)
+                    : (isP1 ? player.name : currentMatch.opponent.name));
             logThrow(`⚡ ${winnerName} ${t('t-log-sd-win')}`, isP1 ? 'hit' : 'ai');
 
             // W mistrzostwach świata sudden death rozstrzyga ostatni, decydujący set.
@@ -112,14 +118,18 @@ function checkAchievements(type, data = null) {
             }
 
             currentMatch.suddenDeath = null;
-            if (isP1) checkAchievements('sudden_death'); // <--- DODANE TUTAJ
+            if (isP1 && !currentMatch.isSpectator) checkAchievements('sudden_death'); // <--- DODANE TUTAJ
             finishMatch(isP1, winnerName);
         }
 
         function processSuddenDeathThrow(isP1, targetSec, targetMult, hitSec, hitMult) {
             const suddenDeath = currentMatch.suddenDeath;
             const points = hitSec * hitMult;
-            const playerName = currentMatch.isDoubles ? getCurrentMatchThrowerName(isP1) : (isP1 ? player.name : currentMatch.opponent.name);
+            const playerName = currentMatch.isDoubles
+                ? getCurrentMatchThrowerName(isP1)
+                : (typeof getCurrentSinglesMatchPlayerName === 'function'
+                    ? getCurrentSinglesMatchPlayerName(isP1)
+                    : (isP1 ? player.name : currentMatch.opponent.name));
             const logType = isP1 ? 'hit' : 'ai';
 
             addDartToCanvas(hitSec, hitMult, isP1 ? '#f1c40f' : '#ecf0f1', targetSec, targetMult);
@@ -151,14 +161,17 @@ function checkAchievements(type, data = null) {
 
             if (!isP1) {
                 clearTimeout(window.aiTimeout);
-                window.aiTimeout = setTimeout(aiTurn, 1200);
+                const delay = typeof getSpectatorPlaybackDelay === 'function'
+                    ? getSpectatorPlaybackDelay(1200, 350)
+                    : 1200;
+                window.aiTimeout = setTimeout(aiTurn, delay);
             }
         }
 
        function handleCompletedLeg(isP1, playerName) {
             const st = currentMatch.stats;
             // --- SPRAWDZANIE 9-DARTERA ---
-            if (isP1 && st.p1LegDarts === 9 && (!currentMatch.isDoubles || isCareerPlayerThrowing(true))) {
+            if (isP1 && !currentMatch.isSpectator && st.p1LegDarts === 9 && (!currentMatch.isDoubles || isCareerPlayerThrowing(true))) {
                 setTimeout(() => triggerNineDarterAlert(), 1500);
                 checkAchievements('9darter');
             }
@@ -190,7 +203,12 @@ function checkAchievements(type, data = null) {
                 setWasWon = true;
                 if (isP1) currentMatch.p1Sets++;
                 else currentMatch.p2Sets++;
-                logThrow(`🏆 ${currentMatch.isDoubles ? getDoublesTeamName(isP1) : (isP1 ? player.name : currentMatch.opponent.name)} ${t('t-log-wins-set')}`, isP1 ? 'hit' : 'ai');
+                const setWinnerName = currentMatch.isDoubles
+                    ? getDoublesTeamName(isP1)
+                    : (typeof getCurrentSinglesMatchPlayerName === 'function'
+                        ? getCurrentSinglesMatchPlayerName(isP1)
+                        : (isP1 ? player.name : currentMatch.opponent.name));
+                logThrow(`🏆 ${setWinnerName} ${t('t-log-wins-set')}`, isP1 ? 'hit' : 'ai');
             }
 
             const decidingSetReachedSuddenDeath = isDecidingSet && format.decidingSetSuddenDeathAt &&
@@ -215,9 +233,12 @@ function checkAchievements(type, data = null) {
                 updateScores(); // Pokazuje ostateczny wynik np. 6:4
                 
                 // Czekamy 2.5 sekundy, żeby sędzia zdążył wybrzmieć, zanim wyskoczy okienko
+                const finishDelay = typeof getSpectatorPlaybackDelay === 'function'
+                    ? getSpectatorPlaybackDelay(2500, 900)
+                    : 2500;
                 setTimeout(() => {
                     finishMatch();
-                }, 2500);
+                }, finishDelay);
                 return true;
             }
 
@@ -230,6 +251,9 @@ function checkAchievements(type, data = null) {
             announceAudio('win_leg', playerName);
             updateScores(); // Od razu aktualizuje wynik na tablicy (np. na 1:0)
 
+            const nextLegDelay = typeof getSpectatorPlaybackDelay === 'function'
+                ? getSpectatorPlaybackDelay(2500, 900)
+                : 2500;
             setTimeout(() => {
                 if (!currentMatch) return;
                 
@@ -258,6 +282,7 @@ function checkAchievements(type, data = null) {
                 // Zmiana rozpoczynającego (naprzemiennie co leg)
                 currentMatch.turn = (currentMatch.totalLegsPlayed % 2 === 0) ? currentMatch.startingPlayer : (currentMatch.startingPlayer === 'p1' ? 'p2' : 'p1');
                 currentMatch.dartsThrown = 0;
+                currentMatch.isTurnLocked = false;
                 currentTurnScore = 0;
                 drawnDarts = [];
 
@@ -266,12 +291,21 @@ function checkAchievements(type, data = null) {
                 setTurnUI();
                 drawDartboard();
                 updateDartDots();
-            }, 2500);
+            }, nextLegDelay);
 
             return true;
         }
 
         function processThrow(isP1, targetSec, targetMult, hitSec, hitMult) {
+            if (!currentMatch) return;
+
+            // To jest ostateczna granica bezpieczeństwa dla wszystkich źródeł
+            // rzutu (przycisk gracza, AI i ewentualne wywołania programowe).
+            // Dzięki temu żadne opóźnione lub wielokrotne kliknięcie nie może
+            // dopisać czwartej lotki do bieżącego podejścia.
+            const throwingSide = isP1 ? 'p1' : 'p2';
+            if (currentMatch.turn !== throwingSide || currentMatch.dartsThrown >= 3 || currentMatch.isTurnLocked) return;
+
             if (currentMatch.suddenDeath) {
                 if (typeof processSuddenDeathThrow === 'function') processSuddenDeathThrow(isP1, targetSec, targetMult, hitSec, hitMult);
                 return;
@@ -281,7 +315,11 @@ function checkAchievements(type, data = null) {
 
             let points = hitSec * hitMult; 
             let currentScore = isP1 ? currentMatch.p1Score : currentMatch.p2Score;
-            let playerName = currentMatch.isDoubles ? getCurrentMatchThrowerName(isP1) : (isP1 ? player.name : currentMatch.opponent.name); 
+            let playerName = currentMatch.isDoubles
+                ? getCurrentMatchThrowerName(isP1)
+                : (typeof getCurrentSinglesMatchPlayerName === 'function'
+                    ? getCurrentSinglesMatchPlayerName(isP1)
+                    : (isP1 ? player.name : currentMatch.opponent.name));
             let logType = isP1 ? 'hit' : 'ai';
             
             if (activeTournament && activeTournament.format === 'DIDO' && currentScore === 501) {
@@ -345,10 +383,17 @@ function checkAchievements(type, data = null) {
             if (isP1) currentMatch.p1Score = newScore; else currentMatch.p2Score = newScore;
             currentMatch.dartsThrown++; 
 
+            const legCompleted = newScore === 0 && hitMult === 2;
+            if (currentMatch.dartsThrown >= 3 || legCompleted) {
+                currentMatch.isTurnLocked = true;
+                const throwButton = document.getElementById('throw-btn');
+                if (throwButton) throwButton.disabled = true;
+            }
+
             if (currentMatch.dartsThrown >= 3 && currentTurnScore === 180) {
                 if (isP1) {
                     st.p1OneEighties++;
-                    if (!currentMatch.isDoubles || isCareerPlayerThrowing(true)) {
+                    if (!currentMatch.isSpectator && (!currentMatch.isDoubles || isCareerPlayerThrowing(true))) {
                         initCareerStats();
                         player.careerStats.total180s++; 
                     }
@@ -358,10 +403,10 @@ function checkAchievements(type, data = null) {
 
             updateScores(); updateMatchStatsUI(); updateDartDots();
 
-            if (newScore === 0 && hitMult === 2) {
+            if (legCompleted) {
                 if (isP1) {
                     st.p1HighCheckout = Math.max(st.p1HighCheckout || 0, currentTurnScore);
-                    if (!currentMatch.isDoubles || isCareerPlayerThrowing(true)) {
+                    if (!currentMatch.isSpectator && (!currentMatch.isDoubles || isCareerPlayerThrowing(true))) {
                         initCareerStats();
                         if (currentTurnScore > (player.careerStats.highestCheckout || 0)) {
                             player.careerStats.highestCheckout = currentTurnScore;
@@ -386,9 +431,12 @@ function checkAchievements(type, data = null) {
 
             if (currentMatch.dartsThrown >= 3) {
                 setTimeout(() => endTurn(), 100);
-            } else if (!isP1 || (currentMatch.isDoubles && !isCareerPlayerThrowing(isP1))) {
+            } else if (currentMatch.isSpectator || !isP1 || (currentMatch.isDoubles && !isCareerPlayerThrowing(isP1))) {
                 clearTimeout(window.aiTimeout); // Czyścimy przed kolejnym rzutem
-                window.aiTimeout = setTimeout(() => aiTurn(), 650); 
+                const nextDartDelay = typeof getSpectatorPlaybackDelay === 'function'
+                    ? getSpectatorPlaybackDelay(650, 220)
+                    : 650;
+                window.aiTimeout = setTimeout(() => aiTurn(), nextDartDelay); 
             }
         }
 
@@ -401,7 +449,11 @@ function checkAchievements(type, data = null) {
             }
 
             if (currentMatch.p1Score > 0 && currentMatch.p2Score > 0) announceAudio(currentTurnScore);
-            currentMatch.dartsThrown = 0; currentTurnScore = 0; updateDartDots(); drawnDarts = []; setTimeout(() => { drawDartboard(); }, 500);
+            currentMatch.dartsThrown = 0; currentMatch.isTurnLocked = false; currentTurnScore = 0; updateDartDots(); drawnDarts = [];
+            const boardClearDelay = typeof getSpectatorPlaybackDelay === 'function'
+                ? getSpectatorPlaybackDelay(500, 150)
+                : 500;
+            setTimeout(() => { drawDartboard(); }, boardClearDelay);
             if (currentMatch.p1Score === 0 || currentMatch.p2Score === 0) return;
             
             if (currentMatch.vsAI) {
@@ -418,6 +470,7 @@ function checkAchievements(type, data = null) {
             } else { 
                 currentMatch.p1TurnStartScore = currentMatch.p1Score; 
                 if (currentMatch.p1Score <= 170) setTimeout(() => announceRequire(currentMatch.p1Score), 1500);
+                setTurnUI();
             }
         }
 

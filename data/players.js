@@ -76,7 +76,7 @@ const pdcPlayers = [
     { name: "Tom Pissel", country: "Anglia", ovr: 67, scoring: 68, doubles: 66, prizeMoney: 67500, proTourPrizeMoney: 52000, pcPrizeMoney: 0 },
     { name: "Daryll Pilgry", country: "Anglia", ovr: 67, scoring: 67, doubles: 67, prizeMoney: 66250, proTourPrizeMoney: 42500, pcPrizeMoney: 0 },
     { name: "Cor Deckers", country: "Holandia", ovr: 67, scoring: 68, doubles: 66, prizeMoney: 65750, proTourPrizeMoney: 44250, pcPrizeMoney: 0 },
-    { name: "Bo Graves", country: "Anglia", ovr: 66, scoring: 67, doubles: 65, prizeMoney: 62500, proTourPrizeMoney: 60250, pcPrizeMoney: 0 },
+    { name: "Bo Graves", country: "Anglia", gender: "female", ovr: 66, scoring: 67, doubles: 65, prizeMoney: 62500, proTourPrizeMoney: 60250, pcPrizeMoney: 0 },
     { name: "Dominic Gruell", country: "Niemcy", ovr: 66, scoring: 67, doubles: 65, prizeMoney: 62250, proTourPrizeMoney: 14250, pcPrizeMoney: 0 },
     { name: "Chris Kister", country: "Holandia", ovr: 66, scoring: 66, doubles: 66, prizeMoney: 60500, proTourPrizeMoney: 46500, pcPrizeMoney: 0 },
     { name: "Andrew Bolton", country: "Szkocja", ovr: 65, scoring: 66, doubles: 64, prizeMoney: 53000, proTourPrizeMoney: 33500, pcPrizeMoney: 0 },
@@ -177,10 +177,86 @@ const pdcPlayers = [
     { name: "Liam Lawrence", country: "Niemcy", ovr: 55, scoring: 56, doubles: 54, prizeMoney: 2000, proTourPrizeMoney: 2000, pcPrizeMoney: 0 },
     { name: "Arthur Hardy", country: "Anglia", ovr: 55, scoring: 56, doubles: 54, prizeMoney: 2000, proTourPrizeMoney: 2000, pcPrizeMoney: 0 },
 
+    // Zawodniczki i junior potrzebni do niezależnych ścieżek kwalifikacji MŚ.
+    { name: "Fallon Sparks", country: "Anglia", gender: "female", birthYear: 1994, ovr: 64, scoring: 65, doubles: 63, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0 },
+    { name: "Lisa Ashburn", country: "Anglia", gender: "female", birthYear: 1992, ovr: 62, scoring: 62, doubles: 62, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0 },
+    { name: "Mikuru Suzaki", country: "Japonia", gender: "female", birthYear: 1998, ovr: 63, scoring: 64, doubles: 62, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0 },
+    { name: "Noa-Lynn Veenstra", country: "Holandia", gender: "female", birthYear: 2000, ovr: 61, scoring: 62, doubles: 60, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0 },
+    { name: "Elliot Mercer", country: "Anglia", gender: "male", birthYear: 2009, ovr: 58, scoring: 59, doubles: 57, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0 },
+
+    // Regionalni zawodnicy Continental Tour. Nazwiska są fikcyjnymi
+    // odpowiednikami, aby zachować konwencję całej bazy gry.
+    { name: "Krzysztof Kciuba", country: "Polska", birthYear: 1980, ovr: 61, scoring: 62, doubles: 60, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0 },
+    { name: "Karolina Radecka", country: "Polska", gender: "female", birthYear: 1987, ovr: 60, scoring: 61, doubles: 59, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0 },
+    { name: "Radoslaw Szaranski", country: "Polska", birthYear: 1979, ovr: 62, scoring: 63, doubles: 61, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0 },
+    { name: "Miroslaw Grudzinski", country: "Polska", birthYear: 1984, ovr: 58, scoring: 59, doubles: 57, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0 },
+    { name: "Dawid Robacki", country: "Polska", birthYear: 1981, ovr: 57, scoring: 58, doubles: 56, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0 },
+    { name: "Wojciech Brulewicz", country: "Polska", birthYear: 1992, ovr: 56, scoring: 57, doubles: 55, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0 },
+    { name: "Krzysztof Lisek", country: "Polska", birthYear: 1990, ovr: 56, scoring: 56, doubles: 56, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0 },
+
+    { name: "Marcel Schluepfer", country: "Austria", ovr: 55, scoring: 56, doubles: 54, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0 },
+    { name: "Patrick Schiltner", country: "Austria", ovr: 54, scoring: 55, doubles: 53, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0 },
+    { name: "Nick Zwinig", country: "Austria", ovr: 56, scoring: 57, doubles: 55, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0 },
+    { name: "Patrick Reisenberg", country: "Austria", ovr: 55, scoring: 56, doubles: 54, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0 },
+    { name: "Patrick Tringel", country: "Austria", ovr: 57, scoring: 58, doubles: 56, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0 },
+    { name: "Marcel Weniger", country: "Austria", ovr: 59, scoring: 60, doubles: 58, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0 },
+    { name: "Branko Stojan", country: "Austria", ovr: 61, scoring: 62, doubles: 60, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0 },
+    { name: "Hannes Schneir", country: "Austria", ovr: 58, scoring: 59, doubles: 57, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0 },
+    { name: "Thomas Scheiber", country: "Austria", ovr: 59, scoring: 60, doubles: 58, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0 },
+    { name: "Zoran Lerchbach", country: "Austria", ovr: 60, scoring: 61, doubles: 59, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0 },
+    { name: "Patrick Sojek", country: "Austria", ovr: 59, scoring: 60, doubles: 58, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0 },
+    { name: "Dominic Popat", country: "Austria", ovr: 57, scoring: 58, doubles: 56, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0 },
+    { name: "Mario Marxen", country: "Austria", ovr: 58, scoring: 59, doubles: 57, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0 },
+    { name: "Martin Mayer", country: "Austria", ovr: 56, scoring: 57, doubles: 55, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0 },
+
+    { name: "Ladislav Lengel", country: "Słowacja", ovr: 57, scoring: 58, doubles: 56, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0 },
+    { name: "Stefan Hayeck", country: "Słowacja", ovr: 58, scoring: 59, doubles: 57, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0 },
+    { name: "Hugo Krisko", country: "Słowacja", ovr: 57, scoring: 58, doubles: 56, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0 },
+    { name: "Adam Bartel", country: "Słowacja", ovr: 56, scoring: 57, doubles: 55, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0 },
+
+    { name: "Bence Egari", country: "Węgry", ovr: 56, scoring: 57, doubles: 55, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0 },
+    { name: "Csaba Helfer", country: "Węgry", ovr: 57, scoring: 58, doubles: 56, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0 },
+    { name: "Mark Kallath", country: "Węgry", ovr: 58, scoring: 59, doubles: 57, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0 },
+    { name: "Milan Lovay", country: "Węgry", ovr: 61, scoring: 62, doubles: 60, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0 },
+    { name: "Adam Csizmar", country: "Węgry", ovr: 55, scoring: 56, doubles: 54, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0 },
+    { name: "Zsolt Csajbar", country: "Węgry", ovr: 61, scoring: 62, doubles: 60, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0 },
+    { name: "Balazs Szotar", country: "Węgry", ovr: 58, scoring: 59, doubles: 57, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0 },
+    { name: "Martin Paunor", country: "Węgry", ovr: 55, scoring: 56, doubles: 54, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0 },
+    { name: "Andras Borbal", country: "Węgry", ovr: 65, scoring: 66, doubles: 64, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0 },
+    { name: "Laszlo Ancsa", country: "Węgry", ovr: 61, scoring: 62, doubles: 60, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0 },
+    { name: "Janos Vegsen", country: "Węgry", ovr: 60, scoring: 61, doubles: 59, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0 },
+    { name: "Milan Biron", country: "Węgry", ovr: 61, scoring: 62, doubles: 60, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0 },
+
+    { name: "Fabian Limar", country: "Szwajcaria", ovr: 56, scoring: 57, doubles: 55, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0 },
+    { name: "Ansh Suden", country: "Szwajcaria", ovr: 56, scoring: 57, doubles: 55, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0 },
+    { name: "Enes Yavuz", country: "Szwajcaria", ovr: 56, scoring: 57, doubles: 55, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0 },
+    { name: "Denis Schnetz", country: "Szwajcaria", ovr: 58, scoring: 59, doubles: 57, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0 },
+    { name: "Roman Welling", country: "Szwajcaria", ovr: 58, scoring: 59, doubles: 57, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0 },
+    { name: "Rocco Fulcin", country: "Szwajcaria", ovr: 59, scoring: 60, doubles: 58, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0 },
+
+    { name: "Filip Manek", country: "Czechy", ovr: 60, scoring: 61, doubles: 59, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0 },
+    { name: "Vitezslav Sedlar", country: "Czechy", ovr: 59, scoring: 60, doubles: 58, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0 },
+    { name: "Lukas Ungar", country: "Czechy", ovr: 59, scoring: 60, doubles: 58, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0 },
+    { name: "Roman Benes", country: "Czechy", ovr: 61, scoring: 62, doubles: 60, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0 },
+    { name: "Dalibor Smolar", country: "Czechy", ovr: 63, scoring: 64, doubles: 62, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0 },
+    { name: "Jiri Brejan", country: "Czechy", ovr: 57, scoring: 58, doubles: 56, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0 },
+
+    { name: "Pascal Devroy", country: "Belgia", ovr: 61, scoring: 62, doubles: 60, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0 },
+    { name: "Mylo Michers", country: "Belgia", ovr: 58, scoring: 59, doubles: 57, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0 },
+    { name: "Timothy Verbruggen", country: "Belgia", ovr: 61, scoring: 62, doubles: 60, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0 },
+    { name: "Francois Schwyer", country: "Belgia", ovr: 60, scoring: 61, doubles: 59, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0 },
+    { name: "Jeroen Carens", country: "Belgia", ovr: 59, scoring: 60, doubles: 58, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0 },
+
+    { name: "Nick Crouwen", country: "Holandia", ovr: 61, scoring: 62, doubles: 60, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0 },
+    { name: "Jerry Hendrix", country: "Holandia", ovr: 61, scoring: 62, doubles: 60, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0 },
+    { name: "Marc Vleghers", country: "Holandia", ovr: 59, scoring: 60, doubles: 58, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0 },
+    { name: "Ziggy Schenker", country: "Holandia", ovr: 65, scoring: 66, doubles: 64, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0 },
+    { name: "Berry van Peren", country: "Holandia", ovr: 62, scoring: 63, doubles: 61, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0 },
+    { name: "Jeremy van der Winckel", country: "Holandia", ovr: 62, scoring: 63, doubles: 61, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0 },
+
     // --- Puchar Narodów: fikcyjni odpowiednicy reprezentacji z lat 2022-2026 ---
     { name: "Jani Havis", country: "Finlandia", ovr: 63, scoring: 64, doubles: 62, prizeMoney: 32000, proTourPrizeMoney: 32000, pcPrizeMoney: 0, birthYear: 1975 },
     { name: "Jonas Masal", country: "Finlandia", ovr: 60, scoring: 61, doubles: 59, prizeMoney: 24000, proTourPrizeMoney: 24000, pcPrizeMoney: 0, birthYear: 1983 },
-    { name: "Adam Leeke", country: "Australia", ovr: 61, scoring: 62, doubles: 60, prizeMoney: 26000, proTourPrizeMoney: 26000, pcPrizeMoney: 0, birthYear: 2001 },
     { name: "Davy Cameran", country: "Kanada", ovr: 60, scoring: 61, doubles: 59, prizeMoney: 35000, proTourPrizeMoney: 35000, pcPrizeMoney: 0, birthYear: 1969 },
     { name: "Qingyu Zann", country: "Chiny", ovr: 60, scoring: 61, doubles: 59, prizeMoney: 21000, proTourPrizeMoney: 21000, pcPrizeMoney: 0, birthYear: 1988 },
     { name: "Xiaochen Zonn", country: "Chiny", ovr: 58, scoring: 59, doubles: 57, prizeMoney: 18000, proTourPrizeMoney: 18000, pcPrizeMoney: 0, birthYear: 1991 },
@@ -196,19 +272,18 @@ const pdcPlayers = [
     { name: "Ankit Goenkar", country: "Indie", ovr: 58, scoring: 59, doubles: 57, prizeMoney: 15000, proTourPrizeMoney: 15000, pcPrizeMoney: 0, birthYear: 1990 },
     { name: "Michele Turetti", country: "Włochy", ovr: 63, scoring: 64, doubles: 62, prizeMoney: 25000, proTourPrizeMoney: 25000, pcPrizeMoney: 0, birthYear: 1981 },
     { name: "Riccardo Casteli", country: "Włochy", ovr: 58, scoring: 59, doubles: 57, prizeMoney: 16000, proTourPrizeMoney: 16000, pcPrizeMoney: 0, birthYear: 1994 },
-    { name: "Motomu Sakaii", country: "Japonia", ovr: 63, scoring: 64, doubles: 62, prizeMoney: 28000, proTourPrizeMoney: 28000, pcPrizeMoney: 0, birthYear: 1994 },
+    { name: "Motomu Sakaii", country: "Japonia", ovr: 66, scoring: 67, doubles: 65, prizeMoney: 28000, proTourPrizeMoney: 28000, pcPrizeMoney: 0, birthYear: 1994 },
     { name: "Haruki Muramura", country: "Japonia", ovr: 61, scoring: 62, doubles: 60, prizeMoney: 24000, proTourPrizeMoney: 24000, pcPrizeMoney: 0, birthYear: 1977 },
     { name: "Mindaugas Baraukas", country: "Litwa", ovr: 58, scoring: 59, doubles: 57, prizeMoney: 16000, proTourPrizeMoney: 16000, pcPrizeMoney: 0, birthYear: 1980 },
     { name: "Altan Myagmar", country: "Mongolia", ovr: 57, scoring: 58, doubles: 56, prizeMoney: 14000, proTourPrizeMoney: 14000, pcPrizeMoney: 0, birthYear: 1987 },
     { name: "Ganzorig Lkhav", country: "Mongolia", ovr: 56, scoring: 57, doubles: 55, prizeMoney: 12000, proTourPrizeMoney: 12000, pcPrizeMoney: 0, birthYear: 1989 },
     { name: "Johnny Tatta", country: "Nowa Zelandia", ovr: 60, scoring: 61, doubles: 59, prizeMoney: 19000, proTourPrizeMoney: 19000, pcPrizeMoney: 0, birthYear: 1987 },
     { name: "Ben Robbin", country: "Nowa Zelandia", ovr: 58, scoring: 59, doubles: 57, prizeMoney: 15000, proTourPrizeMoney: 15000, pcPrizeMoney: 0, birthYear: 1988 },
-    { name: "Cor Dekar", country: "Norwegia", ovr: 61, scoring: 62, doubles: 60, prizeMoney: 24000, proTourPrizeMoney: 24000, pcPrizeMoney: 0, birthYear: 1982 },
     { name: "Kent Siversen", country: "Norwegia", ovr: 58, scoring: 59, doubles: 57, prizeMoney: 17000, proTourPrizeMoney: 17000, pcPrizeMoney: 0, birthYear: 1987 },
-    { name: "Alexis Toylen", country: "Filipiny", ovr: 64, scoring: 65, doubles: 63, prizeMoney: 34000, proTourPrizeMoney: 34000, pcPrizeMoney: 0, birthYear: 1992 },
+    { name: "Alexis Toylen", country: "Filipiny", ovr: 71, scoring: 72, doubles: 70, prizeMoney: 34000, proTourPrizeMoney: 34000, pcPrizeMoney: 0, birthYear: 1992 },
     { name: "Paulo Nibreda", country: "Filipiny", ovr: 62, scoring: 63, doubles: 61, prizeMoney: 25000, proTourPrizeMoney: 25000, pcPrizeMoney: 0, birthYear: 1994 },
     { name: "Luis Camaro", country: "Portugalia", ovr: 61, scoring: 62, doubles: 60, prizeMoney: 24000, proTourPrizeMoney: 24000, pcPrizeMoney: 0, birthYear: 1986 },
-    { name: "Jose de Souza", country: "Portugalia", ovr: 60, scoring: 61, doubles: 59, prizeMoney: 18000, proTourPrizeMoney: 18000, pcPrizeMoney: 0, birthYear: 1975 },
+    { name: "Jose de Souza", country: "Portugalia", ovr: 70, scoring: 71, doubles: 69, prizeMoney: 18000, proTourPrizeMoney: 18000, pcPrizeMoney: 0, birthYear: 1975 },
     { name: "Paul Limm", country: "Singapur", ovr: 65, scoring: 66, doubles: 64, prizeMoney: 43000, proTourPrizeMoney: 43000, pcPrizeMoney: 0, birthYear: 1954 },
     { name: "Phuay Tan", country: "Singapur", ovr: 60, scoring: 61, doubles: 59, prizeMoney: 20000, proTourPrizeMoney: 20000, pcPrizeMoney: 0, birthYear: 1981 },
     { name: "Stefano Bozic", country: "Słowenia", ovr: 57, scoring: 58, doubles: 56, prizeMoney: 13000, proTourPrizeMoney: 13000, pcPrizeMoney: 0, birthYear: 1985 },
@@ -256,11 +331,8 @@ const pdcPlayers = [
     { name: "Tomoya Gote", country: "Japonia", ovr: 58, scoring: 59, doubles: 57, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0, birthYear: 1986 },
     { name: "Abdullah Seid", country: "Bahrajn", ovr: 55, scoring: 56, doubles: 54, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0, birthYear: 1993 },
     { name: "Basem Mahmud", country: "Bahrajn", ovr: 54, scoring: 55, doubles: 53, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0, birthYear: 1986 },
-    { name: "Oscar Lucasi", country: "Szwecja", ovr: 63, scoring: 64, doubles: 62, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0, birthYear: 1991 },
-    { name: "Viktor Tingren", country: "Szwecja", ovr: 59, scoring: 60, doubles: 58, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0, birthYear: 1992 },
-    { name: "Andreas Harrison", country: "Szwecja", ovr: 62, scoring: 63, doubles: 61, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0, birthYear: 1975 },
+    { name: "Andreas Harrison", country: "Szwecja", ovr: 71, scoring: 72, doubles: 70, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0, birthYear: 1975 },
     { name: "Daniel Larssen", country: "Szwecja", ovr: 59, scoring: 60, doubles: 58, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0, birthYear: 1981 },
-    { name: "Jim Longe", country: "Kanada", ovr: 61, scoring: 62, doubles: 60, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0, birthYear: 1968 },
     { name: "Alex Spellar", country: "USA", ovr: 59, scoring: 60, doubles: 58, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0, birthYear: 1988 },
     { name: "Leon Gates", country: "USA", ovr: 60, scoring: 61, doubles: 59, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0, birthYear: 1970 },
     { name: "Garry Mayson", country: "USA", ovr: 58, scoring: 59, doubles: 57, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0, birthYear: 1960 },
@@ -271,7 +343,7 @@ const pdcPlayers = [
     { name: "Kayden Mils", country: "Nowa Zelandia", ovr: 54, scoring: 55, doubles: 53, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0, birthYear: 1998 },
     { name: "Haupai Puhu", country: "Nowa Zelandia", ovr: 60, scoring: 61, doubles: 59, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0, birthYear: 1985 },
     { name: "Raymond Smyth", country: "Australia", ovr: 63, scoring: 64, doubles: 62, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0, birthYear: 1979 },
-    { name: "Brody Kling", country: "Australia", ovr: 55, scoring: 56, doubles: 54, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0, birthYear: 1995 },
+    { name: "Brody Kling", country: "Australia", ovr: 74, scoring: 75, doubles: 73, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0, birthYear: 1995 },
     { name: "Tim Puse", country: "Australia", ovr: 55, scoring: 56, doubles: 54, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0, birthYear: 1994 },
     { name: "Joe Comit", country: "Australia", ovr: 54, scoring: 55, doubles: 53, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0, birthYear: 1987 },
     { name: "Mal Cumin", country: "Australia", ovr: 55, scoring: 56, doubles: 54, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0, birthYear: 1982 }
@@ -283,8 +355,19 @@ const pdcPlayers = [
 // Korekty danych, które obowiązują również zawodników podmienionych przez mod.
 // Pozwalają naprawić pojedynczy błąd w bazie bez wymuszania nowej wersji moda.
 const playerDatabaseCorrections = {
+    'brody kling': { ovr: 74, scoring: 75, doubles: 73 },
+    'alexis toylen': { ovr: 71, scoring: 72, doubles: 70 },
+    'andreas harrison': { ovr: 71, scoring: 72, doubles: 70 },
+    'andreas harrysson': { ovr: 71, scoring: 72, doubles: 70 },
+    'jose de souza': { ovr: 70, scoring: 71, doubles: 69 },
+    'jose de sousa': { ovr: 70, scoring: 71, doubles: 69 },
+    'josé de sousa': { ovr: 70, scoring: 71, doubles: 69 },
+    'motomu sakaii': { ovr: 66, scoring: 67, doubles: 65 },
+    'radoslaw szaranski': { ovr: 62, scoring: 63, doubles: 61 },
+    'adam leak': { country: 'Australia' },
     'adam leek': { country: 'Australia' },
     'adam leeke': { country: 'Australia' },
+    'cor deckers': { country: 'Norwegia' },
     'sebastian bielicki': { name: 'Sebastian Bialecki' },
     'adrian dudziak': { country: 'Słowacja' },
     'adrian dudek': { country: 'Słowacja' },
@@ -300,8 +383,10 @@ function applyKnownPlayerCorrections(players) {
     if (!Array.isArray(players)) return;
     players.forEach(candidate => {
         if (!candidate || candidate.isBye) return;
-        const name = String(candidate.name || '').trim().toLocaleLowerCase('pl');
-        const correction = playerDatabaseCorrections[name];
+        const identities = [candidate.sourceName, candidate.name]
+            .map(value => String(value || '').trim().toLocaleLowerCase('pl'))
+            .filter(Boolean);
+        const correction = identities.map(identity => playerDatabaseCorrections[identity]).find(Boolean);
         if (correction) Object.assign(candidate, correction);
     });
 }

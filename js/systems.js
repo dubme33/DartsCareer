@@ -155,8 +155,10 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
             const isUnavailable = candidate => !candidate
                 || (typeof isRetiredPlayer === 'function' && isRetiredPlayer(candidate));
             const replacements = (Array.isArray(pdcPlayers) ? pdcPlayers : [])
-                .filter(candidate => candidate && !candidate.isBye && candidate.hasTourCard !== false && !isUnavailable(candidate))
-                .sort((first, second) => (Number(second.prizeMoney) || 0) - (Number(first.prizeMoney) || 0)
+                .filter(candidate => candidate && !candidate.isBye && !isUnavailable(candidate)
+                    && (typeof isPdcTourCardEligiblePlayer !== 'function' || isPdcTourCardEligiblePlayer(candidate)))
+                .sort((first, second) => Number(first.hasTourCard === true) - Number(second.hasTourCard === true)
+                    || (Number(second.prizeMoney) || 0) - (Number(first.prizeMoney) || 0)
                     || (Number(second.ovr) || 0) - (Number(first.ovr) || 0));
 
             return bracket.map(candidate => {
@@ -347,15 +349,6 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
             const legacyWorldCup = tournamentDatabase.find(tournament => tournament.name === 'World Cup of Darts');
             if (legacyWorldCup && !existingWorldCup) legacyWorldCup.name = nationsCupName;
 
-            const movedEvents = [
-                ['Pro Players Cup 9', 5, 7],
-                ['Pro Players Cup 10', 5, 8]
-            ];
-            movedEvents.forEach(([name, month, day]) => {
-                const tournament = tournamentDatabase.find(candidate => candidate.name === name);
-                if (tournament) { tournament.month = month; tournament.day = day; }
-            });
-
             if (!tournamentDatabase.some(tournament => tournament.specialType === 'worldCup' || tournament.name === nationsCupName)) {
                 tournamentDatabase.push({
                     name: nationsCupName, month: 5, day: 11, endDay: 14,
@@ -436,7 +429,11 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
                 if (typeof restorePlayerLifecycleState === 'function') restorePlayerLifecycleState(gameState.playerLifecycleState);
                 mergeNewDefaultPlayersIntoSave();
                 if (typeof applyKnownPlayerCorrections === 'function') applyKnownPlayerCorrections([player, ...pdcPlayers]);
-                if (typeof applyWorldCupNonRankingStatus === 'function') applyWorldCupNonRankingStatus(pdcPlayers);
+                if (typeof deduplicatePdcPlayers === 'function') deduplicatePdcPlayers();
+                // Zawodnicy dodani pierwotnie do regionalnych składów Pucharu
+                // Narodów zaczynają z zerowym rankingiem, ale od tej chwili są
+                // pełnoprawnymi uczestnikami kariery. Nie zerujemy ponownie ich
+                // nagród ani kart przy każdym wczytaniu zapisu.
                 applyKnownPlayerBirthYears([player, ...pdcPlayers]);
                 if (typeof removeCareerPlayerFromAiPool === 'function') removeCareerPlayerFromAiPool();
                 normalizePlayerIds(pdcPlayers, player);
@@ -450,12 +447,19 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
                 migrateWorldCupCalendar();
                 if (typeof migrateContinentalTourQualifiersCalendar === 'function') migrateContinentalTourQualifiersCalendar();
                 if (typeof migrateWorldMastersCalendar === 'function') migrateWorldMastersCalendar();
+                if (typeof syncPdc2026TournamentCalendar === 'function') syncPdc2026TournamentCalendar();
                 currentDate = new Date(gameState.currentDate);
                 if (typeof migrateEuropeanTourOrderOfMeritFromHistory === 'function') {
                     migrateEuropeanTourOrderOfMeritFromHistory([player, ...pdcPlayers], tournamentDatabase);
                 }
                 if (typeof migrateProTourOrderOfMeritFromHistory === 'function') {
                     migrateProTourOrderOfMeritFromHistory([player, ...pdcPlayers], tournamentDatabase, currentDate);
+                }
+                if (typeof migrateMainOrderOfMeritFromHistory === 'function') {
+                    migrateMainOrderOfMeritFromHistory([player, ...pdcPlayers], tournamentDatabase, currentDate);
+                }
+                if (typeof migratePdcTourCardSystem === 'function') {
+                    migratePdcTourCardSystem([player, ...pdcPlayers], currentDate);
                 }
                 initAllPlayerSeasonStats();
                 emails = Array.isArray(gameState.emails) ? gameState.emails : [];
@@ -947,7 +951,7 @@ async function updateProfileWalkon(event) {
 
         const TRAINING_CONFIG = Object.freeze({
             weeklyLimit: 2,
-            staminaCost: 25,
+            staminaCost: STAMINA_CONFIG.trainingCost,
             equipmentBonusCap: 50,
             randomEventXpPerStatPoint: 12
         });
@@ -1060,7 +1064,7 @@ async function updateProfileWalkon(event) {
                 return;
             }
 
-            player.stamina -= TRAINING_CONFIG.staminaCost;
+            changePlayerStamina(player, -TRAINING_CONFIG.staminaCost);
             let currentStat = type === 'scoring' ? player.scoring : player.doubles;
             let baseXP = 20;
             
@@ -1084,51 +1088,6 @@ async function updateProfileWalkon(event) {
         }
 
     // --- 8. SILNIK BŁYSKAWICZNEJ SYMULACJI (FAST-FORWARD) ---
-
-        // Ustawienia po wysokim wyniku. Kluczem jest bieżący wynik i liczba lotek
-        // w ręku, dzięki czemu AI nie wraca automatycznie na T20 po trafieniu
-        // pierwszego, świadomie wybranego singla. Każda sekwencja prowadzi do
-        // wygodnego finiszu (167-170, 164 lub 160), jeśli zaplanowane pola wejdą.
-        const HIGH_SCORE_SETUP_AIMS = {
-            '233:3': { sector: 19, mult: 1 }, '214:2': { sector: 19, mult: 1 }, '195:1': { sector: 25, mult: 1 },
-            '259:3': { sector: 19, mult: 1 }, '240:2': { sector: 20, mult: 1 }, '220:1': { sector: 20, mult: 3 },
-            '265:3': { sector: 19, mult: 1 }, '246:2': { sector: 19, mult: 1 },
-            '269:3': { sector: 19, mult: 1 }, '250:2': { sector: 20, mult: 3 }, '190:1': { sector: 20, mult: 1 },
-            '302:3': { sector: 18, mult: 1 }, '284:2': { sector: 20, mult: 3 }, '224:1': { sector: 20, mult: 3 },
-            '303:3': { sector: 19, mult: 3 },
-            '305:3': { sector: 18, mult: 1 }, '287:2': { sector: 20, mult: 3 }, '227:1': { sector: 20, mult: 3 },
-            '306:3': { sector: 19, mult: 1 },
-            '308:3': { sector: 18, mult: 1 }, '290:2': { sector: 20, mult: 3 }, '230:1': { sector: 20, mult: 3 },
-            '309:3': { sector: 19, mult: 1 }
-        };
-
-        function getHighScoreSetupAim(score, dartsLeft) {
-            return HIGH_SCORE_SETUP_AIMS[`${score}:${dartsLeft}`] || null;
-        }
-
-        function getOptimalAim(score, isDIDO, dartsLeft = 3) {
-            if (isDIDO && score === 501) return { sector: 20, mult: 2 };
-            
-            // NOWOŚĆ: Rozmienianie 50 na 40, jeśli mamy więcej niż 1 lotkę w dłoni
-            if (score === 50 && dartsLeft > 1) {
-                return { sector: 10, mult: 1 };
-            }
-
-            if (checkoutGuide[score]) {
-                let firstAim = checkoutGuide[score].split(" ")[0];
-                return { 
-                    sector: parseInt(firstAim.replace('T','').replace('D','').replace('BULL','25')), 
-                    mult: firstAim.includes('T') ? 3 : (firstAim.includes('D') || firstAim === 'BULL' ? 2 : 1)
-                };
-            }
-            if (score === 50) return { sector: 25, mult: 2 }; 
-            if (score <= 40 && score % 2 === 0) return { sector: score/2, mult: 2 };
-            if (score <= 40) return { sector: 1, mult: 1 }; 
-            if (score < 60) return { sector: 10, mult: 1 };
-            const highScoreSetupAim = getHighScoreSetupAim(score, dartsLeft);
-            if (highScoreSetupAim) return highScoreSetupAim;
-            return { sector: 20, mult: 3 };
-        }
 
         function simulateTurnFast(isP1) {
             const isDoublesMatch = Boolean(currentMatch.isDoubles && typeof getDoublesCurrentThrower === 'function');

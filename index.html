@@ -62,6 +62,53 @@
         <div class="changelog-box">
             <h3>📢 What's New / Changelog</h3>
 
+            <!-- UPDATE V1.3.0 -->
+            <div class="changelog-version-badge">v1.3.0 · Tour Cards & Qualification Overhaul</div>
+
+            <div class="changelog-grid">
+                <div class="cl-item">
+                    <span class="cl-tag feature">PDC Tour Cards</span>
+                    <span class="cl-title">🪪 A Real Two-Year Tour Card System</span>
+                    <p class="cl-desc">The opening Top 64 of the Order of Merit receive PDC Tour Cards, with a further 64 earned through the fictional Pro Card Trials. Cards last two seasons, are visible in rankings and player profiles, and control access to ProTour events and card-holder qualifiers.</p>
+                </div>
+
+                <div class="cl-item">
+                    <span class="cl-tag feature">Continental Tour</span>
+                    <span class="cl-title">🌍 Authentic 48-Player Qualification</span>
+                    <p class="cl-desc">Every Continental Tour now fields 16 OOM seeds, 16 ProTour qualifiers, 10 Tour Card Holder Qualifiers, four host-nation qualifiers, one Nordic & Baltic qualifier and one Eastern Europe qualifier. Regional qualifiers exclude Tour Card holders and can be watched or simulated.</p>
+                </div>
+
+                <div class="cl-item">
+                    <span class="cl-tag fix">World Series</span>
+                    <span class="cl-title">🎟️ Tour Card Finals Qualifier</span>
+                    <p class="cl-desc">Global Masters Finals retain their 24 World Series ranking places and four OOM places, while the final four places now come strictly from a qualifier open only to eligible PDC Tour Card holders.</p>
+                </div>
+
+                <div class="cl-item">
+                    <span class="cl-tag feature">World Championship</span>
+                    <span class="cl-title">🏆 A Full 128-Player Qualification Field</span>
+                    <p class="cl-desc">The World Championship now combines the Top 80 OOM with structured regional, youth, women’s and non-Tour Card routes to create a unique 128-player field without duplicate entries.</p>
+                </div>
+
+                <div class="cl-item">
+                    <span class="cl-tag feature">Rankings</span>
+                    <span class="cl-title">📊 Authentic Two-Year Order of Merit</span>
+                    <p class="cl-desc">The main Order of Merit uses ranking prize money over a rolling two-year window. Opening rankings use the verified 2026 baseline, while results earned in career mode replace expiring money naturally.</p>
+                </div>
+
+                <div class="cl-item">
+                    <span class="cl-tag tweak">Career & Tournaments</span>
+                    <span class="cl-title">👀 Faster Progress, Better Tournament Control</span>
+                    <p class="cl-desc">After elimination you can simulate an entire remaining tournament at once, or watch AI matches live from the bracket. Players Championship payouts, stamina recovery and costs have also been rebalanced.</p>
+                </div>
+
+                <div class="cl-item">
+                    <span class="cl-tag fix">Match & AI</span>
+                    <span class="cl-title">🎯 Safer Turns and Smarter Setups</span>
+                    <p class="cl-desc">Rapid clicking can no longer throw more than three darts in a visit. AI checkout and setup choices now use practical alternatives such as 19s, 18s, 17s and Bull routes when they preserve a finish.</p>
+                </div>
+            </div>
+
             <!-- UPDATE V1.2.6 -->
             <div class="changelog-version-badge">v1.2.6 · Authentic Formats & New Talent</div>
 
@@ -541,6 +588,14 @@
                     <small id="t-fav-double-hint" style="color:#bdc3c7;">+5 p.p. do trafienia, gdy celujesz w wybrany double.</small>
                 </div>
                 <div class="form-group">
+                    <label for="start-with-tour-card" id="t-tour-card-start">Czy chcesz zaczynać z kartą PDC?</label>
+                    <select id="start-with-tour-card" required>
+                        <option id="t-tour-card-no" value="no" selected>Nie — zagraj w Q-Schoolu</option>
+                        <option id="t-tour-card-yes" value="yes">Tak — zacznij w Top 64 OOM</option>
+                    </select>
+                    <small id="t-tour-card-hint" style="color:#bdc3c7;">Karta obowiązuje przez dwa lata i daje dostęp do pełnego Pro Touru.</small>
+                </div>
+                <div class="form-group">
                     <label id="t-photo-upload">Zdjęcie z dysku (opcjonalnie):</label> 
                     <input type="file" id="photoUpload" accept="image/*">
                 </div>
@@ -915,6 +970,7 @@
             <div id="results-content" style="text-align: left; margin-bottom: 15px;"></div>
             <!-- NOWE PRZYCISKI -->
             <button id="t-btn-next-round" class="action-btn green" onclick="proceedToNextRound()" style="display:none; margin-bottom: 10px;">Przejdź do następnej rundy</button>
+            <button id="t-btn-sim-tournament-results" class="action-btn" onclick="simulateRemainingTournament()" style="display:none; margin-bottom: 10px; background-color:#8e44ad;">Symuluj cały turniej</button>
             <button id="t-btn-tour-back" class="action-btn" onclick="document.getElementById('results-modal').style.display='none'; showScreen('screen-hub');">Wróć do Menu</button>
         </div>
     </div>
@@ -951,6 +1007,7 @@
             <button id="t-btn-play-match" class="action-btn green" onclick="closeBracketAndPlay()">Przejdź do meczu!</button>
             <!-- NOWOŚĆ: Przycisk do symulacji turowej -->
             <button id="t-btn-sim-round" class="action-btn" onclick="simulateNextRound()" style="background-color: #f39c12; margin-top: 5px; display: none;">Symuluj Rundę (Mecze AI)</button>
+            <button id="t-btn-sim-tournament" class="action-btn" onclick="simulateRemainingTournament()" style="background-color:#8e44ad; margin-top:5px; display:none;">Symuluj cały turniej</button>
             
             <button id="t-btn-hide-bracket" class="action-btn" onclick="document.getElementById('bracket-modal').style.display='none';" style="margin-top: 5px; background: var(--primary-color);">Schowaj</button>
         </div>
@@ -1134,41 +1191,50 @@
     </main>
     <!-- STOPKA AUTORSKA -->
     <footer style="width: 100%; text-align: center; padding: 25px 15px; margin-top: auto; color: #7f8c8d; font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 2px;">
-        <div style="margin-bottom: 5px; color: #bdc3c7;">V. 1.2.6</div>
+        <div style="margin-bottom: 5px; color: #bdc3c7;">V. 1.3.0</div>
         powered by dubme<br>
         <a href="mailto:dartscareer@gmail.com" style="color: #bdc3c7; text-decoration: none; text-transform: lowercase; display: inline-block; margin-top: 5px;">dartscareer@gmail.com</a>
     </footer>
 
     <!-- SKRYPTY -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <script src="data/players.js"></script>
+    <script src="data/players.js?v=1.3.0-rating-update-2"></script>
+    <script src="data/order-of-merit-history.js"></script>
+    <script src="data/order-of-merit-opening-2026.js"></script>
     <script src="data/player-birth-years.js"></script>
-    <script src="data/tournaments.js"></script>
+    <script src="data/tournaments.js?v=1.3.0-mod-calendar-names"></script>
     <script src="data/achievements.js"></script>
     <script src="data/interviews.js"></script>
     <script src="data/random-events.js"></script>
-    <script src="js/core.js"></script>
+    <script src="js/core.js?v=1.3.0-player-deduplication"></script>
     <script src="js/european-tour.js"></script>
-    <script src="js/i18n.js"></script>
-    <script src="js/player-lifecycle.js"></script>
-    <script src="js/career.js"></script>
-    <script src="js/player-profiles.js"></script>
+    <script src="js/order-of-merit.js?v=1.2.7-tour-cards"></script>
+    <script src="js/tour-cards.js?v=1.3.0-qschool-all-players"></script>
+    <script src="js/world-championship-qualification.js?v=1.2.8-world-qualification"></script>
+    <script src="js/stamina.js"></script>
+    <script src="js/i18n.js?v=1.2.7-tour-cards"></script>
+    <script src="js/player-lifecycle.js?v=1.2.8-world-qualification"></script>
+    <script src="js/career.js?v=1.2.7-tour-cards"></script>
+    <script src="js/player-profiles.js?v=1.2.7-tour-cards"></script>
     <script src="js/tournaments/results.js"></script>
-    <script src="js/tournaments/rules.js"></script>
+    <script src="js/tournaments/rules.js?v=1.2.9-continental-qualification"></script>
+    <script src="js/match/ai-strategy.js"></script>
     <script src="js/match/intro.js"></script>
     <script src="js/tournaments/rewards.js"></script>
     <script src="js/grand-slam.js"></script>
-    <script src="js/tournaments/flow.js"></script>
+    <script src="js/tournaments/flow.js?v=1.3.0-qschool-all-players"></script>
+    <script src="js/tournaments/fast-forward.js?v=1.2.7-tour-cards"></script>
+    <script src="js/tournaments/spectator.js"></script>
     <script src="js/world-cup.js"></script>
-    <script src="js/continental-qualifiers.js"></script>
-    <script src="js/world-masters.js"></script>
-    <script src="js/match/setup.js"></script>
+    <script src="js/continental-qualification-v2.js?v=1.2.9-continental-qualification"></script>
+    <script src="js/world-masters.js?v=1.3.0-player-deduplication"></script>
+    <script src="js/match/setup.js?v=1.2.7-tour-cards"></script>
     <script src="js/match/leg-flow.js"></script>
     <script src="js/match/audio.js"></script>
     <script src="js/match/turns.js"></script>
     <script src="js/match/board.js"></script>
-    <script src="js/systems.js"></script>
-    <script src="js/extras.js"></script>
+    <script src="js/systems.js?v=1.3.0-player-deduplication"></script>
+    <script src="js/extras.js?v=1.2.7-tour-cards"></script>
 
 </body>
 </html>

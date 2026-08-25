@@ -306,6 +306,7 @@ function showGrandSlamGroups() {
     const list = document.getElementById('bracket-list');
     const playButton = document.getElementById('t-btn-play-match');
     const simulateButton = document.getElementById('t-btn-sim-round');
+    const simulateTournamentButton = document.getElementById('t-btn-sim-tournament');
     title.innerText = `🏆 ${activeTournament.name} — Faza grupowa`;
     list.innerHTML = `<p style="margin:0 0 10px; color:#bdc3c7;">16 grup po 3 zawodników. Awans uzyskuje wyłącznie zwycięzca każdej grupy.</p>${grandSlamState.groups.map(renderGrandSlamGroup).join('')}`;
 
@@ -315,6 +316,7 @@ function showGrandSlamGroups() {
     simulateButton.onclick = simulateGrandSlamRemainingAiGroupMatches;
     simulateButton.innerText = 'Symuluj mecze AI w grupach';
     simulateButton.style.display = hasAiMatches ? 'block' : 'none';
+    if (simulateTournamentButton) simulateTournamentButton.style.display = 'none';
     document.getElementById('bracket-modal').style.display = 'flex';
     return true;
 }

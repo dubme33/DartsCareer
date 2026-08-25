@@ -10,7 +10,7 @@ function startMatch(vsAI) {
             currentMatch = { 
                 vsAI: vsAI, opponent: vsAI ? pdcPlayers[document.getElementById('opponent-select').value] : null, 
                 p1Score: 501, p2Score: 501, p1Legs: 0, p2Legs: 0, p1Sets: 0, p2Sets: 0, totalLegsPlayed: 0, legsToWin: customLegs,
-                matchFormat: matchFormat, turn: starter, startingPlayer: starter, dartsThrown: 0, p1TurnStartScore: 501, p2TurnStartScore: 501, isTournament: false,
+                matchFormat: matchFormat, turn: starter, startingPlayer: starter, dartsThrown: 0, isTurnLocked: false, p1TurnStartScore: 501, p2TurnStartScore: 501, isTournament: false,
                 stats: { 
                     p1TotalDarts: 0, p1AccumulatedScore: 0, p1First9Score: 0, p1First9Darts: 0, p1LegDarts: 0, p1HighCheckout: 0, p1DoubleAttempts: 0, p1DoubleHits: 0, p1OneEighties: 0,
                     p2TotalDarts: 0, p2AccumulatedScore: 0, p2First9Score: 0, p2First9Darts: 0, p2LegDarts: 0, p2HighCheckout: 0, p2DoubleAttempts: 0, p2DoubleHits: 0, p2OneEighties: 0 
@@ -113,9 +113,17 @@ function startMatch(vsAI) {
                 document.getElementById('stat-p1-title').innerHTML = `${getFlagImg(currentMatch.worldCupTeamP1.country)} ${escapeHtml(currentMatch.worldCupTeamP1.country)}`;
                 document.getElementById('stat-p2-title').innerHTML = `${getFlagImg(currentMatch.worldCupTeamP2.country)} ${escapeHtml(currentMatch.worldCupTeamP2.country)}`;
             } else {
-                document.getElementById('stat-p1-title').innerHTML = `${getFlagImg(player.country)} ${escapeHtml(player.name)}`;
-                if (currentMatch.opponent) {
-                    document.getElementById('stat-p2-title').innerHTML = `${getFlagImg(currentMatch.opponent.country)} ${escapeHtml(currentMatch.opponent.name)}`;
+                const p1Candidate = typeof getCurrentSinglesMatchPlayer === 'function'
+                    ? getCurrentSinglesMatchPlayer(true)
+                    : player;
+                const p2Candidate = typeof getCurrentSinglesMatchPlayer === 'function'
+                    ? getCurrentSinglesMatchPlayer(false)
+                    : currentMatch.opponent;
+                if (p1Candidate) {
+                    document.getElementById('stat-p1-title').innerHTML = `${getFlagImg(p1Candidate.country)} ${escapeHtml(p1Candidate.name)}`;
+                }
+                if (p2Candidate) {
+                    document.getElementById('stat-p2-title').innerHTML = `${getFlagImg(p2Candidate.country)} ${escapeHtml(p2Candidate.name)}`;
                 }
             }
             
@@ -125,25 +133,37 @@ function startMatch(vsAI) {
         function setTurnUI() {
             clearTimeout(window.aiTimeout); // Usuwamy stare opóźnienia
             
-            const playerControlsP1 = !currentMatch.isDoubles || isCareerPlayerThrowing(true);
+            const playerControlsP1 = !currentMatch.isSpectator
+                && (!currentMatch.isDoubles || isCareerPlayerThrowing(true));
             if (currentMatch.turn === 'p1' && playerControlsP1) {
                 document.getElementById('score-col-player').classList.add('active-turn'); document.getElementById('score-col-ai').classList.remove('active-turn');
                 document.getElementById('player-controls').style.opacity = "1"; document.getElementById('throw-btn').disabled = false;
             } else {
                 document.getElementById('score-col-player').classList.toggle('active-turn', currentMatch.turn === 'p1'); document.getElementById('score-col-ai').classList.toggle('active-turn', currentMatch.turn === 'p2');
                 document.getElementById('player-controls').style.opacity = "0.5"; document.getElementById('throw-btn').disabled = true;
-                window.aiTimeout = setTimeout(aiTurn, 1200);
+                const delay = typeof getSpectatorPlaybackDelay === 'function'
+                    ? getSpectatorPlaybackDelay(1200, 350)
+                    : 1200;
+                window.aiTimeout = setTimeout(aiTurn, delay);
             }
         }
 
         function handleBust(isP1) {
-            const throwerName = currentMatch.isDoubles ? getCurrentMatchThrowerName(isP1) : (isP1 ? t('t-you') : currentMatch.opponent.name);
+            const throwerName = currentMatch.isDoubles
+                ? getCurrentMatchThrowerName(isP1)
+                : (typeof getCurrentSinglesMatchPlayerName === 'function'
+                    ? getCurrentSinglesMatchPlayerName(isP1)
+                    : (isP1 ? t('t-you') : currentMatch.opponent.name));
             logThrow(`${throwerName}: ${t('t-log-bust')}`, isP1 ? 'miss' : 'ai');
             if(isP1) currentMatch.p1Score = currentMatch.p1TurnStartScore; else currentMatch.p2Score = currentMatch.p2TurnStartScore;
             currentTurnScore = 0; updateScores(); updateMatchStatsUI(); endTurn();
         }
 
         function finishMatch() {
+            if (currentMatch?.isSpectator && typeof finishSpectatedTournamentMatch === 'function') {
+                finishSpectatedTournamentMatch();
+                return;
+            }
             if (currentMatch && currentMatch.isWorldCup && typeof finishWorldCupMatch === 'function') {
                 finishWorldCupMatch();
                 return;
@@ -201,13 +221,6 @@ function startMatch(vsAI) {
                 addCareerChronicleEvent('checkout', { value: finalHighCheckout });
             }
 
-            if (typeof player.stamina !== 'undefined') {
-                // NOWY BALANS: 2% za mecz turniejowy, 1% za sparing
-                let drain = currentMatch.isTournament ? 2 : 1; 
-                // Math.max gwarantuje, że energia nigdy nie spadnie poniżej 0!
-                player.stamina = Math.max(0, player.stamina - drain); 
-            }
-            
             checkAchievements('stats'); // <--- DODANE TUTAJ (skanuje po każdym meczu)
 
             // Przechodzimy do rozstrzygnięcia
@@ -245,6 +258,26 @@ function startMatch(vsAI) {
                     currentMatch = null;
                     document.getElementById('bracket-modal').style.display = 'none';
                     concludeWorldMastersFinalsQualifierEvent(true);
+                    showTournamentEnd();
+                    if (typeof updateHub === 'function') updateHub();
+                    showScreen('screen-hub');
+                    saveGame(true);
+                    return;
+                }
+                if (specialTournamentOutcome === 'pdcQSchool') {
+                    currentMatch = null;
+                    document.getElementById('bracket-modal').style.display = 'none';
+                    concludePdcQSchoolEvent(true);
+                    showTournamentEnd();
+                    if (typeof updateHub === 'function') updateHub();
+                    showScreen('screen-hub');
+                    saveGame(true);
+                    return;
+                }
+                if (specialTournamentOutcome === 'pdcTourCardQualifier') {
+                    currentMatch = null;
+                    document.getElementById('bracket-modal').style.display = 'none';
+                    concludePdcTourCardQualifierEvent(true);
                     showTournamentEnd();
                     if (typeof updateHub === 'function') updateHub();
                     showScreen('screen-hub');

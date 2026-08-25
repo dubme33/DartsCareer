@@ -1,3 +1,14 @@
+const PLAYERS_CHAMPIONSHIP_PRIZE_MONEY = Object.freeze({
+    winner: 15000,
+    2: 10000,
+    4: 6500,
+    8: 4000,
+    16: 3000,
+    32: 2000,
+    64: 1250,
+    128: 0
+});
+
 function getPrizeMoney(tName, round, won) {
     if (typeof isWorldMastersName === 'function' && isWorldMastersName(tName)) {
         return getWorldMastersPrizeMoney(tName, round, won);
@@ -29,10 +40,8 @@ function getPrizeMoney(tName, round, won) {
         if(!won && round === 16) return 10000; if(!won && round === 32) return 6500;
         if(!won && round === 64) return 3000;
     } else if (tName.includes("Players Championship") || tName.includes("Pro Players Cup")) {
-        if(won && round === 2) return 15000; if(!won && round === 2) return 10000;
-        if(!won && round === 4) return 6500; if(!won && round === 8) return 4000;
-        if(!won && round === 16) return 3000; if(!won && round === 32) return 2000;
-        if(!won && round === 64) return 1250; if(!won && round === 128) return 1000;
+        if (won && round === 2) return PLAYERS_CHAMPIONSHIP_PRIZE_MONEY.winner;
+        return PLAYERS_CHAMPIONSHIP_PRIZE_MONEY[round] || 0;
     } else if (tName.includes("Global Darts League - Play-offs") || (tName.includes("Premier") && tName.includes("Play-offs"))) {
         if(won && round === 2) return 350000;
         if(!won && round === 2) return 170000;
@@ -70,6 +79,7 @@ function getPrizeMoney(tName, round, won) {
 
         function awardPrizeMoney(p, amount, tName) {
             if (!p || typeof amount !== 'number' || isNaN(amount) || amount <= 0) return;
+            tName = String(tName || '');
             
             // Zabezpieczenie przed uszkodzonym zapisem (przywraca 0 zamiast błędu)
             if (typeof p.prizeMoney !== 'number' || isNaN(p.prizeMoney)) p.prizeMoney = 0;
@@ -97,6 +107,14 @@ function getPrizeMoney(tName, round, won) {
             const isPC = typeof isPlayersChampionshipTournament === 'function'
                 ? isPlayersChampionshipTournament(tName)
                 : ((tName.includes("Players Championship") || tName.includes("Pro Players Cup")) && !tName.includes("Final"));
+            const isMainRanking = typeof isMainOrderOfMeritRankingTournament === 'function'
+                ? isMainOrderOfMeritRankingTournament(tName)
+                : isProTour || tName.includes("World Darts Championship") || tName.includes("Global Darts Championship")
+                    || tName.includes("UK Open") || tName.includes("British Open") || tName.includes("Matchplay")
+                    || tName.includes("Grand Prix") || tName.includes("European Championship")
+                    || tName.includes("Continental Championship") || tName.includes("Grand Slam")
+                    || tName.includes("Champion's Slam") || tName.includes("Players Championship Finals")
+                    || tName.includes("Pro Players Finals");
 
             // --- 1. RANKING PROTOUR (kroczące 52 tygodnie) ---
             if (isProTour) {
@@ -108,15 +126,20 @@ function getPrizeMoney(tName, round, won) {
                 }
             }
 
-            // --- 2. GŁÓWNY ORDER OF MERIT (Kroczący 24-miesięczny / 2-letni) ---
-            if (!p.historyMain[tName]) {
-                let estimatedPast = Math.round(p.prizeMoney / 80);
-                p.historyMain[tName] = [estimatedPast, estimatedPast]; 
+            // --- 2. GŁÓWNY ORDER OF MERIT (dokładne, kroczące dwa lata) ---
+            if (isMainRanking) {
+                if (typeof awardMainOrderOfMeritPrizeMoney === 'function') {
+                    awardMainOrderOfMeritPrizeMoney(
+                        p,
+                        amount,
+                        tName,
+                        typeof currentDate !== 'undefined' ? currentDate : null
+                    );
+                } else {
+                    p.prizeMoney += amount;
+                    p.historyMain[tName] = (Number(p.historyMain[tName]) || 0) + amount;
+                }
             }
-
-            let droppedMain = p.historyMain[tName].shift(); 
-            p.prizeMoney = Math.max(0, p.prizeMoney - droppedMain) + amount;
-            p.historyMain[tName].push(amount);
 
             // --- 3. RANKING PLAYERS CHAMPIONSHIP (Resetowany co roku 1 stycznia!) ---
             if (isPC) {

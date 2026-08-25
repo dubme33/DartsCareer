@@ -158,15 +158,22 @@
         }
         .bracket-content {
             background: var(--panel-bg); border: 2px solid var(--accent-green); padding: 25px;
-            border-radius: 10px; max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto;
+            border-radius: 10px; max-width: 820px; width: 90%; max-height: 80vh; overflow-y: auto;
         }
         .bracket-match {
-            display: flex; justify-content: space-between; align-items: center; background: #0f3460; padding: 12px; margin-bottom: 8px; border-radius: 5px; font-size: 15px;
+            display: flex; justify-content: space-between; align-items: center; gap: 8px; background: #0f3460; padding: 12px; margin-bottom: 8px; border-radius: 5px; font-size: 15px;
         }
         .bracket-match.player-match { border: 2px solid var(--accent-green); background: #1a1a2e; box-shadow: 0 0 10px var(--accent-green); }
         .bracket-vs { color: var(--accent-red); font-weight: bold; font-size: 12px; margin: 0 15px; }
         /* Poprawki widoku meczu dla urządzeń mobilnych */
 @media (max-width: 768px) {
+    .bracket-match {
+        flex-wrap: wrap;
+    }
+    .bracket-match > :last-child:not(:nth-child(3)) {
+        width: 100%;
+        margin-top: 6px;
+    }
     /* Ustawia tablice wyników jedna pod drugą */
     .score-board {
         flex-direction: column;

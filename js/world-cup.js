@@ -1,4 +1,5 @@
 let worldCupState = null;
+let isFastForwardingWorldCup = false;
 
 const WORLD_CUP_TOURNAMENT_NAME = 'Puchar Narodów';
 const WORLD_CUP_LEGACY_NAME = 'World Cup of Darts';
@@ -992,6 +993,48 @@ function simulateSkippedWorldCup() {
     }
 }
 
+function isWorldCupCareerTeamStillAlive() {
+    if (!worldCupState || worldCupState.completed) return false;
+    const careerTeam = worldCupState.teams.find(teamContainsCareerPlayer);
+    if (!careerTeam) return false;
+
+    // Przed fazą pucharową wynik gracza może nadal zależeć od pozostałych
+    // spotkań grupowych, więc nie udostępniamy jeszcze skrótu całych zawodów.
+    if (worldCupState.phase !== 'knockout') return true;
+
+    return (worldCupState.knockout?.matches || []).some(match => {
+        const includesCareerTeam = match.team1Id === careerTeam.id || match.team2Id === careerTeam.id;
+        return includesCareerTeam && (!match.played || match.winnerId === careerTeam.id);
+    });
+}
+
+function simulateRemainingWorldCupTournament() {
+    if (isFastForwardingWorldCup || !worldCupState || worldCupState.completed || isWorldCupCareerTeamStillAlive()) return false;
+
+    const completedTournament = activeTournament;
+    const button = document.getElementById('t-btn-sim-tournament');
+    isFastForwardingWorldCup = true;
+    if (button) button.disabled = true;
+    worldCupState.skipPlayerMatches = true;
+
+    try {
+        let simulatedStages = 0;
+        while (!worldCupState.completed && simulatedStages < 8) {
+            simulateWorldCupCurrentStage(false);
+            simulatedStages++;
+        }
+
+        if (!worldCupState.completed) return false;
+        if (completedTournament?.historyLogs && typeof showCompletedTournamentResults === 'function') {
+            showCompletedTournamentResults(completedTournament);
+        }
+        return true;
+    } finally {
+        isFastForwardingWorldCup = false;
+        if (button) button.disabled = false;
+    }
+}
+
 function advanceWorldCup() {
     if (!worldCupState || worldCupState.completed) return;
     if (worldCupState.skipPlayerMatches) {
@@ -1080,6 +1123,7 @@ function showWorldCupOverview() {
     const list = document.getElementById('bracket-list');
     const playButton = document.getElementById('t-btn-play-match');
     const simulateButton = document.getElementById('t-btn-sim-round');
+    const simulateTournamentButton = document.getElementById('t-btn-sim-tournament');
     const pending = getWorldCupPendingMatch();
 
     title.innerText = `🏆 ${getWorldCupTournamentDisplayName()} — ${getWorldCupRoundLabel()}`;
@@ -1128,6 +1172,14 @@ function showWorldCupOverview() {
             : trWorldCup('simulateNextStage', { tournament: getWorldCupTournamentDisplayName() });
         simulateButton.onclick = () => simulateWorldCupCurrentStage(true);
     }
+    if (simulateTournamentButton) {
+        const canFastForwardTournament = worldCupState.phase === 'knockout'
+            && !worldCupState.completed
+            && !isWorldCupCareerTeamStillAlive();
+        simulateTournamentButton.style.display = canFastForwardTournament ? 'block' : 'none';
+        simulateTournamentButton.innerText = t('t-btn-sim-tournament');
+        simulateTournamentButton.onclick = simulateRemainingWorldCupTournament;
+    }
     modal.style.display = 'flex';
 }
 
@@ -1154,9 +1206,13 @@ function startWorldCupTournament() {
         sendWorldCupSelectionEmail();
         if (typeof saveGame === 'function') saveGame(true);
     }
-    if (typeof isSkippingTournament !== 'undefined' && isSkippingTournament) {
+    const isSkipping = typeof isSkippingTournament !== 'undefined' && isSkippingTournament;
+    if (isSkipping) {
         worldCupState.skipPlayerMatches = true;
         isSkippingTournament = false;
+    }
+    if (!worldCupState.skipPlayerMatches && worldCupState.teams.some(teamContainsCareerPlayer) && typeof chargeTournamentParticipationStamina === 'function') {
+        chargeTournamentParticipationStamina(activeTournament);
     }
     if (!worldCupState.skipPlayerMatches && !worldCupState.qualificationsAcknowledged) {
         worldCupState.qualificationsAcknowledged = true;
@@ -1176,9 +1232,13 @@ function startWorldCupQualifiers() {
         sendWorldCupSelectionEmail();
         if (typeof saveGame === 'function') saveGame(true);
     }
-    if (typeof isSkippingTournament !== 'undefined' && isSkippingTournament) {
+    const isSkipping = typeof isSkippingTournament !== 'undefined' && isSkippingTournament;
+    if (isSkipping) {
         worldCupState.skipPlayerMatches = true;
         isSkippingTournament = false;
+    }
+    if (!worldCupState.skipPlayerMatches && worldCupState.teams.some(teamContainsCareerPlayer) && typeof chargeTournamentParticipationStamina === 'function') {
+        chargeTournamentParticipationStamina(activeTournament);
     }
     if (!worldCupState.skipPlayerMatches && !worldCupState.qualificationsAcknowledged) {
         worldCupState.qualificationsAcknowledged = true;
@@ -1239,7 +1299,7 @@ function startWorldCupMatch(match) {
         worldCupTeamP2: opponentTeam,
         doublesThrower: { p1: playerTeam.players.findIndex(candidate => isCurrentPlayer(candidate)), p2: 0 },
         p1Score: 501, p2Score: 501, p1Legs: 0, p2Legs: 0, p1Sets: 0, p2Sets: 0, totalLegsPlayed: 0,
-        legsToWin: format.legsToWin, matchFormat: format, turn: starter, startingPlayer: starter, dartsThrown: 0,
+        legsToWin: format.legsToWin, matchFormat: format, turn: starter, startingPlayer: starter, dartsThrown: 0, isTurnLocked: false,
         p1TurnStartScore: 501, p2TurnStartScore: 501,
         stats: {
             p1TotalDarts: 0, p1AccumulatedScore: 0, p1First9Score: 0, p1First9Darts: 0, p1LegDarts: 0, p1HighCheckout: 0, p1DoubleAttempts: 0, p1DoubleHits: 0, p1OneEighties: 0,
@@ -1281,7 +1341,6 @@ function finishWorldCupMatch() {
     if (playerTeamAverage !== null && typeof recordCareerBestAverage === 'function') {
         recordCareerBestAverage(playerTeamAverage);
     }
-    if (typeof player.stamina !== 'undefined') player.stamina = Math.max(0, player.stamina - 2);
     if (typeof checkAchievements === 'function') checkAchievements('stats');
     const p1WasOriginallyFirst = match.team1Id === currentMatch.worldCupTeamP1.id;
     const score1 = p1WasOriginallyFirst ? currentMatch.p1Legs : currentMatch.p2Legs;
@@ -1312,9 +1371,11 @@ function finishWorldCupTournament(winner) {
         addCareerChronicleEvent('trophy', { tournament: WORLD_CUP_TOURNAMENT_NAME, prize: WORLD_CUP_PRIZES.winner / 2 });
         checkAchievements('tour_win', WORLD_CUP_TOURNAMENT_NAME);
     }
-    alert(careerPlayerWon
-        ? trWorldCup('winnerAlert', { tournament: getWorldCupTournamentDisplayName(), country: getWorldCupCountryName(winner.country) })
-        : trWorldCup('otherWinnerAlert', { tournament: getWorldCupTournamentDisplayName(), country: getWorldCupCountryName(winner.country) }));
+    if (!isFastForwardingWorldCup) {
+        alert(careerPlayerWon
+            ? trWorldCup('winnerAlert', { tournament: getWorldCupTournamentDisplayName(), country: getWorldCupCountryName(winner.country) })
+            : trWorldCup('otherWinnerAlert', { tournament: getWorldCupTournamentDisplayName(), country: getWorldCupCountryName(winner.country) }));
+    }
     activeTournament = null;
     const bracketModal = document.getElementById('bracket-modal');
     if (bracketModal) bracketModal.style.display = 'none';

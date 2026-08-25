@@ -32,11 +32,11 @@ const CONTINENTAL_QUALIFIER_TRANSLATIONS = {
 };
 
 const CONTINENTAL_QUALIFIER_SCHEDULE = [
-    ['Continental Tour 1', 1, 18], ['Continental Tour 2', 1, 25], ['Continental Tour 3', 2, 9],
-    ['Continental Tour 4', 2, 17], ['Continental Tour 5', 2, 24], ['Continental Tour 6', 3, 14],
-    ['Continental Tour 7', 4, 6], ['Continental Tour 8', 4, 20], ['Continental Tour 9', 5, 18],
-    ['Continental Tour 10', 6, 15], ['Continental Tour 11', 7, 5], ['Continental Tour 12', 7, 23],
-    ['Continental Tour 13', 8, 15], ['Continental Tour 14', 9, 8], ['Continental Tour 15', 9, 15]
+    ['Continental Tour 1', 1, 18], ['Continental Tour 2', 2, 11], ['Continental Tour 3', 2, 18],
+    ['Continental Tour 4', 3, 3], ['Continental Tour 5', 3, 15], ['Continental Tour 6', 4, 6],
+    ['Continental Tour 7', 4, 20], ['Continental Tour 8', 4, 27], ['Continental Tour 9', 5, 18],
+    ['Continental Tour 10', 6, 8], ['Continental Tour 11', 7, 27], ['Continental Tour 12', 8, 3],
+    ['Continental Tour 13', 8, 10], ['Continental Tour 14', 9, 8], ['Continental Tour 15', 9, 15]
 ];
 
 function trContinentalQualifier(key, values = {}) {
@@ -77,9 +77,10 @@ function sortContinentalQualificationRank(first, second, property) {
 
 function getContinentalQualifierEligiblePlayers() {
     const aiPlayers = Array.isArray(pdcPlayers)
-        ? pdcPlayers.filter(candidate => candidate && candidate.hasTourCard !== false)
+        ? pdcPlayers.filter(candidate => candidate && candidate.hasTourCard === true)
         : [];
-    return [...aiPlayers, player].filter(Boolean);
+    if (player?.hasTourCard === true) aiPlayers.push(player);
+    return aiPlayers.filter(Boolean);
 }
 
 function getContinentalQualificationSeason() {
@@ -122,7 +123,7 @@ function ensureContinentalQualificationState(mainTournament, eligiblePlayers = g
         .filter(candidate => !automaticKeys.has(getContinentalQualificationPlayerKey(candidate)))
         .sort((first, second) => sortContinentalQualificationRank(first, second, 'proTourPrizeMoney'));
     let qualifierPlayers = qualifierCandidates.slice(0, 128);
-    if (!automaticKeys.has(getContinentalQualificationPlayerKey(player)) && !qualifierPlayers.some(isCurrentPlayer)) {
+    if (player?.hasTourCard === true && !automaticKeys.has(getContinentalQualificationPlayerKey(player)) && !qualifierPlayers.some(isCurrentPlayer)) {
         qualifierPlayers = [...qualifierPlayers.slice(0, 127), player];
     }
 
