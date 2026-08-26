@@ -1131,7 +1131,8 @@ async function updateProfileWalkon(event) {
             if (levelsGained > 0) alert(type === 'scoring' ? t('t-alert-lvl-sc') : t('t-alert-lvl-db'));
 
             player.trainingSessionsThisWeek += 1;
-            advanceDay(); updateHub();
+            // Trening zajmuje cały dzień, więc nie jest jednocześnie dniem odpoczynku.
+            advanceDay({ recoverStamina: false }); updateHub();
             if (document.getElementById('screen-training').classList.contains('active')) showTrainingScreen();
         }
 

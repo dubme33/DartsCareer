@@ -536,7 +536,7 @@ function showScreen(screenId) {
             return pendingTournament ? activateTournamentFromCalendar(pendingTournament) : null;
         }
 
-        function advanceDay() {
+        function advanceDay({ recoverStamina = true } = {}) {
             // Starszy zapis mógł powstać już w dniu turnieju, zanim autosave
             // zdążył przypiąć wydarzenie. Nie pozwalamy przeskoczyć takiej imprezy;
             // dotyczy to również wcześniejszych wydarzeń pominiętych przez dawny próg OVR.
@@ -565,13 +565,15 @@ function showScreen(screenId) {
             }
             updateDateDisplay();
 
-            if (typeof recoverDailyStamina === 'function') {
-                recoverDailyStamina(player);
-            } else {
-                // Awaryjna ścieżka dla przeglądarki, która ma jeszcze starszy
-                // plik modułu w pamięci podręcznej.
-                const currentStamina = Number.isFinite(Number(player.stamina)) ? Number(player.stamina) : 100;
-                player.stamina = Math.min(100, currentStamina + 10);
+            if (recoverStamina) {
+                if (typeof recoverDailyStamina === 'function') {
+                    recoverDailyStamina(player);
+                } else {
+                    // Awaryjna ścieżka dla przeglądarki, która ma jeszcze starszy
+                    // plik modułu w pamięci podręcznej.
+                    const currentStamina = Number.isFinite(Number(player.stamina)) ? Number(player.stamina) : 100;
+                    player.stamina = Math.min(100, currentStamina + 10);
+                }
             }
             updateHub();
 
