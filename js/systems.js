@@ -43,10 +43,53 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
             if (!isPlainObject(tournament)) return tournament || null;
             return {
                 name: tournament.name,
+                sourceName: tournament.sourceName,
                 month: tournament.month,
                 day: tournament.day,
-                specialType: tournament.specialType
+                specialType: tournament.specialType,
+                qualifierFor: tournament.qualifierFor,
+                qualifierPath: tournament.qualifierPath,
+                worldMastersEvent: tournament.worldMastersEvent
             };
+        }
+
+        function resolveLoadedTournamentReference(savedTournament) {
+            if (!isPlainObject(savedTournament) || !Array.isArray(tournamentDatabase)) return null;
+
+            const stableName = savedTournament.sourceName || savedTournament.name;
+            const byStableName = stableName
+                ? tournamentDatabase.find(tournament => tournament.sourceName === stableName)
+                    || tournamentDatabase.find(tournament => !tournament.sourceName && tournament.name === stableName)
+                : null;
+            if (byStableName) return byStableName;
+
+            const byDisplayAlias = savedTournament.name
+                ? tournamentDatabase.find(tournament => tournament.name === savedTournament.name
+                    || tournament.sourceName === savedTournament.name)
+                : null;
+            if (byDisplayAlias) return byDisplayAlias;
+
+            if (savedTournament.worldMastersEvent) {
+                const byWorldMastersEvent = tournamentDatabase.find(tournament =>
+                    tournament.worldMastersEvent === savedTournament.worldMastersEvent);
+                if (byWorldMastersEvent) return byWorldMastersEvent;
+            }
+
+            const sameDate = tournamentDatabase.filter(tournament =>
+                tournament.month === savedTournament.month && tournament.day === savedTournament.day);
+            if (savedTournament.specialType === 'continentalQualifier' && savedTournament.qualifierPath) {
+                const byQualifierPath = sameDate.find(tournament =>
+                    tournament.specialType === 'continentalQualifier'
+                    && tournament.qualifierPath === savedTournament.qualifierPath);
+                if (byQualifierPath) return byQualifierPath;
+            }
+
+            if (savedTournament.specialType) {
+                const bySpecialType = sameDate.filter(tournament =>
+                    tournament.specialType === savedTournament.specialType);
+                if (bySpecialType.length === 1) return bySpecialType[0];
+            }
+            return sameDate.length === 1 ? sameDate[0] : null;
         }
 
         function getSaveStateWithoutProfileMedia(gameState) {
@@ -477,8 +520,13 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
                         : 'Puchar Narodów';
                 }
                 activeTournament = savedTournament
-                    ? tournamentDatabase.find(tournament => tournament.name === savedTournament.name && tournament.month === savedTournament.month && tournament.day === savedTournament.day) || savedTournament
+                    ? resolveLoadedTournamentReference(savedTournament)
                     : null;
+                if (activeTournament?.completed) activeTournament = null;
+                if (!activeTournament && (!Array.isArray(gameState.tournamentBracket) || gameState.tournamentBracket.length === 0)
+                    && typeof recoverPendingTournamentForCurrentDate === 'function') {
+                    recoverPendingTournamentForCurrentDate(true);
+                }
                 tournamentRound = Number.isFinite(gameState.tournamentRound) ? gameState.tournamentRound : 32;
                 const savedPreTournamentRanks = isPlainObject(gameState.preTournamentRanks) ? gameState.preTournamentRanks : {};
                 preTournamentRanks = {

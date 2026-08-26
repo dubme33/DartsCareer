@@ -495,7 +495,56 @@ function showScreen(screenId) {
 ];
 
 
+        function getPendingTournamentForCareerDate(date = currentDate, includeOverdue = false) {
+            if (!(date instanceof Date) || Number.isNaN(date.getTime())
+                || typeof tournamentDatabase === 'undefined' || !Array.isArray(tournamentDatabase)) return null;
+
+            const careerYear = date.getFullYear();
+            const targetMonth = date.getMonth();
+            const targetDay = date.getDate();
+            return tournamentDatabase
+                .filter(tournament => tournament && tournament.completed !== true
+                    && (typeof isTournamentScheduledForCareerYear !== 'function'
+                        || isTournamentScheduledForCareerYear(tournament, careerYear))
+                    && (includeOverdue
+                        ? tournament.month < targetMonth || (tournament.month === targetMonth && tournament.day <= targetDay)
+                        : tournament.month === targetMonth && tournament.day === targetDay))
+                .sort((first, second) => first.month - second.month || first.day - second.day)[0]
+                || null;
+        }
+
+        function activateTournamentFromCalendar(tournament) {
+            if (!tournament) return null;
+            activeTournament = tournament;
+            const tournamentDisplayName = typeof getTournamentDisplayName === 'function'
+                ? getTournamentDisplayName(tournament)
+                : tournament.name;
+            const nameDisplay = typeof document !== 'undefined'
+                ? document.getElementById('tour-name-display')
+                : null;
+            const tournamentTile = typeof document !== 'undefined'
+                ? document.getElementById('tile-tournament')
+                : null;
+            if (nameDisplay) nameDisplay.innerText = tournamentDisplayName;
+            if (tournamentTile) tournamentTile.style.display = 'block';
+            return tournament;
+        }
+
+        function recoverPendingTournamentForCurrentDate(includeOverdue = false) {
+            if (activeTournament && !activeTournament.completed) return activeTournament;
+            const pendingTournament = getPendingTournamentForCareerDate(currentDate, includeOverdue);
+            return pendingTournament ? activateTournamentFromCalendar(pendingTournament) : null;
+        }
+
         function advanceDay() {
+            // Starszy zapis mógł powstać już w dniu turnieju, zanim autosave
+            // zdążył przypiąć wydarzenie. Nie pozwalamy przeskoczyć takiej imprezy;
+            // dotyczy to również wcześniejszych wydarzeń pominiętych przez dawny próg OVR.
+            if ((!activeTournament || activeTournament.completed)
+                && typeof recoverPendingTournamentForCurrentDate === 'function') {
+                if (activeTournament?.completed) activeTournament = null;
+                recoverPendingTournamentForCurrentDate(true);
+            }
             if (activeTournament && !activeTournament.completed) {
                 const messages = {
                     pl: 'Najpierw dokończ turniej albo wybierz opcję „Odpuść turniej”.',
@@ -586,7 +635,7 @@ function showScreen(screenId) {
                     updateHub();
                 }
             }
-            if (currentDate.getDate() === 1 || currentDate.getDate() === 15) saveGame(true);
+            const shouldAutoSaveToday = currentDate.getDate() === 1 || currentDate.getDate() === 15;
 
             // --- Kwalifikacje do Ligi (1 lutego) ---
             if (currentDate.getMonth() === 1 && currentDate.getDate() === 1) {
@@ -613,12 +662,15 @@ function showScreen(screenId) {
             document.getElementById('tile-tournament').style.display = 'none';
 
             if (typeof tournamentDatabase !== 'undefined') {
-                const todayTournament = tournamentDatabase.find(t_tour =>
-                    t_tour.month === currentDate.getMonth()
-                    && t_tour.day === currentDate.getDate()
-                    && (typeof isTournamentScheduledForCareerYear !== 'function'
-                        || isTournamentScheduledForCareerYear(t_tour, currentDate.getFullYear()))
-                );
+                const todayTournament = typeof getPendingTournamentForCareerDate === 'function'
+                    ? getPendingTournamentForCareerDate(currentDate)
+                    : tournamentDatabase.find(t_tour =>
+                        t_tour.completed !== true
+                        && t_tour.month === currentDate.getMonth()
+                        && t_tour.day === currentDate.getDate()
+                        && (typeof isTournamentScheduledForCareerYear !== 'function'
+                            || isTournamentScheduledForCareerYear(t_tour, currentDate.getFullYear()))
+                    );
                 if (todayTournament) {
                     const tournamentDisplayName = typeof getTournamentDisplayName === 'function'
                         ? getTournamentDisplayName(todayTournament)
@@ -649,24 +701,24 @@ function showScreen(screenId) {
                         // Zawodnik z miejsc rankingowych ma już gwarantowany start w
                         // turnieju głównym. Kwalifikacje rozstrzygamy w tle, aby nie
                         // blokowały mu kalendarza ani nie wymagały kliknięcia „Odpuść”.
-                        activeTournament = todayTournament;
+                        activateTournamentFromCalendar(todayTournament);
+                        if (shouldAutoSaveToday && typeof saveGame === 'function') saveGame(true);
                         startTournament();
                         return;
                     }
-                    
-                    if (player.overall >= todayTournament.minOvr) {
-                        activeTournament = todayTournament;
-                        document.getElementById('tour-name-display').innerText = tournamentDisplayName;
-                        document.getElementById('tile-tournament').style.display = 'block';
-                    } else {
-                        let subNoQual = t('t-email-no-qual-sub');
-                        let bodyNoQual = t('t-email-no-qual-body').replace('{tour}', tournamentDisplayName);
-                        addEmail(t('t-sender-org'), subNoQual, bodyNoQual);
-                    }
+
+                    // minOvr było dawnym skrótem kwalifikacji. Obecna obsada jest
+                    // wyliczana w startTournament na podstawie rankingów i ścieżek
+                    // kwalifikacyjnych, więc nawet gracz spoza stawki musi móc
+                    // otworzyć oraz zasymulować turniej AI.
+                    activateTournamentFromCalendar(todayTournament);
+                    if (shouldAutoSaveToday && typeof saveGame === 'function') saveGame(true);
                     return; 
                 }
             }
-            
+
+            if (shouldAutoSaveToday && typeof saveGame === 'function') saveGame(true);
+
             if (Math.random() < 0.15 && typeof randomEventsDatabase !== 'undefined') { triggerRandomEvent(); return; }
             if (Math.random() < 0.12) { 
                 let randomMail = randomEmailsDB[Math.floor(Math.random() * randomEmailsDB.length)];

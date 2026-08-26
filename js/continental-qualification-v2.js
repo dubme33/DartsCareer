@@ -43,7 +43,9 @@ function isContinentalQualifierTournament(tournament = activeTournament) {
 function isContinentalTourTournament(tournament) {
     if (!tournament || isContinentalQualifierTournament(tournament)) return false;
     const name = typeof tournament === 'string' ? tournament : tournament.name;
-    return /(?:european|continental) tour/i.test(name || '');
+    const sourceName = typeof tournament === 'object' ? tournament.sourceName : '';
+    return /(?:european|continental) tour/i.test(name || '')
+        || /(?:european|continental) tour/i.test(sourceName || '');
 }
 
 function getContinentalQualifierPath(tournament) {
@@ -107,7 +109,9 @@ function resolveContinentalQualificationPlayers(keys, candidates = getContinenta
 
 function getLinkedContinentalTour(qualifierTournament) {
     if (!qualifierTournament?.qualifierFor || typeof tournamentDatabase === 'undefined' || !Array.isArray(tournamentDatabase)) return null;
-    return tournamentDatabase.find(tournament => tournament.name === qualifierTournament.qualifierFor) || null;
+    return tournamentDatabase.find(tournament => tournament.name === qualifierTournament.qualifierFor)
+        || tournamentDatabase.find(tournament => tournament.sourceName === qualifierTournament.qualifierFor)
+        || null;
 }
 
 function getContinentalQualificationPathState(state, path) {

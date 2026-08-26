@@ -149,13 +149,36 @@ const CONTINENTAL_TOUR_QUALIFIER_PATH_DEFINITIONS = Object.freeze([
     ['card', 'Pro Card Qualifier']
 ]);
 
+function findTournamentBySourceName(calendar, sourceName) {
+    if (!Array.isArray(calendar) || !sourceName) return null;
+    // W razie starego, zduplikowanego zapisu pierwszeństwo ma wpis moda.
+    // To on zwykle zawiera zachowaną historię i nazwę wyświetlaną.
+    return calendar.find(tournament => tournament?.sourceName === sourceName)
+        || calendar.find(tournament => tournament?.name === sourceName)
+        || null;
+}
+
+function getContinentalQualifierSourceMainName(calendar, qualifier) {
+    if (!qualifier) return '';
+    const linkedMain = findTournamentBySourceName(calendar, qualifier.qualifierFor);
+    if (linkedMain) return linkedMain.sourceName || linkedMain.name;
+
+    const qualifierSourceName = qualifier.sourceName || qualifier.name || '';
+    const scheduledMain = CONTINENTAL_TOUR_2026_QUALIFIER_SCHEDULE
+        .map(([mainName]) => mainName)
+        .find(mainName => qualifierSourceName === `${mainName} - Qualifiers`
+            || qualifierSourceName.startsWith(`${mainName} - `));
+    return scheduledMain || qualifier.qualifierFor || '';
+}
+
 function syncContinentalTourQualificationCalendar(calendar = tournamentDatabase) {
     if (!Array.isArray(calendar)) return calendar;
     const existingQualifiers = calendar.filter(tournament => tournament?.specialType === 'continentalQualifier');
     const reusable = new Map();
     existingQualifiers.forEach(tournament => {
         const path = tournament.qualifierPath || 'card';
-        reusable.set(`${tournament.qualifierFor}|${path}`, tournament);
+        const sourceMainName = getContinentalQualifierSourceMainName(calendar, tournament);
+        reusable.set(`${sourceMainName}|${path}`, tournament);
     });
 
     for (let index = calendar.length - 1; index >= 0; index--) {
@@ -163,14 +186,21 @@ function syncContinentalTourQualificationCalendar(calendar = tournamentDatabase)
     }
 
     CONTINENTAL_TOUR_2026_QUALIFIER_SCHEDULE.forEach(([mainName, ...dates]) => {
-        const mainTournament = calendar.find(tournament => tournament.name === mainName);
+        const mainTournament = findTournamentBySourceName(calendar, mainName);
         if (!mainTournament) return;
         CONTINENTAL_TOUR_QUALIFIER_PATH_DEFINITIONS.forEach(([path, label], pathIndex) => {
             const [month, day] = dates[pathIndex];
             const key = `${mainName}|${path}`;
             const qualifier = reusable.get(key) || {};
+            const sourceName = `${mainName} - ${label}`;
+            const mainHasDisplayNameOverride = mainTournament.sourceName === mainName
+                && mainTournament.name !== mainName;
+            const hasDisplayNameOverride = typeof qualifier.name === 'string'
+                && qualifier.name !== sourceName
+                && (qualifier.sourceName === sourceName
+                    || (mainHasDisplayNameOverride && qualifier.qualifierFor === mainTournament.name));
             Object.assign(qualifier, {
-                name: `${mainName} - ${label}`,
+                name: hasDisplayNameOverride ? qualifier.name : sourceName,
                 month,
                 day,
                 format: 'legs',
@@ -179,10 +209,11 @@ function syncContinentalTourQualificationCalendar(calendar = tournamentDatabase)
                 country: mainTournament.country,
                 specialType: 'continentalQualifier',
                 qualifierPath: path,
-                qualifierFor: mainName,
+                qualifierFor: mainTournament.name,
                 completed: qualifier.completed === true,
                 historyLogs: typeof qualifier.historyLogs === 'string' ? qualifier.historyLogs : ''
             });
+            if (hasDisplayNameOverride) qualifier.sourceName = sourceName;
             delete qualifier.endMonth;
             delete qualifier.endDay;
             calendar.push(qualifier);
@@ -236,6 +267,10 @@ function syncPdc2026TournamentCalendar(calendar = tournamentDatabase) {
         let tournament = findPdc2026CalendarEntry(calendar, template);
         if (!tournament) {
             tournament = { ...template, completed: false, historyLogs: '' };
+            if (template.qualifierFor) {
+                const linkedMainTournament = findTournamentBySourceName(calendar, template.qualifierFor);
+                if (linkedMainTournament) tournament.qualifierFor = linkedMainTournament.name;
+            }
             calendar.push(tournament);
             return;
         }
@@ -246,9 +281,12 @@ function syncPdc2026TournamentCalendar(calendar = tournamentDatabase) {
         const hasDisplayNameOverride = tournament.sourceName === template.name
             && tournament.name !== template.name;
         const displayName = hasDisplayNameOverride ? tournament.name : null;
-        const displayQualifierFor = hasDisplayNameOverride && template.qualifierFor
-            ? tournament.qualifierFor
+        const linkedMainTournament = template.qualifierFor
+            ? findTournamentBySourceName(calendar, template.qualifierFor)
             : null;
+        const displayQualifierFor = linkedMainTournament?.name || (hasDisplayNameOverride && template.qualifierFor
+            ? tournament.qualifierFor
+            : null);
 
         PDC_2026_CALENDAR_FIELDS.forEach(field => {
             if (Object.prototype.hasOwnProperty.call(template, field)) tournament[field] = template[field];
@@ -258,9 +296,9 @@ function syncPdc2026TournamentCalendar(calendar = tournamentDatabase) {
         if (hasDisplayNameOverride) {
             tournament.name = displayName;
             tournament.sourceName = template.name;
-            if (template.qualifierFor && displayQualifierFor) {
-                tournament.qualifierFor = displayQualifierFor;
-            }
+        }
+        if (template.qualifierFor && displayQualifierFor) {
+            tournament.qualifierFor = displayQualifierFor;
         }
     });
 
