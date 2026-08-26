@@ -1,5 +1,5 @@
 const STAMINA_CONFIG = Object.freeze({
-    dailyRecovery: 5,
+    dailyRecovery: 10,
     trainingCost: 20,
     regularTournamentCost: 10,
     majorTournamentCost: 20,

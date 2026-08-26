@@ -87,6 +87,40 @@
         /* Mecz UI */
         .match-layout { display: flex; gap: 20px; margin-top: 20px; flex-wrap: wrap; }
         .match-board, .match-stats { background: #0f3460; padding: 20px; border-radius: 10px; flex: 1; min-width: 300px; }
+
+        .spectator-speed-controls {
+            align-items: center;
+            justify-content: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin: 0 auto 15px;
+            padding: 10px 14px;
+            width: fit-content;
+            max-width: 100%;
+            box-sizing: border-box;
+            border: 1px solid var(--border-color);
+            border-radius: 9px;
+            background: #1a1a2e;
+        }
+        .spectator-speed-label { color: #bdc3c7; font-size: 13px; font-weight: bold; }
+        .spectator-speed-buttons { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
+        .spectator-pause-btn,
+        .spectator-speed-btn {
+            min-width: 44px;
+            padding: 7px 10px;
+            border: 1px solid #34495e;
+            border-radius: 6px;
+            background: #0f3460;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+        .spectator-pause-btn { min-width: 94px; border-color: #f39c12; background: #7d4d08; }
+        .spectator-pause-btn:hover { border-color: #f1c40f; transform: translateY(-1px); }
+        .spectator-pause-btn.paused { border-color: #2ecc71; background: var(--accent-green); }
+        .spectator-speed-btn:hover { border-color: var(--accent-green); transform: translateY(-1px); }
+        .spectator-speed-btn.active { background: var(--accent-green); border-color: #2ecc71; box-shadow: 0 0 8px rgba(39, 174, 96, 0.45); }
         
         .score-board { display: flex; justify-content: space-between; margin-bottom: 20px; background: #1a1a2e; padding: 15px; border-radius: 10px; gap: 15px; }
         .score-col { display: flex; align-items: center; width: 49%; background: #0f3460; border-radius: 10px; padding: 15px; box-sizing: border-box; transition: 0.3s; border: 2px solid transparent;}
@@ -337,7 +371,7 @@
     grid-template-areas:
         "existing existing"
         "changelog form";
-    align-items: stretch;
+    align-items: start;
     gap: 24px;
 }
 
@@ -395,14 +429,14 @@
 .changelog-box {
     grid-area: changelog;
     min-width: 0;
-    max-height: none;
-    align-self: stretch;
+    max-height: 600px;
+    align-self: start;
 }
 
 .create-form-wrapper {
     grid-area: form;
     min-width: 0;
-    align-self: stretch;
+    align-self: start;
     box-sizing: border-box;
     padding: 20px;
     background: #16213e;
@@ -484,6 +518,7 @@
         .player-profile-hero {
             display: flex;
             align-items: center;
+            flex-wrap: wrap;
             gap: 20px;
             margin-bottom: 18px;
             padding: 20px;
@@ -517,6 +552,67 @@
             text-align: left;
         }
         .profile-subtitle { margin: 8px 0 0; color: #bdc3c7; }
+        .player-profile-identity { flex: 1 1 235px; min-width: 0; }
+        .profile-career-titles {
+            flex: 1 1 280px;
+            align-self: stretch;
+            min-width: 240px;
+            max-height: 200px;
+            padding: 13px 14px;
+            box-sizing: border-box;
+            overflow: hidden;
+            background: rgba(15, 52, 96, 0.72);
+            border: 1px solid rgba(241, 196, 15, 0.35);
+            border-radius: 8px;
+        }
+        .profile-career-titles h3 {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            margin: 0 0 8px;
+            padding-bottom: 7px;
+            border-bottom: 1px solid rgba(241, 196, 15, 0.25);
+            color: #f1c40f;
+            font-size: 14px;
+            text-align: left;
+        }
+        .profile-career-titles h3 > strong {
+            min-width: 25px;
+            padding: 2px 7px;
+            border-radius: 12px;
+            color: #111a33;
+            background: #f1c40f;
+            font-size: 12px;
+            text-align: center;
+        }
+        .profile-career-titles ul {
+            max-height: 143px;
+            margin: 0;
+            padding: 0 4px 0 0;
+            overflow-y: auto;
+            list-style: none;
+        }
+        .profile-career-titles li {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            padding: 6px 1px;
+            border-bottom: 1px solid rgba(189, 195, 199, 0.13);
+            color: #ecf0f1;
+            font-size: 12px;
+        }
+        .profile-career-titles li:last-child { border-bottom: 0; }
+        .profile-career-titles li > span { min-width: 0; overflow-wrap: anywhere; }
+        .profile-career-titles li > strong { flex: 0 0 auto; color: var(--accent-green); font-size: 13px; }
+        .profile-career-titles .profile-career-titles-empty {
+            justify-content: center;
+            padding: 25px 5px;
+            color: #95a5a6;
+            font-style: italic;
+            text-align: center;
+        }
         .profile-stat-grid {
             display: grid;
             grid-template-columns: repeat(5, minmax(120px, 1fr));
@@ -588,6 +684,8 @@
         @media (max-width: 700px) {
             .player-profile-hero { align-items: flex-start; gap: 12px; padding: 14px; }
             .player-profile-photo { flex-basis: 92px; width: 92px; height: 128px; }
+            .profile-career-titles { flex-basis: 100%; min-width: 100%; max-height: 220px; }
+            .profile-career-titles ul { max-height: 163px; }
             .profile-stat-grid { grid-template-columns: repeat(2, minmax(120px, 1fr)); }
             .profile-list-item div { flex-direction: column; gap: 3px; }
             .world-cup-groups { grid-template-columns: 1fr; }

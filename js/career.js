@@ -571,7 +571,7 @@ function showScreen(screenId) {
                 // Awaryjna ścieżka dla przeglądarki, która ma jeszcze starszy
                 // plik modułu w pamięci podręcznej.
                 const currentStamina = Number.isFinite(Number(player.stamina)) ? Number(player.stamina) : 100;
-                player.stamina = Math.min(100, currentStamina + 5);
+                player.stamina = Math.min(100, currentStamina + 10);
             }
             updateHub();
 

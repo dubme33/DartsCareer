@@ -22,7 +22,7 @@
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://dartscareer.pl">
     <link rel="icon" type="image/png" href="favicon.png">
-    <link rel="stylesheet" href="css/game.css">
+    <link rel="stylesheet" href="css/game.css?v=1.3.1-changelog-scroll">
 </head>
 <body>
     <header>
@@ -61,6 +61,53 @@
         <!-- LEWA STRONA: CHANGELOG (Zawsze po angielsku) -->
         <div class="changelog-box">
             <h3>📢 What's New / Changelog</h3>
+
+            <!-- UPDATE V1.3.1 -->
+            <div class="changelog-version-badge">v1.3.1 · Career Stability & Spectator Update</div>
+
+            <div class="changelog-grid">
+                <div class="cl-item">
+                    <span class="cl-tag fix">Save & Calendar</span>
+                    <span class="cl-title">💾 Tournaments No Longer Disappear</span>
+                    <p class="cl-desc">Loaded careers now safely restore major events, Continental Tours and their qualification history. Saves created with a mod remain playable without reloading that mod, without empty qualifier fields or all-BYE draws.</p>
+                </div>
+
+                <div class="cl-item">
+                    <span class="cl-tag feature">Spectator Mode</span>
+                    <span class="cl-title">🎵 AI Walk-ons, Match Speed & Pause</span>
+                    <p class="cl-desc">Watched AI matches now begin with introductions and walk-on music for both players. A slower x1 pace gives the caller time to finish, while x2, x4, x8 and x16 controls plus a true pause/resume button let you watch at your preferred speed.</p>
+                </div>
+
+                <div class="cl-item">
+                    <span class="cl-tag fix">World Series Finals</span>
+                    <span class="cl-title">🌍 Complete and Correct Last 32</span>
+                    <p class="cl-desc">The finals field now contains all 32 players: the Top 24 World Series ranking players, four further Order of Merit players and four qualifiers from the Tour Card Holder Qualifier.</p>
+                </div>
+
+                <div class="cl-item">
+                    <span class="cl-tag feature">Player Profiles</span>
+                    <span class="cl-title">🏆 Full Career Title History</span>
+                    <p class="cl-desc">Player profiles now show every title won across the entire saved career, grouped by tournament with the number of victories instead of displaying only the current season.</p>
+                </div>
+
+                <div class="cl-item">
+                    <span class="cl-tag tweak">Career Balance</span>
+                    <span class="cl-title">🔋 More Stamina, Softer Veteran Decline</span>
+                    <p class="cl-desc">Advancing a day restores five more stamina than before. Automatic age decline now starts after 43 and increases gradually, while veteran match results no longer apply an additional hidden penalty to losses.</p>
+                </div>
+
+                <div class="cl-item">
+                    <span class="cl-tag feature">Newgens</span>
+                    <span class="cl-title">🌱 Richer, Country-Accurate Names</span>
+                    <p class="cl-desc">Newgens use much larger pools of locally appropriate first and last names. Repeated identities are reduced, and major darts nations are represented far more often than tiny or exotic countries.</p>
+                </div>
+
+                <div class="cl-item">
+                    <span class="cl-tag fix">Player Database</span>
+                    <span class="cl-title">🇮🇪 Mickey Mansell Represents Ireland</span>
+                    <p class="cl-desc">Mickey Mansell's nationality is corrected to Ireland in the default database, modded careers and existing save files.</p>
+                </div>
+            </div>
 
             <!-- UPDATE V1.3.0 -->
             <div class="changelog-version-badge">v1.3.0 · Tour Cards & Qualification Overhaul</div>
@@ -820,6 +867,18 @@
         <div style="text-align: center; margin-bottom: 15px;">
             <button id="t-btn-skip-walkon" class="action-btn" onclick="skipWalkon()" style="display: none; background-color: var(--accent-red); width: auto; padding: 8px 15px; font-size: 14px; margin-top: 0;">⏩ Pomiń zapowiedzi</button>
         </div>
+
+        <div id="spectator-speed-controls" class="spectator-speed-controls" style="display: none;">
+            <span class="spectator-speed-label dyn-t" data-key="t-spectator-speed">Prędkość symulacji</span>
+            <button id="spectator-pause-btn" type="button" class="spectator-pause-btn" aria-pressed="false" onclick="toggleSpectatorPause()">⏸ Pauza</button>
+            <div class="spectator-speed-buttons" role="group" aria-label="Prędkość symulacji">
+                <button type="button" class="spectator-speed-btn active" data-spectator-speed="1" aria-pressed="true" onclick="setSpectatorPlaybackSpeed(1)">x1</button>
+                <button type="button" class="spectator-speed-btn" data-spectator-speed="2" aria-pressed="false" onclick="setSpectatorPlaybackSpeed(2)">x2</button>
+                <button type="button" class="spectator-speed-btn" data-spectator-speed="4" aria-pressed="false" onclick="setSpectatorPlaybackSpeed(4)">x4</button>
+                <button type="button" class="spectator-speed-btn" data-spectator-speed="8" aria-pressed="false" onclick="setSpectatorPlaybackSpeed(8)">x8</button>
+                <button type="button" class="spectator-speed-btn" data-spectator-speed="16" aria-pressed="false" onclick="setSpectatorPlaybackSpeed(16)">x16</button>
+            </div>
+        </div>
         
         <div class="score-board">
             <div class="score-col active-turn" id="score-col-player">
@@ -1191,47 +1250,48 @@
     </main>
     <!-- STOPKA AUTORSKA -->
     <footer style="width: 100%; text-align: center; padding: 25px 15px; margin-top: auto; color: #7f8c8d; font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 2px;">
-        <div style="margin-bottom: 5px; color: #bdc3c7;">V. 1.3.0</div>
+        <div style="margin-bottom: 5px; color: #bdc3c7;">V. 1.3.1</div>
         powered by dubme<br>
         <a href="mailto:dartscareer@gmail.com" style="color: #bdc3c7; text-decoration: none; text-transform: lowercase; display: inline-block; margin-top: 5px;">dartscareer@gmail.com</a>
     </footer>
 
     <!-- SKRYPTY -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <script src="data/players.js?v=1.3.0-rating-update-2"></script>
+    <script src="data/players.js?v=1.3.1-mansell-country-fix"></script>
     <script src="data/order-of-merit-history.js"></script>
     <script src="data/order-of-merit-opening-2026.js"></script>
     <script src="data/player-birth-years.js"></script>
+    <script src="data/newgen-names.js?v=1.3.1-localized-newgens"></script>
     <script src="data/tournaments.js?v=1.3.1-save-calendar-fix"></script>
     <script src="data/achievements.js"></script>
     <script src="data/interviews.js"></script>
     <script src="data/random-events.js"></script>
-    <script src="js/core.js?v=1.3.0-player-deduplication"></script>
+    <script src="js/core.js?v=1.3.1-veteran-aging"></script>
     <script src="js/european-tour.js"></script>
     <script src="js/order-of-merit.js?v=1.2.7-tour-cards"></script>
     <script src="js/tour-cards.js?v=1.3.0-qschool-all-players"></script>
     <script src="js/world-championship-qualification.js?v=1.2.8-world-qualification"></script>
-    <script src="js/stamina.js"></script>
-    <script src="js/i18n.js?v=1.2.7-tour-cards"></script>
-    <script src="js/player-lifecycle.js?v=1.2.8-world-qualification"></script>
+    <script src="js/stamina.js?v=1.3.1-stamina-recovery"></script>
+    <script src="js/i18n.js?v=1.3.1-spectator-pause"></script>
+    <script src="js/player-lifecycle.js?v=1.3.1-veteran-aging"></script>
     <script src="js/career.js?v=1.3.1-save-calendar-fix"></script>
-    <script src="js/player-profiles.js?v=1.2.7-tour-cards"></script>
+    <script src="js/player-profiles.js?v=1.3.1-career-titles"></script>
     <script src="js/tournaments/results.js"></script>
     <script src="js/tournaments/rules.js?v=1.2.9-continental-qualification"></script>
     <script src="js/match/ai-strategy.js"></script>
-    <script src="js/match/intro.js"></script>
+    <script src="js/match/intro.js?v=1.3.1-ai-walkons"></script>
     <script src="js/tournaments/rewards.js"></script>
     <script src="js/grand-slam.js"></script>
-    <script src="js/tournaments/flow.js?v=1.3.0-qschool-all-players"></script>
+    <script src="js/tournaments/flow.js?v=1.3.1-finals-draw"></script>
     <script src="js/tournaments/fast-forward.js?v=1.2.7-tour-cards"></script>
-    <script src="js/tournaments/spectator.js"></script>
+    <script src="js/tournaments/spectator.js?v=1.3.1-spectator-pause"></script>
     <script src="js/world-cup.js"></script>
     <script src="js/continental-qualification-v2.js?v=1.3.1-save-calendar-fix"></script>
-    <script src="js/world-masters.js?v=1.3.0-player-deduplication"></script>
-    <script src="js/match/setup.js?v=1.2.7-tour-cards"></script>
-    <script src="js/match/leg-flow.js"></script>
+    <script src="js/world-masters.js?v=1.3.1-finals-draw"></script>
+    <script src="js/match/setup.js?v=1.3.1-spectator-pause"></script>
+    <script src="js/match/leg-flow.js?v=1.3.1-spectator-pause"></script>
     <script src="js/match/audio.js"></script>
-    <script src="js/match/turns.js"></script>
+    <script src="js/match/turns.js?v=1.3.1-spectator-pause"></script>
     <script src="js/match/board.js"></script>
     <script src="js/systems.js?v=1.3.1-save-calendar-fix"></script>
     <script src="js/extras.js?v=1.2.7-tour-cards"></script>

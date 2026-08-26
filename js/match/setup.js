@@ -141,10 +141,9 @@ function startMatch(vsAI) {
             } else {
                 document.getElementById('score-col-player').classList.toggle('active-turn', currentMatch.turn === 'p1'); document.getElementById('score-col-ai').classList.toggle('active-turn', currentMatch.turn === 'p2');
                 document.getElementById('player-controls').style.opacity = "0.5"; document.getElementById('throw-btn').disabled = true;
-                const delay = typeof getSpectatorPlaybackDelay === 'function'
-                    ? getSpectatorPlaybackDelay(1200, 350)
-                    : 1200;
-                window.aiTimeout = setTimeout(aiTurn, delay);
+                if (typeof scheduleSpectatorPlaybackAction === 'function') {
+                    window.aiTimeout = scheduleSpectatorPlaybackAction(aiTurn, 1200, 900);
+                } else window.aiTimeout = setTimeout(aiTurn, 1200);
             }
         }
 

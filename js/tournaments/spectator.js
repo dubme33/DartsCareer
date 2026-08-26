@@ -49,8 +49,118 @@ function getCurrentSinglesMatchPlayerName(isP1) {
     return getCurrentSinglesMatchPlayer(isP1)?.name || '';
 }
 
-function getSpectatorPlaybackDelay(normalDelay, spectatorDelay) {
-    return currentMatch?.isSpectator ? spectatorDelay : normalDelay;
+const SPECTATOR_PLAYBACK_SPEEDS = Object.freeze([1, 2, 4, 8, 16]);
+let spectatorPendingPlayback = null;
+
+function getSpectatorPlaybackSpeed() {
+    const speed = Number(currentMatch?.spectatorPlaybackSpeed);
+    return SPECTATOR_PLAYBACK_SPEEDS.includes(speed) ? speed : 1;
+}
+
+function getSpectatorPlaybackDelay(normalDelay, spectatorBaseDelay = normalDelay) {
+    if (!currentMatch?.isSpectator) return normalDelay;
+    return Math.max(25, Math.round(spectatorBaseDelay / getSpectatorPlaybackSpeed()));
+}
+
+function armSpectatorPendingPlayback(pending) {
+    if (!pending || currentMatch !== pending.match || pending.match.spectatorPaused) return null;
+    pending.startedAt = Date.now();
+    pending.timerId = setTimeout(() => {
+        if (spectatorPendingPlayback !== pending || currentMatch !== pending.match) return;
+        if (pending.match.spectatorPaused) {
+            pending.remaining = 0;
+            pending.timerId = null;
+            return;
+        }
+
+        spectatorPendingPlayback = null;
+        window.aiTimeout = null;
+        pending.callback();
+    }, pending.remaining);
+    window.aiTimeout = pending.timerId;
+    return pending.timerId;
+}
+
+function scheduleSpectatorPlaybackAction(callback, normalDelay, spectatorBaseDelay = normalDelay) {
+    if (!currentMatch?.isSpectator) return setTimeout(callback, normalDelay);
+
+    if (spectatorPendingPlayback?.timerId) clearTimeout(spectatorPendingPlayback.timerId);
+    const pending = {
+        match: currentMatch,
+        callback,
+        remaining: getSpectatorPlaybackDelay(normalDelay, spectatorBaseDelay),
+        startedAt: null,
+        timerId: null
+    };
+    spectatorPendingPlayback = pending;
+    if (currentMatch.spectatorPaused) return null;
+    return armSpectatorPendingPlayback(pending);
+}
+
+function setSpectatorPaused(paused) {
+    if (!currentMatch?.isSpectator) return false;
+    const shouldPause = Boolean(paused);
+    if (currentMatch.spectatorPaused === shouldPause) return shouldPause;
+
+    currentMatch.spectatorPaused = shouldPause;
+    const pending = spectatorPendingPlayback;
+    if (pending?.match === currentMatch) {
+        if (shouldPause && pending.timerId) {
+            const elapsed = Math.max(0, Date.now() - pending.startedAt);
+            pending.remaining = Math.max(0, pending.remaining - elapsed);
+            clearTimeout(pending.timerId);
+            pending.timerId = null;
+            window.aiTimeout = null;
+        } else if (!shouldPause && !pending.timerId) {
+            armSpectatorPendingPlayback(pending);
+        }
+    } else if (!shouldPause && !currentMatch.introInProgress && typeof setTurnUI === 'function') {
+        setTurnUI();
+    }
+
+    updateSpectatorSpeedControls();
+    return shouldPause;
+}
+
+function toggleSpectatorPause() {
+    if (!currentMatch?.isSpectator) return false;
+    return setSpectatorPaused(!currentMatch.spectatorPaused);
+}
+
+function updateSpectatorSpeedControls() {
+    const controls = document.getElementById('spectator-speed-controls');
+    if (!controls) return;
+
+    const spectating = Boolean(currentMatch?.isSpectator);
+    controls.style.display = spectating ? 'flex' : 'none';
+    const pauseButton = document.getElementById('spectator-pause-btn');
+    if (pauseButton) {
+        const paused = Boolean(currentMatch?.spectatorPaused);
+        const translationKey = paused ? 't-spectator-resume' : 't-spectator-pause';
+        const fallbackLabel = paused ? 'Wznów' : 'Pauza';
+        pauseButton.innerText = `${paused ? '▶' : '⏸'} ${typeof t === 'function' ? t(translationKey) : fallbackLabel}`;
+        pauseButton.classList.toggle('paused', paused);
+        pauseButton.setAttribute('aria-pressed', String(paused));
+    }
+    if (!spectating || typeof controls.querySelectorAll !== 'function') return;
+
+    const selectedSpeed = getSpectatorPlaybackSpeed();
+    controls.querySelectorAll('[data-spectator-speed]').forEach(button => {
+        const isActive = Number(button.dataset.spectatorSpeed) === selectedSpeed;
+        button.classList.toggle('active', isActive);
+        button.setAttribute('aria-pressed', String(isActive));
+    });
+}
+
+function setSpectatorPlaybackSpeed(speed) {
+    const parsedSpeed = Number(speed);
+    if (!currentMatch?.isSpectator || !SPECTATOR_PLAYBACK_SPEEDS.includes(parsedSpeed)) {
+        return getSpectatorPlaybackSpeed();
+    }
+
+    currentMatch.spectatorPlaybackSpeed = parsedSpeed;
+    updateSpectatorSpeedControls();
+    return parsedSpeed;
 }
 
 function setSpectatorMatchControls(spectating) {
@@ -64,6 +174,7 @@ function setSpectatorMatchControls(spectating) {
     if (simulateLegButton) simulateLegButton.style.display = spectating ? 'none' : '';
     if (simulateMatchButton) simulateMatchButton.style.display = spectating ? 'none' : '';
     if (backButton) backButton.style.display = spectating ? 'none' : '';
+    updateSpectatorSpeedControls();
 }
 
 function setSpectatorPlayerPhoto(elementId, candidate, fallbackLabel) {
@@ -95,6 +206,8 @@ function startSpectatingTournamentMatch(bracketIndex) {
         isSpectator: true,
         spectatorP1: p1,
         opponent: p2,
+        spectatorPlaybackSpeed: 1,
+        spectatorPaused: false,
         spectatorRound: tournamentRound,
         spectatorMatchIndex: bracketIndex,
         p1Score: 501,
@@ -142,7 +255,8 @@ function startSpectatingTournamentMatch(bracketIndex) {
     updateMatchStatsUI();
     showScreen('screen-match');
     logThrow(`👁 ${t('t-spectator-watching')}: ${escapeHtml(p1.name)} vs ${escapeHtml(p2.name)}`, 'system');
-    setTurnUI();
+    if (typeof playMatchIntro === 'function') playMatchIntro(p1.name, p2.name);
+    else setTurnUI();
     return true;
 }
 
@@ -185,6 +299,7 @@ function finishSpectatedTournamentMatch() {
     }
 
     clearTimeout(window.aiTimeout);
+    if (spectatorPendingPlayback?.match === watchedMatch) spectatorPendingPlayback = null;
     currentMatch = null;
     currentTurnScore = 0;
     drawnDarts = [];

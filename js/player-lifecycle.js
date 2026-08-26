@@ -33,28 +33,6 @@ const PLAYER_LIFECYCLE_TRANSLATIONS = {
     }
 };
 
-const NEWGEN_DARTS_HEARTLANDS = [
-    { country: 'Anglia', weight: 24 }, { country: 'Niemcy', weight: 18 }, { country: 'Holandia', weight: 15 },
-    { country: 'Szkocja', weight: 12 }, { country: 'Walia', weight: 10 }, { country: 'Irlandia Północna', weight: 10 },
-    { country: 'Irlandia', weight: 11 }
-];
-
-const NEWGEN_FIRST_NAMES = [
-    'Alden', 'Branik', 'Cyran', 'Daven', 'Eryk', 'Faron', 'Galen', 'Hendrik', 'Ivar', 'Joren', 'Kael', 'Luken',
-    'Marek', 'Neron', 'Oren', 'Pavel', 'Quinn', 'Riven', 'Soren', 'Taren', 'Ulric', 'Varek', 'Wylan', 'Zorin'
-];
-
-const NEWGEN_FEMALE_FIRST_NAMES = [
-    'Ayla', 'Brina', 'Celia', 'Daria', 'Elara', 'Freya', 'Greta', 'Helena', 'Iona', 'Juna', 'Kira', 'Livia',
-    'Mara', 'Nadia', 'Orla', 'Petra', 'Rina', 'Selma', 'Talia', 'Vera', 'Willa', 'Zara'
-];
-
-const NEWGEN_LAST_NAMES = [
-    'Ashmere', 'Barkett', 'Caldren', 'Dovrin', 'Eldmark', 'Fennor', 'Gravik', 'Haldane', 'Ironwood', 'Jaspert',
-    'Kendric', 'Lornel', 'Marlowe', 'Norrick', 'Orvane', 'Pellor', 'Quenby', 'Ravell', 'Seldric', 'Tolland',
-    'Ulmere', 'Vandor', 'Westin', 'Yarwick', 'Zandell'
-];
-
 function trPlayerLifecycle(key, values = {}) {
     const language = typeof currentLang === 'string' && PLAYER_LIFECYCLE_TRANSLATIONS[currentLang] ? currentLang : 'pl';
     const template = PLAYER_LIFECYCLE_TRANSLATIONS[language][key] || PLAYER_LIFECYCLE_TRANSLATIONS.pl[key] || key;
@@ -202,11 +180,16 @@ function getRetirementChance(age) {
 }
 
 function getAnnualDecline(age) {
-    if (!Number.isInteger(age) || age <= 40) return 0;
-    // Weterani zaczynają tracić część poziomu już po czterdziestce.
-    // Po 46. roku życia spadek wyraźnie przyspiesza.
-    if (age <= 45) return 0.5;
-    return 1 + Math.floor((age - 46) / 3);
+    if (!Number.isInteger(age) || age <= 43) return 0;
+
+    // Darterzy mogą utrzymywać światowy poziom znacznie dłużej niż zawodnicy
+    // sportów wymagających szybkości i wydolności. Regres zaczyna się łagodnie
+    // i nigdy nie przyspiesza do dawnych 3–5 punktów OVR na jeden sezon.
+    if (age <= 46) return 0.25;
+    if (age <= 49) return 0.5;
+    if (age <= 52) return 0.75;
+    if (age <= 56) return 1;
+    return 1.25;
 }
 
 function getPlayerLifecycleRankings() {
@@ -263,66 +246,111 @@ function applyCareerAnnualAgeDecline(age) {
     return decline;
 }
 
-function pickWeightedNewgenCountry() {
-    const totalWeight = NEWGEN_DARTS_HEARTLANDS.reduce((sum, entry) => sum + entry.weight, 0);
-    let roll = Math.random() * totalWeight;
-    for (const entry of NEWGEN_DARTS_HEARTLANDS) {
+function getNewgenCountryDistribution() {
+    return typeof NEWGEN_COUNTRY_DISTRIBUTION !== 'undefined' && Array.isArray(NEWGEN_COUNTRY_DISTRIBUTION)
+        ? NEWGEN_COUNTRY_DISTRIBUTION
+        : [];
+}
+
+function getNewgenNameProfile(country) {
+    const distribution = getNewgenCountryDistribution();
+    const entry = distribution.find(candidate => candidate.country === country) || distribution[0];
+    const profiles = typeof NEWGEN_NAME_PROFILES !== 'undefined' ? NEWGEN_NAME_PROFILES : {};
+    return profiles[entry?.profile] || profiles.english || null;
+}
+
+function pickWeightedNewgenCountry(random = Math.random) {
+    const distribution = getNewgenCountryDistribution();
+    const totalWeight = distribution.reduce((sum, entry) => sum + Math.max(0, Number(entry.weight) || 0), 0);
+    if (!distribution.length || totalWeight <= 0) return 'Anglia';
+
+    let roll = random() * totalWeight;
+    for (const entry of distribution) {
         roll -= entry.weight;
         if (roll <= 0) return entry.country;
     }
-    return NEWGEN_DARTS_HEARTLANDS[0].country;
+    return distribution[distribution.length - 1].country;
 }
 
-function pickNewgenCountry() {
-    if (Math.random() < 0.7) return pickWeightedNewgenCountry();
-    const globalCountries = (typeof countries !== 'undefined' ? countries : [])
-        .filter(country => country && !NEWGEN_DARTS_HEARTLANDS.some(entry => entry.country === country));
-    return globalCountries.length ? globalCountries[Math.floor(Math.random() * globalCountries.length)] : pickWeightedNewgenCountry();
+function pickNewgenCountry(random = Math.random) {
+    return pickWeightedNewgenCountry(random);
 }
 
-function createFictionalNewgenName(existingNames, gender = 'male') {
-    const firstNames = gender === 'female' ? NEWGEN_FEMALE_FIRST_NAMES : NEWGEN_FIRST_NAMES;
-    for (let attempt = 0; attempt < 100; attempt++) {
-        const first = firstNames[Math.floor(Math.random() * firstNames.length)];
-        const last = NEWGEN_LAST_NAMES[Math.floor(Math.random() * NEWGEN_LAST_NAMES.length)];
-        const name = `${first} ${last}`;
-        if (!existingNames.has(name)) return name;
+function normalizeNewgenName(name) {
+    return String(name || '').trim().replace(/\s+/g, ' ').toLocaleLowerCase('pl');
+}
+
+function createFictionalNewgenName(existingNames, country, gender = 'male', random = Math.random) {
+    const profile = getNewgenNameProfile(country);
+    if (!profile) throw new Error(`Brak profilu imion newgenów dla kraju: ${country || 'nieznany'}`);
+
+    const firstNames = gender === 'female' ? profile.female : profile.male;
+    const lastNames = gender === 'female' && Array.isArray(profile.femaleLast) ? profile.femaleLast : profile.last;
+    const normalizedExistingNames = [...(existingNames || [])].map(normalizeNewgenName);
+    const existingNameSet = new Set(normalizedExistingNames);
+    const firstNameUsage = new Map(firstNames.map(first => {
+        const normalizedFirst = `${normalizeNewgenName(first)} `;
+        return [first, normalizedExistingNames.filter(name => name.startsWith(normalizedFirst)).length];
+    }));
+    const lastNameUsage = new Map(lastNames.map(last => {
+        const normalizedLast = ` ${normalizeNewgenName(last)}`;
+        return [last, normalizedExistingNames.filter(name => name.endsWith(normalizedLast)).length];
+    }));
+
+    let bestScore = Number.POSITIVE_INFINITY;
+    let bestCandidates = [];
+    for (const first of firstNames) {
+        for (const last of lastNames) {
+            const name = `${first} ${last}`;
+            if (existingNameSet.has(normalizeNewgenName(name))) continue;
+            const score = (firstNameUsage.get(first) || 0) + (lastNameUsage.get(last) || 0);
+            if (score < bestScore) {
+                bestScore = score;
+                bestCandidates = [name];
+            } else if (score === bestScore) {
+                bestCandidates.push(name);
+            }
+        }
     }
-    const first = firstNames[Math.floor(Math.random() * firstNames.length)];
-    const last = NEWGEN_LAST_NAMES[Math.floor(Math.random() * NEWGEN_LAST_NAMES.length)];
-    let suffix = 2;
-    while (existingNames.has(`${first} ${last} ${suffix}`)) suffix++;
-    return `${first} ${last} ${suffix}`;
+
+    if (bestCandidates.length) return bestCandidates[Math.floor(random() * bestCandidates.length)];
+
+    // Pełna pula daje setki realistycznych kombinacji. Po jej wyczerpaniu
+    // dopuszczamy prawdziwie możliwego imiennika zamiast dopisywać cyfrę.
+    const first = firstNames[Math.floor(random() * firstNames.length)];
+    const last = lastNames[Math.floor(random() * lastNames.length)];
+    return `${first} ${last}`;
 }
 
-function getNewgenStartingOverall() {
-    const roll = Math.random();
-    if (roll < 0.05) return 70 + Math.floor(Math.random() * 5);
-    if (roll < 0.28) return 64 + Math.floor(Math.random() * 6);
-    if (roll < 0.72) return 57 + Math.floor(Math.random() * 7);
-    return 52 + Math.floor(Math.random() * 5);
+function getNewgenStartingOverall(random = Math.random) {
+    const roll = random();
+    if (roll < 0.05) return 70 + Math.floor(random() * 5);
+    if (roll < 0.28) return 64 + Math.floor(random() * 6);
+    if (roll < 0.72) return 57 + Math.floor(random() * 7);
+    return 52 + Math.floor(random() * 5);
 }
 
-function createAnnualNewgen(year, existingNames) {
-    const overall = getNewgenStartingOverall();
+function createAnnualNewgen(year, existingNames, random = Math.random) {
+    const overall = getNewgenStartingOverall(random);
     // New professionals can break through later too, not only as teenagers.
-    const age = 17 + Math.floor(Math.random() * 19); // 17–35 inclusive
-    const scoring = Math.max(40, Math.min(99, overall + (Math.floor(Math.random() * 5) - 1)));
-    const doubles = Math.max(40, Math.min(99, overall + (Math.floor(Math.random() * 5) - 3)));
-    const gender = Math.random() < 0.18 ? 'female' : 'male';
-    const name = createFictionalNewgenName(existingNames, gender);
+    const age = 17 + Math.floor(random() * 19); // 17–35 inclusive
+    const scoring = Math.max(40, Math.min(99, overall + (Math.floor(random() * 5) - 1)));
+    const doubles = Math.max(40, Math.min(99, overall + (Math.floor(random() * 5) - 3)));
+    const gender = random() < 0.18 ? 'female' : 'male';
+    const country = pickNewgenCountry(random);
+    const name = createFictionalNewgenName(existingNames, country, gender, random);
     existingNames.add(name);
     return {
         id: createEntityId('newgen'),
         name,
         gender,
-        country: pickNewgenCountry(),
+        country,
         birthYear: year - age,
         overall,
         ovr: overall,
         scoring,
         doubles,
-        favoriteDouble: [16, 20, 18, 12, 8][Math.floor(Math.random() * 5)],
+        favoriteDouble: [16, 20, 18, 12, 8][Math.floor(random() * 5)],
         prizeMoney: 0,
         proTourPrizeMoney: 0,
         pcPrizeMoney: 0,
@@ -345,6 +373,7 @@ function createAnnualNewgen(year, existingNames) {
             : 1,
         seasonStats: { year, highestAvg: 0, results: [] },
         isNewgen: true,
+        nameGenerationVersion: 2,
         joinedSeason: year
     };
 }

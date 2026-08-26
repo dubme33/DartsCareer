@@ -161,10 +161,9 @@ function checkAchievements(type, data = null) {
 
             if (!isP1) {
                 clearTimeout(window.aiTimeout);
-                const delay = typeof getSpectatorPlaybackDelay === 'function'
-                    ? getSpectatorPlaybackDelay(1200, 350)
-                    : 1200;
-                window.aiTimeout = setTimeout(aiTurn, delay);
+                if (typeof scheduleSpectatorPlaybackAction === 'function') {
+                    window.aiTimeout = scheduleSpectatorPlaybackAction(aiTurn, 1200, 650);
+                } else window.aiTimeout = setTimeout(aiTurn, 1200);
             }
         }
 
@@ -233,12 +232,12 @@ function checkAchievements(type, data = null) {
                 updateScores(); // Pokazuje ostateczny wynik np. 6:4
                 
                 // Czekamy 2.5 sekundy, żeby sędzia zdążył wybrzmieć, zanim wyskoczy okienko
-                const finishDelay = typeof getSpectatorPlaybackDelay === 'function'
-                    ? getSpectatorPlaybackDelay(2500, 900)
-                    : 2500;
-                setTimeout(() => {
+                const finishAction = () => {
                     finishMatch();
-                }, finishDelay);
+                };
+                if (typeof scheduleSpectatorPlaybackAction === 'function') {
+                    window.aiTimeout = scheduleSpectatorPlaybackAction(finishAction, 2500, 2800);
+                } else window.aiTimeout = setTimeout(finishAction, 2500);
                 return true;
             }
 
@@ -251,10 +250,7 @@ function checkAchievements(type, data = null) {
             announceAudio('win_leg', playerName);
             updateScores(); // Od razu aktualizuje wynik na tablicy (np. na 1:0)
 
-            const nextLegDelay = typeof getSpectatorPlaybackDelay === 'function'
-                ? getSpectatorPlaybackDelay(2500, 900)
-                : 2500;
-            setTimeout(() => {
+            const startNextLeg = () => {
                 if (!currentMatch) return;
                 
                 // Dodajemy resztkę z 501 do ogólnej sumy punktów (do średniej)
@@ -291,7 +287,10 @@ function checkAchievements(type, data = null) {
                 setTurnUI();
                 drawDartboard();
                 updateDartDots();
-            }, nextLegDelay);
+            };
+            if (typeof scheduleSpectatorPlaybackAction === 'function') {
+                window.aiTimeout = scheduleSpectatorPlaybackAction(startNextLeg, 2500, 2500);
+            } else window.aiTimeout = setTimeout(startNextLeg, 2500);
 
             return true;
         }
@@ -425,18 +424,22 @@ function checkAchievements(type, data = null) {
                 updateMatchStatsUI(); 
 
                 logThrow(`🎯 ${playerName} ${t('t-log-wins-leg')}`, 'system');
-                setTimeout(() => handleCompletedLeg(isP1, playerName), 1000);
+                const completeLeg = () => handleCompletedLeg(isP1, playerName);
+                if (typeof scheduleSpectatorPlaybackAction === 'function') {
+                    window.aiTimeout = scheduleSpectatorPlaybackAction(completeLeg, 1000, 1300);
+                } else window.aiTimeout = setTimeout(completeLeg, 1000);
                 return;
             }
 
             if (currentMatch.dartsThrown >= 3) {
-                setTimeout(() => endTurn(), 100);
+                if (typeof scheduleSpectatorPlaybackAction === 'function') {
+                    window.aiTimeout = scheduleSpectatorPlaybackAction(endTurn, 100, 300);
+                } else window.aiTimeout = setTimeout(endTurn, 100);
             } else if (currentMatch.isSpectator || !isP1 || (currentMatch.isDoubles && !isCareerPlayerThrowing(isP1))) {
                 clearTimeout(window.aiTimeout); // Czyścimy przed kolejnym rzutem
-                const nextDartDelay = typeof getSpectatorPlaybackDelay === 'function'
-                    ? getSpectatorPlaybackDelay(650, 220)
-                    : 650;
-                window.aiTimeout = setTimeout(() => aiTurn(), nextDartDelay); 
+                if (typeof scheduleSpectatorPlaybackAction === 'function') {
+                    window.aiTimeout = scheduleSpectatorPlaybackAction(aiTurn, 650, 650);
+                } else window.aiTimeout = setTimeout(aiTurn, 650);
             }
         }
 
@@ -451,7 +454,7 @@ function checkAchievements(type, data = null) {
             if (currentMatch.p1Score > 0 && currentMatch.p2Score > 0) announceAudio(currentTurnScore);
             currentMatch.dartsThrown = 0; currentMatch.isTurnLocked = false; currentTurnScore = 0; updateDartDots(); drawnDarts = [];
             const boardClearDelay = typeof getSpectatorPlaybackDelay === 'function'
-                ? getSpectatorPlaybackDelay(500, 150)
+                ? getSpectatorPlaybackDelay(500, 500)
                 : 500;
             setTimeout(() => { drawDartboard(); }, boardClearDelay);
             if (currentMatch.p1Score === 0 || currentMatch.p2Score === 0) return;
@@ -464,9 +467,22 @@ function checkAchievements(type, data = null) {
                 currentMatch.turn = currentMatch.turn === 'p1' ? 'p2' : 'p1';
                 if(currentMatch.turn === 'p1') { 
                     currentMatch.p1TurnStartScore = currentMatch.p1Score; 
-                    if (currentMatch.p1Score <= 170) setTimeout(() => announceRequire(currentMatch.p1Score), 1500);
+                    if (currentMatch.p1Score <= 170) {
+                        const requireDelay = typeof getSpectatorPlaybackDelay === 'function'
+                            ? getSpectatorPlaybackDelay(1500, 1800)
+                            : 1500;
+                        setTimeout(() => announceRequire(currentMatch.p1Score), requireDelay);
+                    }
                 } else { currentMatch.p2TurnStartScore = currentMatch.p2Score; }
-                setTurnUI();
+                if (currentMatch.isSpectator) {
+                    clearTimeout(window.aiTimeout);
+                    const continueMatch = () => {
+                        if (currentMatch?.isSpectator) setTurnUI();
+                    };
+                    if (typeof scheduleSpectatorPlaybackAction === 'function') {
+                        window.aiTimeout = scheduleSpectatorPlaybackAction(continueMatch, 0, 1800);
+                    } else window.aiTimeout = setTimeout(continueMatch, 1800);
+                } else setTurnUI();
             } else { 
                 currentMatch.p1TurnStartScore = currentMatch.p1Score; 
                 if (currentMatch.p1Score <= 170) setTimeout(() => announceRequire(currentMatch.p1Score), 1500);

@@ -87,6 +87,8 @@ function skipActiveTournament() {
                     : null;
                 const isWorldMastersFinalsQualifierDraw = typeof isWorldMastersFinalsQualifierTournament === 'function'
                     && isWorldMastersFinalsQualifierTournament(activeTournament);
+                const isWorldMastersFinalsDraw = typeof isWorldMastersFinalsTournament === 'function'
+                    && isWorldMastersFinalsTournament(activeTournament);
                 const staleWorldMastersOpeningDraw = typeof shouldRefreshWorldMastersEventField === 'function'
                     && shouldRefreshWorldMastersEventField(activeTournament);
                 const malformedOpeningWorldMastersDraw = expectedOpeningRound === tournamentRound && (
@@ -95,6 +97,9 @@ function skipActiveTournament() {
                         candidate.isBye
                             ? !isWorldMastersFinalsQualifierDraw
                             : isWorldMastersFinalsQualifierDraw && candidate.hasTourCard !== true
+                    ))
+                    || (isWorldMastersFinalsDraw && activeTournament.worldMastersFinalsDrawVersion !== (
+                        typeof WORLD_MASTERS_FINALS_DRAW_VERSION === 'number' ? WORLD_MASTERS_FINALS_DRAW_VERSION : 2
                     ))
                     || staleWorldMastersOpeningDraw
                 );

@@ -1,5 +1,6 @@
 let playerProfileReturnRanking = 'main';
 let currentPlayerProfileId = null;
+const PLAYER_CAREER_TITLES_VERSION = 1;
 
 const PLAYER_PROFILE_TRANSLATIONS = {
     pl: {
@@ -8,7 +9,8 @@ const PLAYER_PROFILE_TRANSLATIONS = {
         noPrize: 'bez nagrody', orderOfMerit: 'Order of Merit', proSeries: 'Pro Series', playersCup: 'Players Cup', gdl: 'GDL',
         noResults: 'Brak rozegranych turniejów w tym sezonie.', noHighlights: 'Największe sukcesy pojawią się po rozegraniu turniejów.',
         photoAlt: 'Zdjęcie zawodnika', photoPlaceholder: 'ZAWODNIK', profile: 'PROFIL ZAWODNIKA', age: 'Wiek', years: '{age} lat',
-        seasonHighestAverage: 'Najwyższa średnia sezonu', highlights: 'Największe sukcesy — sezon {year}', results: 'Wyniki wszystkich turniejów — sezon {year}', back: 'Wróć do rankingów', tourCardHolder: 'POSIADACZ KARTY PDC', tourCardValid: 'ważna do końca {year}'
+        seasonHighestAverage: 'Najwyższa średnia sezonu', highlights: 'Największe sukcesy — sezon {year}', results: 'Wyniki wszystkich turniejów — sezon {year}', back: 'Wróć do rankingów', tourCardHolder: 'POSIADACZ KARTY PDC', tourCardValid: 'ważna do końca {year}',
+        careerTitles: 'Tytuły kariery', noCareerTitles: 'Brak zdobytych tytułów.'
     },
     en: {
         winner: 'Champion', runnerUp: 'Runner-up', semiFinalist: 'Semi-finalist', quarterFinalist: 'Quarter-finalist',
@@ -16,7 +18,8 @@ const PLAYER_PROFILE_TRANSLATIONS = {
         noPrize: 'no prize money', orderOfMerit: 'Order of Merit', proSeries: 'Pro Series', playersCup: 'Players Cup', gdl: 'GDL',
         noResults: 'No tournaments played this season.', noHighlights: 'Major achievements will appear after tournaments are played.',
         photoAlt: 'Player photo', photoPlaceholder: 'PLAYER', profile: 'PLAYER PROFILE', age: 'Age', years: '{age} years old',
-        seasonHighestAverage: 'Highest season average', highlights: 'Major achievements — season {year}', results: 'All tournament results — season {year}', back: 'Back to rankings', tourCardHolder: 'PDC TOUR CARD HOLDER', tourCardValid: 'valid through {year}'
+        seasonHighestAverage: 'Highest season average', highlights: 'Major achievements — season {year}', results: 'All tournament results — season {year}', back: 'Back to rankings', tourCardHolder: 'PDC TOUR CARD HOLDER', tourCardValid: 'valid through {year}',
+        careerTitles: 'Career titles', noCareerTitles: 'No titles won yet.'
     },
     de: {
         winner: 'Sieger', runnerUp: 'Finalist', semiFinalist: 'Halbfinalist', quarterFinalist: 'Viertelfinalist',
@@ -24,7 +27,8 @@ const PLAYER_PROFILE_TRANSLATIONS = {
         noPrize: 'kein Preisgeld', orderOfMerit: 'Order of Merit', proSeries: 'Pro Series', playersCup: 'Players Cup', gdl: 'GDL',
         noResults: 'In dieser Saison wurden noch keine Turniere gespielt.', noHighlights: 'Die größten Erfolge erscheinen nach gespielten Turnieren.',
         photoAlt: 'Spielerfoto', photoPlaceholder: 'SPIELER', profile: 'SPIELERPROFIL', age: 'Alter', years: '{age} Jahre',
-        seasonHighestAverage: 'Höchster Saisonschnitt', highlights: 'Größte Erfolge — Saison {year}', results: 'Alle Turnierergebnisse — Saison {year}', back: 'Zurück zu den Ranglisten', tourCardHolder: 'PDC-TOUR-CARD-INHABER', tourCardValid: 'gültig bis Ende {year}'
+        seasonHighestAverage: 'Höchster Saisonschnitt', highlights: 'Größte Erfolge — Saison {year}', results: 'Alle Turnierergebnisse — Saison {year}', back: 'Zurück zu den Ranglisten', tourCardHolder: 'PDC-TOUR-CARD-INHABER', tourCardValid: 'gültig bis Ende {year}',
+        careerTitles: 'Karrieretitel', noCareerTitles: 'Noch keine Titel gewonnen.'
     },
     nl: {
         winner: 'Winnaar', runnerUp: 'Finalist', semiFinalist: 'Halvefinalist', quarterFinalist: 'Kwartfinalist',
@@ -32,7 +36,8 @@ const PLAYER_PROFILE_TRANSLATIONS = {
         noPrize: 'geen prijzengeld', orderOfMerit: 'Order of Merit', proSeries: 'Pro Series', playersCup: 'Players Cup', gdl: 'GDL',
         noResults: 'Dit seizoen zijn nog geen toernooien gespeeld.', noHighlights: 'De grootste prestaties verschijnen na gespeelde toernooien.',
         photoAlt: 'Spelersfoto', photoPlaceholder: 'SPELER', profile: 'SPELERS­PROFIEL', age: 'Leeftijd', years: '{age} jaar',
-        seasonHighestAverage: 'Hoogste seizoensgemiddelde', highlights: 'Grootste prestaties — seizoen {year}', results: 'Alle toernooiresultaten — seizoen {year}', back: 'Terug naar de ranglijsten', tourCardHolder: 'PDC TOUR CARD-HOUDER', tourCardValid: 'geldig tot eind {year}'
+        seasonHighestAverage: 'Hoogste seizoensgemiddelde', highlights: 'Grootste prestaties — seizoen {year}', results: 'Alle toernooiresultaten — seizoen {year}', back: 'Terug naar de ranglijsten', tourCardHolder: 'PDC TOUR CARD-HOUDER', tourCardValid: 'geldig tot eind {year}',
+        careerTitles: 'Carrièretitels', noCareerTitles: 'Nog geen titels gewonnen.'
     }
 };
 
@@ -70,6 +75,11 @@ function initPlayerSeasonStats(candidate, year = getCurrentSeasonYear()) {
     if (!candidate || candidate.isBye) return null;
 
     if (!candidate.seasonStats || Number(candidate.seasonStats.year) !== year) {
+        // Przed wyczyszczeniem starego sezonu przenosimy jego zwycięstwa do
+        // trwałego rejestru kariery (ważne również dla starszych zapisów).
+        if (candidate.seasonStats && typeof ensurePlayerCareerTitles === 'function') {
+            ensurePlayerCareerTitles(candidate);
+        }
         candidate.seasonStats = { year, highestAvg: 0, results: [] };
     }
 
@@ -88,6 +98,7 @@ function initAllPlayerSeasonStats(year = getCurrentSeasonYear()) {
 
 function resetAllPlayerSeasonStats(year = getCurrentSeasonYear()) {
     getCareerProfilePlayers().forEach(candidate => {
+        ensurePlayerCareerTitles(candidate);
         candidate.seasonStats = { year, highestAvg: 0, results: [] };
     });
 }
@@ -121,6 +132,129 @@ function getSeasonResultStage(round, won) {
     return stages[round] ? trPlayerProfile(stages[round]) : trPlayerProfile('lastRound', { round });
 }
 
+function normalizePlayerCareerTitle(value) {
+    return String(value || '').trim().replace(/\s+/g, ' ').toLocaleLowerCase('pl');
+}
+
+function getPlayerCareerTitleData(tournamentOrName) {
+    const tournament = tournamentOrName && typeof tournamentOrName === 'object' ? tournamentOrName : null;
+    const name = String(tournament?.name || tournamentOrName || '').trim();
+    const sourceName = String(tournament?.sourceName || name).trim();
+    return {
+        key: normalizePlayerCareerTitle(sourceName || name),
+        name,
+        sourceName,
+        specialType: tournament?.specialType || '',
+        worldMastersEvent: tournament?.worldMastersEvent || ''
+    };
+}
+
+function upsertPlayerCareerTitle(titleList, titleData, count = 1, timestamp = 0) {
+    if (!Array.isArray(titleList) || !titleData?.key) return null;
+    const increment = Math.max(1, Math.floor(Number(count) || 1));
+    const wonAt = Math.max(0, Number(timestamp) || 0);
+    let entry = titleList.find(candidate => candidate?.key === titleData.key);
+    if (!entry) {
+        entry = { ...titleData, count: 0, firstWonAt: wonAt, lastWonAt: wonAt };
+        titleList.push(entry);
+    }
+    entry.count = Math.max(0, Math.floor(Number(entry.count) || 0)) + increment;
+    if (titleData.name) entry.name = titleData.name;
+    if (titleData.sourceName) entry.sourceName = titleData.sourceName;
+    if (titleData.specialType) entry.specialType = titleData.specialType;
+    if (titleData.worldMastersEvent) entry.worldMastersEvent = titleData.worldMastersEvent;
+    if (!entry.firstWonAt || (wonAt && wonAt < entry.firstWonAt)) entry.firstWonAt = wonAt;
+    if (wonAt > (Number(entry.lastWonAt) || 0)) entry.lastWonAt = wonAt;
+    return entry;
+}
+
+function sanitisePlayerCareerTitles(candidate) {
+    const mergedTitles = [];
+    (Array.isArray(candidate?.careerTitles) ? candidate.careerTitles : []).forEach(rawEntry => {
+        const entry = rawEntry && typeof rawEntry === 'object' ? rawEntry : { name: rawEntry };
+        const titleData = getPlayerCareerTitleData({
+            name: entry.name,
+            sourceName: entry.sourceName || entry.key || entry.name,
+            specialType: entry.specialType,
+            worldMastersEvent: entry.worldMastersEvent
+        });
+        upsertPlayerCareerTitle(mergedTitles, titleData, entry.count, entry.lastWonAt || entry.firstWonAt);
+    });
+    candidate.careerTitles = mergedTitles;
+    return mergedTitles;
+}
+
+function addPlayerCareerTitle(candidate, tournamentOrName, timestamp = 0, count = 1) {
+    if (!candidate || candidate.isBye) return null;
+    if (!Array.isArray(candidate.careerTitles)) candidate.careerTitles = [];
+    return upsertPlayerCareerTitle(candidate.careerTitles, getPlayerCareerTitleData(tournamentOrName), count, timestamp);
+}
+
+function ensurePlayerCareerTitles(candidate) {
+    if (!candidate || candidate.isBye) return [];
+    const titles = sanitisePlayerCareerTitles(candidate);
+    const seasonResults = Array.isArray(candidate.seasonStats?.results) ? candidate.seasonStats.results : [];
+
+    if (candidate.careerTitlesVersion !== PLAYER_CAREER_TITLES_VERSION) {
+        const legacyTrophies = Array.isArray(candidate.careerStats?.trophies)
+            ? candidate.careerStats.trophies.filter(Boolean)
+            : [];
+        if (legacyTrophies.length) {
+            legacyTrophies.forEach(trophy => addPlayerCareerTitle(candidate, trophy));
+            // Lista pucharów własnego zawodnika obejmowała już również jego
+            // zwycięstwa z bieżącego sezonu, więc nie naliczamy ich drugi raz.
+            seasonResults.filter(result => result?.won).forEach(result => { result.careerTitleRecorded = true; });
+        }
+        candidate.careerTitlesVersion = PLAYER_CAREER_TITLES_VERSION;
+    }
+
+    seasonResults.forEach(result => {
+        if (!result?.won || result.careerTitleRecorded) return;
+        addPlayerCareerTitle(candidate, {
+            name: result.tournament,
+            sourceName: result.sourceTournament || result.tournament,
+            specialType: result.tournamentSpecialType || '',
+            worldMastersEvent: result.worldMastersEvent || ''
+        }, result.timestamp);
+        result.careerTitleRecorded = true;
+    });
+    return titles;
+}
+
+function getPlayerCareerTitles(candidate) {
+    return [...ensurePlayerCareerTitles(candidate)].sort((first, second) =>
+        (Number(second.count) || 0) - (Number(first.count) || 0)
+        || (Number(second.lastWonAt) || 0) - (Number(first.lastWonAt) || 0)
+        || String(first.name || '').localeCompare(String(second.name || ''), getPlayerProfileLocale()));
+}
+
+function getPlayerCareerTitleDisplayName(title) {
+    const currentTournament = typeof tournamentDatabase !== 'undefined' && Array.isArray(tournamentDatabase)
+        ? tournamentDatabase.find(tournament => getPlayerCareerTitleData(tournament).key === title.key)
+        : null;
+    const displayTarget = currentTournament || {
+        name: title.name,
+        sourceName: title.sourceName,
+        specialType: title.specialType,
+        worldMastersEvent: title.worldMastersEvent
+    };
+    return typeof getTournamentDisplayName === 'function'
+        ? getTournamentDisplayName(displayTarget)
+        : (displayTarget.name || title.sourceName || '');
+}
+
+function renderPlayerCareerTitles(candidate) {
+    const titles = getPlayerCareerTitles(candidate);
+    const totalTitles = titles.reduce((sum, title) => sum + Math.max(0, Number(title.count) || 0), 0);
+    const listMarkup = titles.length
+        ? titles.map(title => `<li><span>${escapeHtml(getPlayerCareerTitleDisplayName(title))}</span><strong>×${title.count}</strong></li>`).join('')
+        : `<li class="profile-career-titles-empty">${escapeHtml(trPlayerProfile('noCareerTitles'))}</li>`;
+    return `<aside class="profile-career-titles">
+        <h3><span>🏆 ${escapeHtml(trPlayerProfile('careerTitles'))}</span><strong>${totalTitles}</strong></h3>
+        <ul>${listMarkup}</ul>
+    </aside>`;
+}
+
 function recordSeasonTournamentResult(candidate, tournament, details = {}) {
     if (!candidate || candidate.isBye || !tournament || !tournament.name) return null;
 
@@ -136,10 +270,14 @@ function recordSeasonTournamentResult(candidate, tournament, details = {}) {
     const key = `${stats.year}|${tournament.name}|${timestamp}`;
 
     if (stats.results.some(result => result.key === key)) return null;
+    if (won) ensurePlayerCareerTitles(candidate);
 
     const result = {
         key,
         tournament: tournament.name,
+        sourceTournament: tournament.sourceName || tournament.name,
+        tournamentSpecialType: tournament.specialType || '',
+        worldMastersEvent: tournament.worldMastersEvent || '',
         round,
         won,
         stage: typeof details.stage === 'string' ? details.stage : '',
@@ -147,6 +285,10 @@ function recordSeasonTournamentResult(candidate, tournament, details = {}) {
         timestamp
     };
     stats.results.push(result);
+    if (won) {
+        addPlayerCareerTitle(candidate, tournament, timestamp);
+        result.careerTitleRecorded = true;
+    }
     return result;
 }
 
@@ -247,16 +389,18 @@ function openPlayerProfile(playerId, rankingType = 'main') {
     const highlightsMarkup = highlights.length
         ? highlights.map(renderSeasonResult).join('')
         : `<p class="profile-empty">${trPlayerProfile('noHighlights')}</p>`;
+    const careerTitlesMarkup = renderPlayerCareerTitles(selectedPlayer);
 
     const content = document.getElementById('player-profile-content');
     content.innerHTML = `<section class="player-profile-hero">
         <img id="player-profile-photo" class="player-profile-photo" alt="${escapeHtml(trPlayerProfile('photoAlt'))}">
-        <div>
+        <div class="player-profile-identity">
             <p class="profile-eyebrow">${trPlayerProfile('profile')}</p>
             <h2>${getFlagImg(selectedPlayer.country)} ${escapeHtml(selectedPlayer.name)}</h2>
             <p class="profile-subtitle">${trPlayerProfile('age')}: <strong>${age === null ? '—' : trPlayerProfile('years', { age })}</strong> · Overall: <strong>${overall}</strong></p>
             ${tourCardMarkup}
         </div>
+        ${careerTitlesMarkup}
     </section>
     <section class="profile-stat-grid">
         ${rankingMarkup}

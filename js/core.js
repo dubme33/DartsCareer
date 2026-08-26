@@ -132,16 +132,17 @@
             // above the normal rate, but cannot outpace the simulated AI by training.
             young: { growthMultiplier: 1.65, careerGrowthMultiplier: 1.25, declineMultiplier: 0.8 },
             prime: { growthMultiplier: 1, declineMultiplier: 1 },
-            // Veterans should improve more slowly and decline a little faster,
-            // without causing established players to collapse after one season.
-            veteran: { growthMultiplier: 0.85, declineMultiplier: 1.1 }
+            // Wyniki weteranów nadal zmieniają ich poziom, ale w obie strony
+            // jednakowo wolniej. Dzięki temu sam bilans meczów nie tworzy
+            // dodatkowej, ukrytej kary wieku ponad coroczny regres.
+            veteran: { growthMultiplier: 0.9, declineMultiplier: 0.9 }
         });
 
         function getAgeDevelopmentProfile(candidate, referenceDate = currentDate) {
             const age = getPlayerAge(candidate, referenceDate);
             if (!Number.isInteger(age)) return AGE_DEVELOPMENT_PROFILES.prime;
             if (age < 25) return AGE_DEVELOPMENT_PROFILES.young;
-            if (age >= 41) return AGE_DEVELOPMENT_PROFILES.veteran;
+            if (age >= 44) return AGE_DEVELOPMENT_PROFILES.veteran;
             return AGE_DEVELOPMENT_PROFILES.prime;
         }
 

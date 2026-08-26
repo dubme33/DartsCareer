@@ -6,6 +6,7 @@ const WORLD_MASTERS_FINALS_QUALIFIER_NAME = 'Global Masters Finals Qualifier';
 const WORLD_MASTERS_INVITATION_RULE = 'top-14-oom-balanced-8';
 const WORLD_MASTERS_FINALS_QUALIFIER_VERSION = 2;
 const WORLD_MASTERS_FINALS_QUALIFIER_PLACES = 4;
+const WORLD_MASTERS_FINALS_DRAW_VERSION = 2;
 const WORLD_MASTERS_LEGACY_EVENT_NAMES = {
     atlantic: ['US Masters']
 };
@@ -140,10 +141,10 @@ function findWorldMastersPlayer(key) {
     return getWorldMastersAllPlayers().find(candidate => getWorldMastersPlayerKey(candidate) === key) || null;
 }
 
-function shuffleWorldMasters(items) {
+function shuffleWorldMasters(items, random = Math.random) {
     const shuffled = [...items];
     for (let index = shuffled.length - 1; index > 0; index--) {
-        const target = Math.floor(Math.random() * (index + 1));
+        const target = Math.floor(random() * (index + 1));
         [shuffled[index], shuffled[target]] = [shuffled[target], shuffled[index]];
     }
     return shuffled;
@@ -382,23 +383,49 @@ function getWorldMastersTournamentRound(tournament = activeTournament) {
     return isWorldMastersFinalsTournament(tournament) ? 32 : 16;
 }
 
-function buildWorldMastersTournamentDraw(tournament, participants = getWorldMastersTournamentParticipants(tournament)) {
+function buildWorldMastersTournamentDraw(tournament, participants = getWorldMastersTournamentParticipants(tournament), random = Math.random) {
     if (isWorldMastersTournament(tournament)) {
         const field = ensureWorldMastersEventField(tournament);
         const invited = resolveWorldMastersPlayers(field?.invitedKeys);
-        const locals = shuffleWorldMasters(resolveWorldMastersPlayers(field?.localKeys));
+        const locals = shuffleWorldMasters(resolveWorldMastersPlayers(field?.localKeys), random);
         return invited.flatMap((star, index) => [star, locals[index]]).filter(Boolean);
     }
     if (isWorldMastersFinalsTournament(tournament)) {
         const finals = getWorldMastersFinalsField();
-        const seeds = resolveWorldMastersPlayers(finals.worldSeriesKeys.slice(0, 8));
-        const nonSeeds = shuffleWorldMasters(participants.filter(candidate => !seeds.includes(candidate)));
-        return seeds.flatMap((seed, index) => [seed, nonSeeds[index]]).filter(Boolean);
+        const participantKeys = new Set(participants.map(getWorldMastersPlayerKey));
+        const seeds = resolveWorldMastersPlayers(finals.worldSeriesKeys.slice(0, 8))
+            .filter(candidate => participantKeys.has(getWorldMastersPlayerKey(candidate)));
+        const seedKeys = new Set(seeds.map(getWorldMastersPlayerKey));
+        const nonSeeds = shuffleWorldMasters(
+            participants.filter(candidate => !seedKeys.has(getWorldMastersPlayerKey(candidate))),
+            random
+        );
+
+        // Osiem rozstawionych zajmuje osobne sekcje drabinki. Każda sekcja
+        // zawiera mecz rozstawionego oraz drugi mecz dwóch nierozstawionych,
+        // dzięki czemu wszystkie 32 osoby rzeczywiście grają w Last 32.
+        if (participants.length === 32 && seeds.length === 8 && nonSeeds.length === 24) {
+            const seedOrder = [0, 7, 3, 4, 1, 6, 2, 5];
+            const draw = [];
+            let nonSeedIndex = 0;
+            seedOrder.forEach(seedIndex => {
+                draw.push(
+                    seeds[seedIndex],
+                    nonSeeds[nonSeedIndex++],
+                    nonSeeds[nonSeedIndex++],
+                    nonSeeds[nonSeedIndex++]
+                );
+            });
+            tournament.worldMastersFinalsDrawVersion = WORLD_MASTERS_FINALS_DRAW_VERSION;
+            return draw;
+        }
+
+        return shuffleWorldMasters(participants, random);
     }
     if (isWorldMastersFinalsQualifierTournament(tournament)) {
-        return buildWorldMastersFinalsQualifierDraw(participants);
+        return buildWorldMastersFinalsQualifierDraw(participants, random);
     }
-    return shuffleWorldMasters(participants);
+    return shuffleWorldMasters(participants, random);
 }
 
 function getWorldMastersAutomaticFinalistKeys() {
@@ -491,6 +518,10 @@ function completeWorldMastersFinalsQualifier(tournament, qualifiedPlayers) {
     qualifier.qualifiedKeys = uniqueKeys;
     qualifier.completed = true;
     state.finalsQualifier = qualifier;
+    // Obsada mogła zostać podejrzana przed rozegraniem kwalifikatora. Jeżeli
+    // finał jeszcze się nie rozpoczął, wymuszamy ponowne złożenie stawki z
+    // faktyczną czwórką zwycięzców kwalifikacji.
+    if (!state.finals?.completed) state.finals = null;
     if (tournament) tournament.worldMastersQualifiers = [...qualifier.qualifiedKeys];
     sendWorldMastersFinalsQualifierEmail(resolveWorldMastersPlayers(qualifier.qualifiedKeys));
 }

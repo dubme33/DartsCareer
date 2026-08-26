@@ -24,6 +24,7 @@ function playerThrow() {
 
         function aiTurn() {
             if (!currentMatch || currentMatch.dartsThrown >= 3) return;
+            if (currentMatch.isSpectator && currentMatch.spectatorPaused) return;
             const isP1 = currentMatch.turn === 'p1';
             if (!isP1 && currentMatch.turn !== 'p2') return;
             if (!currentMatch.isDoubles && isP1 && !currentMatch.isSpectator) return;

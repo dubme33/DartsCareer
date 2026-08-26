@@ -379,6 +379,9 @@ const translations = {
         "t-btn-watch-match": "Oglądaj mecz",
         "t-spectator-title": "Tryb widza",
         "t-spectator-watching": "Oglądasz",
+        "t-spectator-speed": "Prędkość symulacji",
+        "t-spectator-pause": "Pauza",
+        "t-spectator-resume": "Wznów",
         "t-btn-next-round": "Przejdź do następnej rundy",
         "t-gdl-player": "Zawodnik",
         "t-gdl-pts": "PKT",
@@ -787,6 +790,9 @@ const translations = {
         "t-btn-watch-match": "Watch match",
         "t-spectator-title": "Spectator mode",
         "t-spectator-watching": "Watching",
+        "t-spectator-speed": "Simulation speed",
+        "t-spectator-pause": "Pause",
+        "t-spectator-resume": "Resume",
         "t-btn-next-round": "Proceed to next round",
         "t-gdl-player": "Player",
         "t-gdl-pts": "PTS",
@@ -1189,6 +1195,9 @@ const translations = {
         "t-btn-watch-match": "Spiel ansehen",
         "t-spectator-title": "Zuschauermodus",
         "t-spectator-watching": "Du siehst",
+        "t-spectator-speed": "Simulationsgeschwindigkeit",
+        "t-spectator-pause": "Pause",
+        "t-spectator-resume": "Fortsetzen",
         "t-btn-next-round": "Zur nächsten Runde",
         "t-gdl-player": "Spieler",
         "t-gdl-pts": "PKT",
@@ -1603,6 +1612,9 @@ const translations = {
         "t-btn-watch-match": "Wedstrijd bekijken",
         "t-spectator-title": "Toeschouwersmodus",
         "t-spectator-watching": "Je kijkt naar",
+        "t-spectator-speed": "Simulatiesnelheid",
+        "t-spectator-pause": "Pauze",
+        "t-spectator-resume": "Hervatten",
         "t-btn-next-round": "Ga naar de volgende ronde",
         "t-gdl-player": "Speler",
         "t-gdl-pts": "PNT",
@@ -1877,6 +1889,7 @@ const translations = {
                 const k = el.getAttribute('data-key');
                 if(dict[k]) el.innerText = dict[k];
             });
+            if (typeof updateSpectatorSpeedControls === 'function') updateSpectatorSpeedControls();
             // Przebudowa i sortowanie listy narodowości
             renderNationalityDropdown();
             updateRivalUIStrings();

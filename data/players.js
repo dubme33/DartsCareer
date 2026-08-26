@@ -41,7 +41,7 @@ const pdcPlayers = [
     { name: "Marten Lukeboy", country: "Anglia", ovr: 79, scoring: 79, doubles: 79, prizeMoney: 211750, proTourPrizeMoney: 16750, pcPrizeMoney: 0 },
     { name: "Ray van Barnewelt", country: "Holandia", ovr: 78, scoring: 79, doubles: 77, prizeMoney: 200500, proTourPrizeMoney: 42500, pcPrizeMoney: 0 },
     { name: "Cal Ridz", country: "Anglia", ovr: 78, scoring: 79, doubles: 77, prizeMoney: 197500, proTourPrizeMoney: 51750, pcPrizeMoney: 0 },
-    { name: "Mick Manbuy", country: "Irlandia Północna", ovr: 78, scoring: 78, doubles: 78, prizeMoney: 192750, proTourPrizeMoney: 56500, pcPrizeMoney: 0 },
+    { name: "Mick Manbuy", country: "Irlandia", ovr: 78, scoring: 78, doubles: 78, prizeMoney: 192750, proTourPrizeMoney: 56500, pcPrizeMoney: 0 },
     { name: "Mads Ramza", country: "Łotwa", ovr: 77, scoring: 77, doubles: 77, prizeMoney: 191250, proTourPrizeMoney: 55750, pcPrizeMoney: 0 },
     { name: "Justus Hoods", country: "Anglia", ovr: 77, scoring: 78, doubles: 76, prizeMoney: 189000, proTourPrizeMoney: 53500, pcPrizeMoney: 0 },
     { name: "Gabe Klemens", country: "Niemcy", ovr: 77, scoring: 78, doubles: 76, prizeMoney: 184250, proTourPrizeMoney: 56000, pcPrizeMoney: 0 },
@@ -383,6 +383,14 @@ function applyKnownPlayerCorrections(players) {
     if (!Array.isArray(players)) return;
     players.forEach(candidate => {
         if (!candidate || candidate.isBye) return;
+        const displayName = String(candidate.name || '').trim().toLocaleLowerCase('pl');
+        // Korekta jest celowo oparta na aktualnej nazwie zawodnika, a nie na
+        // sourceName. Dzięki temu obejmuje bazowego Micka Manbuya i prawdziwe
+        // nazwisko z moda, ale nie zmienia narodowości innych modowych zamienników
+        // korzystających z tego samego slotu (np. polskiego moda).
+        if (displayName === 'mick manbuy' || displayName === 'mickey mansell') {
+            candidate.country = 'Irlandia';
+        }
         const identities = [candidate.sourceName, candidate.name]
             .map(value => String(value || '').trim().toLocaleLowerCase('pl'))
             .filter(Boolean);

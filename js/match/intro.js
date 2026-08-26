@@ -8,6 +8,22 @@ function startCrowd() {
             crowdAudio.play().catch(e => console.log("Crowd zablokowany", e));
         }
 
+        function getMatchIntroPlayer(isP1, fallbackName) {
+            if (typeof getCurrentSinglesMatchPlayer === 'function') {
+                const matchPlayer = getCurrentSinglesMatchPlayer(isP1);
+                if (matchPlayer) return matchPlayer;
+            }
+            if (isP1 && typeof player !== 'undefined') return player;
+            if (!isP1 && currentMatch?.opponent) return currentMatch.opponent;
+            return { name: fallbackName, country: '' };
+        }
+
+        function getMatchWalkonAudioSource(candidate) {
+            if (!candidate?.name) return '';
+            if (candidate.walkon) return candidate.walkon;
+            return moddedAssets.music[candidate.name] || `music/${candidate.name}.mp3`;
+        }
+
         function playMatchIntro(p1Name, p2Name) {
             isWalkonSkipped = false;
             
@@ -16,11 +32,13 @@ function startCrowd() {
             if(skipBtn) skipBtn.style.display = 'inline-block';
 
             // NOWOŚĆ: Blokujemy rzucanie i resetujemy stoper AI na czas wejść!
-            document.getElementById('throw-btn').disabled = true;
+            const throwButton = document.getElementById('throw-btn');
+            if (throwButton) throwButton.disabled = true;
             clearTimeout(window.aiTimeout);
 
-            if (!window.speechSynthesis) return;
-            window.speechSynthesis.cancel(); 
+            if (currentMatch) currentMatch.introInProgress = true;
+            const hasSpeechSynthesis = Boolean(window.speechSynthesis && typeof SpeechSynthesisUtterance !== 'undefined');
+            if (hasSpeechSynthesis) window.speechSynthesis.cancel();
             if(currentWalkonAudio) { currentWalkonAudio.pause(); currentWalkonAudio = null; }
             if(oppAudio) { oppAudio.pause(); oppAudio = null; }
             if(crowdAudio) { crowdAudio.pause(); }
@@ -35,21 +53,29 @@ function startCrowd() {
                 "Kanada": "Canada", "Litwa": "Lithuania", "Słowenia": "Slovenia", "Chorwacja": "Croatia", "Finlandia": "Finland" 
             };
 
-            let p2CountryEn = enCountries[currentMatch.opponent.country] || currentMatch.opponent.country;
-            let p1CountryEn = enCountries[player.country] || player.country;
+            const p1Candidate = getMatchIntroPlayer(true, p1Name);
+            const p2Candidate = getMatchIntroPlayer(false, p2Name);
+            p1Name = p1Candidate.name || p1Name;
+            p2Name = p2Candidate.name || p2Name;
+            let p2CountryEn = enCountries[p2Candidate.country] || p2Candidate.country || '';
+            let p1CountryEn = enCountries[p1Candidate.country] || p1Candidate.country || '';
             
-            let u1 = new SpeechSynthesisUtterance(`Ladies and gentlemen, please welcome... from ${p2CountryEn}... ${p2Name}!`);
+            let u1 = hasSpeechSynthesis
+                ? new SpeechSynthesisUtterance(`Ladies and gentlemen, please welcome... from ${p2CountryEn}... ${p2Name}!`)
+                : {};
             u1.lang = 'en-GB'; u1.pitch = 0.85; u1.rate = 0.9; u1.volume = 1.0 * globalVolume;
             
-            let u2 = new SpeechSynthesisUtterance(`And his opponent... from ${p1CountryEn}... ${p1Name}!`);
+            let u2 = hasSpeechSynthesis
+                ? new SpeechSynthesisUtterance(`And his opponent... from ${p1CountryEn}... ${p1Name}!`)
+                : {};
             u2.lang = 'en-GB'; u2.pitch = 0.8; u2.rate = 0.9; u2.volume = 1.0 * globalVolume;
             
             u1.onend = () => {
                 if(isWalkonSkipped) return;
-                let audioSrc = moddedAssets.music[p2Name] || `music/${p2Name}.mp3`;
+                let audioSrc = getMatchWalkonAudioSource(p2Candidate);
                 oppAudio = new Audio(audioSrc);
                 oppAudio.volume = 0.6 * globalVolume;
-                oppAudio.play().then(() => {
+                const beginOpponentWalkon = () => {
                     walkonTimeout = setTimeout(() => {
                         if(isWalkonSkipped) return;
                         let fadeVol = 0.6;
@@ -64,40 +90,55 @@ function startCrowd() {
                             }
                         }, 200);
                     }, 20000); // 20 sekund dla rywala
-                }).catch(e => { if(!isWalkonSkipped) playPlayerIntro(); });
+                };
+                const playPromise = oppAudio.play();
+                if (playPromise && typeof playPromise.then === 'function') {
+                    playPromise.then(beginOpponentWalkon).catch(() => {
+                        if(!isWalkonSkipped) playPlayerIntro();
+                    });
+                } else beginOpponentWalkon();
             };
 
             function playPlayerIntro() { 
-                if(!isWalkonSkipped) window.speechSynthesis.speak(u2); 
+                if (isWalkonSkipped) return;
+                if (hasSpeechSynthesis) window.speechSynthesis.speak(u2);
+                else u2.onend();
             }
 
             u2.onend = () => {
                 if(isWalkonSkipped) return;
-                if (player.walkon) {
-                    currentWalkonAudio = new Audio(player.walkon);
+                const audioSrc = getMatchWalkonAudioSource(p1Candidate);
+                if (audioSrc) {
+                    currentWalkonAudio = new Audio(audioSrc);
                     currentWalkonAudio.volume = 0.6 * globalVolume;
+                    const beginPlayerWalkon = () => {
+                        walkonTimeout = setTimeout(() => {
+                            if(isWalkonSkipped) return;
+                            let fadeVol = 0.6;
+                            walkonInterval = setInterval(() => {
+                                fadeVol -= 0.05;
+                                if(fadeVol > 0) {
+                                    if(currentWalkonAudio) currentWalkonAudio.volume = fadeVol * globalVolume;
+                                } else {
+                                    clearInterval(walkonInterval);
+                                    if(currentWalkonAudio) currentWalkonAudio.pause();
+                                    if(!isWalkonSkipped) finishWalkon();
+                                }
+                            }, 300);
+                        }, 20000);
+                    };
                     let playPromise = currentWalkonAudio.play();
-                    if (playPromise !== undefined) playPromise.catch(e => console.log("Auto-play zablokowany", e));
-                    
-                    walkonTimeout = setTimeout(() => {
-                        if(isWalkonSkipped) return;
-                        let fadeVol = 0.6;
-                        walkonInterval = setInterval(() => {
-                            fadeVol -= 0.05;
-                            if(fadeVol > 0) {
-                                if(currentWalkonAudio) currentWalkonAudio.volume = fadeVol * globalVolume;
-                            } else { 
-                                clearInterval(walkonInterval); 
-                                if(currentWalkonAudio) currentWalkonAudio.pause(); 
-                                if(!isWalkonSkipped) finishWalkon();
-                            }
-                        }, 300);
-                    }, 20000); // 20 sekund dla gracza
+                    if (playPromise !== undefined) {
+                        playPromise.then(beginPlayerWalkon).catch(() => {
+                            if (!isWalkonSkipped) finishWalkon();
+                        });
+                    } else beginPlayerWalkon();
                 } else {
                     finishWalkon();
                 }
             };
-            window.speechSynthesis.speak(u1);
+            if (hasSpeechSynthesis) window.speechSynthesis.speak(u1);
+            else u1.onend();
         }
 
         function finishWalkon() {
@@ -116,7 +157,7 @@ function startCrowd() {
                 
                 if (playPromise !== undefined) {
                     playPromise.catch(e => {
-                        if (window.speechSynthesis) {
+                        if (window.speechSynthesis && typeof SpeechSynthesisUtterance !== 'undefined') {
                             let utterance = new SpeechSynthesisUtterance("Game on!");
                             utterance.lang = 'en-GB';
                             utterance.pitch = 1.1; 
@@ -129,14 +170,17 @@ function startCrowd() {
                 
                 // NOWOŚĆ: Dopiero teraz odpalamy przypisanie tury.
                 // Jeśli AI miało zacząć, to dopiero tu włączymy jego stoper!
-                if (currentMatch) setTurnUI();
+                if (currentMatch) {
+                    currentMatch.introInProgress = false;
+                    setTurnUI();
+                }
 
             }, 800);
         }
 
         function skipWalkon() {
             isWalkonSkipped = true;
-            window.speechSynthesis.cancel();
+            if (window.speechSynthesis) window.speechSynthesis.cancel();
             if(currentWalkonAudio) { currentWalkonAudio.pause(); currentWalkonAudio = null; }
             if(oppAudio) { oppAudio.pause(); oppAudio = null; }
             clearTimeout(walkonTimeout);
