@@ -281,6 +281,45 @@ function completePdcTourCardQualifier(qualifierTournament, qualifiedPlayers) {
     return state;
 }
 
+function repairLegacyGrandSlamQualification(mainTournament, qualifierTournament, state, candidates) {
+    const blocks = qualifierTournament?.matchHistory?.blocks;
+    // Starsza wersja rozgrywała grupy w kwalifikatorze nazwanym przez mod
+    // „Grand Slam ... Qualifier”, po czym zapisywała zaledwie dwóch zwycięzców.
+    // Zachowujemy ich awans i odtwarzamy brakujące miejsca według osiągniętej
+    // rundy. Nie powtarzamy meczów ani nie zmieniamy nagród i historii.
+    if (!state?.completed || mainTournament?.completed || !Array.isArray(blocks)
+        || !blocks.some(block => block?.type === 'grandSlamGroups')
+        || state.qualifiedPlayerIds.length >= state.qualifyingPlaces) return false;
+    const eligible = new Map(getPdcTourCardQualifierEligiblePlayers(qualifierTournament, candidates)
+        .map(candidate => [getPdcTourCardPlayerKey(candidate), candidate]));
+    const selected = new Set();
+    const addKey = key => {
+        if (selected.size < state.qualifyingPlaces && eligible.has(key)) selected.add(key);
+    };
+    state.qualifiedPlayerIds.forEach(addKey);
+    const historyPlayers = qualifierTournament.matchHistory.players || [];
+    const addHistoryPlayer = index => {
+        const entry = historyPlayers[index];
+        if (typeof entry?.[0] !== 'string') return;
+        const key = entry[0].startsWith('id:') ? entry[0].slice(3) : entry[0].replace(/^name:/, '');
+        addKey(key);
+    };
+    const rounds = blocks.filter(block => block?.type === 'round' && Array.isArray(block.matches))
+        .sort((first, second) => Number(first.round) - Number(second.round));
+    for (const round of rounds) {
+        round.matches.forEach(match => addHistoryPlayer(Number(match[2]) >= Number(match[3]) ? match[0] : match[1]));
+        round.matches.forEach(match => addHistoryPlayer(Number(match[2]) >= Number(match[3]) ? match[1] : match[0]));
+        if (selected.size >= state.qualifyingPlaces) break;
+    }
+    // Gdy fragment starej historii nie istnieje, korzystamy z kolejności
+    // zapisanej listy uczestników tego kwalifikatora, nadal tylko z kartą.
+    state.qualifierPlayerIds.forEach(addKey);
+    if (selected.size <= state.qualifiedPlayerIds.length) return false;
+    state.qualifiedPlayerIds = [...selected];
+    state.legacyGrandSlamQualifierRepaired = true;
+    return true;
+}
+
 function getPdcTourCardQualifiedMainField(mainTournament, candidates = getPdcTourCardPlayers()) {
     const qualifierTournament = Array.isArray(tournamentDatabase)
         ? tournamentDatabase.find(tournament => tournament.specialType === PDC_TOUR_CARD_QUALIFIER_TYPE
@@ -288,6 +327,7 @@ function getPdcTourCardQualifiedMainField(mainTournament, candidates = getPdcTou
         : null;
     if (!qualifierTournament) return null;
     const state = ensurePdcTourCardQualificationState(qualifierTournament, candidates);
+    repairLegacyGrandSlamQualification(mainTournament, qualifierTournament, state, candidates);
     if (!state.completed) {
         state.qualifiedPlayerIds = getPdcTourCardQualifierParticipants(qualifierTournament, candidates)
             .slice(0, state.qualifyingPlaces).map(getPdcTourCardPlayerKey);

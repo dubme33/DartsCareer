@@ -3,6 +3,7 @@ let tournamentSimulationFinished = Promise.resolve(true);
 let tournamentSimulationSaveBlocked = false;
 const TOURNAMENT_SIMULATION_BATCH_MS = 8;
 const TOURNAMENT_SIMULATION_BATCH_PAIRS = 16;
+const MATCH_CHECKPOINT_BATCH_RECORDS = 64;
 
 function isTournamentSimulationBusy() {
     return isFastForwardingTournament;
@@ -119,7 +120,41 @@ async function simulateTournamentRoundsInBatches(tournament) {
     return outcome;
 }
 
-async function createTournamentSimulationCheckpoint() {
+async function cloneMatchCheckpointInBatches(state) {
+    const clone = value => typeof structuredClone === 'function'
+        ? structuredClone(value)
+        : (value === undefined ? undefined : JSON.parse(JSON.stringify(value)));
+    const copy = {};
+    let startedAt = tournamentSimulationNow();
+    let items = 0;
+    // Zapis używa referencji ID między zawodnikami i turniejami. Największe
+    // listy można więc kopiować po rekordzie bez klonowania całej kariery naraz.
+    for (const [key, value] of Object.entries(state)) {
+        if ((key === 'pdcPlayers' || key === 'tournamentDatabase') && Array.isArray(value)) {
+            copy[key] = [];
+            for (const record of value) {
+                copy[key].push(clone(record));
+                if (++items >= MATCH_CHECKPOINT_BATCH_RECORDS
+                    || tournamentSimulationNow() - startedAt >= TOURNAMENT_SIMULATION_BATCH_MS) {
+                    await yieldTournamentSimulation();
+                    startedAt = tournamentSimulationNow();
+                    items = 0;
+                }
+            }
+        } else {
+            copy[key] = clone(value);
+        }
+        if (tournamentSimulationNow() - startedAt >= TOURNAMENT_SIMULATION_BATCH_MS) {
+            await yieldTournamentSimulation();
+            startedAt = tournamentSimulationNow();
+            items = 0;
+        }
+    }
+    await yieldTournamentSimulation();
+    return copy;
+}
+
+async function createTournamentSimulationCheckpoint({ cooperative = false } = {}) {
     const state = buildGameState();
     const payload = typeof createCareerIndexedDbPayload === 'function'
         ? await createCareerIndexedDbPayload(state)
@@ -127,7 +162,8 @@ async function createTournamentSimulationCheckpoint() {
     // Jedna kopia bezpieczeństwa na całą operację. Pliki profilu pozostają
     // binarne, poza klonowanym stanem; nie kopiujemy ich do Base64.
     return {
-        state: typeof structuredClone === 'function'
+        state: cooperative ? await cloneMatchCheckpointInBatches(payload.state)
+            : typeof structuredClone === 'function'
             ? structuredClone(payload.state)
             : JSON.parse(JSON.stringify(payload.state)),
         media: payload.mediaByKind
@@ -225,8 +261,11 @@ function finishFastForwardedSpecialTournament(outcome) {
     return false;
 }
 
-async function simulateRemainingTournament() {
-    if (!Array.isArray(tournamentBracket) || tournamentBracket.length <= 1 || isCareerPlayerInRemainingBracket()) return false;
+async function simulateRemainingTournament(options = {}) {
+    // Zwykły przycisk po odpadnięciu nie może wycofać gracza. Taką zgodę
+    // przekazuje wyłącznie potwierdzone „Odpuść” dla istniejącej drabinki.
+    if (!Array.isArray(tournamentBracket) || tournamentBracket.length <= 1
+        || (isCareerPlayerInRemainingBracket() && options?.withdrawCareerPlayer !== true)) return false;
 
     return runTournamentSimulation(async () => {
         const outcome = await simulateTournamentRoundsInBatches(activeTournament);
@@ -309,11 +348,14 @@ function simulateHeadlessTournament(prepareDraw, hasGroupStage = false) {
     } });
 }
 
-async function runTournamentSimulation(operation, { onRestored = () => showBracket() } = {}) {
+async function runTournamentSimulation(operation, { onRestored = () => showBracket(), match = null } = {}) {
     if (isFastForwardingTournament || tournamentSimulationSaveBlocked || !activeTournament
-        || (typeof currentMatch !== 'undefined' && currentMatch)) return false;
+        || (typeof currentMatch !== 'undefined' && currentMatch && currentMatch !== match)) return false;
+    if (match && (currentMatch !== match || match.isFinishing)) return false;
 
     isFastForwardingTournament = true;
+    if (match) { match.isFinishing = true; match.isTurnLocked = true; }
+    const matchButtons = [];
     let releaseSaveBarrier;
     tournamentSimulationFinished = new Promise(resolve => { releaseSaveBarrier = resolve; });
     let unlockInterface = () => {};
@@ -321,6 +363,15 @@ async function runTournamentSimulation(operation, { onRestored = () => showBrack
     let safeToSave = true;
 
     try {
+        if (match) {
+            for (const id of ['t-btn-sim-leg', 't-btn-sim-match', 'throw-btn']) {
+                const button = document.getElementById(id);
+                if (button) {
+                    matchButtons.push({ button, disabled: button.disabled });
+                    button.disabled = true;
+                }
+            }
+        }
         setRemainingTournamentButtonsDisabled(true);
         unlockInterface = lockTournamentSimulationInterface();
         updateTournamentSimulationProgress(tournamentRound, 0, Math.ceil(tournamentBracket.length / 2));
@@ -328,7 +379,7 @@ async function runTournamentSimulation(operation, { onRestored = () => showBrack
         // Starszy zapis ma referencje do zawodników: musi skończyć zapisywanie
         // przed pierwszą zmianą nagród. Nowe autosave'y czekają na barierze.
         if (typeof waitForCareerSaveWrites === 'function') await waitForCareerSaveWrites();
-        checkpoint = await createTournamentSimulationCheckpoint();
+        checkpoint = await createTournamentSimulationCheckpoint({ cooperative: Boolean(match) });
         return await operation();
     } catch (error) {
         console.error('Nie udało się dokończyć symulacji turnieju.', error);
@@ -349,9 +400,13 @@ async function runTournamentSimulation(operation, { onRestored = () => showBrack
         return false;
     } finally {
         tournamentSimulationSaveBlocked = !safeToSave;
+        if (match) delete match.isFinishing;
         isFastForwardingTournament = false;
         releaseSaveBarrier(safeToSave);
         unlockInterface();
         setRemainingTournamentButtonsDisabled(false);
+        matchButtons.forEach(({ button, disabled }) => {
+            button.disabled = button.id === 'throw-btn' && currentMatch === match ? true : disabled;
+        });
     }
 }

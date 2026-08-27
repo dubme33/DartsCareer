@@ -6,6 +6,18 @@ let playerLifecycleState = {
     retiredTemplateIndexes: []
 };
 
+let playerLifecycleValidationCache = null;
+const PLAYER_LIFECYCLE_IDENTITY_FIELDS = ['retiredPlayerKeys', 'retiredPlayerNames', 'retiredPlayerIds', 'retiredTemplateIndexes'];
+
+function invalidatePlayerLifecycleCache() {
+    playerLifecycleValidationCache = null;
+}
+
+function getPlayerLifecycleCacheStamp(state) {
+    return [state.lastProcessedYear, ...PLAYER_LIFECYCLE_IDENTITY_FIELDS.map(field =>
+        Array.isArray(state[field]) ? JSON.stringify(state[field]) : null)].join('|');
+}
+
 const PLAYER_LIFECYCLE_TRANSLATIONS = {
     pl: {
         sender: 'Federacja Darta', subject: 'Koniec sezonu {year} — emerytury zawodników',
@@ -43,6 +55,15 @@ function ensurePlayerLifecycleState() {
     if (!playerLifecycleState || typeof playerLifecycleState !== 'object') {
         playerLifecycleState = { lastProcessedYear: null, retiredPlayerKeys: [], retiredPlayerNames: [], retiredPlayerIds: [], retiredTemplateIndexes: [] };
     }
+    const roster = typeof pdcPlayers !== 'undefined' ? pdcPlayers : null;
+    const templates = typeof defaultPdcPlayerTemplates !== 'undefined' ? defaultPdcPlayerTemplates : null;
+    const stamp = getPlayerLifecycleCacheStamp(playerLifecycleState);
+    if (playerLifecycleValidationCache?.state === playerLifecycleState
+        && playerLifecycleValidationCache.stamp === stamp
+        && playerLifecycleValidationCache.roster === roster
+        && playerLifecycleValidationCache.rosterLength === roster?.length
+        && playerLifecycleValidationCache.templates === templates
+        && playerLifecycleValidationCache.templatesLength === templates?.length) return playerLifecycleState;
     if (!Array.isArray(playerLifecycleState.retiredPlayerKeys)) playerLifecycleState.retiredPlayerKeys = [];
     if (!Array.isArray(playerLifecycleState.retiredPlayerNames)) {
         playerLifecycleState.retiredPlayerNames = playerLifecycleState.retiredPlayerKeys
@@ -60,11 +81,18 @@ function ensurePlayerLifecycleState() {
         .map(Number)
         .filter(index => Number.isInteger(index) && index >= 0))];
     if (!Number.isInteger(playerLifecycleState.lastProcessedYear)) playerLifecycleState.lastProcessedYear = null;
+    // Kosztowna migracja nazw moda i indeksów bazy jest potrzebna tylko po
+    // zmianie stanu emerytur lub składu bazy, nie dla każdego zawodnika.
     hydrateRetiredTemplateIndexes(playerLifecycleState);
+    playerLifecycleValidationCache = {
+        state: playerLifecycleState, stamp: getPlayerLifecycleCacheStamp(playerLifecycleState),
+        roster, rosterLength: roster?.length, templates, templatesLength: templates?.length
+    };
     return playerLifecycleState;
 }
 
 function restorePlayerLifecycleState(savedState) {
+    invalidatePlayerLifecycleCache();
     playerLifecycleState = {
         lastProcessedYear: Number.isInteger(savedState?.lastProcessedYear) ? savedState.lastProcessedYear : null,
         retiredPlayerKeys: Array.isArray(savedState?.retiredPlayerKeys) ? [...new Set(savedState.retiredPlayerKeys)] : [],
@@ -167,6 +195,8 @@ function isRetiredPlayer(candidate, templateIndex = getLifecycleTemplateIndex(ca
 
 function removeRetiredPlayersFromPool(players = (typeof pdcPlayers !== 'undefined' ? pdcPlayers : null)) {
     if (!Array.isArray(players)) return 0;
+    // Mod mógł podmienić nazwy/ID w miejscu, bez zmiany długości tablicy.
+    invalidatePlayerLifecycleCache();
     const initialCount = players.length;
     const state = ensurePlayerLifecycleState();
     const activePlayers = players.filter(candidate => candidate && !candidate.isBye && !isRetiredPlayer(candidate, undefined, state));

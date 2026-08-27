@@ -1,7 +1,7 @@
 function getPrefix(m) { return m === 1 ? "" : (m === 2 ? "D" : "T"); }
         function logThrow(text, type) {
             const logBox = document.getElementById('match-log');
-            logBox.innerHTML = `<div class="log-entry ${type}">${escapeHtml(text)}</div>` + logBox.innerHTML;
+            logBox.insertAdjacentHTML('afterbegin', `<div class="log-entry ${escapeHtml(type)}">${escapeHtml(text)}</div>`);
         }
 
         function drawDartboard() {

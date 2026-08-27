@@ -34,7 +34,8 @@ function buildPlayersChampionshipField(cardHolders, replacementPoolOrRandom = []
 }
 
 function skipActiveTournament() {
-            if (typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy()) return false;
+            if (!activeTournament || (typeof currentMatch !== 'undefined' && currentMatch)
+                || (typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy())) return false;
             if (!confirm(t('t-confirm-skip'))) return;
             isSkippingTournament = true;
             return startTournament();
@@ -146,6 +147,10 @@ function skipActiveTournament() {
                 // ponownie z dostępnymi zastępcami i aktualną regułą OOM.
                 if (!malformedOpeningWorldMastersDraw && !staleWorldMastersFinalsQualifierDraw && !staleEuropeanChampionshipOpeningDraw
                     && !staleWorldChampionshipOpeningDraw && !staleContinentalQualificationDraw && !staleQSchoolOpeningDraw) {
+                    if (isSkippingTournament && typeof simulateRemainingTournament === 'function') {
+                        isSkippingTournament = false;
+                        return simulateRemainingTournament({ withdrawCareerPlayer: true });
+                    }
                     if (tournamentBracket.some(isCurrentPlayer) && typeof chargeTournamentParticipationStamina === 'function') {
                         chargeTournamentParticipationStamina(activeTournament);
                     }

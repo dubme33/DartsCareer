@@ -283,6 +283,7 @@ function initCareerChronicle() {
         }
 
         function applyModData(modData, isCareerActive, options = {}) {
+            if (typeof invalidatePlayerLifecycleCache === 'function') invalidatePlayerLifecycleCache();
             if (!isCareerActive) {
                 if (modData.pdcPlayers) {
                     pdcPlayers.length = 0;

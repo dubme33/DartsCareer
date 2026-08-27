@@ -132,6 +132,10 @@ function startMatch(vsAI) {
 
         function setTurnUI() {
             clearTimeout(window.aiTimeout); // Usuwamy stare opóźnienia
+            if (!currentMatch || currentMatch.isFinishing) {
+                document.getElementById('throw-btn').disabled = true;
+                return;
+            }
             
             const playerControlsP1 = !currentMatch.isSpectator
                 && (!currentMatch.isDoubles || isCareerPlayerThrowing(true));
@@ -159,6 +163,44 @@ function startMatch(vsAI) {
         }
 
         function finishMatch() {
+            if (!currentMatch || currentMatch.isFinishing
+                || (typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy())) return false;
+            clearTimeout(window.aiTimeout);
+            const match = currentMatch;
+            // Wspólna logika wyniku i nagród, lecz reszta rundy oddaje sterowanie
+            // po partiach meczów. Pozostałe tryby zachowują dotychczasowy przebieg.
+            const isCareerKnockout = match.isTournament && activeTournament && !match.isSpectator && !match.isWorldCup
+                && !(typeof isGrandSlamCareerGroupMatch === 'function' && isGrandSlamCareerGroupMatch(match));
+            if (isCareerKnockout) {
+                const tournament = activeTournament;
+                const bracket = tournamentBracket;
+                const round = tournamentRound;
+                return runTournamentSimulation(() => runTournamentSimulationSteps(
+                    iterateMatchCompletion(), round, Math.ceil(bracket.length / 2), () => {
+                        if (currentMatch !== match || activeTournament !== tournament
+                            || tournamentBracket !== bracket || tournamentRound !== round) {
+                            throw new Error('Stan meczu zmienił się podczas rozliczania rundy.');
+                        }
+                    }
+                ), { match, onRestored: () => {
+                    currentMatch = match;
+                    match.opponent = resolveLoadedPlayer(match.opponent);
+                    ['bracket-modal', 'results-modal', 'event-modal'].forEach(id => {
+                        const modal = document.getElementById(id);
+                        if (modal) modal.style.display = 'none';
+                    });
+                    updateScores();
+                    updateMatchStatsUI();
+                    showScreen('screen-match');
+                } });
+            }
+            const steps = iterateMatchCompletion();
+            let step = steps.next();
+            while (!step.done) step = steps.next();
+            return step.value;
+        }
+
+        function* iterateMatchCompletion() {
             if (currentMatch?.isSpectator && typeof finishSpectatedTournamentMatch === 'function') {
                 finishSpectatedTournamentMatch();
                 return;
@@ -241,7 +283,7 @@ function startMatch(vsAI) {
                     saveGame(true);
                     return;
                 }
-                const specialTournamentOutcome = advanceTournament(isP1Winner);
+                const specialTournamentOutcome = yield* iterateTournamentRound(isP1Winner);
 
                 if (specialTournamentOutcome === true) {
                     currentMatch = null;

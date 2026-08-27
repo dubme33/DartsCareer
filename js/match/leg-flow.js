@@ -296,7 +296,7 @@ function checkAchievements(type, data = null) {
         }
 
         function processThrow(isP1, targetSec, targetMult, hitSec, hitMult) {
-            if (!currentMatch) return;
+            if (!currentMatch || currentMatch.isFinishing) return;
 
             // To jest ostateczna granica bezpieczeństwa dla wszystkich źródeł
             // rzutu (przycisk gracza, AI i ewentualne wywołania programowe).
@@ -444,6 +444,7 @@ function checkAchievements(type, data = null) {
         }
 
         function endTurn() {
+            if (!currentMatch || currentMatch.isFinishing) return;
             let wasP1 = currentMatch.turn === 'p1';
             
             if (currentMatch.dartsThrown === 3) {

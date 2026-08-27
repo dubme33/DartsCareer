@@ -1,7 +1,7 @@
 function playerThrow() {
             // Kliknięcia mogą już czekać w kolejce zdarzeń, gdy trzecia lotka
             // kończy podejście. Nie pozwalamy im wejść do logiki punktacji.
-            if (!currentMatch || currentMatch.isSpectator || currentMatch.turn !== 'p1' || currentMatch.dartsThrown >= 3 || currentMatch.isTurnLocked) return;
+            if (!currentMatch || currentMatch.isFinishing || currentMatch.isSpectator || currentMatch.turn !== 'p1' || currentMatch.dartsThrown >= 3 || currentMatch.isTurnLocked) return;
             if (currentMatch.isDoubles && !isCareerPlayerThrowing(true)) return;
 
             let tSec = parseInt(document.getElementById('aim-sector').value); 
@@ -23,7 +23,7 @@ function playerThrow() {
         }
 
         function aiTurn() {
-            if (!currentMatch || currentMatch.dartsThrown >= 3) return;
+            if (!currentMatch || currentMatch.isFinishing || currentMatch.dartsThrown >= 3) return;
             if (currentMatch.isSpectator && currentMatch.spectatorPaused) return;
             const isP1 = currentMatch.turn === 'p1';
             if (!isP1 && currentMatch.turn !== 'p2') return;

@@ -1625,7 +1625,7 @@ async function updateProfileWalkon(event) {
                 currentMatch.doublesThrower[winningSide] = currentMatch.doublesThrower[winningSide] === 0 ? 1 : 0;
             }
             currentMatch.turn = (currentMatch.totalLegsPlayed % 2 === 0) ? currentMatch.startingPlayer : (currentMatch.startingPlayer === 'p1' ? 'p2' : 'p1');
-            currentMatch.dartsThrown = 0; currentTurnScore = 0; drawnDarts = [];
+            currentMatch.dartsThrown = 0; currentMatch.isTurnLocked = false; currentTurnScore = 0; drawnDarts = [];
         }
 
         function processFastLeg() {
@@ -1646,7 +1646,7 @@ async function updateProfileWalkon(event) {
                     if (currentMatch.suddenDeath.p1Score !== currentMatch.suddenDeath.p2Score) {
                         let isP1 = currentMatch.suddenDeath.p1Score > currentMatch.suddenDeath.p2Score;
                         currentMatch.suddenDeath = null;
-                        finishMatch(); return;
+                        return finishMatch();
                     }
                 }
                 return;
@@ -1673,29 +1673,42 @@ async function updateProfileWalkon(event) {
         }
 
         function simulateOneLegFast() {
+            if (!canSimulateCurrentMatch()) return false;
+            if (isMatchFinished()) return finishMatch();
             skipWalkon(); // Wycisza muzykę, żeby uniknąć nakładania dźwięków
             clearTimeout(window.aiTimeout); // ZABEZPIECZENIE: Przerywa zaplanowane ruchy AI
-            if (currentMatch.suddenDeath) { processFastLeg(); return; }
+            if (currentMatch.suddenDeath) return processFastLeg();
             
             processFastLeg();
             
             updateScores(); updateMatchStatsUI(); drawnDarts = [];
             drawDartboard(); updateDartDots(); setTurnUI();
             
-            if (isMatchFinished()) finishMatch();
+            if (isMatchFinished()) return finishMatch();
+        }
+
+        function canSimulateCurrentMatch() {
+            if (!currentMatch || currentMatch.isFinishing
+                || (typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy())) return false;
+            // Ręczny checkout ma jeszcze zaplanowane naliczenie lega / zmianę
+            // seta. Nie anulujemy tego timera ani nie symulujemy od wyniku zero.
+            return isMatchFinished() || currentMatch.suddenDeath
+                || (currentMatch.p1Score > 0 && currentMatch.p2Score > 0);
         }
 
         function simulateMatchFast() {
+            if (!canSimulateCurrentMatch()) return false;
             if (!confirm(t('t-confirm-sim-match'))) return;
+            if (isMatchFinished()) return finishMatch();
             skipWalkon(); 
             clearTimeout(window.aiTimeout);
             let safety = 0;
             while (!isMatchFinished() && !currentMatch.suddenDeath && safety < 100) {
                 processFastLeg(); safety++;
             }
-            if (currentMatch.suddenDeath) processFastLeg(); 
+            if (currentMatch.suddenDeath) return processFastLeg();
             if (isMatchFinished()) {
-                updateScores(); updateMatchStatsUI(); finishMatch();
+                updateScores(); updateMatchStatsUI(); return finishMatch();
             }
         }
 

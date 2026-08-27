@@ -22,7 +22,7 @@
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://dartscareer.pl">
     <link rel="icon" type="image/png" href="favicon.png">
-    <link rel="stylesheet" href="css/game.css?v=1.3.2">
+    <link rel="stylesheet" href="css/game.css?v=1.3.3">
 </head>
 <body>
     <header>
@@ -61,6 +61,59 @@
         <!-- LEWA STRONA: CHANGELOG (Zawsze po angielsku) -->
         <div class="changelog-box">
             <h3>📢 What's New / Changelog</h3>
+
+            <!-- UPDATE V1.3.3 -->
+            <div class="changelog-version-badge">v1.3.3 · Match Flow &amp; Performance Fixes</div>
+
+            <div class="changelog-grid">
+                <div class="cl-item">
+                    <span class="cl-tag fix">Match Controls</span>
+                    <span class="cl-title">🎯 Reliable Manual-to-Simulation Switching</span>
+                    <p class="cl-desc">Fixed player and AI throws getting stuck after switching from manual darts to leg simulation. Simulating during a manual checkout no longer interrupts the pending leg result, and finished matches cannot gain an extra leg.</p>
+                </div>
+
+                <div class="cl-item">
+                    <span class="cl-tag tweak">Match Performance</span>
+                    <span class="cl-title">⏩ More Responsive Match Completion</span>
+                    <p class="cl-desc">After the final leg, the remaining matches in the round are processed in short batches with a progress indicator. This reduces long interface pauses without changing match formats, result calculations or prize money.</p>
+                </div>
+
+                <div class="cl-item">
+                    <span class="cl-tag tweak">Match History</span>
+                    <span class="cl-title">📝 Lighter Match Log</span>
+                    <p class="cl-desc">New dart and leg entries are added without rebuilding the entire match log. The complete log remains available, with less work required as a match gets longer.</p>
+                </div>
+
+                <div class="cl-item">
+                    <span class="cl-tag fix">Save Safety</span>
+                    <span class="cl-title">🛡️ Safer Round Processing</span>
+                    <p class="cl-desc">Repeated clicks and further throws are blocked while a round is being processed, and autosaves wait for completion. If processing fails, the game restores the previous career state and keeps the completed match available to retry.</p>
+                </div>
+
+                <div class="cl-item">
+                    <span class="cl-tag tweak">Calendar</span>
+                    <span class="cl-title">📅 Faster Calendar Rendering</span>
+                    <p class="cl-desc">The calendar is built in a single screen update instead of rebuilding the list for every event. Tournament dates, event order and access to past results stay the same.</p>
+                </div>
+
+                <div class="cl-item">
+                    <span class="cl-tag tweak">Long Careers</span>
+                    <span class="cl-title">⚡ Faster Retired-Player Checks</span>
+                    <p class="cl-desc">Cached retired-player lookups reduce repeated scans when preparing tournament fields and checking eligibility in later seasons, including careers played with a mod.</p>
+                </div>
+
+                <div class="cl-item">
+                    <span class="cl-tag fix">Grand Slam</span>
+                    <span class="cl-title">🏆 Grand Slam Starts with Mods</span>
+                    <p class="cl-desc">Fixed modded Grand Slam qualifiers being mistaken for the main tournament. Older qualifying results are repaired where possible while respecting player eligibility.</p>
+                </div>
+
+                <div class="cl-item">
+                    <span class="cl-tag fix">Tournament Skipping</span>
+                    <span class="cl-title">⏭️ Skip an Existing Tournament Draw</span>
+                    <p class="cl-desc">Skipping an event now also handles an already-created bracket, preserving previously recorded results and completing the remaining rounds.</p>
+                </div>
+            </div>
 
             <!-- UPDATE V1.3.2 -->
             <div class="changelog-version-badge">v1.3.2 · Performance &amp; Tournament Safety</div>
@@ -109,9 +162,7 @@
                 </div>
 
                 <div class="cl-item">
-                    <span class="cl-tag feature">Community</span>
                     <span class="cl-title">💖 Atsus &amp; Blax91 Join the Hall of Fame</span>
-                    <p class="cl-desc"></p>
                 </div>
             </div>
 
@@ -1323,53 +1374,53 @@
     </main>
     <!-- STOPKA AUTORSKA -->
     <footer style="width: 100%; text-align: center; padding: 25px 15px; margin-top: auto; color: #7f8c8d; font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 2px;">
-        <div style="margin-bottom: 5px; color: #bdc3c7;">V. 1.3.2</div>
+        <div style="margin-bottom: 5px; color: #bdc3c7;">V. 1.3.3</div>
         powered by dubme<br>
         <a href="mailto:dartscareer@gmail.com" style="color: #bdc3c7; text-decoration: none; text-transform: lowercase; display: inline-block; margin-top: 5px;">dartscareer@gmail.com</a>
     </footer>
 
     <!-- SKRYPTY -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <script src="data/players.js?v=1.3.2"></script>
+    <script src="data/players.js?v=1.3.3"></script>
     <script src="data/order-of-merit-history.js"></script>
     <script src="data/order-of-merit-opening-2026.js"></script>
     <script src="data/player-birth-years.js"></script>
-    <script src="data/newgen-names.js?v=1.3.2"></script>
-    <script src="data/tournaments.js?v=1.3.2"></script>
+    <script src="data/newgen-names.js?v=1.3.3"></script>
+    <script src="data/tournaments.js?v=1.3.3"></script>
     <script src="data/achievements.js"></script>
     <script src="data/interviews.js"></script>
     <script src="data/random-events.js"></script>
-    <script src="js/core.js?v=1.3.2"></script>
-    <script src="js/european-tour.js?v=1.3.2"></script>
-    <script src="js/order-of-merit.js?v=1.3.2"></script>
-    <script src="js/tour-cards.js?v=1.3.2"></script>
-    <script src="js/world-championship-qualification.js?v=1.3.2"></script>
-    <script src="js/stamina.js?v=1.3.2"></script>
-    <script src="js/i18n.js?v=1.3.2"></script>
-    <script src="js/player-lifecycle.js?v=1.3.2"></script>
-    <script src="js/career.js?v=1.3.2"></script>
-    <script src="js/player-profiles.js?v=1.3.2"></script>
-    <script src="js/tournaments/results.js?v=1.3.2"></script>
-    <script src="js/tournaments/rules.js?v=1.3.2"></script>
+    <script src="js/core.js?v=1.3.3"></script>
+    <script src="js/european-tour.js?v=1.3.3"></script>
+    <script src="js/order-of-merit.js?v=1.3.3"></script>
+    <script src="js/tour-cards.js?v=1.3.3"></script>
+    <script src="js/world-championship-qualification.js?v=1.3.3"></script>
+    <script src="js/stamina.js?v=1.3.3"></script>
+    <script src="js/i18n.js?v=1.3.3"></script>
+    <script src="js/player-lifecycle.js?v=1.3.3"></script>
+    <script src="js/career.js?v=1.3.3"></script>
+    <script src="js/player-profiles.js?v=1.3.3"></script>
+    <script src="js/tournaments/results.js?v=1.3.3"></script>
+    <script src="js/tournaments/rules.js?v=1.3.3"></script>
     <script src="js/match/ai-strategy.js"></script>
-    <script src="js/match/intro.js?v=1.3.2"></script>
-    <script src="js/tournaments/rewards.js?v=1.3.2"></script>
-    <script src="js/grand-slam.js?v=1.3.2"></script>
-    <script src="js/tournaments/flow.js?v=1.3.2"></script>
-    <script src="js/tournaments/fast-forward.js?v=1.3.2"></script>
-    <script src="js/tournaments/spectator.js?v=1.3.2"></script>
-    <script src="js/world-cup.js?v=1.3.2"></script>
-    <script src="js/continental-qualification-v2.js?v=1.3.2"></script>
-    <script src="js/world-masters.js?v=1.3.2"></script>
-    <script src="js/match/setup.js?v=1.3.2"></script>
-    <script src="js/match/leg-flow.js?v=1.3.2"></script>
+    <script src="js/match/intro.js?v=1.3.3"></script>
+    <script src="js/tournaments/rewards.js?v=1.3.3"></script>
+    <script src="js/grand-slam.js?v=1.3.3"></script>
+    <script src="js/tournaments/flow.js?v=1.3.3"></script>
+    <script src="js/tournaments/fast-forward.js?v=1.3.3"></script>
+    <script src="js/tournaments/spectator.js?v=1.3.3"></script>
+    <script src="js/world-cup.js?v=1.3.3"></script>
+    <script src="js/continental-qualification-v2.js?v=1.3.3"></script>
+    <script src="js/world-masters.js?v=1.3.3"></script>
+    <script src="js/match/setup.js?v=1.3.3"></script>
+    <script src="js/match/leg-flow.js?v=1.3.3"></script>
     <script src="js/match/audio.js"></script>
-    <script src="js/match/turns.js?v=1.3.2"></script>
-    <script src="js/match/board.js"></script>
-    <script src="js/storage.js?v=1.3.2"></script>
-    <script src="js/systems.js?v=1.3.2"></script>
-    <script src="js/mod-media.js?v=1.3.2"></script>
-    <script src="js/extras.js?v=1.3.2"></script>
+    <script src="js/match/turns.js?v=1.3.3"></script>
+    <script src="js/match/board.js?v=1.3.3"></script>
+    <script src="js/storage.js?v=1.3.3"></script>
+    <script src="js/systems.js?v=1.3.3"></script>
+    <script src="js/mod-media.js?v=1.3.3"></script>
+    <script src="js/extras.js?v=1.3.3"></script>
 
 </body>
 </html>

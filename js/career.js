@@ -880,8 +880,13 @@ function showScreen(screenId) {
 
         function showCalendar() {
             const list = document.getElementById('calendar-list');
-            list.innerHTML = "";
-            if(typeof tournamentDatabase === 'undefined') return;
+            if(typeof tournamentDatabase === 'undefined') {
+                list.innerHTML = "";
+                return;
+            }
+            // Budujemy całą listę przed zmianą DOM, aby każdy kolejny turniej
+            // nie powodował ponownego parsowania wszystkich poprzednich wierszy.
+            let calendarHtml = "";
 
             tournamentDatabase
                 .map((tour, idx) => ({ tour, idx }))
@@ -902,7 +907,7 @@ function showScreen(screenId) {
                         : `${tour.day}.${startMonth}-${tour.endDay}.${endMonth}.${year}`)
                     : `${tour.day}.${startMonth}.${year}`;
                 
-                list.innerHTML += `<div style="border-bottom:1px solid var(--border-color); padding:10px 0; display:flex; justify-content:space-between; align-items:center;">
+                calendarHtml += `<div style="border-bottom:1px solid var(--border-color); padding:10px 0; display:flex; justify-content:space-between; align-items:center;">
                     <div>
                         <strong>${dateStr}</strong> - <span style="color:white; font-size:15px;">${escapeHtml(typeof getTournamentDisplayName === 'function' ? getTournamentDisplayName(tour) : tour.name)}</span>
                         <br><small style="color:#bdc3c7; display: flex; align-items: center; gap: 5px; margin-top: 3px;">
@@ -912,6 +917,7 @@ function showScreen(screenId) {
                     <div>${statusBadge}</div>
                 </div>`;
             });
+            list.innerHTML = calendarHtml;
             showScreen('screen-calendar');
         }
 
