@@ -692,7 +692,8 @@ function concludeWorldMastersFinalsQualifierEvent(showOutcome = true) {
     if (!isWorldMastersFinalsQualifierTournament(activeTournament)) return null;
     const qualifierTournament = activeTournament;
     qualifierTournament.completed = true;
-    qualifierTournament.historyLogs = lastTournamentResults;
+    if (typeof finalizeTournamentMatchHistory === 'function') finalizeTournamentMatchHistory(qualifierTournament);
+    else qualifierTournament.historyLogs = lastTournamentResults;
     activeTournament = null;
     tournamentBracket = [];
     const tile = document.getElementById('tile-tournament');
@@ -727,13 +728,14 @@ function renderWorldMastersRanking(list) {
         list.innerHTML = `<div style="text-align:center; margin-top:40px; color:#bdc3c7;">${trWorldMasters('tableEmpty')}</div>`;
         return;
     }
-    list.innerHTML = `<div style="border-bottom:2px solid var(--accent-green); padding:5px 10px; display:flex; font-size:12px; color:#bdc3c7; font-weight:bold; background:#0f3460;"><div style="flex:3;">${trWorldMasters('player')}</div><div style="flex:1; text-align:center;">${trWorldMasters('points')}</div><div style="flex:2; text-align:center;">${trWorldMasters('legs')}</div><div style="flex:1; text-align:right;">${trWorldMasters('average')}</div></div>`;
+    let rankingHtml = `<div style="border-bottom:2px solid var(--accent-green); padding:5px 10px; display:flex; font-size:12px; color:#bdc3c7; font-weight:bold; background:#0f3460;"><div style="flex:3;">${trWorldMasters('player')}</div><div style="flex:1; text-align:center;">${trWorldMasters('points')}</div><div style="flex:2; text-align:center;">${trWorldMasters('legs')}</div><div style="flex:1; text-align:right;">${trWorldMasters('average')}</div></div>`;
     rows.forEach((row, index) => {
         const candidate = row.player || row;
         const isMe = candidate && typeof isCurrentPlayer === 'function' && isCurrentPlayer(candidate);
         const qualified = index < 24;
-        list.innerHTML += `<button type="button" class="ranking-player-row" data-player-id="${escapeHtml(candidate?.id || '')}" style="border-bottom:1px solid var(--border-color); ${isMe ? 'background:rgba(39,174,96,.2);' : qualified ? 'background:rgba(41,128,185,.1);' : ''}"><div style="flex:3;"><strong>${index + 1}.</strong> ${getFlagImg(row.country)} ${escapeHtml(row.name)} ${isMe ? '<b style="color:var(--accent-green)">(TY)</b>' : ''}${qualified ? ` <small style="color:#f1c40f;">${trWorldMasters('qualified')}</small>` : ''}</div><div style="flex:1; text-align:center; color:#f1c40f; font-weight:bold;">${row.points}</div><div style="flex:2; text-align:center; color:#bdc3c7;">${row.legsWon}-${row.legsLost}</div><div style="flex:1; text-align:right; color:#bdc3c7;">${row.average ? row.average.toFixed(2) : '—'}</div></button>`;
+        rankingHtml += `<button type="button" class="ranking-player-row" data-player-id="${escapeHtml(candidate?.id || '')}" style="border-bottom:1px solid var(--border-color); ${isMe ? 'background:rgba(39,174,96,.2);' : qualified ? 'background:rgba(41,128,185,.1);' : ''}"><div style="flex:3;"><strong>${index + 1}.</strong> ${getFlagImg(row.country)} ${escapeHtml(row.name)} ${isMe ? '<b style="color:var(--accent-green)">(TY)</b>' : ''}${qualified ? ` <small style="color:#f1c40f;">${trWorldMasters('qualified')}</small>` : ''}</div><div style="flex:1; text-align:center; color:#f1c40f; font-weight:bold;">${row.points}</div><div style="flex:2; text-align:center; color:#bdc3c7;">${row.legsWon}-${row.legsLost}</div><div style="flex:1; text-align:right; color:#bdc3c7;">${row.average ? row.average.toFixed(2) : '—'}</div></button>`;
     });
+    list.innerHTML = rankingHtml;
 }
 
 function refreshWorldMastersTranslations() {

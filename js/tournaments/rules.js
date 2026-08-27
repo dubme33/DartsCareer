@@ -69,7 +69,7 @@ const checkoutGuide = {
             const name = tournament ? tournament.name : "";
 
             if (typeof isPdcQSchoolTournament === 'function' && isPdcQSchoolTournament(tournament)) {
-                return { type: 'legs', legsToWin: 6 };
+                return { type: 'legs', legsToWin: 11 };
             }
             if (typeof isPdcTourCardQualifierTournament === 'function' && isPdcTourCardQualifierTournament(tournament)) {
                 return { type: 'legs', legsToWin: 6 };

@@ -366,8 +366,12 @@
         const dartboardOrder = [20, 1, 18, 4, 13, 6, 10, 15, 2, 17, 3, 19, 7, 16, 8, 11, 14, 9, 12, 5];
 
         // --- 2. INICJALIZACJA GRY ---
-        window.onload = function() {
+        window.onload = async function() {
     changeLanguage('en'); // <--- DODAJ TĘ LINIJKĘ TUTAJ
+
+    if (typeof waitForPersistedModRestore === 'function') {
+        await waitForPersistedModRestore();
+    }
 
     if(typeof pdcPlayers !== 'undefined') {
         normalizePlayerIds(pdcPlayers, player);

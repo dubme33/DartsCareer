@@ -1,12 +1,8 @@
 function showScreen(screenId) {
             // Wyciszamy wszystkie dźwięki meczowe przy wychodzeniu z meczu
             if(screenId !== 'screen-match') { 
-                isWalkonSkipped = true; 
-                clearTimeout(walkonTimeout); clearInterval(walkonInterval);
+                cancelMatchIntro();
                 clearTimeout(window.aiTimeout);
-                if (window.speechSynthesis) window.speechSynthesis.cancel();
-                if(currentWalkonAudio) { currentWalkonAudio.pause(); currentWalkonAudio = null; }
-                if(oppAudio) { oppAudio.pause(); oppAudio = null; }
                 if(crowdAudio) { crowdAudio.pause(); crowdAudio.currentTime = 0; }
                 if(postMatchAudio) { postMatchAudio.pause(); postMatchAudio.currentTime = 0; }
             }
@@ -14,112 +10,139 @@ function showScreen(screenId) {
             document.getElementById(screenId).classList.add('active');
         }
 
-        function startCareerAsExistingPlayer() {
-            const select = document.getElementById('existing-player-select');
-            const selectedPlayer = select && typeof pdcPlayers !== 'undefined'
-                ? pdcPlayers.find(candidate => candidate && candidate.id === select.value)
-                : null;
+        let existingPlayerCareerStarting = false;
+        async function startCareerAsExistingPlayer() {
+            if (typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy()) return false;
+            if (existingPlayerCareerStarting) return;
+            existingPlayerCareerStarting = true;
+            const startButton = document.getElementById('career-start-existing-button');
+            if (startButton) startButton.disabled = true;
+            try {
+                if (typeof waitForPersistedModRestore === 'function') {
+                    await waitForPersistedModRestore();
+                }
+                const select = document.getElementById('existing-player-select');
+                const selectedPlayer = select && typeof pdcPlayers !== 'undefined'
+                    ? pdcPlayers.find(candidate => candidate && candidate.id === select.value)
+                    : null;
 
-            if (!selectedPlayer) {
-                alert(trCareerStart('empty'));
-                return;
+                if (!selectedPlayer) {
+                    alert(trCareerStart('empty'));
+                    return;
+                }
+
+                const asNumber = (value, fallback) => Number.isFinite(Number(value)) ? Number(value) : fallback;
+                const overall = Math.round(asNumber(selectedPlayer.ovr, 55));
+                const scoring = Math.round(asNumber(selectedPlayer.scoring, overall));
+                const doubles = Math.round(asNumber(selectedPlayer.doubles, overall));
+                const prizeMoney = asNumber(selectedPlayer.prizeMoney, 0);
+                const proTourPrizeMoney = asNumber(selectedPlayer.proTourPrizeMoney, 0);
+                const pcPrizeMoney = asNumber(selectedPlayer.pcPrizeMoney, 0);
+                const europeanTourPrizeMoney = asNumber(selectedPlayer.europeanTourPrizeMoney, 0);
+                const careerStartAssets = moddedAssets;
+                const careerStartPlayer = player;
+                const modMedia = await getModCareerProfileMedia(careerStartAssets, selectedPlayer.name);
+                if (typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy()) return false;
+                // W trakcie odczytu pliku użytkownik mógł wczytać inną karierę lub moda.
+                if (player !== careerStartPlayer || moddedAssets !== careerStartAssets || !pdcPlayers.includes(selectedPlayer)) return;
+
+                // Przenosimy dokładnie tego zawodnika z puli AI do kariery, bez tworzenia duplikatu.
+                const selectedIndex = pdcPlayers.indexOf(selectedPlayer);
+                if (selectedIndex !== -1) pdcPlayers.splice(selectedIndex, 1);
+
+                if (typeof clearCareerProfileMediaRuntime === 'function') clearCareerProfileMediaRuntime();
+                player = {
+                    ...selectedPlayer,
+                    id: selectedPlayer.id,
+                    // Zachowujemy powiązanie z wpisem bazowym/moda. Dzięki temu po
+                    // ponownym wczytaniu baza nie odtworzy tego samego zawodnika jako AI.
+                    sourceName: selectedPlayer.sourceName || selectedPlayer.name,
+                    defaultTemplateIndex: Number.isInteger(selectedPlayer.defaultTemplateIndex)
+                        ? selectedPlayer.defaultTemplateIndex
+                        : selectedIndex,
+                    overall, ovr: overall, scoring, doubles,
+                    baseOvr: overall, baseScoring: scoring, baseDoubles: doubles, form: 0,
+                    favoriteDouble: asNumber(selectedPlayer.favoriteDouble, 20),
+                    // Prize money determines ranking; the budget is the separate amount used in the shop.
+                    budget: Math.min(10000, Math.max(500, Math.round(prizeMoney * 0.002))),
+                    prof: Math.min(95, Math.max(55, Math.round(45 + (overall - 40) * 0.75))),
+                    pop: Math.min(85, Math.max(20, Math.round(10 + (overall - 40) * 1.2))),
+                    stamina: 100,
+                    prizeMoney, proTourPrizeMoney, pcPrizeMoney, europeanTourPrizeMoney,
+                    photo: (typeof modMedia.photo === 'string' && modMedia.photo) || selectedPlayer.photo || '',
+                    walkon: (typeof modMedia.walkon === 'string' && modMedia.walkon) || selectedPlayer.walkon || null,
+                    historyPT: selectedPlayer.historyPT && typeof selectedPlayer.historyPT === 'object'
+                        ? { ...selectedPlayer.historyPT }
+                        : {},
+                    historyMain: selectedPlayer.historyMain && typeof selectedPlayer.historyMain === 'object'
+                        ? { ...selectedPlayer.historyMain }
+                        : {},
+                    mainPrizeHistory: Array.isArray(selectedPlayer.mainPrizeHistory)
+                        ? selectedPlayer.mainPrizeHistory.map(entry => ({ ...entry }))
+                        : [],
+                    mainOomHistoryVersion: selectedPlayer.mainOomHistoryVersion,
+                    activeSponsors: [], technicalPartner: null,
+                    equipment: { board: 0, surround: 0, light: 0 },
+                    scoringXP: 0, doublesXP: 0,
+                    trainingWeekKey: null, trainingSessionsThisWeek: 0,
+                    achievements: [],
+                    careerStats: { highestAvg: 0, highestCheckout: 0, total180s: 0, nineDarters: 0, tonPlusCheckouts: 0, trophies: [] },
+                    rivalries: {}, activeRivalIds: [], careerChronicle: []
+                };
+                for (const kind of ['photo', 'walkon']) {
+                    if (modMedia[kind] instanceof Blob) setPlayerProfileMediaFromFile(kind, modMedia[kind]);
+                }
+
+                // Usuń także historyczne aliasy tego zawodnika, nie tylko dokładnie wybrany wpis.
+                if (typeof removeCareerPlayerFromAiPool === 'function') removeCareerPlayerFromAiPool();
+
+                currentMatch = null;
+                activeTournament = null;
+                tournamentBracket = [];
+                tournamentMatchHistory = null;
+                tournamentRound = 32;
+                lastTournamentResults = '';
+                currentRoundHTML = '';
+                preTournamentRanks = { main: 0, pt: 0, pc: 0 };
+                gdlTable = [];
+                if (typeof resetGrandSlamState === 'function') resetGrandSlamState();
+                emails = [];
+                unreadMailsCount = 0;
+
+                normalizePlayerIds(pdcPlayers, player);
+                if (typeof refreshMainOrderOfMerit === 'function') {
+                    refreshMainOrderOfMerit([...pdcPlayers, player], currentDate);
+                }
+                if (typeof migratePdcTourCardSystem === 'function') {
+                    migratePdcTourCardSystem([...pdcPlayers, player], currentDate);
+                }
+                initAllPlayerSeasonStats();
+                initCareerStats();
+                initCareerChronicle();
+                initRivalries();
+                initPlayerXP();
+                renderOpponentOptions();
+                renderCareerPlayerOptions();
+                updateMailBadge();
+
+                const hubPhoto = document.getElementById('hub-photo');
+                if (hubPhoto) hubPhoto.src = player.photo || 'https://via.placeholder.com/120?text=ZAWODNIK';
+                updateHub();
+                showScreen('screen-hub');
+            } finally {
+                existingPlayerCareerStarting = false;
+                if (startButton) startButton.disabled = false;
             }
-
-            const asNumber = (value, fallback) => Number.isFinite(Number(value)) ? Number(value) : fallback;
-            const overall = Math.round(asNumber(selectedPlayer.ovr, 55));
-            const scoring = Math.round(asNumber(selectedPlayer.scoring, overall));
-            const doubles = Math.round(asNumber(selectedPlayer.doubles, overall));
-            const prizeMoney = asNumber(selectedPlayer.prizeMoney, 0);
-            const proTourPrizeMoney = asNumber(selectedPlayer.proTourPrizeMoney, 0);
-            const pcPrizeMoney = asNumber(selectedPlayer.pcPrizeMoney, 0);
-            const europeanTourPrizeMoney = asNumber(selectedPlayer.europeanTourPrizeMoney, 0);
-            const modPhoto = typeof moddedAssets !== 'undefined' ? moddedAssets.photos[selectedPlayer.name] : '';
-            const modWalkon = typeof moddedAssets !== 'undefined' ? moddedAssets.music[selectedPlayer.name] : '';
-
-            // Przenosimy dokładnie tego zawodnika z puli AI do kariery, bez tworzenia duplikatu.
-            const selectedIndex = pdcPlayers.indexOf(selectedPlayer);
-            if (selectedIndex !== -1) pdcPlayers.splice(selectedIndex, 1);
-
-            player = {
-                ...selectedPlayer,
-                id: selectedPlayer.id,
-                // Zachowujemy powiązanie z wpisem bazowym/moda. Dzięki temu po
-                // ponownym wczytaniu baza nie odtworzy tego samego zawodnika jako AI.
-                sourceName: selectedPlayer.sourceName || selectedPlayer.name,
-                defaultTemplateIndex: Number.isInteger(selectedPlayer.defaultTemplateIndex)
-                    ? selectedPlayer.defaultTemplateIndex
-                    : selectedIndex,
-                overall, ovr: overall, scoring, doubles,
-                baseOvr: overall, baseScoring: scoring, baseDoubles: doubles, form: 0,
-                favoriteDouble: asNumber(selectedPlayer.favoriteDouble, 20),
-                // Prize money determines ranking; the budget is the separate amount used in the shop.
-                budget: Math.min(10000, Math.max(500, Math.round(prizeMoney * 0.002))),
-                prof: Math.min(95, Math.max(55, Math.round(45 + (overall - 40) * 0.75))),
-                pop: Math.min(85, Math.max(20, Math.round(10 + (overall - 40) * 1.2))),
-                stamina: 100,
-                prizeMoney, proTourPrizeMoney, pcPrizeMoney, europeanTourPrizeMoney,
-                photo: modPhoto || selectedPlayer.photo || '',
-                walkon: modWalkon || selectedPlayer.walkon || null,
-                historyPT: selectedPlayer.historyPT && typeof selectedPlayer.historyPT === 'object'
-                    ? { ...selectedPlayer.historyPT }
-                    : {},
-                historyMain: selectedPlayer.historyMain && typeof selectedPlayer.historyMain === 'object'
-                    ? { ...selectedPlayer.historyMain }
-                    : {},
-                mainPrizeHistory: Array.isArray(selectedPlayer.mainPrizeHistory)
-                    ? selectedPlayer.mainPrizeHistory.map(entry => ({ ...entry }))
-                    : [],
-                mainOomHistoryVersion: selectedPlayer.mainOomHistoryVersion,
-                activeSponsors: [], technicalPartner: null,
-                equipment: { board: 0, surround: 0, light: 0 },
-                scoringXP: 0, doublesXP: 0,
-                trainingWeekKey: null, trainingSessionsThisWeek: 0,
-                achievements: [],
-                careerStats: { highestAvg: 0, highestCheckout: 0, total180s: 0, nineDarters: 0, tonPlusCheckouts: 0, trophies: [] },
-                rivalries: {}, activeRivalIds: [], careerChronicle: []
-            };
-
-            // Usuń także historyczne aliasy tego zawodnika, nie tylko dokładnie wybrany wpis.
-            if (typeof removeCareerPlayerFromAiPool === 'function') removeCareerPlayerFromAiPool();
-
-            currentMatch = null;
-            activeTournament = null;
-            tournamentBracket = [];
-            tournamentMatchHistory = [];
-            tournamentRound = 32;
-            lastTournamentResults = '';
-            currentRoundHTML = '';
-            preTournamentRanks = { main: 0, pt: 0, pc: 0 };
-            gdlTable = [];
-            if (typeof resetGrandSlamState === 'function') resetGrandSlamState();
-            emails = [];
-            unreadMailsCount = 0;
-
-            normalizePlayerIds(pdcPlayers, player);
-            if (typeof refreshMainOrderOfMerit === 'function') {
-                refreshMainOrderOfMerit([...pdcPlayers, player], currentDate);
-            }
-            if (typeof migratePdcTourCardSystem === 'function') {
-                migratePdcTourCardSystem([...pdcPlayers, player], currentDate);
-            }
-            initAllPlayerSeasonStats();
-            initCareerStats();
-            initCareerChronicle();
-            initRivalries();
-            initPlayerXP();
-            renderOpponentOptions();
-            renderCareerPlayerOptions();
-            updateMailBadge();
-
-            const hubPhoto = document.getElementById('hub-photo');
-            if (hubPhoto) hubPhoto.src = player.photo || 'https://via.placeholder.com/120?text=ZAWODNIK';
-            updateHub();
-            showScreen('screen-hub');
         }
 
         document.getElementById('create-player-form').addEventListener('submit', async function(e) {
             e.preventDefault();
+            if (typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy()) return;
+            if (typeof waitForPersistedModRestore === 'function') {
+                await waitForPersistedModRestore();
+            }
             
+            if (typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy()) return;
             const potVal = document.getElementById('potential').value;
             let ovr = 55;
             if (potVal === 'weak') ovr = 45;
@@ -128,6 +151,7 @@ function showScreen(screenId) {
             else if (potVal === 'very_good') ovr = 75;
             else if (potVal === 'goat') ovr = 82;
             
+            if (typeof clearCareerProfileMediaRuntime === 'function') clearCareerProfileMediaRuntime();
             player = {
                 id: createEntityId('player'),
                 name: document.getElementById('firstName').value + " " + document.getElementById('lastName').value,
@@ -168,22 +192,27 @@ function showScreen(screenId) {
             const audioInput = document.getElementById('walkonUpload');
 
             try {
-                // Data URL działa także po ponownym uruchomieniu strony, w przeciwieństwie do blob: URL.
+                // Pliki są trzymane jako Bloby w IndexedDB; Data URL pozostaje zgodnym fallbackiem.
                 if (photoInput && photoInput.files.length > 0) {
-                    player.photo = await convertFileToBase64(photoInput.files[0]);
+                    player.photo = typeof setPlayerProfileMediaFromFile === 'function'
+                        ? setPlayerProfileMediaFromFile('photo', photoInput.files[0])
+                        : await convertFileToBase64(photoInput.files[0]);
                     document.getElementById('hub-photo').src = player.photo;
                 } else {
                     document.getElementById('hub-photo').src = "https://via.placeholder.com/120?text=ZAWODNIK";
                 }
 
                 if (audioInput && audioInput.files.length > 0) {
-                    player.walkon = await convertFileToBase64(audioInput.files[0]);
+                    player.walkon = typeof setPlayerProfileMediaFromFile === 'function'
+                        ? setPlayerProfileMediaFromFile('walkon', audioInput.files[0])
+                        : await convertFileToBase64(audioInput.files[0]);
                 }
             } catch (error) {
                 console.error('Nie udało się odczytać pliku profilu.', error);
                 alert('Nie udało się odczytać zdjęcia lub muzyki. Kariera zostanie utworzona bez tego pliku.');
                 player.photo = '';
                 player.walkon = null;
+                if (typeof clearCareerProfileMediaRuntime === 'function') clearCareerProfileMediaRuntime();
             }
 
             updateHub(); 
@@ -537,6 +566,7 @@ function showScreen(screenId) {
         }
 
         function advanceDay({ recoverStamina = true } = {}) {
+            if (typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy()) return false;
             // Starszy zapis mógł powstać już w dniu turnieju, zanim autosave
             // zdążył przypiąć wydarzenie. Nie pozwalamy przeskoczyć takiej imprezy;
             // dotyczy to również wcześniejszych wydarzeń pominiętych przez dawny próg OVR.
@@ -618,6 +648,7 @@ function showScreen(screenId) {
                     if (typeof pdcPlayers !== 'undefined') {
                         pdcPlayers.forEach(p => p.pcPrizeMoney = 0);
                     }
+                    if (typeof invalidatePlayerRankingCache === 'function') invalidatePlayerRankingCache('pc');
                     if (typeof resetEuropeanTourOrderOfMerit === 'function') {
                         resetEuropeanTourOrderOfMerit([...pdcPlayers, player]);
                     }
@@ -625,6 +656,7 @@ function showScreen(screenId) {
                         tournamentDatabase.forEach(tournament => {
                             tournament.completed = false;
                             tournament.historyLogs = '';
+                            delete tournament.matchHistory;
                             delete tournament.staminaChargedYear;
                         });
                     }
@@ -705,8 +737,7 @@ function showScreen(screenId) {
                         // blokowały mu kalendarza ani nie wymagały kliknięcia „Odpuść”.
                         activateTournamentFromCalendar(todayTournament);
                         if (shouldAutoSaveToday && typeof saveGame === 'function') saveGame(true);
-                        startTournament();
-                        return;
+                        return startTournament();
                     }
 
                     // minOvr było dawnym skrótem kwalifikacji. Obecna obsada jest
@@ -724,32 +755,103 @@ function showScreen(screenId) {
             if (Math.random() < 0.15 && typeof randomEventsDatabase !== 'undefined') { triggerRandomEvent(); return; }
             if (Math.random() < 0.12) { 
                 let randomMail = randomEmailsDB[Math.floor(Math.random() * randomEmailsDB.length)];
-                addEmail(randomMail.sender_pl, randomMail.subject_pl, randomMail.body_pl); 
+                addEmail(randomMail.sender_pl, randomMail.subject_pl, randomMail.body_pl, { kind: 'random' }); 
             }
         }
-        // Zmodyfikuj funkcję dodawania e-maili
-    function addEmail(senderKey, subjectKey, bodyKey) {
-    const langSuffix = `_${currentLang}`;
-    
-    // Szukaj w bazie losowych e-maili
-    const emailTemplate = randomEmailsDB.find(e => 
-        (e[`sender${langSuffix}`] === senderKey || e.sender_pl === senderKey)
-    );
-    
-    if (emailTemplate) {
-        const sender = emailTemplate[`sender${langSuffix}`] || emailTemplate.sender_pl;
-        const subject = emailTemplate[`subject${langSuffix}`] || emailTemplate.subject_pl;
-        const body = emailTemplate[`body${langSuffix}`] || emailTemplate.body_pl;
-        
-        emails.unshift({ sender, subject, body, date: currentDate.toLocaleDateString('pl-PL'), read: false });
-    } else {
-        // Fallback dla custom e-maili
-        emails.unshift({ sender: senderKey, subject: subjectKey, body: bodyKey, date: currentDate.toLocaleDateString('pl-PL'), read: false });
+
+    const RANDOM_EMAIL_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
+    const RANDOM_EMAIL_ARCHIVE_LIMIT = 50;
+
+    function getStoredEmailTimestamp(email) {
+        const storedTimestamp = Number(email?.createdAt);
+        if (Number.isFinite(storedTimestamp) && storedTimestamp > 0) return storedTimestamp;
+
+        const legacyDate = String(email?.date || '').match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
+        if (!legacyDate) return null;
+        const parsedTimestamp = new Date(
+            Number(legacyDate[3]),
+            Number(legacyDate[2]) - 1,
+            Number(legacyDate[1])
+        ).getTime();
+        return Number.isFinite(parsedTimestamp) ? parsedTimestamp : null;
     }
-    
-    unreadMailsCount++;
-    updateMailBadge();
-}
+
+    function isStoredRandomEmail(email) {
+        if (email?.kind === 'random') return true;
+        if (email?.kind === 'system') return false;
+        if (!email || typeof email !== 'object') return false;
+
+        return randomEmailsDB.some(template => ['pl', 'en', 'de', 'nl'].some(language =>
+            email.sender === template[`sender_${language}`]
+            && email.subject === template[`subject_${language}`]
+            && email.body === template[`body_${language}`]
+        ));
+    }
+
+    function normalizeStoredEmails(sourceEmails, legacyUnreadCount = 0) {
+        const safeEmails = Array.isArray(sourceEmails)
+            ? sourceEmails.filter(email => email && typeof email === 'object')
+            : [];
+        const unreadLimit = Math.max(0, Math.min(safeEmails.length, Number(legacyUnreadCount) || 0));
+
+        return safeEmails.map((email, index) => {
+            const timestamp = getStoredEmailTimestamp(email);
+            const hasCurrentMetadata = Number.isFinite(Number(email.createdAt))
+                && (email.kind === 'random' || email.kind === 'system');
+            return {
+                ...email,
+                createdAt: timestamp,
+                kind: isStoredRandomEmail(email) ? 'random' : 'system',
+                // Starsze wersje nie aktualizowały pola read. Licznik nieprzeczytanych
+                // pozwala odtworzyć stan: najnowsze wiadomości są na początku tablicy.
+                read: hasCurrentMetadata ? email.read === true : index >= unreadLimit
+            };
+        });
+    }
+
+    function pruneExpiredRandomEmails(referenceDate = currentDate, legacyUnreadCount = unreadMailsCount) {
+        const referenceTimestamp = referenceDate instanceof Date
+            ? referenceDate.getTime()
+            : Number(referenceDate);
+        let retainedRandomEmails = 0;
+
+        emails = normalizeStoredEmails(emails, legacyUnreadCount).filter(email => {
+            if (email.kind !== 'random') return true;
+
+            const isExpired = email.read === true
+                && Number.isFinite(referenceTimestamp)
+                && Number.isFinite(email.createdAt)
+                && referenceTimestamp - email.createdAt > RANDOM_EMAIL_RETENTION_MS;
+            if (isExpired) return false;
+
+            retainedRandomEmails++;
+            return email.read !== true || retainedRandomEmails <= RANDOM_EMAIL_ARCHIVE_LIMIT;
+        });
+        unreadMailsCount = emails.reduce((count, email) => count + (email.read === true ? 0 : 1), 0);
+        return emails;
+    }
+
+    function addEmail(senderKey, subjectKey, bodyKey, options = {}) {
+        const langSuffix = `_${currentLang}`;
+        const emailTemplate = randomEmailsDB.find(e =>
+            (e[`sender${langSuffix}`] === senderKey || e.sender_pl === senderKey)
+        );
+        const sender = emailTemplate ? (emailTemplate[`sender${langSuffix}`] || emailTemplate.sender_pl) : senderKey;
+        const subject = emailTemplate ? (emailTemplate[`subject${langSuffix}`] || emailTemplate.subject_pl) : subjectKey;
+        const body = emailTemplate ? (emailTemplate[`body${langSuffix}`] || emailTemplate.body_pl) : bodyKey;
+
+        emails.unshift({
+            sender,
+            subject,
+            body,
+            date: currentDate.toLocaleDateString('pl-PL'),
+            createdAt: currentDate.getTime(),
+            kind: options.kind === 'random' ? 'random' : 'system',
+            read: false
+        });
+        unreadMailsCount++;
+        updateMailBadge();
+    }
 
         function updateMailBadge() {
             const badge = document.getElementById('mail-badge');
@@ -762,22 +864,16 @@ function showScreen(screenId) {
 
         function showMailbox() {
     const list = document.getElementById('email-list');
-    list.innerHTML = "";
+    pruneExpiredRandomEmails();
+    const mailboxHtml = emails.map(e => `<div style="background:#0f3460; padding:10px; margin-bottom:10px; border-radius:5px; border-left:4px solid var(--accent-green);">
+            <small style="color:#bdc3c7;">${escapeHtml(e.date)} | ${t('t-from')}: <strong>${escapeHtml(e.sender)}</strong></small>
+            <h4 style="margin:5px 0;">${escapeHtml(e.subject)}</h4>
+            <p style="margin:0; font-size:13px;">${sanitizeEmailHtml(e.body)}</p>
+        </div>`).join('');
+    list.innerHTML = mailboxHtml || `<p style='text-align:center;'>${t('t-no-mails')}</p>`;
+    emails.forEach(email => { email.read = true; });
     unreadMailsCount = 0; 
     updateMailBadge();
-
-    if (emails.length === 0) {
-        list.innerHTML = `<p style='text-align:center;'>${t('t-no-mails')}</p>`;
-    } else {
-        emails.forEach(e => {
-            // e.sender, e.subject, e.body już zawierają właściwe wartości
-            list.innerHTML += `<div style="background:#0f3460; padding:10px; margin-bottom:10px; border-radius:5px; border-left:4px solid var(--accent-green);">
-                <small style="color:#bdc3c7;">${escapeHtml(e.date)} | ${t('t-from')}: <strong>${escapeHtml(e.sender)}</strong></small>
-                <h4 style="margin:5px 0;">${escapeHtml(e.subject)}</h4>
-                <p style="margin:0; font-size:13px;">${sanitizeEmailHtml(e.body)}</p>
-            </div>`;
-        });
-    }
     showScreen('screen-mailbox');
 }
 
@@ -821,22 +917,26 @@ function showScreen(screenId) {
 
         function viewTournamentHistory(index) {
             const tour = tournamentDatabase[index];
-            if (tour && tour.historyLogs) {
+            const compactOrLegacyHistory = tour && typeof getCompletedTournamentHistoryHtml === 'function'
+                ? getCompletedTournamentHistoryHtml(tour)
+                : (tour?.historyLogs || '');
+            const dynamicWorldCupHistory = tour?.specialType === 'worldCup' && tour.worldCupWinner && typeof trWorldCup === 'function'
+                ? `<strong>${escapeHtml(getTournamentDisplayName(tour))}</strong><br>${trWorldCup('historyWinner', {
+                    country: escapeHtml(getWorldCupCountryName(tour.worldCupWinner.country)),
+                    players: escapeHtml((tour.worldCupWinner.players || []).join(' / '))
+                })}`
+                : '';
+            const detailedWorldCupHistory = tour?.specialType === 'worldCup' && tour.worldCupWinner &&
+                typeof buildWorldCupTournamentHistory === 'function' &&
+                typeof worldCupState !== 'undefined' && worldCupState?.completed
+                ? buildWorldCupTournamentHistory(tour.worldCupWinner)
+                : '';
+            const historyHtml = detailedWorldCupHistory || compactOrLegacyHistory || dynamicWorldCupHistory;
+            if (tour && historyHtml) {
                 document.getElementById('t-tour-end-title').innerText = t('t-tour-end-title');
-                const dynamicWorldCupHistory = tour.specialType === 'worldCup' && tour.worldCupWinner && typeof trWorldCup === 'function'
-                    ? `<strong>${escapeHtml(getTournamentDisplayName(tour))}</strong><br>${trWorldCup('historyWinner', {
-                        country: escapeHtml(getWorldCupCountryName(tour.worldCupWinner.country)),
-                        players: escapeHtml((tour.worldCupWinner.players || []).join(' / '))
-                    })}`
-                    : tour.historyLogs;
-                const detailedWorldCupHistory = tour.specialType === 'worldCup' && tour.worldCupWinner &&
-                    typeof buildWorldCupTournamentHistory === 'function' &&
-                    typeof worldCupState !== 'undefined' && worldCupState?.completed
-                    ? buildWorldCupTournamentHistory(tour.worldCupWinner)
-                    : '';
                 // Nowe podsumowania World Cup zawierają pełną fazę grupową i pucharową.
                 // Dla starych zapisów bez tego szczegółowego logu zostawiamy krótki komunikat o mistrzu.
-                document.getElementById('results-content').innerHTML = detailedWorldCupHistory || tour.historyLogs || dynamicWorldCupHistory;
+                document.getElementById('results-content').innerHTML = historyHtml;
                 document.getElementById('t-btn-next-round').style.display = 'none';
                 const simulateTournamentButton = document.getElementById('t-btn-sim-tournament-results');
                 if (simulateTournamentButton) simulateTournamentButton.style.display = 'none';
@@ -1105,9 +1205,6 @@ function showScreen(screenId) {
         }
 
         function showPdcRankings(type = 'main') {
-            if (type === 'protour' && typeof refreshProTourOrderOfMerit === 'function') {
-                refreshProTourOrderOfMerit([...pdcPlayers, player], currentDate);
-            }
             document.getElementById('btn-rank-main').style.background = type === 'main' ? 'var(--accent-green)' : '#34495e';
             document.getElementById('btn-rank-pt').style.background = type === 'protour' ? 'var(--accent-green)' : '#34495e';
             document.getElementById('btn-rank-pc').style.background = type === 'pc' ? 'var(--accent-green)' : '#34495e';
@@ -1131,7 +1228,7 @@ function showScreen(screenId) {
             }
 
             const list = document.getElementById('pdc-list');
-            list.innerHTML = "";
+            let rankingHtml = '';
 
             if (type === 'worldMasters') {
                 if (typeof renderWorldMastersRanking === 'function') renderWorldMastersRanking(list);
@@ -1158,7 +1255,7 @@ function showScreen(screenId) {
                     return b.legsWon - a.legsWon;
                 });
                 
-                list.innerHTML += `<div style="border-bottom: 2px solid var(--accent-green); padding: 5px 10px; display: flex; font-size: 12px; color: #bdc3c7; font-weight: bold; background: #0f3460;">
+                rankingHtml += `<div style="border-bottom: 2px solid var(--accent-green); padding: 5px 10px; display: flex; font-size: 12px; color: #bdc3c7; font-weight: bold; background: #0f3460;">
                     <div style="flex: 3;">${t('t-gdl-player')}</div>
                     <div style="flex: 1; text-align: center;">${t('t-gdl-pts')}</div>
                     <div style="flex: 1; text-align: center;">${t('t-gdl-nights')}</div>
@@ -1175,7 +1272,7 @@ function showScreen(screenId) {
                     let legDiff = row.legsWon - row.legsLost;
                     let sign = legDiff > 0 ? '+' : '';
                     
-                    list.innerHTML += `<button type="button" class="ranking-player-row" data-player-id="${escapeHtml(row.player.id)}" style="${borderStyle} ${bgStyle}">
+                    rankingHtml += `<button type="button" class="ranking-player-row" data-player-id="${escapeHtml(row.player.id)}" style="${borderStyle} ${bgStyle}">
                         <div style="flex: 3;">
                             <strong>${index + 1}.</strong> ${getFlagImg(row.player.country)} ${escapeHtml(row.player.name)} ${isMe ? "<b style='color:var(--accent-green)'>(TY)</b>" : ""}
                         </div>
@@ -1190,25 +1287,17 @@ function showScreen(screenId) {
                         </div>
                     </button>`;
                 });
+                list.innerHTML = rankingHtml;
                 attachRankingProfileLinks(list, type);
                 showScreen('screen-pdc');
                 return;
             }
 
             // --- STANDARDOWE RANKINGI OOM / PT / PC ---
-            const combinedPlayers = [...pdcPlayers, player];
-            
-            let sortedPlayers = combinedPlayers.sort((a, b) => {
-                if (type === 'protour') return b.proTourPrizeMoney - a.proTourPrizeMoney;
-                if (type === 'pc') return b.pcPrizeMoney - a.pcPrizeMoney;
-                if (type === 'europeanTour') return typeof compareEuropeanTourOrderOfMerit === 'function'
-                    ? compareEuropeanTourOrderOfMerit(a, b)
-                    : (b.europeanTourPrizeMoney || 0) - (a.europeanTourPrizeMoney || 0);
-                return b.prizeMoney - a.prizeMoney; 
-            });
+            const sortedPlayers = getCachedRankedPlayers(type);
 
             if (type === 'europeanTour') {
-                list.innerHTML = '<div style="border-bottom: 2px solid var(--accent-green); padding: 8px 10px; color: #bdc3c7; font-size: 12px; background: #0f3460;">European Tour Order of Merit · Top 32 kwalifikuje się do European Championship</div>';
+                rankingHtml = '<div style="border-bottom: 2px solid var(--accent-green); padding: 8px 10px; color: #bdc3c7; font-size: 12px; background: #0f3460;">European Tour Order of Merit · Top 32 kwalifikuje się do European Championship</div>';
             }
             
             sortedPlayers.forEach((p, index) => {
@@ -1231,7 +1320,7 @@ function showScreen(screenId) {
                     ? `<span title="${escapeHtml(typeof getPdcTourCardLabel === 'function' ? getPdcTourCardLabel(p) : 'Posiadacz karty PDC')}" style="display:inline-block; margin-left:6px; padding:2px 6px; border-radius:10px; background:#8e44ad; color:white; font-size:10px; font-weight:bold;">PDC CARD</span>`
                     : '';
 
-                list.innerHTML += `<button type="button" class="ranking-player-row" data-player-id="${escapeHtml(p.id)}" style="border-bottom: 1px solid var(--border-color); ${bgStyle}">
+                rankingHtml += `<button type="button" class="ranking-player-row" data-player-id="${escapeHtml(p.id)}" style="border-bottom: 1px solid var(--border-color); ${bgStyle}">
                     <div>
                         <strong>#${index + 1}</strong> ${getFlagImg(p.country)} ${escapeHtml(p.name)}${tourCardBadge}
                         <span style="color: #bdc3c7; font-size: 13px; margin-left: 5px;">OVR: ${displayOvr} ${formText}</span> ${isMe ? "<b>(TY)</b>" : ""}
@@ -1241,6 +1330,7 @@ function showScreen(screenId) {
                     </div>
                 </button>`;
             });
+            list.innerHTML = rankingHtml;
             attachRankingProfileLinks(list, type);
             showScreen('screen-pdc');
         }
@@ -1249,25 +1339,65 @@ function showScreen(screenId) {
         
         let tournamentRound = 32; 
         let tournamentBracket = [];
-        let tournamentMatchHistory = [];
+        let tournamentMatchHistory = null;
         let preTournamentRanks = { main: 0, pt: 0, pc: 0, et: 0 };
         let lastTournamentResults = "";
         let currentRoundHTML = "";
 
-        function getPlayerRank(type) {
-            let combinedPlayers = [...pdcPlayers, player];
-            if (type === 'protour' && typeof refreshProTourOrderOfMerit === 'function') {
+        const playerRankingCache = new Map();
+
+        function invalidatePlayerRankingCache(type = null) {
+            if (type) playerRankingCache.delete(type);
+            else playerRankingCache.clear();
+        }
+
+        function getPlayerRankingCacheValue(candidate, type) {
+            if (type === 'protour') return Number(candidate?.proTourPrizeMoney) || 0;
+            if (type === 'pc') return Number(candidate?.pcPrizeMoney) || 0;
+            if (type === 'europeanTour') {
+                return [
+                    Number(candidate?.europeanTourPrizeMoney) || 0,
+                    Number(candidate?.prizeMoney) || 0,
+                    Number(candidate?.ovr) || 0,
+                    String(candidate?.name || '')
+                ].join('|');
+            }
+            return Number(candidate?.prizeMoney) || 0;
+        }
+
+        function getCachedRankedPlayers(type = 'main') {
+            const rankingType = ['main', 'protour', 'pc', 'europeanTour'].includes(type) ? type : 'main';
+            const combinedPlayers = [...pdcPlayers, player].filter(candidate => candidate && !candidate.isBye);
+            if (rankingType === 'protour' && typeof refreshProTourOrderOfMerit === 'function') {
                 refreshProTourOrderOfMerit(combinedPlayers, currentDate);
             }
-            let sortedPlayers = combinedPlayers.sort((a, b) => {
-                if (type === 'protour') return b.proTourPrizeMoney - a.proTourPrizeMoney;
-                if (type === 'pc') return b.pcPrizeMoney - a.pcPrizeMoney;
-                if (type === 'europeanTour') return typeof compareEuropeanTourOrderOfMerit === 'function'
-                    ? compareEuropeanTourOrderOfMerit(a, b)
-                    : (b.europeanTourPrizeMoney || 0) - (a.europeanTourPrizeMoney || 0);
-                return b.prizeMoney - a.prizeMoney;
+
+            const cached = playerRankingCache.get(rankingType);
+            const canReuse = cached
+                && cached.candidates.length === combinedPlayers.length
+                && combinedPlayers.every((candidate, index) =>
+                    cached.candidates[index] === candidate
+                    && cached.values[index] === getPlayerRankingCacheValue(candidate, rankingType));
+            if (canReuse) return cached.rankedPlayers;
+
+            const rankedPlayers = [...combinedPlayers].sort((first, second) => {
+                if (rankingType === 'protour') return (second.proTourPrizeMoney || 0) - (first.proTourPrizeMoney || 0);
+                if (rankingType === 'pc') return (second.pcPrizeMoney || 0) - (first.pcPrizeMoney || 0);
+                if (rankingType === 'europeanTour') return typeof compareEuropeanTourOrderOfMerit === 'function'
+                    ? compareEuropeanTourOrderOfMerit(first, second)
+                    : (second.europeanTourPrizeMoney || 0) - (first.europeanTourPrizeMoney || 0);
+                return (second.prizeMoney || 0) - (first.prizeMoney || 0);
             });
-            return sortedPlayers.findIndex(isCurrentPlayer) + 1;
+            playerRankingCache.set(rankingType, {
+                candidates: combinedPlayers,
+                values: combinedPlayers.map(candidate => getPlayerRankingCacheValue(candidate, rankingType)),
+                rankedPlayers
+            });
+            return rankedPlayers;
+        }
+
+        function getPlayerRank(type) {
+            return getCachedRankedPlayers(type).findIndex(isCurrentPlayer) + 1;
         }
 
         function sendTournamentSummaryEmail(tName, prize, wonTournament) {

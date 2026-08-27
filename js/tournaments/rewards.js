@@ -145,6 +145,7 @@ function getPrizeMoney(tName, round, won) {
             if (isPC) {
                 // Nie bronimy tu żadnych punktów - one tylko rosną przez cały rok.
                 p.pcPrizeMoney += amount;
+                if (typeof invalidatePlayerRankingCache === 'function') invalidatePlayerRankingCache('pc');
             }
 
             // European Tour OOM jest osobną, sezonową klasyfikacją służącą

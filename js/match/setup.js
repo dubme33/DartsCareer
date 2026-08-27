@@ -286,7 +286,8 @@ function startMatch(vsAI) {
 
                 if (tournamentBracket.length === 1) {
                     activeTournament.completed = true;
-                    activeTournament.historyLogs = lastTournamentResults; 
+                    if (typeof finalizeTournamentMatchHistory === 'function') finalizeTournamentMatchHistory(activeTournament);
+                    else activeTournament.historyLogs = lastTournamentResults;
                     
                     let winner = tournamentBracket[0];
                     let winPrize = getPrizeMoney(activeTournament.name, 2, true);

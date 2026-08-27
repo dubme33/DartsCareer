@@ -1,6 +1,75 @@
 // Główny PDC Order of Merit: wyłącznie nagrody z turniejów rankingowych
 // zdobyte w kroczącym okresie dwóch lat kalendarzowych.
 const MAIN_ORDER_OF_MERIT_VERSION = 2;
+let mainOrderOfMeritRefreshCache = null;
+
+function getMainOomExpiryTime(earnedAt) {
+    const expiryDate = new Date(Number(earnedAt));
+    if (Number.isNaN(expiryDate.getTime())) return null;
+    expiryDate.setFullYear(expiryDate.getFullYear() + 2);
+    return expiryDate.getTime();
+}
+
+function getMainOomRefreshSnapshot(candidate) {
+    const history = Array.isArray(candidate?.mainPrizeHistory) ? candidate.mainPrizeHistory : null;
+    const lastEntry = history?.at(-1);
+    const lastEarnedAt = Number(lastEntry?.earnedAt);
+    const lastAmount = Number(lastEntry?.amount);
+    return {
+        candidate,
+        history,
+        historyLength: history?.length || 0,
+        lastEarnedAt: Number.isFinite(lastEarnedAt) ? lastEarnedAt : null,
+        lastAmount: Number.isFinite(lastAmount) ? lastAmount : null,
+        prizeMoney: Number(candidate?.prizeMoney) || 0,
+        version: candidate?.mainOomHistoryVersion
+    };
+}
+
+function isMainOomRefreshSnapshotCurrent(snapshot, candidate) {
+    if (!snapshot || snapshot.candidate !== candidate) return false;
+    const history = Array.isArray(candidate?.mainPrizeHistory) ? candidate.mainPrizeHistory : null;
+    const lastEntry = history?.at(-1);
+    const lastEarnedAt = Number(lastEntry?.earnedAt);
+    const lastAmount = Number(lastEntry?.amount);
+    return snapshot.history === history
+        && snapshot.historyLength === (history?.length || 0)
+        && snapshot.lastEarnedAt === (Number.isFinite(lastEarnedAt) ? lastEarnedAt : null)
+        && snapshot.lastAmount === (Number.isFinite(lastAmount) ? lastAmount : null)
+        && snapshot.prizeMoney === (Number(candidate?.prizeMoney) || 0)
+        && snapshot.version === candidate?.mainOomHistoryVersion;
+}
+
+function canReuseMainOrderOfMeritRefresh(candidates, referenceTime) {
+    const cache = mainOrderOfMeritRefreshCache;
+    if (!cache || candidates.length < 64 || cache.candidates.length !== candidates.length) return false;
+    if (referenceTime < cache.referenceTime) return false;
+    if (Number.isFinite(cache.nextExpiryTime) && referenceTime >= cache.nextExpiryTime) return false;
+    return candidates.every((candidate, index) =>
+        isMainOomRefreshSnapshotCurrent(cache.candidates[index], candidate));
+}
+
+function updateMainOrderOfMeritRefreshCache(candidates, referenceTime) {
+    let nextExpiryTime = Infinity;
+    candidates.forEach(candidate => {
+        (Array.isArray(candidate?.mainPrizeHistory) ? candidate.mainPrizeHistory : []).forEach(entry => {
+            const expiryTime = getMainOomExpiryTime(entry?.earnedAt);
+            if (Number.isFinite(expiryTime) && expiryTime > referenceTime && expiryTime < nextExpiryTime) {
+                nextExpiryTime = expiryTime;
+            }
+        });
+    });
+    mainOrderOfMeritRefreshCache = {
+        referenceTime,
+        nextExpiryTime,
+        candidates: candidates.map(getMainOomRefreshSnapshot)
+    };
+}
+
+function invalidateMainOrderOfMeritRefreshCache() {
+    mainOrderOfMeritRefreshCache = null;
+    if (typeof invalidatePlayerRankingCache === 'function') invalidatePlayerRankingCache('main');
+}
 
 function getMainOomReferenceTime(referenceDate = typeof currentDate !== 'undefined' ? currentDate : null) {
     const time = referenceDate instanceof Date
@@ -254,6 +323,7 @@ function refreshMainOrderOfMerit(candidates, referenceDate) {
     const referenceTime = getMainOomReferenceTime(referenceDate);
     const cutoff = getMainOomCutoffTime(referenceTime);
     const list = Array.isArray(candidates) ? candidates : [];
+    if (canReuseMainOrderOfMeritRefresh(list, referenceTime)) return false;
 
     list.forEach(candidate => {
         if (!candidate || candidate.isBye) return;
@@ -271,6 +341,9 @@ function refreshMainOrderOfMerit(candidates, referenceDate) {
             candidate.mainOomTourCardProtected = index < 64;
         });
     }
+    if (list.length >= 64) updateMainOrderOfMeritRefreshCache(list, referenceTime);
+    if (typeof invalidatePlayerRankingCache === 'function') invalidatePlayerRankingCache('main');
+    return true;
 }
 
 function awardMainOrderOfMeritPrizeMoney(candidate, amount, tournamentOrName, referenceDate) {
@@ -285,6 +358,10 @@ function awardMainOrderOfMeritPrizeMoney(candidate, amount, tournamentOrName, re
     if (!candidate.historyMain || typeof candidate.historyMain !== 'object') candidate.historyMain = {};
     candidate.historyMain[tournamentName] = (Number(candidate.historyMain[tournamentName]) || 0) + prize;
     refreshMainOrderOfMerit([candidate], referenceTime);
+    // Pełny ranking musi zostać ponownie sprawdzony po zmianie historii jednego gracza.
+    // Snapshot wykrywa zmianę również bez tego wywołania, ale jawne unieważnienie
+    // od razu usuwa nieaktualną mapę pozycji używaną przez interfejs.
+    invalidateMainOrderOfMeritRefreshCache();
     return true;
 }
 

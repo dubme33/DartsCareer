@@ -118,10 +118,33 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
             };
         }
 
+        function getTournamentDatabaseForSave() {
+            return (Array.isArray(tournamentDatabase) ? tournamentDatabase : []).map(tournament => {
+                if (!isPlainObject(tournament)) return tournament;
+                const savedTournament = { ...tournament };
+                const hasCompactHistory = typeof hasTournamentMatchHistory === 'function'
+                    && hasTournamentMatchHistory(savedTournament.matchHistory);
+                const canRebuildWorldCupHistory = savedTournament.specialType === 'worldCup'
+                    && typeof worldCupState !== 'undefined'
+                    && worldCupState?.completed;
+
+                // Nowe historie przechowują wyłącznie kompaktowe rekordy meczów.
+                // Stary HTML pozostaje tylko przy turniejach ze starszych zapisów,
+                // których nie da się już wiarygodnie przekonwertować na dane.
+                if (hasCompactHistory || canRebuildWorldCupHistory) delete savedTournament.historyLogs;
+                return savedTournament;
+            });
+        }
+
         function buildGameState() {
+            if (typeof pruneExpiredRandomEmails === 'function') pruneExpiredRandomEmails(currentDate, unreadMailsCount);
+            const hasActiveCompactHistory = Boolean(activeTournament
+                && typeof hasTournamentMatchHistory === 'function'
+                && hasTournamentMatchHistory(tournamentMatchHistory));
+            const shouldSaveLegacyActiveHtml = Boolean(activeTournament && !hasActiveCompactHistory);
             return {
-                version: 2,
-                player, pdcPlayers, tournamentDatabase,
+                version: 4,
+                player, pdcPlayers, tournamentDatabase: getTournamentDatabaseForSave(),
                 currentDate: currentDate.getTime(), emails, unreadMailsCount,
                 gdlTable: Array.isArray(gdlTable)
                     ? gdlTable.map(row => isPlainObject(row) ? { ...row, player: getPlayerSaveReference(row.player) } : row)
@@ -130,7 +153,9 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
                 tournamentRound,
                 tournamentBracket: Array.isArray(tournamentBracket) ? tournamentBracket.map(getPlayerSaveReference) : [],
                 preTournamentRanks,
-                lastTournamentResults, currentRoundHTML,
+                tournamentMatchHistory: hasActiveCompactHistory ? tournamentMatchHistory : null,
+                lastTournamentResults: shouldSaveLegacyActiveHtml ? lastTournamentResults : '',
+                currentRoundHTML: shouldSaveLegacyActiveHtml ? currentRoundHTML : '',
                 worldCupState: typeof worldCupState !== 'undefined' ? getWorldCupStateForSave(worldCupState) : null,
                 worldMastersState: typeof worldMastersState !== 'undefined' ? worldMastersState : null,
                 grandSlamState: typeof getGrandSlamStateForSave === 'function' ? getGrandSlamStateForSave() : null,
@@ -186,8 +211,94 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
             return matchingAi.length === 1 ? matchingAi[0] : savedPlayer;
         }
 
-        function repairRetiredTournamentBracket(bracket) {
+        function getTournamentRetirementReplacementPool(tournament, candidates) {
+            if (!tournament || tournament.completed) return [];
+            const name = `${tournament.name || ''} ${tournament.sourceName || ''}`.toLowerCase();
+            const rankBy = property => [...candidates].sort((first, second) =>
+                (Number(second[property]) || 0) - (Number(first[property]) || 0)
+                || (Number(second.prizeMoney) || 0) - (Number(first.prizeMoney) || 0)
+                || (Number(second.ovr ?? second.overall) || 0) - (Number(first.ovr ?? first.overall) || 0));
+
+            if (tournament.specialType === 'pdcQSchool') {
+                return rankBy('prizeMoney').filter(candidate => candidate.hasTourCard !== true);
+            }
+            if (tournament.specialType === 'pdcTourCardQualifier') {
+                return typeof getPdcTourCardQualifierEligiblePlayers === 'function'
+                    ? getPdcTourCardQualifierEligiblePlayers(tournament, candidates)
+                    : [];
+            }
+            if (tournament.specialType === 'worldMastersFinalsQualifier') {
+                return typeof getWorldMastersFinalsQualifierEligiblePlayers === 'function'
+                    ? getWorldMastersFinalsQualifierEligiblePlayers()
+                    : [];
+            }
+            if (tournament.specialType === 'continentalQualifier') {
+                const mainTournament = typeof getLinkedContinentalTour === 'function'
+                    ? getLinkedContinentalTour(tournament) : null;
+                if (!mainTournament || typeof isContinentalQualifierPathEligible !== 'function') return [];
+                const path = getContinentalQualifierPath(tournament);
+                const state = ensureContinentalQualificationState(mainTournament, candidates);
+                const excludedKeys = getCompletedContinentalQualifierKeys(state, path);
+                return candidates.filter(candidate => isContinentalQualifierPathEligible(candidate, mainTournament, path)
+                    && !excludedKeys.has(getContinentalQualificationPlayerKey(candidate)))
+                    .sort((first, second) => sortContinentalQualificationRank(first, second,
+                        path === 'card' ? 'proTourPrizeMoney' : 'ovr'));
+            }
+            if (tournament.specialType === 'worldCup' || tournament.specialType === 'worldCupQualifiers') {
+                // Reprezentacje mają własną naprawę składów według kraju.
+                return [];
+            }
+            if (name.includes('premier') || name.includes('global darts league')) {
+                const rows = typeof gdlTable !== 'undefined' && Array.isArray(gdlTable) ? [...gdlTable] : [];
+                rows.sort((first, second) => second.points - first.points
+                    || (second.legsWon - second.legsLost) - (first.legsWon - first.legsLost));
+                return (name.includes('play-off') ? rows.slice(0, 4) : rows).map(row => row.player);
+            }
+            if (name.includes('players championship finals') || name.includes('pro players finals')) {
+                return rankBy('pcPrizeMoney');
+            }
+            if (name.includes('european championship') || name.includes('continental championship')) {
+                return typeof getEuropeanTourOrderOfMerit === 'function'
+                    ? getEuropeanTourOrderOfMerit(candidates) : rankBy('europeanTourPrizeMoney');
+            }
+            if (name.includes('players championship') || name.includes('pro players cup')
+                || name.includes('uk open') || name.includes('british open')) {
+                const withdrawnKeys = new Set(tournament.playersChampionshipWithdrawals || []);
+                return rankBy('prizeMoney').filter(candidate => candidate.hasTourCard !== true
+                    && !withdrawnKeys.has(candidate.id || candidate.name));
+            }
+            if (tournament.specialType === 'worldMasters' || tournament.specialType === 'worldMastersFinals') {
+                return rankBy('prizeMoney').sort((first, second) =>
+                    Number(second.hasTourCard === true) - Number(first.hasTourCard === true));
+            }
+            if (name.includes('world darts championship') || name.includes('global darts championship')) {
+                return typeof buildWorldChampionshipQualification === 'function'
+                    ? buildWorldChampionshipQualification(candidates).participants : [];
+            }
+            if (typeof isContinentalTourTournament === 'function' && isContinentalTourTournament(tournament)) {
+                const state = tournament.continentalQualification;
+                return state && typeof resolveContinentalQualificationPlayers === 'function'
+                    ? resolveContinentalQualificationPlayers([
+                        ...(state.oomPlayerIds || []), ...(state.proTourPlayerIds || []), ...(state.qualifiedPlayerIds || [])
+                    ], candidates) : [];
+            }
+            if (name.includes('grand slam') || name.includes("champion's slam")) {
+                const state = tournament.pdcTourCardQualification;
+                return state && typeof resolvePdcTourCardPlayerKeys === 'function'
+                    ? resolvePdcTourCardPlayerKeys([
+                        ...(state.automaticPlayerIds || []), ...(state.qualifiedPlayerIds || [])
+                    ], candidates) : [];
+            }
+            // Matchplay, Grand Prix i pozostałe turnieje: Top 16 OOM + Top 16 ProTour.
+            const seeds = rankBy('prizeMoney').slice(0, 16);
+            const seedKeys = new Set(seeds.map(candidate => candidate.id || `${candidate.name}|${candidate.country}`));
+            return [...seeds, ...rankBy('proTourPrizeMoney')
+                .filter(candidate => !seedKeys.has(candidate.id || `${candidate.name}|${candidate.country}`)).slice(0, 16)];
+        }
+
+        function repairRetiredTournamentBracket(bracket, tournament = activeTournament) {
             if (!Array.isArray(bracket)) return [];
+            if (!tournament || tournament.completed) return bracket;
             const getIdentity = candidate => {
                 if (!candidate || candidate.isBye) return '';
                 if (candidate.id) return `id:${candidate.id}`;
@@ -195,19 +306,39 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
                 return `${candidate.name || ''}|${candidate.country || ''}`;
             };
             const usedIdentities = new Set(bracket.map(getIdentity).filter(Boolean));
-            const isUnavailable = candidate => !candidate
+            const isRetired = candidate => !candidate
                 || (typeof isRetiredPlayer === 'function' && isRetiredPlayer(candidate));
-            const replacements = (Array.isArray(pdcPlayers) ? pdcPlayers : [])
-                .filter(candidate => candidate && !candidate.isBye && !isUnavailable(candidate)
-                    && (typeof isPdcTourCardEligiblePlayer !== 'function' || isPdcTourCardEligiblePlayer(candidate)))
-                .sort((first, second) => Number(first.hasTourCard === true) - Number(second.hasTourCard === true)
-                    || (Number(second.prizeMoney) || 0) - (Number(first.prizeMoney) || 0)
-                    || (Number(second.ovr) || 0) - (Number(first.ovr) || 0));
+            const restrictedQualifier = ['pdcQSchool', 'pdcTourCardQualifier', 'continentalQualifier', 'worldMastersFinalsQualifier']
+                .includes(tournament.specialType);
+            if (!restrictedQualifier && !bracket.some(isRetired)) return bracket;
+            const availablePlayers = [...(Array.isArray(pdcPlayers) ? pdcPlayers : []), ...(player?.name ? [player] : [])]
+                .filter(candidate => candidate && !candidate.isBye && !candidate.isWorldCupGuest && !isRetired(candidate)
+                    && (typeof isPdcTourCardEligiblePlayer !== 'function' || isPdcTourCardEligiblePlayer(candidate)));
+            const candidates = [...new Map(availablePlayers.map(candidate => [getIdentity(candidate), candidate])).values()];
+            const activeIdentities = new Set(candidates.map(getIdentity));
+            const replacements = getTournamentRetirementReplacementPool(tournament, candidates)
+                .filter(candidate => candidate && activeIdentities.has(getIdentity(candidate)));
+            const eligibleIdentities = new Set(replacements.map(getIdentity));
+            const isUnavailable = candidate => !candidate || (!candidate.isBye && (isRetired(candidate)
+                || (restrictedQualifier && !eligibleIdentities.has(getIdentity(candidate)))));
+            if (!bracket.some(isUnavailable)) return bracket;
+
+            // W rozpoczętych turniejach nie dopisujemy nowych uczestników do
+            // późniejszej rundy ani nie przywracamy wyeliminowanych zawodników.
+            const history = typeof tournamentMatchHistory !== 'undefined' ? tournamentMatchHistory : null;
+            const hasPlayedMatches = (Array.isArray(history?.blocks) && history.blocks.some(block =>
+                block?.matches?.length > 0 || block?.type === 'grandSlamGroups'))
+                || (typeof lastTournamentResults === 'string' && lastTournamentResults.trim().length > 0)
+                || (typeof currentRoundHTML === 'string' && currentRoundHTML.trim().length > 0)
+                || Object.keys(tournament.spectatedMatchResults || {}).length > 0;
 
             return bracket.map(candidate => {
                 if (!isUnavailable(candidate)) return candidate;
-                const replacement = replacements.find(candidate => !usedIdentities.has(getIdentity(candidate)));
-                if (!replacement) return { name: 'BYE', isBye: true };
+                const replacement = !hasPlayedMatches && replacements.find(candidate =>
+                    !usedIdentities.has(getIdentity(candidate))
+                    && !(typeof isCurrentPlayer === 'function' && isCurrentPlayer(candidate))
+                    && getIdentity(candidate) !== getIdentity(player));
+                if (!replacement) return { name: '(BYE)', isBye: true, country: 'Brak', ovr: 0, overall: 0 };
                 usedIdentities.add(getIdentity(replacement));
                 return replacement;
             });
@@ -420,41 +551,159 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
             }
         }
 
-        function saveGame(isAutoSave = false) {
-            let gameState = null;
-            try {
-                gameState = buildGameState();
-                localStorage.setItem('dartsCareerSave', JSON.stringify(gameState));
-                if (!isAutoSave) alert(t('t-alert-save-ok'));
-                return true;
-            } catch (error) {
-                console.error('Nie udało się zapisać kariery.', error);
+        const LEGACY_CAREER_SAVE_KEY = 'dartsCareerSave';
+        const CAREER_AUTOSAVE_DEBOUNCE_MS = 250;
+        let pendingCareerAutosaveTimer = null;
+        let pendingCareerAutosaveResolvers = [];
+        let careerSaveWriteQueue = Promise.resolve();
 
-                if (!gameState) {
-                    if (!isAutoSave) alert('Nie udało się przygotować zapisu kariery. Pobierz plik .JSON, aby nie utracić postępów.');
-                    return false;
-                }
+        function waitForCareerSaveWrites() {
+            return careerSaveWriteQueue;
+        }
 
-                // Zdjęcie i muzyka są wyłącznie elementami wizualnymi. Jeżeli to one
-                // przekraczają limit localStorage, zachowujemy całą karierę bez nich.
+        function writeCareerStateToLegacyStorage(gameState) {
+            localStorage.setItem(LEGACY_CAREER_SAVE_KEY, JSON.stringify(gameState));
+        }
+
+        async function persistCareerGameState(gameState) {
+            if (typeof canUseIndexedDbCareerStorage === 'function'
+                && canUseIndexedDbCareerStorage()
+                && typeof writeCareerStateToIndexedDb === 'function') {
                 try {
-                    localStorage.setItem('dartsCareerSave', JSON.stringify(getSaveStateWithoutProfileMedia(gameState)));
-                    console.warn('Kariera została zapisana bez zdjęcia i muzyki profilu z powodu limitu localStorage.');
-                    if (!isAutoSave) alert('Kariera została zapisana. W zapisie przeglądarki pominięto tylko zdjęcie i muzykę profilu, bo przekraczały limit pamięci. Aby zachować je również, pobierz plik .JSON.');
-                    return true;
-                } catch (fallbackError) {
-                    console.error('Nie udało się zapisać także odchudzonej kariery.', fallbackError);
-                    if (!isAutoSave) alert('Nie udało się zapisać kariery w pamięci przeglądarki. Pobierz plik .JSON, aby nie utracić postępów.');
-                    return false;
+                    const indexedDbPayload = typeof createCareerIndexedDbPayload === 'function'
+                        ? await createCareerIndexedDbPayload(gameState)
+                        : { state: gameState, media: undefined, mediaByKind: {} };
+                    await writeCareerStateToIndexedDb(indexedDbPayload.state, indexedDbPayload.media);
+                    if (typeof applyCareerProfileMediaToPlayer === 'function') {
+                        applyCareerProfileMediaToPlayer(indexedDbPayload.mediaByKind);
+                    }
+                    return { success: true, backend: 'indexeddb', omittedMedia: false };
+                } catch (indexedDbError) {
+                    console.warn('Pełny zapis IndexedDB nie powiódł się. Próba bez multimediów.', indexedDbError);
+                    try {
+                        const compactIndexedDbState = getSaveStateWithoutProfileMedia(gameState);
+                        delete compactIndexedDbState.profileMediaRefs;
+                        const clearedMedia = typeof CAREER_PROFILE_MEDIA_KEYS !== 'undefined'
+                            ? Object.fromEntries(Object.values(CAREER_PROFILE_MEDIA_KEYS).map(key => [key, null]))
+                            : undefined;
+                        await writeCareerStateToIndexedDb(compactIndexedDbState, clearedMedia);
+                        return { success: true, backend: 'indexeddb', omittedMedia: true };
+                    } catch (compactIndexedDbError) {
+                        console.warn('Odchudzony zapis IndexedDB nie powiódł się. Używam awaryjnego localStorage.', compactIndexedDbError);
+                    }
+                }
+            }
+
+            let portableGameState = null;
+            try {
+                portableGameState = typeof createPortableCareerGameState === 'function'
+                    ? await createPortableCareerGameState(gameState)
+                    : gameState;
+            } catch (portableStateError) {
+                console.warn('Nie udało się przygotować multimediów dla localStorage. Zapiszę karierę bez nich.', portableStateError);
+            }
+            const withoutMedia = getSaveStateWithoutProfileMedia(portableGameState || gameState);
+            try {
+                if (!portableGameState) throw new Error('Brak przenośnej wersji multimediów profilu.');
+                writeCareerStateToLegacyStorage(portableGameState);
+                return { success: true, backend: 'localStorage', omittedMedia: false };
+            } catch (legacyError) {
+                console.warn('Pełny zapis localStorage nie powiódł się. Próba bez multimediów.', legacyError);
+                try {
+                    writeCareerStateToLegacyStorage(withoutMedia);
+                    return { success: true, backend: 'localStorage', omittedMedia: true };
+                } catch (compactLegacyError) {
+                    console.error('Nie udało się zapisać kariery.', compactLegacyError);
+                    return { success: false, backend: null, omittedMedia: false };
                 }
             }
         }
 
+        async function performCareerSave(isAutoSave = false) {
+            while (typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy()) {
+                if (!await waitForTournamentSimulation()) return false;
+            }
+            if (typeof isTournamentSimulationSaveSafe === 'function' && !isTournamentSimulationSaveSafe()) return false;
+            let gameState;
+            try {
+                gameState = buildGameState();
+            } catch (error) {
+                console.error('Nie udało się przygotować zapisu kariery.', error);
+                if (!isAutoSave) alert('Nie udało się przygotować zapisu kariery. Pobierz plik .JSON, aby nie utracić postępów.');
+                return false;
+            }
+
+            const queuedWrite = careerSaveWriteQueue
+                .catch(() => undefined)
+                .then(() => persistCareerGameState(gameState));
+            careerSaveWriteQueue = queuedWrite.then(() => undefined, () => undefined);
+            let result;
+            try {
+                result = await queuedWrite;
+            } catch (error) {
+                console.error('Nieoczekiwany błąd kolejki zapisu kariery.', error);
+                result = { success: false, backend: null, omittedMedia: false };
+            }
+
+            if (!isAutoSave) {
+                if (!result.success) {
+                    alert('Nie udało się zapisać kariery w pamięci przeglądarki. Pobierz plik .JSON, aby nie utracić postępów.');
+                } else if (result.omittedMedia) {
+                    alert('Kariera została zapisana bez zdjęcia i muzyki profilu z powodu limitu pamięci. Aby zachować je również, pobierz plik .JSON.');
+                } else {
+                    alert(t('t-alert-save-ok'));
+                }
+            }
+            return result.success;
+        }
+
+        function flushScheduledCareerAutosave(isAutoSave = true) {
+            if (pendingCareerAutosaveTimer !== null) {
+                clearTimeout(pendingCareerAutosaveTimer);
+                pendingCareerAutosaveTimer = null;
+            }
+            const resolvers = pendingCareerAutosaveResolvers.splice(0);
+            const operation = performCareerSave(isAutoSave);
+            operation.then(
+                result => resolvers.forEach(resolve => resolve(result)),
+                () => resolvers.forEach(resolve => resolve(false))
+            );
+            return operation;
+        }
+
+        function saveGame(isAutoSave = false) {
+            if (!isAutoSave) {
+                return pendingCareerAutosaveResolvers.length
+                    ? flushScheduledCareerAutosave(false)
+                    : performCareerSave(false);
+            }
+
+            return new Promise(resolve => {
+                pendingCareerAutosaveResolvers.push(resolve);
+                if (pendingCareerAutosaveTimer !== null) clearTimeout(pendingCareerAutosaveTimer);
+                pendingCareerAutosaveTimer = setTimeout(
+                    () => flushScheduledCareerAutosave(true),
+                    CAREER_AUTOSAVE_DEBOUNCE_MS
+                );
+            });
+        }
+
+        if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
+            document.addEventListener('visibilitychange', () => {
+                if (document.visibilityState === 'hidden' && pendingCareerAutosaveResolvers.length) {
+                    flushScheduledCareerAutosave(true);
+                }
+            });
+        }
+
         // Restores an already parsed save. Keeping this separate lets a downloaded
         // .JSON save be loaded even when the browser's local storage is full.
-        function restoreGameState(gameState, showFeedback = true) {
+        function restoreGameState(gameState, showFeedback = true, options = {}) {
+            if (typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy()
+                && options.tournamentRollback !== true) return false;
             try {
                 validateGameState(gameState);
+                if (typeof clearCareerProfileMediaRuntime === 'function') clearCareerProfileMediaRuntime();
 
                 player = gameState.player;
                 if (!player.activeSponsors) player.activeSponsors = [];
@@ -507,6 +756,9 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
                 initAllPlayerSeasonStats();
                 emails = Array.isArray(gameState.emails) ? gameState.emails : [];
                 unreadMailsCount = Number.isFinite(gameState.unreadMailsCount) ? gameState.unreadMailsCount : 0;
+                if (typeof pruneExpiredRandomEmails === 'function') {
+                    pruneExpiredRandomEmails(currentDate, unreadMailsCount);
+                }
 
                 gdlTable = (gameState.gdlTable || [])
                     .filter(isPlainObject)
@@ -535,11 +787,25 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
                     pc: Number(savedPreTournamentRanks.pc) || 0,
                     et: Number(savedPreTournamentRanks.et) || 0
                 };
-                lastTournamentResults = typeof gameState.lastTournamentResults === 'string' ? gameState.lastTournamentResults : '';
-                currentRoundHTML = typeof gameState.currentRoundHTML === 'string' ? gameState.currentRoundHTML : '';
+                const savedLastTournamentResults = typeof gameState.lastTournamentResults === 'string' ? gameState.lastTournamentResults : '';
+                const savedCurrentRoundHTML = typeof gameState.currentRoundHTML === 'string' ? gameState.currentRoundHTML : '';
+                if (typeof restoreActiveTournamentMatchHistory === 'function') {
+                    restoreActiveTournamentMatchHistory(
+                        activeTournament ? gameState.tournamentMatchHistory : null,
+                        savedLastTournamentResults,
+                        savedCurrentRoundHTML
+                    );
+                } else {
+                    tournamentMatchHistory = gameState.tournamentMatchHistory || null;
+                    lastTournamentResults = savedLastTournamentResults;
+                    currentRoundHTML = savedCurrentRoundHTML;
+                }
                 tournamentBracket = (gameState.tournamentBracket || []).map(resolveLoadedPlayer);
+                // Kwalifikator World Series musi korzystać z rankingu tej
+                // wczytywanej kariery, nie ze stanu poprzednio otwartej gry.
+                if (typeof restoreWorldMastersState === 'function') restoreWorldMastersState(gameState.worldMastersState);
                 if (typeof repairRetiredTournamentBracket === 'function') {
-                    tournamentBracket = repairRetiredTournamentBracket(tournamentBracket);
+                    tournamentBracket = repairRetiredTournamentBracket(tournamentBracket, activeTournament);
                 }
                 if (typeof repairCareerTournamentBracket === 'function') {
                     tournamentBracket = repairCareerTournamentBracket(tournamentBracket);
@@ -556,8 +822,6 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
                     if (typeof repairWorldCupTeamRosters === 'function') repairWorldCupTeamRosters();
                     if (typeof rebuildCompletedWorldCupCalendarHistory === 'function') rebuildCompletedWorldCupCalendarHistory();
                 }
-                if (typeof restoreWorldMastersState === 'function') restoreWorldMastersState(gameState.worldMastersState);
-
                 if (activeTournament) {
                     document.getElementById('tour-name-display').innerText = typeof getTournamentDisplayName === 'function'
                         ? getTournamentDisplayName(activeTournament)
@@ -569,6 +833,7 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
 
                 renderOpponentOptions();
                 updateDateDisplay(); updateMailBadge(); updateHub(); showScreen('screen-hub');
+                if (typeof clearTournamentSimulationSaveBlock === 'function') clearTournamentSimulationSaveBlock();
                 if (showFeedback) alert(t('t-alert-load-ok'));
                 return true;
             } catch (error) {
@@ -578,15 +843,72 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
             }
         }
 
-        function loadGame(showFeedback = true) {
-            const saveData = localStorage.getItem('dartsCareerSave');
+        async function loadGame(showFeedback = true) {
+            if (typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy()) return false;
+            if (typeof waitForPersistedModRestore === 'function') {
+                await waitForPersistedModRestore();
+            }
+            let indexedDbState = null;
+            if (typeof canUseIndexedDbCareerStorage === 'function'
+                && canUseIndexedDbCareerStorage()
+                && typeof readCareerStateFromIndexedDb === 'function') {
+                try {
+                    indexedDbState = await readCareerStateFromIndexedDb();
+                } catch (error) {
+                    console.warn('Nie udało się odczytać IndexedDB. Sprawdzam starszy zapis localStorage.', error);
+                }
+            }
+
+            if (typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy()) return false;
+            if (indexedDbState && restoreGameState(indexedDbState, false)) {
+                if (typeof reapplyLoadedModToActiveCareer === 'function') {
+                    reapplyLoadedModToActiveCareer();
+                }
+                if (typeof readCareerProfileMediaFromIndexedDb === 'function'
+                    && typeof applyCareerProfileMediaToPlayer === 'function') {
+                    try {
+                        const profileMedia = await readCareerProfileMediaFromIndexedDb(indexedDbState.profileMediaRefs);
+                        applyCareerProfileMediaToPlayer(profileMedia);
+                    } catch (mediaError) {
+                        console.warn('Kariera została wczytana bez multimediów profilu.', mediaError);
+                    }
+                }
+                if (showFeedback) alert(t('t-alert-load-ok'));
+                return true;
+            }
+
+            let saveData = null;
+            try {
+                saveData = localStorage.getItem(LEGACY_CAREER_SAVE_KEY);
+            } catch (error) {
+                console.warn('Nie udało się odczytać awaryjnego localStorage.', error);
+            }
             if (!saveData) {
                 if (showFeedback) alert(t('t-alert-load-fail'));
                 return false;
             }
 
             try {
-                return restoreGameState(JSON.parse(saveData), showFeedback);
+                const legacyGameState = JSON.parse(saveData);
+                if (!restoreGameState(legacyGameState, false)) throw new Error('Starszy zapis jest niepoprawny.');
+                if (typeof reapplyLoadedModToActiveCareer === 'function') {
+                    reapplyLoadedModToActiveCareer();
+                }
+
+                // Pierwsze wczytanie po aktualizacji migruje zapis do IndexedDB,
+                // ale nie usuwa starej kopii. Pozostaje ona awaryjnym fallbackiem.
+                if (typeof canUseIndexedDbCareerStorage === 'function'
+                    && canUseIndexedDbCareerStorage()
+                    && typeof writeCareerStateToIndexedDb === 'function') {
+                    try {
+                        const migrated = await performCareerSave(true);
+                        if (!migrated) throw new Error('Migracja zapisu nie powiodła się.');
+                    } catch (migrationError) {
+                        console.warn('Kariera działa, ale migracja do IndexedDB nie powiodła się.', migrationError);
+                    }
+                }
+                if (showFeedback) alert(t('t-alert-load-ok'));
+                return true;
             } catch (error) {
                 console.error('Nie udało się wczytać kariery.', error);
                 if (showFeedback) alert('Nie udało się wczytać zapisu. Plik jest uszkodzony lub nie pochodzi z tej wersji gry.');
@@ -595,32 +917,49 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
         }
 
         // --- ZAPIS I ODCZYT Z FIZYCZNEGO PLIKU (.JSON) ---
-        function exportSaveToFile() {
-            const file = new Blob([JSON.stringify(buildGameState())], { type: 'application/json' });
-            const fileUrl = URL.createObjectURL(file);
-            const dlAnchorNode = document.createElement('a');
-            dlAnchorNode.href = fileUrl;
-            dlAnchorNode.download = `darts_career_save_${Date.now()}.json`;
-            document.body.appendChild(dlAnchorNode);
-            dlAnchorNode.click();
-            dlAnchorNode.remove();
-            URL.revokeObjectURL(fileUrl);
+        async function exportSaveToFile() {
+            if (typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy()) return false;
+            try {
+                const liveState = buildGameState();
+                const gameState = typeof structuredClone === 'function'
+                    ? structuredClone(liveState) : JSON.parse(JSON.stringify(liveState));
+                const portableGameState = typeof createPortableCareerGameState === 'function'
+                    ? await createPortableCareerGameState(gameState)
+                    : gameState;
+                const file = new Blob([JSON.stringify(portableGameState)], { type: 'application/json' });
+                const fileUrl = URL.createObjectURL(file);
+                const dlAnchorNode = document.createElement('a');
+                dlAnchorNode.href = fileUrl;
+                dlAnchorNode.download = `darts_career_save_${Date.now()}.json`;
+                document.body.appendChild(dlAnchorNode);
+                dlAnchorNode.click();
+                dlAnchorNode.remove();
+                URL.revokeObjectURL(fileUrl);
+            } catch (error) {
+                console.error('Nie udało się wyeksportować zapisu.', error);
+                alert('Nie udało się przygotować pliku zapisu. Spróbuj ponownie po ponownym wczytaniu gry.');
+            }
         }
 
         function importSaveFromFile(event) {
+            if (typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy()) return false;
             const file = event.target.files[0];
             if (!file) return;
             const reader = new FileReader();
-            reader.onload = function(e) {
+            reader.onload = async function(e) {
+                if (typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy()) return;
                 try {
                     const gameState = JSON.parse(e.target.result);
                     if (!restoreGameState(gameState, false)) throw new Error('Nie udało się odtworzyć zapisu.');
+                    if (typeof reapplyLoadedModToActiveCareer === 'function') {
+                        reapplyLoadedModToActiveCareer();
+                    }
 
                     // The restored state is saved again through buildGameState(),
                     // which stores a compact World Cup state instead of duplicate
                     // player histories. A failed local save must not invalidate a
                     // correct .JSON file or interrupt the current session.
-                    const savedLocally = saveGame(true);
+                    const savedLocally = await saveGame(true);
                     if (savedLocally) {
                         alert(t('t-alert-import-ok') || 'Zapis poprawnie wczytany z pliku!');
                     } else {
@@ -981,7 +1320,9 @@ function getBoostedPlayerStats() {
 async function updateProfilePhoto(event) {
             const file = event.target.files[0];
             if (file) {
-                player.photo = await convertFileToBase64(file);
+                player.photo = typeof setPlayerProfileMediaFromFile === 'function'
+                    ? setPlayerProfileMediaFromFile('photo', file)
+                    : await convertFileToBase64(file);
                 document.getElementById('hub-photo').src = player.photo;
                 alert(t('t-alert-photo'));
             }
@@ -990,7 +1331,9 @@ async function updateProfilePhoto(event) {
 async function updateProfileWalkon(event) {
             const file = event.target.files[0];
             if (file) {
-                player.walkon = await convertFileToBase64(file);
+                player.walkon = typeof setPlayerProfileMediaFromFile === 'function'
+                    ? setPlayerProfileMediaFromFile('walkon', file)
+                    : await convertFileToBase64(file);
                 alert(t('t-alert-walkon'));
             }
         }
@@ -1101,6 +1444,7 @@ async function updateProfileWalkon(event) {
         }
 
         function performTraining(type) {
+            if (typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy()) return false;
             initPlayerXP();
             initTrainingLimit();
             if (player.trainingSessionsThisWeek >= TRAINING_CONFIG.weeklyLimit) {

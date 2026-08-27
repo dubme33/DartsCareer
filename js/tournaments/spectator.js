@@ -190,6 +190,7 @@ function setSpectatorPlayerPhoto(elementId, candidate, fallbackLabel) {
 }
 
 function startSpectatingTournamentMatch(bracketIndex) {
+    if (typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy()) return false;
     if (!activeTournament || currentMatch || !Array.isArray(tournamentBracket)) return false;
     const p1 = tournamentBracket[bracketIndex];
     const p2 = tournamentBracket[bracketIndex + 1];

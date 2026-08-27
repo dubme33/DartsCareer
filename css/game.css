@@ -168,6 +168,15 @@
             background: var(--panel-bg); border: 2px solid var(--accent-green); padding: 25px;
             border-radius: 10px; max-width: 500px; width: 90%; text-align: center;
         }
+        #tournament-simulation-dialog {
+            box-sizing: border-box; width: min(480px, 90vw); padding: 24px;
+            border: 2px solid var(--accent-green); border-radius: 10px;
+            background: var(--panel-bg); color: #ecf0f1; text-align: center;
+            position: fixed; inset: 0; margin: auto; height: fit-content; z-index: 10000;
+        }
+        #tournament-simulation-dialog::backdrop { background: rgba(0, 0, 0, 0.8); }
+        #tournament-simulation-progress { width: 100%; height: 20px; accent-color: var(--accent-green); }
+        #t-simulation-note { margin-bottom: 0; color: #bdc3c7; font-size: 14px; line-height: 1.5; }
         .choice-btn {
             width: 100%; padding: 12px; margin-top: 10px; background: var(--primary-color);
             color: white; border: 1px solid var(--accent-green); border-radius: 5px; cursor: pointer; text-align: left;
@@ -657,6 +666,35 @@
         .profile-list-item span { color: var(--accent-green); font-size: 13px; white-space: nowrap; }
         .profile-list-item small { display: block; margin-top: 3px; color: #bdc3c7; }
         .profile-empty { margin: 0; color: #bdc3c7; font-style: italic; }
+        .supporter-entry {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: flex-start;
+            gap: 12px;
+            min-height: 44px;
+            padding: 6px 0;
+        }
+        .supporter-youtube-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            box-sizing: border-box;
+            min-height: 44px;
+            padding: 8px 12px;
+            border-radius: 8px;
+            background: #c00;
+            color: #fff;
+            font-size: 14px;
+            line-height: 1;
+            letter-spacing: 0;
+            text-decoration: none;
+        }
+        .supporter-youtube-link:hover { background: #a80000; }
+        .supporter-youtube-link:focus-visible {
+            outline: 3px solid #f1c40f;
+            outline-offset: 4px;
+        }
         .world-cup-intro { margin: 0 0 14px; color: #bdc3c7; text-align: center; font-size: 13px; }
         .world-cup-groups { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
         .world-cup-group { padding: 10px; background: #16213e; border: 1px solid var(--border-color); border-radius: 7px; }

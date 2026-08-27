@@ -937,6 +937,14 @@ function completeWorldCupKnockoutRound(currentRound) {
 }
 
 function simulateWorldCupCurrentStage(showOverview = true, onlyAIMatches = false) {
+    if (typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy()) return false;
+    const stage = iterateWorldCupCurrentStage(showOverview, onlyAIMatches);
+    let step = stage.next();
+    while (!step.done) step = stage.next();
+    return step.value;
+}
+
+function* iterateWorldCupCurrentStage(showOverview = true, onlyAIMatches = false) {
     if (!worldCupState || worldCupState.completed) return false;
 
     const careerMatch = !worldCupState.skipPlayerMatches && getWorldCupCareerMatchInCurrentStage();
@@ -946,13 +954,16 @@ function simulateWorldCupCurrentStage(showOverview = true, onlyAIMatches = false
         return false;
     }
 
-    getCurrentWorldCupStageMatches()
+    const matches = getCurrentWorldCupStageMatches()
         .filter(match => !match.played)
         .filter(match => {
             if (!onlyAIMatches) return true;
             return !teamContainsCareerPlayer(getWorldCupTeam(match.team1Id)) && !teamContainsCareerPlayer(getWorldCupTeam(match.team2Id));
-        })
-        .forEach(simulateWorldCupMatch);
+        });
+    for (const match of matches) {
+        simulateWorldCupMatch(match);
+        yield;
+    }
 
     const remainingCareerMatch = !worldCupState.skipPlayerMatches && getWorldCupCareerMatchInCurrentStage();
     if (remainingCareerMatch) {
@@ -983,14 +994,29 @@ function simulateWorldCupCurrentStage(showOverview = true, onlyAIMatches = false
 }
 
 function simulateSkippedWorldCup() {
+    if (!worldCupState || worldCupState.completed || !worldCupState.skipPlayerMatches) return false;
     const qualifierCalendarEvent = isWorldCupQualifierTournament();
-    let safety = 0;
-    while (worldCupState && !worldCupState.completed && safety < 6) {
-        const phaseBefore = worldCupState.phase;
-        simulateWorldCupCurrentStage(false);
-        safety++;
-        if (qualifierCalendarEvent || worldCupState.completed || worldCupState.phase === phaseBefore) break;
-    }
+    const tournament = activeTournament;
+    const state = worldCupState;
+    return runTournamentSimulation(async () => {
+        let safety = 0;
+        while (worldCupState && !worldCupState.completed && safety < 6) {
+            const phaseBefore = worldCupState.phase;
+            await runTournamentSimulationSteps(
+                iterateWorldCupCurrentStage(false), getWorldCupRoundLabel(),
+                getCurrentWorldCupStageMatches().filter(match => !match.played).length,
+                () => {
+                    if (activeTournament !== tournament || worldCupState !== state) {
+                        throw new Error('Stan Pucharu Narodów zmienił się w trakcie symulacji.');
+                    }
+                }
+            );
+            safety++;
+            if (qualifierCalendarEvent || worldCupState.completed || worldCupState.phase === phaseBefore) break;
+            await yieldTournamentSimulation();
+        }
+        return true;
+    }, { onRestored: () => showWorldCupOverview() });
 }
 
 function isWorldCupCareerTeamStillAlive() {
@@ -1009,6 +1035,7 @@ function isWorldCupCareerTeamStillAlive() {
 }
 
 function simulateRemainingWorldCupTournament() {
+    if (typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy()) return false;
     if (isFastForwardingWorldCup || !worldCupState || worldCupState.completed || isWorldCupCareerTeamStillAlive()) return false;
 
     const completedTournament = activeTournament;
@@ -1036,10 +1063,10 @@ function simulateRemainingWorldCupTournament() {
 }
 
 function advanceWorldCup() {
+    if (typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy()) return false;
     if (!worldCupState || worldCupState.completed) return;
     if (worldCupState.skipPlayerMatches) {
-        simulateSkippedWorldCup();
-        return;
+        return simulateSkippedWorldCup();
     }
 
     const careerMatch = getWorldCupCareerMatchInCurrentStage();
@@ -1197,6 +1224,7 @@ function refreshWorldCupTranslations() {
 }
 
 function startWorldCupTournament() {
+    if (typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy()) return false;
     if (!isWorldCupTournament()) return;
     const shouldCreateState = !worldCupState || worldCupState.completed;
     if (shouldCreateState) worldCupState = buildWorldCupState();
@@ -1219,10 +1247,11 @@ function startWorldCupTournament() {
         showWorldCupOverview();
         return;
     }
-    advanceWorldCup();
+    return advanceWorldCup();
 }
 
 function startWorldCupQualifiers() {
+    if (typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy()) return false;
     if (!isWorldCupQualifierTournament()) return;
     const shouldCreateState = !worldCupState || worldCupState.completed;
     if (shouldCreateState) worldCupState = buildWorldCupState();
@@ -1245,10 +1274,11 @@ function startWorldCupQualifiers() {
         showWorldCupOverview();
         return;
     }
-    advanceWorldCup();
+    return advanceWorldCup();
 }
 
 function startWorldCupPendingMatch() {
+    if (typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy()) return false;
     const match = getWorldCupPendingMatch();
     if (!match) return;
     document.getElementById('bracket-modal').style.display = 'none';
@@ -1280,6 +1310,7 @@ function isCareerPlayerThrowing(isP1) {
 }
 
 function startWorldCupMatch(match) {
+    if (typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy()) return false;
     repairWorldCupTeamRosters();
     const team1 = getWorldCupTeam(match.team1Id);
     const team2 = getWorldCupTeam(match.team2Id);

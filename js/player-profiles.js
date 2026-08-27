@@ -293,6 +293,10 @@ function recordSeasonTournamentResult(candidate, tournament, details = {}) {
 }
 
 function getRankingPosition(candidate, type) {
+    if (typeof getCachedRankedPlayers === 'function') {
+        const index = getCachedRankedPlayers(type).findIndex(row => samePlayer(row, candidate));
+        return index === -1 ? null : index + 1;
+    }
     const profilePlayers = [...getCareerProfilePlayers()];
     if (type === 'protour' && typeof refreshProTourOrderOfMerit === 'function') {
         refreshProTourOrderOfMerit(profilePlayers, currentDate);

@@ -4,6 +4,7 @@
 const EUROPEAN_CHAMPIONSHIP_DRAW_VERSION = 1;
 const PRO_TOUR_ORDER_OF_MERIT_VERSION = 3;
 const PRO_TOUR_ROLLING_PERIOD_MS = 52 * 7 * 24 * 60 * 60 * 1000;
+let proTourOrderOfMeritRefreshCache = null;
 const EUROPEAN_CHAMPIONSHIP_SEED_ORDER = [
     1, 32, 16, 17, 8, 25, 9, 24, 4, 29, 13, 20, 5, 28, 12, 21,
     2, 31, 15, 18, 7, 26, 10, 23, 3, 30, 14, 19, 6, 27, 11, 22
@@ -79,12 +80,14 @@ function getEuropeanTourOrderOfMerit(candidates) {
 function awardEuropeanTourOrderOfMeritPrizeMoney(candidate, amount, tournamentOrName) {
     if (!candidate || !isEuropeanTourTournament(tournamentOrName)) return;
     candidate.europeanTourPrizeMoney = getEuropeanTourPrizeMoney(candidate) + Math.max(0, Number(amount) || 0);
+    if (typeof invalidatePlayerRankingCache === 'function') invalidatePlayerRankingCache('europeanTour');
 }
 
 function resetEuropeanTourOrderOfMerit(candidates) {
     (Array.isArray(candidates) ? candidates : []).forEach(candidate => {
         if (candidate && !candidate.isBye) candidate.europeanTourPrizeMoney = 0;
     });
+    if (typeof invalidatePlayerRankingCache === 'function') invalidatePlayerRankingCache('europeanTour');
 }
 
 function getProTourReferenceTime(referenceDate = typeof currentDate !== 'undefined' ? currentDate : null) {
@@ -153,11 +156,74 @@ function normaliseProTourPrizeHistory(candidate, referenceTime) {
     return entries;
 }
 
+function getProTourRefreshSnapshot(candidate) {
+    const history = Array.isArray(candidate?.proTourPrizeHistory) ? candidate.proTourPrizeHistory : null;
+    const lastEntry = history?.at(-1);
+    const lastEarnedAt = Number(lastEntry?.earnedAt);
+    const lastAmount = Number(lastEntry?.amount);
+    return {
+        candidate,
+        history,
+        historyLength: history?.length || 0,
+        lastEarnedAt: Number.isFinite(lastEarnedAt) ? lastEarnedAt : null,
+        lastAmount: Number.isFinite(lastAmount) ? lastAmount : null,
+        prizeMoney: Number(candidate?.proTourPrizeMoney) || 0,
+        version: candidate?.proTourRankingVersion
+    };
+}
+
+function isProTourRefreshSnapshotCurrent(snapshot, candidate) {
+    if (!snapshot || snapshot.candidate !== candidate) return false;
+    const history = Array.isArray(candidate?.proTourPrizeHistory) ? candidate.proTourPrizeHistory : null;
+    const lastEntry = history?.at(-1);
+    const lastEarnedAt = Number(lastEntry?.earnedAt);
+    const lastAmount = Number(lastEntry?.amount);
+    return snapshot.history === history
+        && snapshot.historyLength === (history?.length || 0)
+        && snapshot.lastEarnedAt === (Number.isFinite(lastEarnedAt) ? lastEarnedAt : null)
+        && snapshot.lastAmount === (Number.isFinite(lastAmount) ? lastAmount : null)
+        && snapshot.prizeMoney === (Number(candidate?.proTourPrizeMoney) || 0)
+        && snapshot.version === candidate?.proTourRankingVersion;
+}
+
+function canReuseProTourOrderOfMeritRefresh(candidates, referenceTime) {
+    const cache = proTourOrderOfMeritRefreshCache;
+    if (!cache || candidates.length < 64 || cache.candidates.length !== candidates.length) return false;
+    if (referenceTime < cache.referenceTime) return false;
+    if (Number.isFinite(cache.nextExpiryTime) && referenceTime >= cache.nextExpiryTime) return false;
+    return candidates.every((candidate, index) =>
+        isProTourRefreshSnapshotCurrent(cache.candidates[index], candidate));
+}
+
+function updateProTourOrderOfMeritRefreshCache(candidates, referenceTime) {
+    let nextExpiryTime = Infinity;
+    candidates.forEach(candidate => {
+        (Array.isArray(candidate?.proTourPrizeHistory) ? candidate.proTourPrizeHistory : []).forEach(entry => {
+            const expiryTime = Number(entry?.earnedAt) + PRO_TOUR_ROLLING_PERIOD_MS;
+            if (Number.isFinite(expiryTime) && expiryTime > referenceTime && expiryTime < nextExpiryTime) {
+                nextExpiryTime = expiryTime;
+            }
+        });
+    });
+    proTourOrderOfMeritRefreshCache = {
+        referenceTime,
+        nextExpiryTime,
+        candidates: candidates.map(getProTourRefreshSnapshot)
+    };
+}
+
+function invalidateProTourOrderOfMeritRefreshCache() {
+    proTourOrderOfMeritRefreshCache = null;
+    if (typeof invalidatePlayerRankingCache === 'function') invalidatePlayerRankingCache('protour');
+}
+
 function refreshProTourOrderOfMerit(candidates, referenceDate) {
     const referenceTime = getProTourReferenceTime(referenceDate);
     const cutoff = referenceTime - PRO_TOUR_ROLLING_PERIOD_MS;
+    const list = Array.isArray(candidates) ? candidates : [];
+    if (canReuseProTourOrderOfMeritRefresh(list, referenceTime)) return false;
 
-    (Array.isArray(candidates) ? candidates : []).forEach(candidate => {
+    list.forEach(candidate => {
         if (!candidate || candidate.isBye) return;
         const activeEntries = normaliseProTourPrizeHistory(candidate, referenceTime)
             .filter(entry => entry.earnedAt > cutoff && entry.earnedAt <= referenceTime);
@@ -165,6 +231,9 @@ function refreshProTourOrderOfMerit(candidates, referenceDate) {
         candidate.proTourPrizeMoney = activeEntries.reduce((total, entry) => total + entry.amount, 0);
         candidate.proTourRankingVersion = PRO_TOUR_ORDER_OF_MERIT_VERSION;
     });
+    if (list.length >= 64) updateProTourOrderOfMeritRefreshCache(list, referenceTime);
+    if (typeof invalidatePlayerRankingCache === 'function') invalidatePlayerRankingCache('protour');
+    return true;
 }
 
 function awardProTourOrderOfMeritPrizeMoney(candidate, amount, tournamentOrName, referenceDate) {
@@ -180,6 +249,7 @@ function awardProTourOrderOfMeritPrizeMoney(candidate, amount, tournamentOrName,
     if (!candidate.historyPT || typeof candidate.historyPT !== 'object') candidate.historyPT = {};
     candidate.historyPT[tournamentName] = (Number(candidate.historyPT[tournamentName]) || 0) + prize;
     refreshProTourOrderOfMerit([candidate], referenceTime);
+    invalidateProTourOrderOfMeritRefreshCache();
 }
 
 // Wersje zapisu sprzed poprawki mogły zawierać w ProTour pieniądze z majorów.

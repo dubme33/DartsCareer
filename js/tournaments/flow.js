@@ -34,12 +34,14 @@ function buildPlayersChampionshipField(cardHolders, replacementPoolOrRandom = []
 }
 
 function skipActiveTournament() {
+            if (typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy()) return false;
             if (!confirm(t('t-confirm-skip'))) return;
             isSkippingTournament = true;
-            startTournament(); 
+            return startTournament();
         }
 
         function startTournament() {
+            if (typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy()) return false;
             if (!activeTournament) return;
             if (currentMatch && currentMatch.isTournament && currentMatch.p1Score !== undefined) {
                 if (typeof chargeTournamentParticipationStamina === 'function') {
@@ -48,12 +50,10 @@ function skipActiveTournament() {
                 showScreen('screen-match'); return;
             }
             if (typeof isWorldCupTournament === 'function' && isWorldCupTournament(activeTournament)) {
-                startWorldCupTournament();
-                return;
+                return startWorldCupTournament();
             }
             if (typeof isWorldCupQualifierTournament === 'function' && isWorldCupQualifierTournament(activeTournament)) {
-                startWorldCupQualifiers();
-                return;
+                return startWorldCupQualifiers();
             }
             if (!isSkippingTournament && typeof isGrandSlamGroupStageActive === 'function' && isGrandSlamGroupStageActive(activeTournament)) {
                 showGrandSlamGroups();
@@ -73,10 +73,13 @@ function skipActiveTournament() {
                 tournamentBracket = repairCareerTournamentBracket(tournamentBracket);
             }
             if (tournamentBracket && tournamentBracket.length > 1 && typeof repairRetiredTournamentBracket === 'function') {
-                tournamentBracket = repairRetiredTournamentBracket(tournamentBracket);
+                tournamentBracket = repairRetiredTournamentBracket(tournamentBracket, activeTournament);
             }
             // --- ZABEZPIECZENIE: Jeśli turniej już trwa (drabinka jest wygenerowana), to tylko ją pokazujemy i kontynuujemy grę! ---
             if (tournamentBracket && tournamentBracket.length > 1) {
+                const hasRecordedTournamentHistory = typeof hasTournamentMatchHistory === 'function'
+                    ? hasTournamentMatchHistory(tournamentMatchHistory)
+                    : Boolean(Array.isArray(tournamentMatchHistory) && tournamentMatchHistory.length > 0);
                 const isWorldMastersActiveTournament = typeof isWorldMastersTournament === 'function' && (
                     isWorldMastersTournament(activeTournament) ||
                     isWorldMastersFinalsTournament(activeTournament) ||
@@ -105,21 +108,21 @@ function skipActiveTournament() {
                 );
                 const staleWorldMastersFinalsQualifierDraw = isWorldMastersFinalsQualifierDraw && (
                     tournamentBracket.some(candidate => candidate && !candidate.isBye && candidate.hasTourCard !== true)
-                    || ((!Array.isArray(tournamentMatchHistory) || tournamentMatchHistory.length === 0)
+                    || (!hasRecordedTournamentHistory
                         && (tournamentRound !== expectedOpeningRound || tournamentBracket.length !== expectedOpeningRound))
                 );
                 const staleEuropeanChampionshipOpeningDraw = typeof isEuropeanChampionshipTournament === 'function'
                     && isEuropeanChampionshipTournament(activeTournament)
                     && tournamentRound === 32
                     && tournamentBracket.length === 32
-                    && (!Array.isArray(tournamentMatchHistory) || tournamentMatchHistory.length === 0)
+                    && !hasRecordedTournamentHistory
                     && activeTournament.europeanChampionshipDrawVersion !== EUROPEAN_CHAMPIONSHIP_DRAW_VERSION;
                 const activeTournamentName = String(activeTournament?.name || '').toLowerCase();
                 const staleWorldChampionshipOpeningDraw = (
                     activeTournamentName.includes('world darts championship')
                     || activeTournamentName.includes('global darts championship')
                 ) && tournamentRound === 128
-                    && (!Array.isArray(tournamentMatchHistory) || tournamentMatchHistory.length === 0)
+                    && !hasRecordedTournamentHistory
                     && (
                         tournamentBracket.some(candidate => candidate?.isBye)
                         || activeTournament.worldChampionshipQualification?.version !== (
@@ -129,10 +132,10 @@ function skipActiveTournament() {
                         )
                     );
                 const staleContinentalQualificationDraw = activeTournament?.specialType === 'continentalQualifier'
-                    && (!Array.isArray(tournamentMatchHistory) || tournamentMatchHistory.length === 0)
+                    && !hasRecordedTournamentHistory
                     && activeTournament.continentalQualificationVersion !== 2;
                 const staleQSchoolOpeningDraw = activeTournament?.specialType === 'pdcQSchool'
-                    && (!Array.isArray(tournamentMatchHistory) || tournamentMatchHistory.length === 0)
+                    && !hasRecordedTournamentHistory
                     && activeTournament.qSchoolDrawVersion !== (
                         typeof PDC_QSCHOOL_DRAW_VERSION === 'number' ? PDC_QSCHOOL_DRAW_VERSION : 2
                     );
@@ -349,203 +352,161 @@ function skipActiveTournament() {
                 chargeTournamentParticipationStamina(activeTournament);
             }
 
-            lastTournamentResults = ""; 
-            tournamentMatchHistory = [];
-            preTournamentRanks = { main: getPlayerRank('main'), pt: getPlayerRank('protour'), pc: getPlayerRank('pc'), et: getPlayerRank('europeanTour') };
-            prepareTournamentSimulationForm(participants);
+            // Przy pomijaniu turnieju przygotowanie grup i drabinki odbywa się
+            // już pod blokadą zapisu, z kopią stanu sprzed pierwszego meczu.
+            function* prepareOpeningDraw() {
+                lastTournamentResults = "";
+                if (activeTournament) delete activeTournament.matchHistory;
+                if (typeof resetTournamentMatchHistory === 'function') resetTournamentMatchHistory();
+                else tournamentMatchHistory = [];
+                preTournamentRanks = { main: getPlayerRank('main'), pt: getPlayerRank('protour'), pc: getPlayerRank('pc'), et: getPlayerRank('europeanTour') };
+                prepareTournamentSimulationForm(participants);
 
-            if (isGrandSlamEvent && typeof initializeGrandSlamTournament === 'function') {
-                const grandSlamStage = initializeGrandSlamTournament(participants, isHeadlessSim);
-                if (!grandSlamStage) return;
-                if (grandSlamStage.phase === 'groups') {
-                    if (typeof saveGame === 'function') saveGame(true);
-                    showGrandSlamGroups();
-                    return;
+                if (isGrandSlamEvent && typeof initializeGrandSlamTournament === 'function') {
+                    const grandSlamStage = isHeadlessSim
+                        ? yield* iterateGrandSlamInitialization(participants, true)
+                        : initializeGrandSlamTournament(participants, false);
+                    if (!grandSlamStage) return;
+                    if (grandSlamStage.phase === 'groups') {
+                        if (typeof saveGame === 'function') saveGame(true);
+                        showGrandSlamGroups();
+                        return;
+                    }
+                    participants = grandSlamStage.participants;
+                    tournamentRound = 16;
                 }
-                participants = grandSlamStage.participants;
-                tournamentRound = 16;
+
+                // --- 2. LOSOWANIE / ROZSTAWIENIE ---
+                if (isTourCardQualifierEvent) {
+                    participants = typeof buildPdcTourCardQualifierDraw === 'function'
+                        ? buildPdcTourCardQualifierDraw(participants)
+                        : shuffle(participants);
+                    tournamentRound = participants.length;
+                } else if (isQSchoolEvent) {
+                    participants = typeof buildPdcQSchoolDraw === 'function'
+                        ? buildPdcQSchoolDraw(participants)
+                        : shuffle(participants);
+                    tournamentRound = participants.length;
+                    activeTournament.qSchoolDrawVersion = typeof PDC_QSCHOOL_DRAW_VERSION === 'number'
+                        ? PDC_QSCHOOL_DRAW_VERSION
+                        : 2;
+                } else if ((tNameLow.includes("premier") || tNameLow.includes("global darts league")) && !tNameLow.includes("play-off")) {
+                    participants = shuffle(participants);
+                } else if ((tNameLow.includes("premier") || tNameLow.includes("global darts league")) && tNameLow.includes("play-off")) {
+                    // Drabinka play-off już ustalona (1 vs 4, 2 vs 3)
+                } else if (tNameLow.includes("uk open") || tNameLow.includes("british open")) {
+                    participants = shuffle(participants);
+                } else if ((tNameLow.includes("players championship") || tNameLow.includes("pro players cup")) && !tNameLow.includes("final")) {
+                    let sortedByPT = [...participants].sort((a,b) => b.proTourPrizeMoney - a.proTourPrizeMoney);
+                    let seeds = sortedByPT.slice(0, 32);
+                    let unseeded = shuffle(sortedByPT.slice(32));
+                    let draw = new Array(128);
+                    const seedOrder = [1, 32, 16, 17, 8, 25, 9, 24, 4, 29, 13, 20, 5, 28, 12, 21, 2, 31, 15, 18, 7, 26, 10, 23, 3, 30, 14, 19, 6, 27, 11, 22];
+
+                    let unIndex = 0;
+                    for (let i = 0; i < 32; i++) {
+                        let boardStart = i * 4;
+                        draw[boardStart] = seeds[seedOrder[i] - 1];
+                        draw[boardStart + 1] = unseeded[unIndex++];
+                        draw[boardStart + 2] = unseeded[unIndex++];
+                        draw[boardStart + 3] = unseeded[unIndex++];
+                    }
+                    participants = draw;
+
+                } else if (tNameLow.includes("players championship finals") || tNameLow.includes("pro players finals")) {
+                    let seeds = [...participants].sort((a,b) => b.pcPrizeMoney - a.pcPrizeMoney);
+                    let draw = new Array(64);
+                    const pcfSeedOrder = [
+                        1, 64, 32, 33, 16, 49, 17, 48, 8, 57, 25, 40, 9, 56, 24, 41,
+                        4, 61, 29, 36, 13, 52, 20, 45, 5, 60, 28, 37, 12, 53, 21, 44,
+                        2, 63, 31, 34, 15, 50, 18, 47, 7, 58, 26, 39, 10, 55, 23, 42,
+                        3, 62, 30, 35, 14, 51, 19, 46, 6, 59, 27, 38, 11, 54, 22, 43
+                    ];
+                    for (let i = 0; i < 64; i++) { draw[i] = seeds[pcfSeedOrder[i] - 1]; }
+                    participants = draw;
+
+                } else if (isContinentalQualifier) {
+                    participants = typeof buildContinentalQualifierDraw === 'function'
+                        ? buildContinentalQualifierDraw(activeTournament, participants)
+                        : shuffle(participants);
+                    tournamentRound = participants.length;
+
+                } else if (isContinentalMainEvent) {
+                    let seeds = participants.slice(0, 16);
+                    let unseeded = shuffle(participants.slice(16));
+                    let draw = new Array(64);
+                    const etSeedOrder = [1, 16, 8, 9, 4, 13, 5, 12, 2, 15, 7, 10, 3, 14, 6, 11];
+                    let unIndex = 0;
+                    for (let i = 0; i < 16; i++) {
+                        let s = seeds[etSeedOrder[i] - 1];
+                        let boardStart = i * 4;
+                        draw[boardStart] = s;
+                        draw[boardStart + 1] = { name: "(BYE)", isBye: true, country: "Brak", ovr: 0, overall: 0 };
+                        draw[boardStart + 2] = unseeded[unIndex++];
+                        draw[boardStart + 3] = unseeded[unIndex++];
+                    }
+                    participants = draw;
+
+                } else if (isWorldMastersEvent || isWorldMastersFinals || isWorldMastersFinalsQualifier) {
+                    participants = typeof buildWorldMastersTournamentDraw === 'function'
+                        ? buildWorldMastersTournamentDraw(activeTournament, participants)
+                        : shuffle(participants);
+
+                } else if (tNameLow.includes("world darts championship") || tNameLow.includes("global darts championship")) {
+                    participants = typeof buildWorldChampionshipDraw === 'function'
+                        ? buildWorldChampionshipDraw(participants)
+                        : shuffle(participants);
+
+                } else if (isGrandSlamEvent) {
+                    // Zwycięzcy 16 rzeczywistych grup są już rozstawieni przez
+                    // initializeGrandSlamTournament() w drabince Last 16.
+                    participants = tournamentBracket;
+
+                } else if (tNameLow.includes("matchplay") || tNameLow.includes("grand prix")) {
+                    let seeds = participants.slice(0, 16);
+                    let unseeded = shuffle(participants.slice(16));
+                    let draw = new Array(32);
+                    const wmSeedOrder = [1, 16, 8, 9, 4, 13, 5, 12, 2, 15, 7, 10, 3, 14, 6, 11];
+                    for (let i = 0; i < 16; i++) {
+                        let s = seeds[wmSeedOrder[i] - 1];
+                        let matchStart = i * 2;
+                        draw[matchStart] = s;
+                        draw[matchStart + 1] = unseeded[i];
+                    }
+                    participants = draw;
+
+                } else if (isEuropeanChampionship) {
+                    participants = typeof buildEuropeanChampionshipDraw === 'function'
+                        ? buildEuropeanChampionshipDraw(participants)
+                        : participants;
+                    activeTournament.europeanChampionshipDrawVersion = typeof EUROPEAN_CHAMPIONSHIP_DRAW_VERSION === 'number'
+                        ? EUROPEAN_CHAMPIONSHIP_DRAW_VERSION
+                        : 1;
+
+                } else {
+                    let unseeded = shuffle(participants.slice(participants.length / 2));
+                    let draw = new Array(participants.length);
+                    let head = 0; let tail = participants.length - 2;
+                    for(let i = 0; i < participants.length / 2; i++) {
+                        let seed = participants[i]; let randomUnseeded = unseeded[i];
+                        if (i % 2 === 0) { draw[head] = seed; draw[head+1] = randomUnseeded; head += 2; }
+                        else { draw[tail] = seed; draw[tail+1] = randomUnseeded; tail -= 2; }
+                    }
+                    participants = draw;
+                }
+
+                tournamentBracket = participants;
+
+                return true;
             }
 
-            // --- 2. LOSOWANIE / ROZSTAWIENIE ---
-            if (isTourCardQualifierEvent) {
-                participants = typeof buildPdcTourCardQualifierDraw === 'function'
-                    ? buildPdcTourCardQualifierDraw(participants)
-                    : shuffle(participants);
-                tournamentRound = participants.length;
-            } else if (isQSchoolEvent) {
-                participants = typeof buildPdcQSchoolDraw === 'function'
-                    ? buildPdcQSchoolDraw(participants)
-                    : shuffle(participants);
-                tournamentRound = participants.length;
-                activeTournament.qSchoolDrawVersion = typeof PDC_QSCHOOL_DRAW_VERSION === 'number'
-                    ? PDC_QSCHOOL_DRAW_VERSION
-                    : 2;
-            } else if ((tNameLow.includes("premier") || tNameLow.includes("global darts league")) && !tNameLow.includes("play-off")) {
-                participants = shuffle(participants);
-            } else if ((tNameLow.includes("premier") || tNameLow.includes("global darts league")) && tNameLow.includes("play-off")) {
-                // Drabinka play-off już ustalona (1 vs 4, 2 vs 3)
-            } else if (tNameLow.includes("uk open") || tNameLow.includes("british open")) {
-                participants = shuffle(participants); 
-            } else if ((tNameLow.includes("players championship") || tNameLow.includes("pro players cup")) && !tNameLow.includes("final")) {
-                let sortedByPT = [...participants].sort((a,b) => b.proTourPrizeMoney - a.proTourPrizeMoney);
-                let seeds = sortedByPT.slice(0, 32); 
-                let unseeded = shuffle(sortedByPT.slice(32)); 
-                let draw = new Array(128);
-                const seedOrder = [1, 32, 16, 17, 8, 25, 9, 24, 4, 29, 13, 20, 5, 28, 12, 21, 2, 31, 15, 18, 7, 26, 10, 23, 3, 30, 14, 19, 6, 27, 11, 22];
-
-                let unIndex = 0;
-                for (let i = 0; i < 32; i++) {
-                    let boardStart = i * 4; 
-                    draw[boardStart] = seeds[seedOrder[i] - 1]; 
-                    draw[boardStart + 1] = unseeded[unIndex++]; 
-                    draw[boardStart + 2] = unseeded[unIndex++]; 
-                    draw[boardStart + 3] = unseeded[unIndex++]; 
-                }
-                participants = draw;
-                
-            } else if (tNameLow.includes("players championship finals") || tNameLow.includes("pro players finals")) {
-                let seeds = [...participants].sort((a,b) => b.pcPrizeMoney - a.pcPrizeMoney);
-                let draw = new Array(64);
-                const pcfSeedOrder = [
-                    1, 64, 32, 33, 16, 49, 17, 48, 8, 57, 25, 40, 9, 56, 24, 41,
-                    4, 61, 29, 36, 13, 52, 20, 45, 5, 60, 28, 37, 12, 53, 21, 44,
-                    2, 63, 31, 34, 15, 50, 18, 47, 7, 58, 26, 39, 10, 55, 23, 42,
-                    3, 62, 30, 35, 14, 51, 19, 46, 6, 59, 27, 38, 11, 54, 22, 43
-                ];
-                for (let i = 0; i < 64; i++) { draw[i] = seeds[pcfSeedOrder[i] - 1]; }
-                participants = draw;
-
-            } else if (isContinentalQualifier) {
-                participants = typeof buildContinentalQualifierDraw === 'function'
-                    ? buildContinentalQualifierDraw(activeTournament, participants)
-                    : shuffle(participants);
-                tournamentRound = participants.length;
-
-            } else if (isContinentalMainEvent) {
-                let seeds = participants.slice(0, 16);
-                let unseeded = shuffle(participants.slice(16)); 
-                let draw = new Array(64);
-                const etSeedOrder = [1, 16, 8, 9, 4, 13, 5, 12, 2, 15, 7, 10, 3, 14, 6, 11];
-                let unIndex = 0;
-                for (let i = 0; i < 16; i++) {
-                    let s = seeds[etSeedOrder[i] - 1]; 
-                    let boardStart = i * 4; 
-                    draw[boardStart] = s; 
-                    draw[boardStart + 1] = { name: "(BYE)", isBye: true, country: "Brak", ovr: 0, overall: 0 }; 
-                    draw[boardStart + 2] = unseeded[unIndex++]; 
-                    draw[boardStart + 3] = unseeded[unIndex++]; 
-                }
-                participants = draw;
-
-            } else if (isWorldMastersEvent || isWorldMastersFinals || isWorldMastersFinalsQualifier) {
-                participants = typeof buildWorldMastersTournamentDraw === 'function'
-                    ? buildWorldMastersTournamentDraw(activeTournament, participants)
-                    : shuffle(participants);
-
-            } else if (tNameLow.includes("world darts championship") || tNameLow.includes("global darts championship")) {
-                participants = typeof buildWorldChampionshipDraw === 'function'
-                    ? buildWorldChampionshipDraw(participants)
-                    : shuffle(participants);
-
-            } else if (isGrandSlamEvent) {
-                // Zwycięzcy 16 rzeczywistych grup są już rozstawieni przez
-                // initializeGrandSlamTournament() w drabince Last 16.
-                participants = tournamentBracket;
-
-            } else if (tNameLow.includes("matchplay") || tNameLow.includes("grand prix")) {
-                let seeds = participants.slice(0, 16);
-                let unseeded = shuffle(participants.slice(16)); 
-                let draw = new Array(32);
-                const wmSeedOrder = [1, 16, 8, 9, 4, 13, 5, 12, 2, 15, 7, 10, 3, 14, 6, 11];
-                for (let i = 0; i < 16; i++) {
-                    let s = seeds[wmSeedOrder[i] - 1]; 
-                    let matchStart = i * 2; 
-                    draw[matchStart] = s; 
-                    draw[matchStart + 1] = unseeded[i]; 
-                }
-                participants = draw;
-            
-            } else if (isEuropeanChampionship) {
-                participants = typeof buildEuropeanChampionshipDraw === 'function'
-                    ? buildEuropeanChampionshipDraw(participants)
-                    : participants;
-                activeTournament.europeanChampionshipDrawVersion = typeof EUROPEAN_CHAMPIONSHIP_DRAW_VERSION === 'number'
-                    ? EUROPEAN_CHAMPIONSHIP_DRAW_VERSION
-                    : 1;
-
-            } else {
-                let unseeded = shuffle(participants.slice(participants.length / 2));
-                let draw = new Array(participants.length);
-                let head = 0; let tail = participants.length - 2; 
-                for(let i = 0; i < participants.length / 2; i++) {
-                    let seed = participants[i]; let randomUnseeded = unseeded[i];
-                    if (i % 2 === 0) { draw[head] = seed; draw[head+1] = randomUnseeded; head += 2; } 
-                    else { draw[tail] = seed; draw[tail+1] = randomUnseeded; tail -= 2; }
-                }
-                participants = draw;
-            }
-
-            tournamentBracket = participants; 
-            
-            if (isHeadlessSim) {
-                // Błyskawiczna symulacja całego turnieju w tle!
-                let specialTournamentOutcome = false;
-                while (tournamentBracket.length > 1) {
-                    specialTournamentOutcome = advanceTournament(false);
-                    if (specialTournamentOutcome) break;
-                }
-
-                if (specialTournamentOutcome === true) {
-                    concludeContinentalTourQualifierEvent(false);
-                    return;
-                }
-                if (specialTournamentOutcome === 'worldMastersFinalsQualifier') {
-                    concludeWorldMastersFinalsQualifierEvent(false);
-                    return;
-                }
-                if (specialTournamentOutcome === 'pdcQSchool') {
-                    concludePdcQSchoolEvent(false);
-                    return;
-                }
-                if (specialTournamentOutcome === 'pdcTourCardQualifier') {
-                    concludePdcTourCardQualifierEvent(false);
-                    return;
-                }
-                
-                // Przypisanie nagród i ostateczne zamknięcie turnieju
-                activeTournament.completed = true;
-                activeTournament.historyLogs = lastTournamentResults;
-                
-                let winner = tournamentBracket[0];
-                let winPrize = getPrizeMoney(activeTournament.name, 2, true);
-                awardPrizeMoney(winner, winPrize, activeTournament.name);
-                if (typeof completeWorldMastersTournament === 'function') completeWorldMastersTournament(activeTournament, winner);
-                recordSeasonTournamentResult(winner, activeTournament, { round: 2, prizeMoney: winPrize, won: true });
-
-                // Wypłaty za miejsca 5-8 po finałach Play-offs
-                if (activeTournament.name.includes("Play-offs")) {
-                    let sortedGDL = [...gdlTable].sort((a,b) => b.points - a.points || (b.legsWon - b.legsLost) - (a.legsWon - a.legsLost));
-                    if(sortedGDL[4]) awardPrizeMoney(sortedGDL[4].player, 95000, activeTournament.name);
-                    if(sortedGDL[5]) awardPrizeMoney(sortedGDL[5].player, 90000, activeTournament.name);
-                    if(sortedGDL[6]) awardPrizeMoney(sortedGDL[6].player, 85000, activeTournament.name);
-                    if(sortedGDL[7]) awardPrizeMoney(sortedGDL[7].player, 80000, activeTournament.name);
-                }
-                
-                activeTournament = null; 
-                tournamentBracket = []; // <--- CZYŚCI DRABINKĘ PO SYMULACJI
-                saveGame(true);
-                
-                // Ukrywamy kafelek aktywnego turnieju, aktualizujemy dane i wracamy do Hubu
-                let tileTour = document.getElementById('tile-tournament');
-                if (tileTour) tileTour.style.display = 'none';
-                
-                updateHub();
-                showScreen('screen-hub');
-                return;
-            }
-
-            showBracket();
+            const openingDraw = prepareOpeningDraw();
+            if (isHeadlessSim) return simulateHeadlessTournament(openingDraw, isGrandSlamEvent);
+            let step = openingDraw.next();
+            while (!step.done) step = openingDraw.next();
+            if (step.value) showBracket();
         }
+
 
         function concludeContinentalTourQualifierEvent(showOutcome = true) {
             if (typeof isContinentalQualifierTournament !== 'function' || !isContinentalQualifierTournament(activeTournament)) return null;
@@ -564,7 +525,8 @@ function skipActiveTournament() {
                 : '';
 
             qualifierTournament.completed = true;
-            qualifierTournament.historyLogs = lastTournamentResults;
+            if (typeof finalizeTournamentMatchHistory === 'function') finalizeTournamentMatchHistory(qualifierTournament);
+            else qualifierTournament.historyLogs = lastTournamentResults;
             activeTournament = null;
             tournamentBracket = [];
             document.getElementById('tile-tournament').style.display = 'none';
@@ -580,7 +542,8 @@ function skipActiveTournament() {
             const qSchoolTournament = activeTournament;
             const playerQualified = player?.hasTourCard === true && player.tourCardSource === 'qschool';
             qSchoolTournament.completed = true;
-            qSchoolTournament.historyLogs = lastTournamentResults;
+            if (typeof finalizeTournamentMatchHistory === 'function') finalizeTournamentMatchHistory(qSchoolTournament);
+            else qSchoolTournament.historyLogs = lastTournamentResults;
             activeTournament = null;
             tournamentBracket = [];
             const tile = document.getElementById('tile-tournament');
@@ -601,7 +564,8 @@ function skipActiveTournament() {
                 ? getPdcTourCardQualifierOutcomeMessage(qualifierTournament, player)
                 : '';
             qualifierTournament.completed = true;
-            qualifierTournament.historyLogs = lastTournamentResults;
+            if (typeof finalizeTournamentMatchHistory === 'function') finalizeTournamentMatchHistory(qualifierTournament);
+            else qualifierTournament.historyLogs = lastTournamentResults;
             activeTournament = null;
             tournamentBracket = [];
             const tile = document.getElementById('tile-tournament');
@@ -667,6 +631,7 @@ function skipActiveTournament() {
         }
 
         function simulateNextRound() {
+            if (typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy()) return false;
             const specialTournamentOutcome = advanceTournament(false);
 
             if (specialTournamentOutcome === true) {
@@ -696,7 +661,8 @@ function skipActiveTournament() {
 
             if (tournamentBracket.length === 1) {
                 activeTournament.completed = true;
-                activeTournament.historyLogs = lastTournamentResults;
+                if (typeof finalizeTournamentMatchHistory === 'function') finalizeTournamentMatchHistory(activeTournament);
+                else activeTournament.historyLogs = lastTournamentResults;
                 
                 let winner = tournamentBracket[0];
                 let winPrize = getPrizeMoney(activeTournament.name, 2, true);
@@ -855,6 +821,16 @@ function skipActiveTournament() {
 }
 
         function advanceTournament(playerAdvancing = true) {
+            if (typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy()) return false;
+            const round = iterateTournamentRound(playerAdvancing);
+            let step = round.next();
+            while (!step.done) step = round.next();
+            return step.value;
+        }
+
+        // Oba tryby korzystają z identycznego rozliczenia meczu. Generator oddaje
+        // sterowanie dopiero po komplecie wyniku, nagród, OVR i wpisów historii.
+        function* iterateTournamentRound(playerAdvancing = true) {
             let nextRoundBracket = [];
             const isContinentalQualifier = typeof isContinentalQualifierTournament === 'function' && isContinentalQualifierTournament(activeTournament);
             const isWorldMastersEvent = typeof isWorldMastersTournament === 'function' && isWorldMastersTournament(activeTournament);
@@ -868,20 +844,21 @@ function skipActiveTournament() {
             let roundHeader = `<h4 style='color:var(--accent-green); margin:15px 0 5px 0; border-bottom: 1px solid var(--border-color); padding-bottom: 3px;'>${getRoundName(tournamentRound)}</h4>`;
             lastTournamentResults += roundHeader;
             currentRoundHTML = roundHeader; 
+            if (typeof appendTournamentHistoryRound === 'function') appendTournamentHistoryRound(tournamentRound);
 
             for(let i=0; i<tournamentBracket.length; i+=2) {
                 let p1 = tournamentBracket[i]; let p2 = tournamentBracket[i+1];
                 
                 // Zabezpieczenie przed pustymi miejscami w drabince
-                if (!p1 || !p2) continue; 
+                if (!p1 || !p2) { yield; continue; }
                 
                 let winner, loser;
                 
                 // ZMIANA: Deklaracja wyników na samej górze pętli, aby były widoczne dla tabeli GDL!
                 let matchWScore = 6, matchLScore = 0; 
 
-                if (p1.isBye) { nextRoundBracket.push(p2); continue; }
-                if (p2.isBye) { nextRoundBracket.push(p1); continue; }
+                if (p1.isBye) { nextRoundBracket.push(p2); yield; continue; }
+                if (p2.isBye) { nextRoundBracket.push(p1); yield; continue; }
 
                 if (isCurrentPlayer(p1) || isCurrentPlayer(p2)) {
                     if (playerAdvancing) {
@@ -942,6 +919,17 @@ function skipActiveTournament() {
 
                     lastTournamentResults += matchResultHTML;
                     currentRoundHTML += matchResultHTML;
+                    if (typeof appendTournamentHistoryMatch === 'function') {
+                        appendTournamentHistoryMatch({
+                            p1, p2,
+                            score1: isP1Winner ? matchWScore : matchLScore,
+                            score2: isP1Winner ? matchLScore : matchWScore,
+                            average1: p1FinalAvg,
+                            average2: p2FinalAvg,
+                            careerMatch: true,
+                            round: tournamentRound
+                        });
+                    }
 
                     if (isWorldMastersEvent && typeof recordWorldMastersMatchResult === 'function') {
                         recordWorldMastersMatchResult(activeTournament, winner, loser, {
@@ -992,6 +980,17 @@ function skipActiveTournament() {
 
                     lastTournamentResults += matchResultHTML;
                     currentRoundHTML += matchResultHTML;
+                    if (typeof appendTournamentHistoryMatch === 'function') {
+                        appendTournamentHistoryMatch({
+                            p1, p2,
+                            score1: isP1Winner ? matchWScore : matchLScore,
+                            score2: isP1Winner ? matchLScore : matchWScore,
+                            average1: p1FinalAvg,
+                            average2: p2FinalAvg,
+                            careerMatch: false,
+                            round: tournamentRound
+                        });
+                    }
 
                     if (isWorldMastersEvent && typeof recordWorldMastersMatchResult === 'function') {
                         recordWorldMastersMatchResult(activeTournament, winner, loser, {
@@ -1023,6 +1022,7 @@ function skipActiveTournament() {
                         if (wGdl) { wGdl.points += 5; wGdl.nightsWon += 1; }
                     }
                 }
+                yield;
             } // Koniec pętli for
             tournamentBracket = nextRoundBracket; tournamentRound /= 2;
             if (isContinentalQualifier && tournamentBracket.length <= (
@@ -1058,6 +1058,7 @@ function skipActiveTournament() {
         }
 
         function startTournamentMatch() {
+            if (typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy()) return false;
             let opponent = null;
             for(let i = 0; i < tournamentBracket.length; i += 2) {
                 if(isCurrentPlayer(tournamentBracket[i])) opponent = tournamentBracket[i+1];

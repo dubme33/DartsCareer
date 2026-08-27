@@ -192,9 +192,20 @@ function getCompletedContinentalQualifierKeys(state, exceptPath = '') {
     return keys;
 }
 
+function isContinentalQualifierPathEligible(candidate, mainTournament, path) {
+    if (!isContinentalQualificationPlayerEligible(candidate)) return false;
+    if (path === 'card') return candidate.hasTourCard === true;
+    if (candidate.hasTourCard === true) return false;
+    if (path === 'host') return Boolean(mainTournament?.country && candidate.country === mainTournament.country);
+    if (path === 'nordicBaltic') return CONTINENTAL_NORDIC_BALTIC_COUNTRIES.has(candidate.country);
+    if (path === 'eastEurope') return CONTINENTAL_EAST_EUROPE_COUNTRIES.has(candidate.country);
+    return false;
+}
+
 function buildContinentalQualifierPool(mainTournament, path, state, candidates = getContinentalQualificationPlayers()) {
     const excludedKeys = getCompletedContinentalQualifierKeys(state, path);
-    const remaining = candidates.filter(candidate => !excludedKeys.has(getContinentalQualificationPlayerKey(candidate)));
+    const remaining = candidates.filter(candidate => isContinentalQualifierPathEligible(candidate, mainTournament, path)
+        && !excludedKeys.has(getContinentalQualificationPlayerKey(candidate)));
     let pool;
 
     if (path === 'card') {
@@ -247,7 +258,7 @@ function getContinentalTourQualifierParticipants(qualifierTournament) {
     const excludedKeys = getCompletedContinentalQualifierKeys(state, path);
     return resolveContinentalQualificationPlayers(pathState.participantIds, candidates)
         .filter(candidate => !excludedKeys.has(getContinentalQualificationPlayerKey(candidate)))
-        .filter(candidate => path === 'card' ? candidate.hasTourCard === true : candidate.hasTourCard !== true);
+        .filter(candidate => isContinentalQualifierPathEligible(candidate, mainTournament, path));
 }
 
 function getContinentalQualifierOpeningRound(qualifierTournament, participantCount) {
@@ -302,10 +313,9 @@ function completeContinentalTourQualifier(qualifierTournament, qualifiedPlayers)
     const excludedKeys = getCompletedContinentalQualifierKeys(state, path);
     const unique = new Map();
     (Array.isArray(qualifiedPlayers) ? qualifiedPlayers : []).forEach(candidate => {
-        if (!isContinentalQualificationPlayerEligible(candidate) || candidate.isBye) return;
+        if (!isContinentalQualifierPathEligible(candidate, mainTournament, path)) return;
         const key = getContinentalQualificationPlayerKey(candidate);
         if (excludedKeys.has(key) || unique.has(key)) return;
-        if (path === 'card' ? candidate.hasTourCard !== true : candidate.hasTourCard === true) return;
         unique.set(key, candidate);
     });
     pathState.qualifiedPlayerIds = [...unique.keys()].slice(0, places);
@@ -322,7 +332,7 @@ function automaticallyCompleteContinentalQualifierPath(mainTournament, path, can
     const excludedKeys = getCompletedContinentalQualifierKeys(state, path);
     pathState.qualifiedPlayerIds = resolveContinentalQualificationPlayers(pathState.participantIds, candidates)
         .filter(candidate => !excludedKeys.has(getContinentalQualificationPlayerKey(candidate)))
-        .filter(candidate => path === 'card' ? candidate.hasTourCard === true : candidate.hasTourCard !== true)
+        .filter(candidate => isContinentalQualifierPathEligible(candidate, mainTournament, path))
         .slice(0, CONTINENTAL_QUALIFIER_PATHS[path].places)
         .map(getContinentalQualificationPlayerKey);
     pathState.completed = true;

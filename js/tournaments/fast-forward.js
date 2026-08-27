@@ -1,4 +1,138 @@
 let isFastForwardingTournament = false;
+let tournamentSimulationFinished = Promise.resolve(true);
+let tournamentSimulationSaveBlocked = false;
+const TOURNAMENT_SIMULATION_BATCH_MS = 8;
+const TOURNAMENT_SIMULATION_BATCH_PAIRS = 16;
+
+function isTournamentSimulationBusy() {
+    return isFastForwardingTournament;
+}
+
+function waitForTournamentSimulation() {
+    return tournamentSimulationFinished;
+}
+
+function isTournamentSimulationSaveSafe() {
+    return !tournamentSimulationSaveBlocked;
+}
+
+function clearTournamentSimulationSaveBlock() {
+    tournamentSimulationSaveBlocked = false;
+}
+
+function yieldTournamentSimulation() {
+    // Rzeczywista przerwa w głównym wątku, nie samo Promise.resolve(). Działa
+    // również w tle, gdzie requestAnimationFrame może się całkiem zatrzymać.
+    return new Promise(resolve => setTimeout(resolve, 0));
+}
+
+function tournamentSimulationNow() {
+    return typeof performance !== 'undefined' ? performance.now() : Date.now();
+}
+
+function lockTournamentSimulationInterface() {
+    const dialog = document.getElementById('tournament-simulation-dialog');
+    const blockAction = event => {
+        if (!isFastForwardingTournament) return;
+        if (dialog && dialog.contains(event.target)) return;
+        event.preventDefault();
+        event.stopImmediatePropagation();
+    };
+    const preventClose = event => event.preventDefault();
+    const preventUnload = event => { event.preventDefault(); event.returnValue = ''; };
+    const events = ['click', 'keydown', 'change', 'input', 'submit'];
+    const unlock = () => {
+        events.forEach(name => document.removeEventListener(name, blockAction, true));
+        window.removeEventListener('beforeunload', preventUnload);
+        if (dialog) {
+            dialog.removeEventListener('cancel', preventClose);
+            if (typeof dialog.close === 'function') dialog.close();
+            else dialog.removeAttribute('open');
+        }
+    };
+    try {
+        events.forEach(name => document.addEventListener(name, blockAction, true));
+        window.addEventListener('beforeunload', preventUnload);
+        if (dialog) {
+            dialog.addEventListener('cancel', preventClose);
+            if (typeof dialog.showModal === 'function') dialog.showModal();
+            else dialog.setAttribute('open', '');
+        }
+        return unlock;
+    } catch (error) {
+        unlock();
+        throw error;
+    }
+}
+
+function updateTournamentSimulationProgress(round, processed, total) {
+    const label = document.getElementById('tournament-simulation-progress-label');
+    const roundLabel = typeof round === 'string' ? round : getRoundName(round);
+    if (label) label.textContent = `${roundLabel} — ${t('t-simulation-round-progress')}: ${processed} / ${total}`;
+    const bar = document.getElementById('tournament-simulation-progress');
+    if (bar) { bar.max = Math.max(1, total); bar.value = processed; }
+}
+
+async function advanceTournamentInBatches(tournament) {
+    const bracket = tournamentBracket;
+    const roundNumber = tournamentRound;
+    const total = Math.ceil(bracket.length / 2);
+    return runTournamentSimulationSteps(iterateTournamentRound(false), roundNumber, total, () => {
+        if (activeTournament !== tournament || tournamentBracket !== bracket || tournamentRound !== roundNumber) {
+            throw new Error('Stan turnieju zmienił się w trakcie symulacji.');
+        }
+    });
+}
+
+async function runTournamentSimulationSteps(steps, round, total, checkState) {
+    let processed = 0;
+    updateTournamentSimulationProgress(round, 0, total);
+    while (true) {
+        if (checkState) checkState();
+        const startedAt = tournamentSimulationNow();
+        let batchPairs = 0;
+        do {
+            const step = steps.next();
+            if (step.done) {
+                updateTournamentSimulationProgress(round, total, total);
+                return step.value;
+            }
+            processed++;
+            batchPairs++;
+        } while (batchPairs < TOURNAMENT_SIMULATION_BATCH_PAIRS
+            && tournamentSimulationNow() - startedAt < TOURNAMENT_SIMULATION_BATCH_MS);
+        updateTournamentSimulationProgress(round, processed, total);
+        await yieldTournamentSimulation();
+    }
+}
+
+async function simulateTournamentRoundsInBatches(tournament) {
+    let outcome = false;
+    let simulatedRounds = 0;
+    while (tournamentBracket.length > 1 && simulatedRounds < 16) {
+        outcome = await advanceTournamentInBatches(tournament);
+        simulatedRounds++;
+        if (outcome) return outcome;
+        if (tournamentBracket.length > 1) await yieldTournamentSimulation();
+    }
+    if (tournamentBracket.length !== 1) throw new Error('Nie udało się zamknąć drabinki turnieju.');
+    return outcome;
+}
+
+async function createTournamentSimulationCheckpoint() {
+    const state = buildGameState();
+    const payload = typeof createCareerIndexedDbPayload === 'function'
+        ? await createCareerIndexedDbPayload(state)
+        : { state, mediaByKind: {} };
+    // Jedna kopia bezpieczeństwa na całą operację. Pliki profilu pozostają
+    // binarne, poza klonowanym stanem; nie kopiujemy ich do Base64.
+    return {
+        state: typeof structuredClone === 'function'
+            ? structuredClone(payload.state)
+            : JSON.parse(JSON.stringify(payload.state)),
+        media: payload.mediaByKind
+    };
+}
 
 function isCareerPlayerInRemainingBracket() {
     return Array.isArray(tournamentBracket)
@@ -31,7 +165,8 @@ function finishFastForwardedTournament({ announceWinner = false } = {}) {
     const winnerPrize = getPrizeMoney(completedTournament.name, 2, true);
 
     completedTournament.completed = true;
-    completedTournament.historyLogs = lastTournamentResults;
+    if (typeof finalizeTournamentMatchHistory === 'function') finalizeTournamentMatchHistory(completedTournament);
+    else completedTournament.historyLogs = lastTournamentResults;
     awardPrizeMoney(winner, winnerPrize, completedTournament.name);
     if (typeof completeWorldMastersTournament === 'function') completeWorldMastersTournament(completedTournament, winner);
     if (typeof isGrandSlamTournament === 'function' && isGrandSlamTournament(completedTournament)
@@ -90,30 +225,133 @@ function finishFastForwardedSpecialTournament(outcome) {
     return false;
 }
 
-function simulateRemainingTournament() {
-    if (isFastForwardingTournament || !activeTournament || !Array.isArray(tournamentBracket)
-        || tournamentBracket.length <= 1 || isCareerPlayerInRemainingBracket()) return false;
+async function simulateRemainingTournament() {
+    if (!Array.isArray(tournamentBracket) || tournamentBracket.length <= 1 || isCareerPlayerInRemainingBracket()) return false;
+
+    return runTournamentSimulation(async () => {
+        const outcome = await simulateTournamentRoundsInBatches(activeTournament);
+        if (!finishFastForwardedSpecialTournament(outcome)) finishFastForwardedTournament({ announceWinner: false });
+        return true;
+    });
+}
+
+function finishHeadlessTournament(specialTournamentOutcome) {
+    if (specialTournamentOutcome === true) {
+        concludeContinentalTourQualifierEvent(false);
+        return;
+    }
+    if (specialTournamentOutcome === 'worldMastersFinalsQualifier') {
+        concludeWorldMastersFinalsQualifierEvent(false);
+        return;
+    }
+    if (specialTournamentOutcome === 'pdcQSchool') {
+        concludePdcQSchoolEvent(false);
+        return;
+    }
+    if (specialTournamentOutcome === 'pdcTourCardQualifier') {
+        concludePdcTourCardQualifierEvent(false);
+        return;
+    }
+    
+    // Przypisanie nagród i ostateczne zamknięcie turnieju
+    activeTournament.completed = true;
+    if (typeof finalizeTournamentMatchHistory === 'function') finalizeTournamentMatchHistory(activeTournament);
+    else activeTournament.historyLogs = lastTournamentResults;
+    
+    let winner = tournamentBracket[0];
+    let winPrize = getPrizeMoney(activeTournament.name, 2, true);
+    awardPrizeMoney(winner, winPrize, activeTournament.name);
+    if (typeof completeWorldMastersTournament === 'function') completeWorldMastersTournament(activeTournament, winner);
+    recordSeasonTournamentResult(winner, activeTournament, { round: 2, prizeMoney: winPrize, won: true });
+
+    // Wypłaty za miejsca 5-8 po finałach Play-offs
+    if (activeTournament.name.includes("Play-offs")) {
+        let sortedGDL = [...gdlTable].sort((a,b) => b.points - a.points || (b.legsWon - b.legsLost) - (a.legsWon - a.legsLost));
+        if(sortedGDL[4]) awardPrizeMoney(sortedGDL[4].player, 95000, activeTournament.name);
+        if(sortedGDL[5]) awardPrizeMoney(sortedGDL[5].player, 90000, activeTournament.name);
+        if(sortedGDL[6]) awardPrizeMoney(sortedGDL[6].player, 85000, activeTournament.name);
+        if(sortedGDL[7]) awardPrizeMoney(sortedGDL[7].player, 80000, activeTournament.name);
+    }
+    
+    activeTournament = null; 
+    tournamentBracket = []; // <--- CZYŚCI DRABINKĘ PO SYMULACJI
+    saveGame(true);
+    
+    // Ukrywamy kafelek aktywnego turnieju, aktualizujemy dane i wracamy do Hubu
+    let tileTour = document.getElementById('tile-tournament');
+    if (tileTour) tileTour.style.display = 'none';
+    
+    updateHub();
+    showScreen('screen-hub');
+}
+
+function simulateHeadlessTournament(prepareDraw, hasGroupStage = false) {
+    const tournament = activeTournament;
+    return runTournamentSimulation(async () => {
+        const prepared = await runTournamentSimulationSteps(
+            prepareDraw,
+            hasGroupStage ? t('t-simulation-groups') : tournamentRound,
+            hasGroupStage ? 48 : 0,
+            () => {
+                if (activeTournament !== tournament) throw new Error('Zmieniono turniej w trakcie przygotowania.');
+            }
+        );
+        if (!prepared) throw new Error('Nie udało się przygotować turnieju.');
+        // Dajemy interfejsowi pokazać drabinkę/postęp po przygotowaniu grup.
+        await yieldTournamentSimulation();
+        const outcome = await simulateTournamentRoundsInBatches(tournament);
+        finishHeadlessTournament(outcome);
+        return true;
+    }, { onRestored: () => {
+        const modal = document.getElementById('bracket-modal');
+        if (modal) modal.style.display = 'none';
+        if (typeof showScreen === 'function') showScreen('screen-hub');
+    } });
+}
+
+async function runTournamentSimulation(operation, { onRestored = () => showBracket() } = {}) {
+    if (isFastForwardingTournament || tournamentSimulationSaveBlocked || !activeTournament
+        || (typeof currentMatch !== 'undefined' && currentMatch)) return false;
 
     isFastForwardingTournament = true;
-    setRemainingTournamentButtonsDisabled(true);
+    let releaseSaveBarrier;
+    tournamentSimulationFinished = new Promise(resolve => { releaseSaveBarrier = resolve; });
+    let unlockInterface = () => {};
+    let checkpoint = null;
+    let safeToSave = true;
 
     try {
-        let specialTournamentOutcome = false;
-        let simulatedRounds = 0;
-
-        while (tournamentBracket.length > 1 && simulatedRounds < 16) {
-            specialTournamentOutcome = advanceTournament(false);
-            simulatedRounds++;
-            if (specialTournamentOutcome) break;
+        setRemainingTournamentButtonsDisabled(true);
+        unlockInterface = lockTournamentSimulationInterface();
+        updateTournamentSimulationProgress(tournamentRound, 0, Math.ceil(tournamentBracket.length / 2));
+        await yieldTournamentSimulation();
+        // Starszy zapis ma referencje do zawodników: musi skończyć zapisywanie
+        // przed pierwszą zmianą nagród. Nowe autosave'y czekają na barierze.
+        if (typeof waitForCareerSaveWrites === 'function') await waitForCareerSaveWrites();
+        checkpoint = await createTournamentSimulationCheckpoint();
+        return await operation();
+    } catch (error) {
+        console.error('Nie udało się dokończyć symulacji turnieju.', error);
+        if (checkpoint) {
+            safeToSave = false;
+            try {
+                safeToSave = restoreGameState(checkpoint.state, false, { tournamentRollback: true });
+                if (safeToSave && typeof applyCareerProfileMediaToPlayer === 'function') {
+                    applyCareerProfileMediaToPlayer(checkpoint.media);
+                }
+                if (safeToSave) onRestored();
+            } catch (restoreError) {
+                safeToSave = false;
+                console.error('Nie udało się przywrócić stanu sprzed symulacji.', restoreError);
+            }
         }
-
-        if (finishFastForwardedSpecialTournament(specialTournamentOutcome)) return true;
-        if (tournamentBracket.length !== 1) return false;
-
-        finishFastForwardedTournament({ announceWinner: false });
-        return true;
+        alert(t(safeToSave ? 't-simulation-error-restored' : 't-simulation-error-reload'));
+        return false;
     } finally {
+        tournamentSimulationSaveBlocked = !safeToSave;
         isFastForwardingTournament = false;
+        releaseSaveBarrier(safeToSave);
+        unlockInterface();
         setRemainingTournamentButtonsDisabled(false);
     }
 }

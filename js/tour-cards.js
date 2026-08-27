@@ -170,7 +170,9 @@ function getPdcQSchoolOpeningRound(participantCount) {
 
 function getPdcTourCardQualifierMainTournament(qualifierTournament) {
     if (!qualifierTournament?.qualifierFor || !Array.isArray(tournamentDatabase)) return null;
-    return tournamentDatabase.find(tournament => tournament.name === qualifierTournament.qualifierFor) || null;
+    return tournamentDatabase.find(tournament => tournament.name === qualifierTournament.qualifierFor)
+        || tournamentDatabase.find(tournament => tournament.sourceName === qualifierTournament.qualifierFor)
+        || null;
 }
 
 function buildPdcTourCardAutomaticField(mainTournament, candidates = getPdcTourCardPlayers()) {
@@ -234,13 +236,25 @@ function resolvePdcTourCardPlayerKeys(keys, candidates = getPdcTourCardPlayers()
     return (Array.isArray(keys) ? keys : []).map(key => byKey.get(key)).filter(Boolean);
 }
 
+function getPdcTourCardQualifierEligiblePlayers(qualifierTournament, candidates = getPdcTourCardPlayers()) {
+    const state = ensurePdcTourCardQualificationState(qualifierTournament, candidates);
+    if (!state) return [];
+    const automaticKeys = new Set(state.automaticPlayerIds);
+    return getPdcTourCardHolders(candidates)
+        .filter(candidate => !automaticKeys.has(getPdcTourCardPlayerKey(candidate)))
+        .sort(comparePdcTourCardRanking);
+}
+
 function getPdcTourCardQualifierParticipants(qualifierTournament, candidates = getPdcTourCardPlayers()) {
     const state = ensurePdcTourCardQualificationState(qualifierTournament, candidates);
-    return resolvePdcTourCardPlayerKeys(state?.qualifierPlayerIds, candidates);
+    const eligibleKeys = new Set(getPdcTourCardQualifierEligiblePlayers(qualifierTournament, candidates)
+        .map(getPdcTourCardPlayerKey));
+    return resolvePdcTourCardPlayerKeys(state?.qualifierPlayerIds, candidates)
+        .filter(candidate => eligibleKeys.has(getPdcTourCardPlayerKey(candidate)));
 }
 
 function buildPdcTourCardQualifierDraw(participants, random = Math.random) {
-    const entrants = shufflePdcQSchoolPlayers(uniquePdcTourCardPlayers(participants), random);
+    const entrants = shufflePdcQSchoolPlayers(getPdcTourCardHolders(participants), random);
     const bracketSize = getPdcQSchoolOpeningRound(entrants.length);
     const byeCount = Math.max(0, bracketSize - entrants.length);
     const draw = [];
@@ -255,7 +269,11 @@ function completePdcTourCardQualifier(qualifierTournament, qualifiedPlayers) {
     const mainTournament = getPdcTourCardQualifierMainTournament(qualifierTournament);
     const state = ensurePdcTourCardQualificationState(qualifierTournament);
     if (!mainTournament || !state) return null;
-    const qualifiers = uniquePdcTourCardPlayers(qualifiedPlayers).slice(0, state.qualifyingPlaces);
+    const eligibleKeys = new Set(getPdcTourCardQualifierEligiblePlayers(qualifierTournament)
+        .map(getPdcTourCardPlayerKey));
+    const qualifiers = uniquePdcTourCardPlayers(qualifiedPlayers)
+        .filter(candidate => eligibleKeys.has(getPdcTourCardPlayerKey(candidate)))
+        .slice(0, state.qualifyingPlaces);
     state.qualifiedPlayerIds = qualifiers.map(getPdcTourCardPlayerKey);
     state.completed = true;
     qualifierTournament.completed = true;
@@ -266,19 +284,23 @@ function completePdcTourCardQualifier(qualifierTournament, qualifiedPlayers) {
 function getPdcTourCardQualifiedMainField(mainTournament, candidates = getPdcTourCardPlayers()) {
     const qualifierTournament = Array.isArray(tournamentDatabase)
         ? tournamentDatabase.find(tournament => tournament.specialType === PDC_TOUR_CARD_QUALIFIER_TYPE
-            && tournament.qualifierFor === mainTournament?.name)
+            && (tournament.qualifierFor === mainTournament?.name || tournament.qualifierFor === mainTournament?.sourceName))
         : null;
     if (!qualifierTournament) return null;
     const state = ensurePdcTourCardQualificationState(qualifierTournament, candidates);
     if (!state.completed) {
-        state.qualifiedPlayerIds = state.qualifierPlayerIds.slice(0, state.qualifyingPlaces);
+        state.qualifiedPlayerIds = getPdcTourCardQualifierParticipants(qualifierTournament, candidates)
+            .slice(0, state.qualifyingPlaces).map(getPdcTourCardPlayerKey);
         state.completed = true;
         state.migratedWithoutQualifier = true;
     }
-    return [
+    const eligibleKeys = new Set(getPdcTourCardQualifierEligiblePlayers(qualifierTournament, candidates)
+        .map(getPdcTourCardPlayerKey));
+    return uniquePdcTourCardPlayers([
         ...resolvePdcTourCardPlayerKeys(state.automaticPlayerIds, candidates),
         ...resolvePdcTourCardPlayerKeys(state.qualifiedPlayerIds, candidates)
-    ];
+            .filter(candidate => eligibleKeys.has(getPdcTourCardPlayerKey(candidate)))
+    ]);
 }
 
 function isCareerPlayerAutomaticallyQualifiedForPdcCardQualifier(qualifierTournament) {

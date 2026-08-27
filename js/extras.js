@@ -250,8 +250,11 @@ function initCareerChronicle() {
             }
         }
 
-        // Pamięć wirtualna na wgrane z ZIPa zdjęcia, muzykę i loga
+        // Binarne zasoby ZIP-a i katalog muzyki rozpakowywanej na żądanie.
         let moddedAssets = { photos: {}, music: {}, sounds: {}, sponsors: {} };
+        let persistedModRestorePromise = null;
+        let activePersistedModRecord = null;
+        let activeModData = null;
 
         // --- SYSTEM MODÓW (IMPORT PACZEK .ZIP) ---
         function validateModData(modData) {
@@ -269,41 +272,8 @@ function initCareerChronicle() {
             if (modData.shopDatabase !== undefined && !isPlainObject(modData.shopDatabase)) throw new Error('Niepoprawna baza sklepu.');
         }
 
-        function getAssetInfo(relativePath) {
-            const filename = relativePath.split('/').pop();
-            const dotIndex = filename.lastIndexOf('.');
-            if (dotIndex <= 0) return null;
-            return { name: filename.slice(0, dotIndex), extension: filename.slice(dotIndex + 1).toLowerCase() };
-        }
-
         async function readModAssets(zipContent) {
-            const assets = { photos: {}, music: {}, sounds: {}, sponsors: {} };
-            const imageTypes = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', webp: 'image/webp' };
-            const audioTypes = { mp3: 'audio/mpeg', wav: 'audio/wav', ogg: 'audio/ogg' };
-            const tasks = [];
-
-            zipContent.forEach((relativePath, zipEntry) => {
-                if (zipEntry.dir) return;
-                const [folder] = relativePath.split('/');
-                const info = getAssetInfo(relativePath);
-                if (!info) return;
-
-                if ((folder === 'zdjecia' || folder === 'sponsors') && imageTypes[info.extension]) {
-                    tasks.push(zipEntry.async('base64').then(content => {
-                        const destination = folder === 'zdjecia' ? assets.photos : assets.sponsors;
-                        destination[info.name] = `data:${imageTypes[info.extension]};base64,${content}`;
-                    }));
-                } else if ((folder === 'music' || folder === 'sounds') && audioTypes[info.extension]) {
-                    tasks.push(zipEntry.async('base64').then(content => {
-                        const destination = folder === 'music' ? assets.music : assets.sounds;
-                        const key = folder === 'sounds' ? info.name.toLowerCase() : info.name;
-                        destination[key] = `data:${audioTypes[info.extension]};base64,${content}`;
-                    }));
-                }
-            });
-
-            await Promise.all(tasks);
-            return assets;
+            return createModMediaAssets(zipContent);
         }
 
         function copyModObjectValues(target, source) {
@@ -312,7 +282,7 @@ function initCareerChronicle() {
             });
         }
 
-        function applyModData(modData, isCareerActive) {
+        function applyModData(modData, isCareerActive, options = {}) {
             if (!isCareerActive) {
                 if (modData.pdcPlayers) {
                     pdcPlayers.length = 0;
@@ -328,7 +298,7 @@ function initCareerChronicle() {
                     if (typeof applyKnownPlayerCorrections === 'function') applyKnownPlayerCorrections(pdcPlayers);
                     if (typeof deduplicatePdcPlayers === 'function') deduplicatePdcPlayers();
                     normalizePlayerIds(pdcPlayers, player);
-                    initPlayersForm();
+                    if (!options.deferPlayerFormInit) initPlayersForm();
                 }
                 if (modData.tournamentDatabase) {
                     tournamentDatabase.length = 0;
@@ -454,6 +424,7 @@ function initCareerChronicle() {
             if (typeof migratePdcTourCardSystem === 'function') {
                 migratePdcTourCardSystem(isCareerActive ? [player, ...pdcPlayers] : pdcPlayers, currentDate);
             }
+            if (typeof invalidatePlayerRankingCache === 'function') invalidatePlayerRankingCache();
 
             renderOpponentOptions();
             const tDescPlay = document.getElementById('t-desc-play'); if (tDescPlay) tDescPlay.innerText = 'Zmierz się z AI z PDC.';
@@ -467,24 +438,142 @@ function initCareerChronicle() {
             if (isCareerActive) updateHub();
         }
 
+        function updatePersistedModControls(record) {
+            activePersistedModRecord = record || null;
+            const forgetButton = document.getElementById('t-btn-forget-mod');
+            if (!forgetButton) return;
+            forgetButton.style.display = activePersistedModRecord ? 'inline-block' : 'none';
+            forgetButton.title = activePersistedModRecord?.name || '';
+        }
+
+        async function parseModPackage(modPackage) {
+            if (typeof JSZip === 'undefined' || typeof JSZip.loadAsync !== 'function') {
+                throw new Error('Biblioteka JSZip nie jest dostępna.');
+            }
+            const zipContent = await JSZip.loadAsync(modPackage);
+            const configEntry = zipContent.file('mod.json');
+            const modData = configEntry ? JSON.parse(await configEntry.async('string')) : {};
+            validateModData(modData);
+            const loadedAssets = await readModAssets(zipContent);
+            return { modData, loadedAssets };
+        }
+
+        async function activateModPackage(modPackage, options = {}) {
+            if (typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy()) {
+                throw new Error('Zmiana moda jest niedostępna podczas symulacji turnieju.');
+            }
+            // Walidujemy strukturę ZIP-a, konfigurację i zasoby startowe.
+            // Utwory wejściowe będą odczytywane dopiero przed odtworzeniem.
+            const { modData, loadedAssets } = await parseModPackage(modPackage);
+            if (typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy()) {
+                disposeModMediaAssets(loadedAssets);
+                throw new Error('Zmiana moda jest niedostępna podczas symulacji turnieju.');
+            }
+            const isCareerActive = options.isCareerActive ?? Boolean(player && player.name);
+            const previousAssets = moddedAssets;
+            try {
+                // Profil ma własne adresy: wymiana moda nie unieważni jego plików.
+                if (isCareerActive && typeof setPlayerProfileMediaFromFile === 'function') {
+                    for (const kind of ['photo', 'walkon']) {
+                        const blob = getModMediaBlobByUrl(previousAssets, player[kind]);
+                        if (blob) setPlayerProfileMediaFromFile(kind, blob);
+                    }
+                }
+                moddedAssets = loadedAssets;
+                applyModData(modData, isCareerActive, {
+                    deferPlayerFormInit: options.deferPlayerFormInit === true
+                });
+            } catch (error) {
+                moddedAssets = previousAssets;
+                disposeModMediaAssets(loadedAssets);
+                throw error;
+            }
+            activeModData = modData;
+            if (typeof cancelMatchIntro === 'function') cancelMatchIntro();
+            if (typeof crowdAudio !== 'undefined' && crowdAudio) {
+                crowdAudio.pause(); crowdAudio.removeAttribute('src'); crowdAudio.load(); crowdAudio = null;
+            }
+            if (typeof postMatchAudio !== 'undefined' && postMatchAudio) {
+                postMatchAudio.pause(); postMatchAudio.removeAttribute('src'); postMatchAudio.load(); postMatchAudio = null;
+            }
+            disposeModMediaAssets(previousAssets);
+
+            let persisted = options.persist !== true;
+            let persistenceError = null;
+            if (options.persist === true) {
+                try {
+                    if (typeof writeCareerModPackageToIndexedDb !== 'function') {
+                        throw new Error('Trwały magazyn modów nie jest dostępny.');
+                    }
+                    const record = await writeCareerModPackageToIndexedDb(modPackage, {
+                        name: modPackage.name,
+                        lastModified: modPackage.lastModified
+                    });
+                    updatePersistedModControls(record);
+                    persisted = true;
+                } catch (error) {
+                    persistenceError = error;
+                    console.warn('Mod działa w tej sesji, ale nie udało się go zapamiętać.', error);
+                }
+            }
+            return { isCareerActive, persisted, persistenceError };
+        }
+
+        function restorePersistedMod() {
+            if (persistedModRestorePromise) return persistedModRestorePromise;
+            persistedModRestorePromise = (async () => {
+                if (typeof readCareerModPackageFromIndexedDb !== 'function') return false;
+                const record = await readCareerModPackageFromIndexedDb();
+                updatePersistedModControls(record);
+                if (!record?.blob) return false;
+                const isCareerActive = Boolean(player && player.name);
+                await activateModPackage(record.blob, {
+                    persist: false,
+                    isCareerActive,
+                    deferPlayerFormInit: !isCareerActive
+                });
+                return true;
+            })().catch(error => {
+                // Automatyczny mod nie może zablokować uruchomienia gry ani zapisu kariery.
+                console.warn('Nie udało się automatycznie odtworzyć zapamiętanego moda.', error);
+                return false;
+            });
+            return persistedModRestorePromise;
+        }
+
+        async function waitForPersistedModRestore() {
+            return restorePersistedMod();
+        }
+
+        function reapplyLoadedModToActiveCareer() {
+            if (!activeModData || !player || !player.name) return false;
+            applyModData(activeModData, true);
+            return true;
+        }
+
+        async function forgetPersistedMod() {
+            try {
+                if (typeof deleteCareerModPackageFromIndexedDb !== 'function') {
+                    throw new Error('Trwały magazyn modów nie jest dostępny.');
+                }
+                await deleteCareerModPackageFromIndexedDb();
+                updatePersistedModControls(null);
+                alert(t('t-alert-mod-forgot'));
+            } catch (error) {
+                console.error('Nie udało się usunąć zapamiętanego moda.', error);
+                alert(t('t-alert-mod-forget-err'));
+            }
+        }
+
         async function loadMod(event) {
             const input = event.target;
             const file = input.files[0];
             if (!file) return;
 
             try {
-                const zipContent = await JSZip.loadAsync(file);
-                const configEntry = zipContent.file('mod.json');
-                const modData = configEntry ? JSON.parse(await configEntry.async('string')) : {};
-                validateModData(modData);
-
-                // Stan gry zostaje zmieniony dopiero, gdy wszystkie pliki ZIP zostały poprawnie odczytane.
-                const loadedAssets = await readModAssets(zipContent);
-                const isCareerActive = Boolean(player && player.name);
-                applyModData(modData, isCareerActive);
-                moddedAssets = loadedAssets;
-
-                alert(isCareerActive ? t('t-alert-mod-career') : t('t-alert-mod-new'));
+                const result = await activateModPackage(file, { persist: true });
+                alert(result.isCareerActive ? t('t-alert-mod-career') : t('t-alert-mod-new'));
+                if (!result.persisted) alert(t('t-alert-mod-persist-err'));
             } catch (error) {
                 console.error('Nie udało się wczytać moda.', error);
                 alert(t('t-alert-mod-err'));
@@ -492,5 +581,9 @@ function initCareerChronicle() {
                 input.value = '';
             }
         }
+
+        // Rozpoczynamy odczyt od razu po załadowaniu skryptów. Miejsca startu
+        // kariery oraz loadGame() dodatkowo czekają na tę samą obietnicę.
+        restorePersistedMod();
 
     

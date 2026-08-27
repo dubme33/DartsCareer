@@ -1,3 +1,37 @@
+let matchIntroGeneration = 0;
+let matchIntroFinishTimeout = null;
+let matchIntroFinishing = false;
+const walkonAudioReleases = new WeakMap();
+
+function releaseMatchWalkonAudio(audio) {
+    if (!audio) return;
+    audio.pause();
+    const release = walkonAudioReleases.get(audio);
+    if (release) {
+        walkonAudioReleases.delete(audio);
+        // Odłącz dekoder przed ewentualnym usunięciem pliku z cache.
+        audio.removeAttribute('src');
+        audio.load();
+        release();
+    }
+    if (currentWalkonAudio === audio) currentWalkonAudio = null;
+    if (oppAudio === audio) oppAudio = null;
+}
+
+function cancelMatchIntro() {
+    // Każda prezentacja ma własny numer: spóźniony odczyt ZIP-a nie uruchomi audio.
+    matchIntroGeneration++;
+    isWalkonSkipped = true;
+    clearTimeout(walkonTimeout);
+    clearInterval(walkonInterval);
+    clearTimeout(matchIntroFinishTimeout);
+    matchIntroFinishTimeout = null;
+    matchIntroFinishing = false;
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
+    releaseMatchWalkonAudio(currentWalkonAudio);
+    releaseMatchWalkonAudio(oppAudio);
+}
+
 function startCrowd() {
             if(!crowdAudio) {
                 let crowdSrc = moddedAssets.sounds["crowd"] || 'sounds/crowd.mp3';
@@ -20,12 +54,31 @@ function startCrowd() {
 
         function getMatchWalkonAudioSource(candidate) {
             if (!candidate?.name) return '';
-            if (candidate.walkon) return candidate.walkon;
-            return moddedAssets.music[candidate.name] || `music/${candidate.name}.mp3`;
+            if (typeof candidate.walkon === 'string' && candidate.walkon) return candidate.walkon;
+            const modSource = moddedAssets.music[candidate.name];
+            return typeof modSource === 'string' ? modSource : `music/${candidate.name}.mp3`;
+        }
+
+        async function acquireMatchWalkonAudio(candidate) {
+            if (!candidate?.walkon && candidate?.name && typeof acquireModMusicAsset === 'function') {
+                try {
+                    const music = await acquireModMusicAsset(moddedAssets, candidate.name);
+                    if (music.url) return music;
+                    music.release();
+                } catch (error) {
+                    // Wadliwy utwór nie może zablokować rozpoczęcia meczu.
+                    console.warn('Nie udało się odczytać muzyki wejściowej z moda.', error);
+                }
+            }
+            return { url: getMatchWalkonAudioSource(candidate), release() {} };
         }
 
         function playMatchIntro(p1Name, p2Name) {
+            cancelMatchIntro();
             isWalkonSkipped = false;
+            const generation = matchIntroGeneration;
+            const introMatch = currentMatch;
+            const isActive = () => generation === matchIntroGeneration && currentMatch === introMatch && !isWalkonSkipped;
             
             // POPRAWKA: Zmienione ID przycisku na takie ze słownika
             let skipBtn = document.getElementById('t-btn-skip-walkon');
@@ -38,11 +91,7 @@ function startCrowd() {
 
             if (currentMatch) currentMatch.introInProgress = true;
             const hasSpeechSynthesis = Boolean(window.speechSynthesis && typeof SpeechSynthesisUtterance !== 'undefined');
-            if (hasSpeechSynthesis) window.speechSynthesis.cancel();
-            if(currentWalkonAudio) { currentWalkonAudio.pause(); currentWalkonAudio = null; }
-            if(oppAudio) { oppAudio.pause(); oppAudio = null; }
             if(crowdAudio) { crowdAudio.pause(); }
-            clearTimeout(walkonTimeout); clearInterval(walkonInterval);
 
             // Tłumaczenie państw na angielski dla płynniejszej wymowy callera
             const enCountries = { 
@@ -70,78 +119,71 @@ function startCrowd() {
                 : {};
             u2.lang = 'en-GB'; u2.pitch = 0.8; u2.rate = 0.9; u2.volume = 1.0 * globalVolume;
             
-            u1.onend = () => {
-                if(isWalkonSkipped) return;
-                let audioSrc = getMatchWalkonAudioSource(p2Candidate);
-                oppAudio = new Audio(audioSrc);
-                oppAudio.volume = 0.6 * globalVolume;
-                const beginOpponentWalkon = () => {
+            async function playCandidateWalkon(candidate, isP1, onFinished) {
+                if (!isActive()) return;
+                const music = await acquireMatchWalkonAudio(candidate);
+                if (!isActive()) { music.release(); return; }
+                if (!music.url) { music.release(); onFinished(); return; }
+                let audio;
+                let completed = false;
+                const advance = () => {
+                    if (completed) return;
+                    completed = true;
+                    if (audio) releaseMatchWalkonAudio(audio);
+                    else music.release();
+                    if (isActive()) onFinished();
+                };
+                const beginWalkon = () => {
+                    if (!isActive()) { advance(); return; }
                     walkonTimeout = setTimeout(() => {
-                        if(isWalkonSkipped) return;
+                        if (!isActive() || completed) return;
                         let fadeVol = 0.6;
                         walkonInterval = setInterval(() => {
+                            if (!isActive() || completed) return;
                             fadeVol -= 0.05;
-                            if(fadeVol > 0) {
-                                if(oppAudio) oppAudio.volume = fadeVol * globalVolume;
-                            } else { 
-                                clearInterval(walkonInterval); 
-                                if(oppAudio) oppAudio.pause(); 
-                                playPlayerIntro(); 
+                            if (fadeVol > 0) {
+                                audio.volume = fadeVol * globalVolume;
+                            } else {
+                                clearInterval(walkonInterval);
+                                advance();
                             }
-                        }, 200);
-                    }, 20000); // 20 sekund dla rywala
+                        }, isP1 ? 300 : 200);
+                    }, 20000); // Dotychczasowe czasy wejść pozostają bez zmian.
                 };
-                const playPromise = oppAudio.play();
-                if (playPromise && typeof playPromise.then === 'function') {
-                    playPromise.then(beginOpponentWalkon).catch(() => {
-                        if(!isWalkonSkipped) playPlayerIntro();
-                    });
-                } else beginOpponentWalkon();
-            };
+                try {
+                    audio = new Audio(music.url);
+                    walkonAudioReleases.set(audio, music.release);
+                    if (isP1) currentWalkonAudio = audio;
+                    else oppAudio = audio;
+                    audio.volume = 0.6 * globalVolume;
+                    const playPromise = audio.play();
+                    if (playPromise && typeof playPromise.then === 'function') {
+                        playPromise.then(beginWalkon).catch(advance);
+                    } else beginWalkon();
+                } catch (_) {
+                    advance();
+                }
+            }
+
+            u1.onend = () => playCandidateWalkon(p2Candidate, false, playPlayerIntro);
 
             function playPlayerIntro() { 
-                if (isWalkonSkipped) return;
+                if (!isActive()) return;
                 if (hasSpeechSynthesis) window.speechSynthesis.speak(u2);
                 else u2.onend();
             }
 
-            u2.onend = () => {
-                if(isWalkonSkipped) return;
-                const audioSrc = getMatchWalkonAudioSource(p1Candidate);
-                if (audioSrc) {
-                    currentWalkonAudio = new Audio(audioSrc);
-                    currentWalkonAudio.volume = 0.6 * globalVolume;
-                    const beginPlayerWalkon = () => {
-                        walkonTimeout = setTimeout(() => {
-                            if(isWalkonSkipped) return;
-                            let fadeVol = 0.6;
-                            walkonInterval = setInterval(() => {
-                                fadeVol -= 0.05;
-                                if(fadeVol > 0) {
-                                    if(currentWalkonAudio) currentWalkonAudio.volume = fadeVol * globalVolume;
-                                } else {
-                                    clearInterval(walkonInterval);
-                                    if(currentWalkonAudio) currentWalkonAudio.pause();
-                                    if(!isWalkonSkipped) finishWalkon();
-                                }
-                            }, 300);
-                        }, 20000);
-                    };
-                    let playPromise = currentWalkonAudio.play();
-                    if (playPromise !== undefined) {
-                        playPromise.then(beginPlayerWalkon).catch(() => {
-                            if (!isWalkonSkipped) finishWalkon();
-                        });
-                    } else beginPlayerWalkon();
-                } else {
-                    finishWalkon();
-                }
-            };
+            u2.onend = () => playCandidateWalkon(p1Candidate, true, finishWalkon);
             if (hasSpeechSynthesis) window.speechSynthesis.speak(u1);
             else u1.onend();
         }
 
         function finishWalkon() {
+            if (matchIntroFinishing) return;
+            matchIntroFinishing = true;
+            const generation = matchIntroGeneration;
+            const introMatch = currentMatch;
+            const isCurrent = () => generation === matchIntroGeneration && currentMatch === introMatch;
             startCrowd();
             
             // POPRAWKA: Zmienione ID przycisku na takie ze słownika
@@ -152,12 +194,13 @@ function startCrowd() {
             let gameOnAudio = new Audio(audioSrc);
             gameOnAudio.volume = 1.0 * globalVolume; 
 
-            setTimeout(() => {
+            matchIntroFinishTimeout = setTimeout(() => {
+                if (!isCurrent()) return;
                 let playPromise = gameOnAudio.play();
                 
                 if (playPromise !== undefined) {
                     playPromise.catch(e => {
-                        if (window.speechSynthesis && typeof SpeechSynthesisUtterance !== 'undefined') {
+                        if (isCurrent() && window.speechSynthesis && typeof SpeechSynthesisUtterance !== 'undefined') {
                             let utterance = new SpeechSynthesisUtterance("Game on!");
                             utterance.lang = 'en-GB';
                             utterance.pitch = 1.1; 
@@ -179,13 +222,8 @@ function startCrowd() {
         }
 
         function skipWalkon() {
-            isWalkonSkipped = true;
-            if (window.speechSynthesis) window.speechSynthesis.cancel();
-            if(currentWalkonAudio) { currentWalkonAudio.pause(); currentWalkonAudio = null; }
-            if(oppAudio) { oppAudio.pause(); oppAudio = null; }
-            clearTimeout(walkonTimeout);
-            clearInterval(walkonInterval);
-            
+            if (matchIntroFinishing) return;
+            cancelMatchIntro();
             finishWalkon();
         }
 
