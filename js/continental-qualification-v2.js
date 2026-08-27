@@ -137,12 +137,66 @@ function refreshContinentalQualificationAggregate(state) {
     return state;
 }
 
+function hasContinentalQualificationResults(history, legacyHtml = '') {
+    if (Number(history?.version) === 1 && Array.isArray(history.blocks) && Array.isArray(history.players)) {
+        // Same nagłówki rund po BYE nie oznaczają rozegranego meczu.
+        return history.blocks.some(block => block?.matches?.length > 0 || block?.type === 'grandSlamGroups');
+    }
+    return (Array.isArray(history) && history.length > 0)
+        || (typeof legacyHtml === 'string' && legacyHtml.trim().length > 0);
+}
+
+function isActiveContinentalTournament(tournament) {
+    return Boolean(tournament && typeof activeTournament !== 'undefined' && activeTournament
+        && (activeTournament === tournament || activeTournament.name === tournament.name));
+}
+
+function hasContinentalTournamentStarted(tournament) {
+    if (!tournament) return false;
+    if (hasContinentalQualificationResults(tournament.matchHistory, tournament.historyLogs)
+        || Object.keys(tournament.spectatedMatchResults || {}).length > 0) return true;
+    if (!isActiveContinentalTournament(tournament)) return false;
+    if (typeof currentMatch !== 'undefined' && currentMatch?.isTournament) return true;
+    // Po zakończeniu poprzedniego turnieju historia może jeszcze pozostać
+    // w pamięci; należy do aktywnego wydarzenia dopiero razem z jego drabinką.
+    if (typeof tournamentBracket === 'undefined' || !tournamentBracket?.length) return false;
+    return hasContinentalQualificationResults(
+        typeof tournamentMatchHistory !== 'undefined' ? tournamentMatchHistory : null,
+        `${typeof lastTournamentResults === 'string' ? lastTournamentResults : ''}${typeof currentRoundHTML === 'string' ? currentRoundHTML : ''}`
+    );
+}
+
+function canRepairContinentalCardQualifier(mainTournament, qualifierTournament) {
+    return Boolean(mainTournament && qualifierTournament
+        && !mainTournament.completed && !qualifierTournament.completed
+        && !hasContinentalTournamentStarted(mainTournament)
+        && !hasContinentalTournamentStarted(qualifierTournament)
+        && !(isActiveContinentalTournament(mainTournament)
+            && typeof tournamentBracket !== 'undefined' && tournamentBracket?.length > 0));
+}
+
+function repairMigratedContinentalCardQualification(mainTournament, state) {
+    const cardPath = state.paths?.card;
+    if (!state.migratedLegacyQualification || state.migratedLegacyQualificationYear === state.year
+        || !cardPath?.initialized || cardPath.participantIds?.length > 0) return;
+    const qualifier = typeof tournamentDatabase !== 'undefined' && tournamentDatabase.find(tournament =>
+        isContinentalQualifierTournament(tournament) && getContinentalQualifierPath(tournament) === 'card'
+        && getLinkedContinentalTour(tournament) === mainTournament);
+    if (!canRepairContinentalCardQualifier(mainTournament, qualifier)) return;
+
+    // Starsza wersja przenosiła zeszłorocznych zwycięzców do nowego sezonu,
+    // oznaczając pustą pulę jako zainicjalizowaną. Pozostałe ścieżki zachowujemy.
+    state.paths.card = { participantIds: [], qualifiedPlayerIds: [], completed: false };
+    delete state.migratedLegacyQualification;
+}
+
 function ensureContinentalQualificationState(mainTournament, candidates = getContinentalQualificationPlayers()) {
     if (!mainTournament) return null;
     const season = getContinentalQualificationSeason();
     const existing = mainTournament.continentalQualification;
     if (existing?.version === CONTINENTAL_QUALIFICATION_VERSION && existing.year === season
         && Array.isArray(existing.oomPlayerIds) && Array.isArray(existing.proTourPlayerIds)) {
+        repairMigratedContinentalCardQualification(mainTournament, existing);
         return refreshContinentalQualificationAggregate(existing);
     }
 
@@ -172,12 +226,15 @@ function ensureContinentalQualificationState(mainTournament, candidates = getCon
         qualifiedPlayerIds: [],
         completed: false
     };
-    if (existing?.completed && Array.isArray(existing.qualifiedPlayerIds)) {
+    if (existing?.year === season && Number(existing.version || 1) < CONTINENTAL_QUALIFICATION_VERSION
+        && existing.completed && Array.isArray(existing.qualifiedPlayerIds)) {
         const cardPath = getContinentalQualificationPathState(state, 'card');
+        cardPath.participantIds = Array.isArray(existing.qualifierPlayerIds) ? [...existing.qualifierPlayerIds] : [];
         cardPath.qualifiedPlayerIds = existing.qualifiedPlayerIds.slice(0, 10);
         cardPath.completed = true;
         cardPath.initialized = true;
         state.migratedLegacyQualification = true;
+        state.migratedLegacyQualificationYear = season;
     }
     mainTournament.continentalQualification = state;
     return refreshContinentalQualificationAggregate(state);
@@ -259,6 +316,14 @@ function getContinentalTourQualifierParticipants(qualifierTournament) {
     return resolveContinentalQualificationPlayers(pathState.participantIds, candidates)
         .filter(candidate => !excludedKeys.has(getContinentalQualificationPlayerKey(candidate)))
         .filter(candidate => isContinentalQualifierPathEligible(candidate, mainTournament, path));
+}
+
+function shouldRefreshEmptyContinentalQualifierDraw(qualifierTournament, bracket) {
+    if (!isContinentalQualifierTournament(qualifierTournament) || getContinentalQualifierPath(qualifierTournament) !== 'card'
+        || !Array.isArray(bracket) || bracket.length < 2 || bracket.some(candidate => candidate && !candidate.isBye)) return false;
+    const mainTournament = getLinkedContinentalTour(qualifierTournament);
+    return canRepairContinentalCardQualifier(mainTournament, qualifierTournament)
+        && getContinentalTourQualifierParticipants(qualifierTournament).length > 0;
 }
 
 function getContinentalQualifierOpeningRound(qualifierTournament, participantCount) {

@@ -133,8 +133,9 @@ function skipActiveTournament() {
                         )
                     );
                 const staleContinentalQualificationDraw = activeTournament?.specialType === 'continentalQualifier'
-                    && !hasRecordedTournamentHistory
-                    && activeTournament.continentalQualificationVersion !== 2;
+                    && ((!hasRecordedTournamentHistory && activeTournament.continentalQualificationVersion !== 2)
+                        || (typeof shouldRefreshEmptyContinentalQualifierDraw === 'function'
+                            && shouldRefreshEmptyContinentalQualifierDraw(activeTournament, tournamentBracket)));
                 const staleQSchoolOpeningDraw = activeTournament?.specialType === 'pdcQSchool'
                     && !hasRecordedTournamentHistory
                     && activeTournament.qSchoolDrawVersion !== (
