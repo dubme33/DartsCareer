@@ -244,14 +244,14 @@ function applyAnnualAgeDecline(candidate, age) {
     candidate.baseOvr = clampBaseRating(baseOvr - decline);
     candidate.baseScoring = clampBaseRating(baseScoring - decline);
     candidate.baseDoubles = clampBaseRating(baseDoubles - decline);
-    candidate.form = Number.isFinite(Number(candidate.form)) ? Number(candidate.form) : 0;
+    candidate.form = 0;
 
     if (typeof applyForm === 'function') {
         applyForm(candidate);
     } else {
-        candidate.ovr = candidate.baseOvr + candidate.form;
-        candidate.scoring = candidate.baseScoring + candidate.form;
-        candidate.doubles = candidate.baseDoubles + candidate.form;
+        candidate.ovr = candidate.baseOvr;
+        candidate.scoring = candidate.baseScoring;
+        candidate.doubles = candidate.baseDoubles;
     }
     candidate.ovr = clampDisplayedRating(candidate.ovr);
     candidate.scoring = clampDisplayedRating(candidate.scoring);

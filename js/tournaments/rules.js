@@ -1,3 +1,29 @@
+// Wspólna, bezstanowa selekcja dla drabinki i podglądu kwalifikacji.
+function getRankingQualificationGroups(tournament, candidates) {
+    const name = String(tournament?.name || '').toLowerCase();
+    const rank = property => [...candidates].sort((a, b) => (Number(b[property]) || 0) - (Number(a[property]) || 0));
+    const group = (key, places, players) => ({ key, places, players });
+    if (name.includes('players championship finals') || name.includes('pro players finals')) {
+        return [group('pc64', 64, rank('pcPrizeMoney').slice(0, 64))];
+    }
+    if (isEuropeanChampionshipTournament(tournament)) {
+        return [group('et32', 32, getEuropeanTourOrderOfMerit(candidates).slice(0, 32))];
+    }
+    if (name.includes('uk open') || name.includes('british open')) {
+        const ranked = rank('prizeMoney');
+        const holders = ranked.filter(p => p.hasTourCard === true).slice(0, 128);
+        return [group('card128', 128, holders),
+            group('reserves', 128 - holders.length, ranked.filter(p => p.hasTourCard !== true).slice(0, 128 - holders.length))];
+    }
+    if (name.includes('matchplay') || name.includes('grand prix')) {
+        const seeds = rank('prizeMoney').slice(0, 16);
+        const selected = new Set(seeds);
+        return [group('oom16', 16, seeds),
+            group('pt16', 16, rank('proTourPrizeMoney').filter(p => !selected.has(p)).slice(0, 16))];
+    }
+    return null;
+}
+
 const checkoutGuide = {
             170: "T20 T20 BULL", 167: "T20 T19 BULL", 164: "T20 T18 BULL", 161: "T20 T17 BULL",
             160: "T20 T20 D20", 158: "T20 T20 D19", 157: "T20 T19 D20", 156: "T20 T20 D18",

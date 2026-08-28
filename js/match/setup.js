@@ -256,6 +256,7 @@ function startMatch(vsAI) {
                 const opponentMatchAvg = (finalP2TotalPts / currentMatch.stats.p2TotalDarts) * 3;
                 recordSeasonHighestAverage(currentMatch.opponent, opponentMatchAvg);
             }
+            if (typeof recordCompletedSinglesMatch === 'function') recordCompletedSinglesMatch(currentMatch);
             const finalHighCheckout = currentMatch.stats.p1HighCheckout || 0;
             if (finalHighCheckout > (player.careerStats.highestCheckout || 0)) {
                 player.careerStats.highestCheckout = finalHighCheckout;

@@ -247,10 +247,33 @@
 
         function getCareerStartPlayers() {
             if (typeof pdcPlayers === 'undefined') return [];
+            // Ta sama historia nagród i data co w głównym rankingu gry.
+            // W trwającej karierze uwzględniamy też gracza przy ochronie Top 64.
+            if (typeof refreshMainOrderOfMerit === 'function') {
+                const rankedPlayers = typeof player !== 'undefined' && player?.name
+                    ? [...pdcPlayers, player] : pdcPlayers;
+                refreshMainOrderOfMerit(rankedPlayers, currentDate);
+            }
             return pdcPlayers
                 .filter(candidate => candidate && !candidate.isBye)
                 .slice()
                 .sort((first, second) => (Number(second.prizeMoney) || 0) - (Number(first.prizeMoney) || 0));
+        }
+
+        function getCareerStartPlayerStats(candidate) {
+            const asNumber = (value, fallback) => Number.isFinite(Number(value)) ? Number(value) : fallback;
+            // Forma AI jest tymczasowa i nie może stać się trwałym OVR gracza.
+            // Lista, podgląd i utworzona kariera korzystają z tych samych ocen.
+            const overall = Math.round(asNumber(candidate.baseOvr ?? candidate.ovr ?? candidate.overall, 55));
+            return {
+                overall,
+                scoring: Math.round(asNumber(candidate.baseScoring ?? candidate.scoring, overall)),
+                doubles: Math.round(asNumber(candidate.baseDoubles ?? candidate.doubles, overall)),
+                prizeMoney: asNumber(candidate.prizeMoney, 0),
+                proTourPrizeMoney: asNumber(candidate.proTourPrizeMoney, 0),
+                pcPrizeMoney: asNumber(candidate.pcPrizeMoney, 0),
+                europeanTourPrizeMoney: asNumber(candidate.europeanTourPrizeMoney, 0)
+            };
         }
 
         function renderCareerPlayerOptions() {
@@ -269,37 +292,38 @@
                 select.disabled = true;
             } else {
                 candidates.forEach((candidate, index) => {
+                    const stats = getCareerStartPlayerStats(candidate);
                     const option = document.createElement('option');
                     option.value = candidate.id;
-                    option.textContent = `${candidate.name} — ${t(candidate.country)} · OVR ${Math.round(candidate.ovr)} · #${index + 1}`;
+                    option.textContent = `${candidate.name} — ${t(candidate.country)} · OVR ${stats.overall} · OOM #${index + 1} · £${stats.prizeMoney.toLocaleString('en-GB')}`;
                     select.appendChild(option);
                 });
                 select.disabled = false;
                 if (candidates.some(candidate => candidate.id === previousValue)) select.value = previousValue;
             }
 
-            updateExistingPlayerPreview();
+            updateExistingPlayerPreview(candidates);
         }
 
-        function updateExistingPlayerPreview() {
+        function updateExistingPlayerPreview(candidates = null) {
             const select = document.getElementById('existing-player-select');
             const preview = document.getElementById('existing-player-preview');
             if (!select || !preview) return;
 
-            const candidate = typeof pdcPlayers === 'undefined'
-                ? null
-                : pdcPlayers.find(item => item && item.id === select.value);
+            const availablePlayers = Array.isArray(candidates) ? candidates : getCareerStartPlayers();
+            const candidate = availablePlayers.find(item => item && item.id === select.value);
             if (!candidate) {
                 preview.textContent = trCareerStart('empty');
                 return;
             }
 
-            const rank = getCareerStartPlayers().findIndex(item => item.id === candidate.id) + 1;
+            const stats = getCareerStartPlayerStats(candidate);
+            const rank = availablePlayers.findIndex(item => item.id === candidate.id) + 1;
             preview.textContent = trCareerStart('preview', {
                 country: t(candidate.country),
-                ovr: Math.round(candidate.ovr),
+                ovr: stats.overall,
                 rank,
-                prize: (Number(candidate.prizeMoney) || 0).toLocaleString('en-GB')
+                prize: stats.prizeMoney.toLocaleString('en-GB')
             });
         }
 
@@ -436,11 +460,8 @@
         function initPlayersForm() {
             normalizePlayerIds(pdcPlayers, player);
             pdcPlayers.forEach(p => {
+                removeLegacyPlayerForm(p);
                 enforcePlayerRatingLimits(p);
-                p.baseOvr = p.ovr;
-                p.baseScoring = p.scoring;
-                p.baseDoubles = p.doubles;
-                p.form = Math.floor(Math.random() * 5) - 2; 
                 // Historia ProTour (52 tygodnie) i 2-letniego głównego OOM.
                 p.historyPT = {}; 
                 p.historyMain = {};
@@ -450,20 +471,40 @@
         }
 
         function applyForm(p) {
-            const form = Number.isFinite(Number(p.form)) ? Math.round(Number(p.form)) : 0;
-            p.ovr = clamp(Math.round(p.baseOvr) + form, 40, 99);
-            p.scoring = clamp(Math.round(p.baseScoring) + form, 40, 100);
-            p.doubles = clamp(Math.round(p.baseDoubles) + form, 40, 100);
+            // Zachowujemy dawną nazwę funkcji dla rozwoju i starzenia zawodników,
+            // ale oceny nie otrzymują już losowego modyfikatora formy.
+            p.form = 0;
+            p.ovr = clamp(Math.round(p.baseOvr), 40, 99);
+            p.scoring = clamp(Math.round(p.baseScoring), 40, 100);
+            p.doubles = clamp(Math.round(p.baseDoubles), 40, 100);
+            if (Object.prototype.hasOwnProperty.call(p, 'overall')) p.overall = p.ovr;
+        }
+
+        function removeLegacyPlayerForm(candidate, careerPlayer = null) {
+            if (!candidate || candidate.isBye) return;
+            // Oceny gracza rosną m.in. przez trening, niezależnie od baseOvr.
+            // Dawna forma nie była do nich dodawana, więc niczego nie odejmujemy.
+            if (candidate === careerPlayer) {
+                candidate.form = 0;
+                return;
+            }
+
+            const legacyForm = Number.isFinite(Number(candidate.form)) ? Math.round(Number(candidate.form)) : 0;
+            const overall = Number(candidate.ovr ?? candidate.overall);
+            [['ovr', 'baseOvr', 99], ['scoring', 'baseScoring', 100], ['doubles', 'baseDoubles', 100]]
+                .forEach(([field, baseField, max]) => {
+                    const base = candidate[baseField] == null ? NaN : Number(candidate[baseField]);
+                    const current = Number(candidate[field] ?? overall);
+                    // Pełna baza zachowuje rozwój i pozwala odtworzyć oceny nawet
+                    // wtedy, gdy stary wynik z formą był przycięty do 40 lub 99.
+                    candidate[baseField] = clamp(Number.isFinite(base) ? base
+                        : (Number.isFinite(current) ? current - legacyForm : 55), 40, max);
+                });
+            applyForm(candidate);
         }
 
         function updateAllPlayersForm() {
-            pdcPlayers.forEach(p => {
-                let formChange = Math.floor(Math.random() * 3) - 1;
-                p.form += formChange;
-                if(p.form > 5) p.form = 5;
-                if(p.form < -5) p.form = -5;
-                applyForm(p);
-            });
+            pdcPlayers.forEach(candidate => removeLegacyPlayerForm(candidate));
         }
 
         function clamp(value, min, max) {
@@ -484,17 +525,21 @@
             return Math.round(isCurrentPlayer(p) ? player.overall : p.ovr);
         }
 
-        function enforcePlayerRatingLimits(candidate) {
+        function enforcePlayerRatingLimits(candidate, careerPlayer = null) {
             if (!candidate || candidate.isBye) return;
 
             const clampRating = (value, min, max, fallback) => {
                 const numericValue = Number(value);
                 return Number.isFinite(numericValue)
-                    ? clamp(Math.round(numericValue), min, max)
+                    ? clamp(numericValue, min, max)
                     : fallback;
             };
 
-            const overall = clampRating(candidate.ovr ?? candidate.overall, 40, 99, 55);
+            // Zapis przechowuje także ułamkowy rozwój. Zaokrąglamy dopiero
+            // w interfejsie (oraz ocenach AI w applyForm), nigdy jego bazę.
+            const currentOverall = candidate === careerPlayer
+                ? candidate.overall ?? candidate.ovr : candidate.ovr ?? candidate.overall;
+            const overall = clampRating(currentOverall, 40, 99, 55);
             candidate.ovr = overall;
             if (Object.prototype.hasOwnProperty.call(candidate, 'overall')) candidate.overall = overall;
             candidate.scoring = clampRating(candidate.scoring, 40, 100, overall);
@@ -632,8 +677,15 @@
 
         function getTournamentWinChance(p1, p2, includeMatchNoise = true) {
             const profile = getTournamentSimulationProfile(activeTournament);
-            let p1Ovr = (isCurrentPlayer(p1) ? player.overall : p1.ovr) + getTournamentSimulationForm(p1);
-            let p2Ovr = (isCurrentPlayer(p2) ? player.overall : p2.ovr) + getTournamentSimulationForm(p2);
+            const p1IsCareer = isCurrentPlayer(p1), p2IsCareer = isCurrentPlayer(p2);
+            let p1Ratings = p1IsCareer ? player : p1;
+            let p2Ratings = p2IsCareer ? player : p2;
+            if (typeof getWorldMastersMatchRatings === 'function') {
+                p1Ratings = getWorldMastersMatchRatings(p1, p1Ratings);
+                p2Ratings = getWorldMastersMatchRatings(p2, p2Ratings);
+            }
+            let p1Ovr = (p1IsCareer ? p1Ratings.overall : p1Ratings.ovr) + getTournamentSimulationForm(p1);
+            let p2Ovr = (p2IsCareer ? p2Ratings.overall : p2Ratings.ovr) + getTournamentSimulationForm(p2);
 
             if (includeMatchNoise) {
                 p1Ovr += (Math.random() + Math.random() - 1) * profile.matchNoise;

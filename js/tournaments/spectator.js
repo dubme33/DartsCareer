@@ -298,6 +298,7 @@ function finishSpectatedTournamentMatch() {
         recordSeasonHighestAverage(p1, Number(p1Average));
         recordSeasonHighestAverage(p2, Number(p2Average));
     }
+    if (typeof recordCompletedSinglesMatch === 'function') recordCompletedSinglesMatch(watchedMatch);
 
     clearTimeout(window.aiTimeout);
     if (spectatorPendingPlayback?.match === watchedMatch) spectatorPendingPlayback = null;

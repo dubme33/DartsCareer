@@ -22,7 +22,8 @@
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://dartscareer.pl">
     <link rel="icon" type="image/png" href="favicon.png">
-    <link rel="stylesheet" href="css/game.css?v=1.3.3">
+    <link rel="stylesheet" href="css/game.css?v=1.3.4&stats=1">
+    <link rel="stylesheet" href="css/career-planning.css?v=1.3.4&fix=planning-2">
 </head>
 <body>
     <header>
@@ -49,7 +50,7 @@
         <!-- SZYBKI START: WYBÓR ZAWODNIKA Z BAZY -->
         <section class="career-start-existing-card">
             <h2 id="career-start-existing-title">🎯 Graj jako zawodnik z bazy</h2>
-            <p id="career-start-existing-desc">Wybierz zawodnika z aktualnej bazy i rozpocznij jego karierę. Nie zostanie on już wylosowany jako rywal.</p>
+            <p id="career-start-existing-desc">Rozpocznij karierę z podanym bazowym OVR i kwotą z głównego OOM. Wybrany zawodnik nie będzie już rywalem.</p>
             <div class="form-group">
                 <label for="existing-player-select" id="career-start-existing-label">Zawodnik:</label>
                 <select id="existing-player-select" onchange="updateExistingPlayerPreview()"></select>
@@ -61,6 +62,71 @@
         <!-- LEWA STRONA: CHANGELOG (Zawsze po angielsku) -->
         <div class="changelog-box">
             <h3>📢 What's New / Changelog</h3>
+
+            <!-- UPDATE V1.3.4 -->
+            <div class="changelog-version-badge">v1.3.4 · Career Planning &amp; Player Statistics</div>
+
+            <div class="changelog-grid">
+                <div class="cl-item">
+                    <span class="cl-tag tweak">Player Ratings</span>
+                    <span class="cl-title">🎯 Updated Player Ratings</span>
+                    <p class="cl-desc">Updated OVR, scoring and doubles for 38 players. The corrections apply with or without mods and to older saves without repacking the mod ZIP. Existing careers receive only the difference from their previous rating update, preserving trained stats and subsequent player development.</p>
+                </div>
+
+                <div class="cl-item">
+                    <span class="cl-tag fix">Player Database</span>
+                    <span class="cl-title">🔄 Consistent OVR &amp; OOM Data</span>
+                    <p class="cl-desc">The database-player career selection and main Order of Merit now use consistent in-game ratings and ranking money, including when a mod is loaded.</p>
+                </div>
+
+                <div class="cl-item">
+                    <span class="cl-tag tweak">Player Form</span>
+                    <span class="cl-title">➖ No Random ±2 OVR Modifier</span>
+                    <p class="cl-desc">Removed the random ±2 form modifier and its indicators beside player names. Older saves are normalized without discarding the career player's trained stats.</p>
+                </div>
+
+                <div class="cl-item">
+                    <span class="cl-tag tweak">World Series</span>
+                    <span class="cl-title">🌍 Regional Player Advantage</span>
+                    <p class="cl-desc">The eight regional entrants on the right of the opening draw receive a hidden +7 to match OVR, scoring and doubles, capped at 100. The bonus follows those players through every round of that event, including after saving and loading. It works with or without mods in played, watched and quick-simulated matches. Invited stars, the series finals and its qualifier are excluded. The bonus does not alter displayed ratings, base stats or saved training.</p>
+                </div>
+
+                <div class="cl-item">
+                    <span class="cl-tag fix">Career Saves</span>
+                    <span class="cl-title">💾 Preserve Trained Ratings on Load</span>
+                    <p class="cl-desc">Loading a career or reapplying a mod no longer overwrites saved scoring, doubles and OVR with starting database ratings. Fractional career and AI development is also preserved through repeated saves and loads.</p>
+                </div>
+
+                <div class="cl-item">
+                    <span class="cl-tag feature">Qualification</span>
+                    <span class="cl-title">🎟️ Qualification Preview</span>
+                    <p class="cl-desc">The new Qualification &amp; OOM screen shows projected fields and qualification routes for the World Championship, major tournaments and Continental Tours. It distinguishes projected places, secured qualification and places awaiting qualifiers without simulating their results. Shortcuts are also available in the calendar.</p>
+                </div>
+
+                <div class="cl-item">
+                    <span class="cl-tag feature">Order of Merit</span>
+                    <span class="cl-title">💷 Money to Defend</span>
+                    <p class="cl-desc">See ranking money expiring within 30 and 90 days, individual expiry dates and the gap or lead around the Top 64 and Top 80. Projected positions account for rivals' expiring prizes and assume no new earnings. Available from Qualification &amp; OOM and the rankings.</p>
+                </div>
+
+                <div class="cl-item">
+                    <span class="cl-tag feature">Player Profiles</span>
+                    <span class="cl-title">📊 Season Statistics</span>
+                    <p class="cl-desc">Profiles now track the mean of recorded match averages, checkout percentage, 180s and the season win-loss record for all newly recorded official singles matches, including unseen AI matches. Quick AI simulations estimate checkout attempts and 180s from skills, averages and legs played; dart-by-dart matches provide exact counts. Estimated totals are marked with ≈ and their match coverage is shown. Match results and rating changes are unaffected, and missing historical data is not invented.</p>
+                </div>
+
+                <div class="cl-item">
+                    <span class="cl-tag feature">Recent Results</span>
+                    <span class="cl-title">📋 Last 10 Matches</span>
+                    <p class="cl-desc">Player profiles list the last 10 recorded matches with opponents, scores, dates and tournaments, using clear win and loss markers. Recent results survive season changes, while season totals reset. These statistics do not change OVR.</p>
+                </div>
+
+                <div class="cl-item">
+                    <span class="cl-tag fix">Match Statistics</span>
+                    <span class="cl-title">✅ Accurate Checkout Attempt Tracking</span>
+                    <p class="cl-desc">Fast match simulation now counts missed checkout attempts that land outside the board, matching manual play. Opening doubles in Double-In events are not counted as checkout attempts.</p>
+                </div>
+            </div>
 
             <!-- UPDATE V1.3.3 -->
             <div class="changelog-version-badge">v1.3.3 · Match Flow &amp; Performance Fixes</div>
@@ -866,6 +932,10 @@
                 <h3 id="t-tile-pdc">🏆 Baza Graczy</h3>
                 <p id="t-desc-pdc">Ranking światowy.</p>
             </div>
+            <button type="button" class="menu-tile planning-menu-tile" onclick="showCareerPlanning()">
+                <h3 id="planning-tile-title">📊 Kwalifikacje i OOM</h3>
+                <p id="planning-tile-desc">Sprawdź awans i pieniądze do obrony.</p>
+            </button>
             <div class="menu-tile" onclick="showRivalriesScreen()" style="background-color: #922b21; border-color: #e74c3c;">
                 <h3 id="rival-tile-title" style="color: white;">🔥 Rywale</h3>
                 <p id="rival-tile-desc" style="color: #f5b7b1;">Bilans bezpośrednich pojedynków.</p>
@@ -1106,6 +1176,7 @@
   <!-- EKRAN 5: BAZA PDC -->
     <main id="screen-pdc" class="screen">
         <h2 id="t-pdc-header">Oficjalne Rankingi</h2>
+        <button id="planning-ranking-link" class="action-btn planning-shortcut" onclick="showCareerPlanning('defence')">Pieniądze do obrony</button>
         <div style="display: flex; gap: 8px; margin-bottom: 15px; justify-content: center; flex-wrap: wrap;">
             <button id="btn-rank-main" class="action-btn green" style="flex: 1; min-width: 130px; font-size: 12px; padding: 10px; margin-top: 0;" onclick="showPdcRankings('main')">Główny Ranking</button>
             <button id="btn-rank-pt" class="action-btn" style="flex: 1; min-width: 130px; font-size: 12px; padding: 10px; background: #34495e; margin-top: 0;" onclick="showPdcRankings('protour')">Ranking Pro Series</button>
@@ -1162,8 +1233,19 @@
     <!-- EKRAN KALENDARZA -->
     <main id="screen-calendar" class="screen">
         <h2 id="t-cal-header">Kalendarz Sezonu</h2>
+        <button id="planning-calendar-link" class="action-btn planning-shortcut" onclick="showCareerPlanning()">Podgląd kwalifikacji</button>
         <div class="log-box" id="calendar-list" style="height: 350px;"></div>
         <button class="action-btn" id="t-back-cal" onclick="showScreen('screen-hub')">Wróć do Menu</button>
+    </main>
+
+    <main id="screen-planning" class="screen">
+        <h2 id="planning-title">Kwalifikacje i OOM</h2>
+        <div class="planning-tabs" role="group" aria-labelledby="planning-title">
+            <button id="planning-tab-qualification" type="button" class="action-btn" aria-pressed="true" onclick="showCareerPlanning('qualification')">Podgląd kwalifikacji</button>
+            <button id="planning-tab-defence" type="button" class="action-btn" aria-pressed="false" onclick="showCareerPlanning('defence')">Pieniądze do obrony</button>
+        </div>
+        <div id="planning-content"></div>
+        <button id="planning-back" class="action-btn" onclick="showScreen('screen-hub')">Wróć do menu</button>
     </main>
 
     <!-- OKNO EVENTU LOSOWEGO -->
@@ -1374,53 +1456,55 @@
     </main>
     <!-- STOPKA AUTORSKA -->
     <footer style="width: 100%; text-align: center; padding: 25px 15px; margin-top: auto; color: #7f8c8d; font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 2px;">
-        <div style="margin-bottom: 5px; color: #bdc3c7;">V. 1.3.3</div>
+        <div style="margin-bottom: 5px; color: #bdc3c7;">V. 1.3.4</div>
         powered by dubme<br>
         <a href="mailto:dartscareer@gmail.com" style="color: #bdc3c7; text-decoration: none; text-transform: lowercase; display: inline-block; margin-top: 5px;">dartscareer@gmail.com</a>
     </footer>
 
     <!-- SKRYPTY -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <script src="data/players.js?v=1.3.3"></script>
+    <script src="data/players.js?v=1.3.4&fix=player-ratings-2"></script>
     <script src="data/order-of-merit-history.js"></script>
     <script src="data/order-of-merit-opening-2026.js"></script>
     <script src="data/player-birth-years.js"></script>
-    <script src="data/newgen-names.js?v=1.3.3"></script>
-    <script src="data/tournaments.js?v=1.3.3"></script>
+    <script src="data/newgen-names.js?v=1.3.4"></script>
+    <script src="data/tournaments.js?v=1.3.4"></script>
     <script src="data/achievements.js"></script>
     <script src="data/interviews.js"></script>
     <script src="data/random-events.js"></script>
-    <script src="js/core.js?v=1.3.3"></script>
-    <script src="js/european-tour.js?v=1.3.3"></script>
-    <script src="js/order-of-merit.js?v=1.3.3"></script>
-    <script src="js/tour-cards.js?v=1.3.3"></script>
-    <script src="js/world-championship-qualification.js?v=1.3.3"></script>
-    <script src="js/stamina.js?v=1.3.3"></script>
-    <script src="js/i18n.js?v=1.3.3"></script>
-    <script src="js/player-lifecycle.js?v=1.3.3"></script>
-    <script src="js/career.js?v=1.3.3"></script>
-    <script src="js/player-profiles.js?v=1.3.3"></script>
-    <script src="js/tournaments/results.js?v=1.3.3"></script>
-    <script src="js/tournaments/rules.js?v=1.3.3"></script>
+    <script src="js/core.js?v=1.3.4&fix=career-progress-1&ws-local=1"></script>
+    <script src="js/european-tour.js?v=1.3.4"></script>
+    <script src="js/order-of-merit.js?v=1.3.4&fix=planning-1"></script>
+    <script src="js/tour-cards.js?v=1.3.4"></script>
+    <script src="js/world-championship-qualification.js?v=1.3.4"></script>
+    <script src="js/stamina.js?v=1.3.4"></script>
+    <script src="js/i18n.js?v=1.3.4&fix=planning-1"></script>
+    <script src="js/player-lifecycle.js?v=1.3.4&fix=no-random-form-1"></script>
+    <script src="js/career.js?v=1.3.4&fix=no-random-form-1&planning=1"></script>
+    <script src="js/player-profiles.js?v=1.3.4&stats=1"></script>
+    <script src="js/player-match-stats.js?v=1.3.4&stats=2"></script>
+    <script src="js/tournaments/results.js?v=1.3.4"></script>
+    <script src="js/tournaments/rules.js?v=1.3.4&fix=planning-1"></script>
     <script src="js/match/ai-strategy.js"></script>
-    <script src="js/match/intro.js?v=1.3.3"></script>
-    <script src="js/tournaments/rewards.js?v=1.3.3"></script>
-    <script src="js/grand-slam.js?v=1.3.3"></script>
-    <script src="js/tournaments/flow.js?v=1.3.3&fix=et-season-1"></script>
-    <script src="js/tournaments/fast-forward.js?v=1.3.3"></script>
-    <script src="js/tournaments/spectator.js?v=1.3.3"></script>
-    <script src="js/world-cup.js?v=1.3.3"></script>
-    <script src="js/continental-qualification-v2.js?v=1.3.3&fix=et-season-1"></script>
-    <script src="js/world-masters.js?v=1.3.3"></script>
-    <script src="js/match/setup.js?v=1.3.3"></script>
-    <script src="js/match/leg-flow.js?v=1.3.3"></script>
+    <script src="js/match/intro.js?v=1.3.4"></script>
+    <script src="js/tournaments/rewards.js?v=1.3.4"></script>
+    <script src="js/grand-slam.js?v=1.3.4"></script>
+    <script src="js/tournaments/flow.js?v=1.3.4&fix=et-season-1&planning=1&stats=2&ws-local=1"></script>
+    <script src="js/tournaments/fast-forward.js?v=1.3.4"></script>
+    <script src="js/tournaments/spectator.js?v=1.3.4&stats=1"></script>
+    <script src="js/world-cup.js?v=1.3.4"></script>
+    <script src="js/continental-qualification-v2.js?v=1.3.4&fix=et-season-1&planning=1"></script>
+    <script src="js/world-masters.js?v=1.3.4&fix=planning-1&ws-local=1"></script>
+    <script src="js/match/setup.js?v=1.3.4&stats=1"></script>
+    <script src="js/match/leg-flow.js?v=1.3.4"></script>
     <script src="js/match/audio.js"></script>
-    <script src="js/match/turns.js?v=1.3.3"></script>
-    <script src="js/match/board.js?v=1.3.3"></script>
-    <script src="js/storage.js?v=1.3.3"></script>
-    <script src="js/systems.js?v=1.3.3"></script>
-    <script src="js/mod-media.js?v=1.3.3"></script>
-    <script src="js/extras.js?v=1.3.3"></script>
+    <script src="js/match/turns.js?v=1.3.4&ws-local=1"></script>
+    <script src="js/match/board.js?v=1.3.4"></script>
+    <script src="js/storage.js?v=1.3.4"></script>
+    <script src="js/systems.js?v=1.3.4&fix=career-progress-1&stats=1&ws-local=1"></script>
+    <script src="js/mod-media.js?v=1.3.4"></script>
+    <script src="js/extras.js?v=1.3.4&fix=no-random-form-1"></script>
+    <script src="js/career-planning.js?v=1.3.4&fix=planning-2"></script>
 
 </body>
 </html>

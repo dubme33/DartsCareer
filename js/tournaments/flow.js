@@ -255,7 +255,7 @@ function skipActiveTournament() {
                     ? getWorldMastersTournamentRound(activeTournament)
                     : (isWorldMastersFinals ? 32 : 16);
             } else if (tNameLow.includes("players championship finals") || tNameLow.includes("pro players finals")) {
-                participants = pcRanked.slice(0, 64); tournamentRound = 64;
+                participants = getRankingQualificationGroups(activeTournament, allPlayers).flatMap(group => group.players); tournamentRound = 64;
             } else if (tNameLow.includes("world darts championship") || tNameLow.includes("global darts championship")) {
                 const worldChampionshipCandidates = [
                     ...(Array.isArray(pdcPlayers) ? pdcPlayers : []),
@@ -266,10 +266,7 @@ function skipActiveTournament() {
                     : oomRanked.slice(0, 128);
                 tournamentRound = 128;
             } else if (tNameLow.includes("uk open") || tNameLow.includes("british open")) {
-                participants = tourCardPlayers.slice(0, 128);
-                if (participants.length < 128) {
-                    participants.push(...nonCardPlayers.slice(0, 128 - participants.length));
-                }
+                participants = getRankingQualificationGroups(activeTournament, allPlayers).flatMap(group => group.players);
                 tournamentRound = 128;
             } else if (isContinentalQualifier) {
                 participants = getContinentalTourQualifierParticipants(activeTournament);
@@ -299,17 +296,10 @@ function skipActiveTournament() {
                 }
                 tournamentRound = 16; 
             } else if (tNameLow.includes("matchplay") || tNameLow.includes("grand prix")) {
-                let seeds = oomRanked.slice(0, 16);
-                let unseeded = [];
-                let ptIndex = 0;
-                while (unseeded.length < 16 && ptIndex < ptRanked.length) {
-                    if (!seeds.includes(ptRanked[ptIndex])) unseeded.push(ptRanked[ptIndex]);
-                    ptIndex++;
-                }
-                participants = [...seeds, ...unseeded]; 
+                participants = getRankingQualificationGroups(activeTournament, allPlayers).flatMap(group => group.players);
                 tournamentRound = 32;
             } else if (isEuropeanChampionship) {
-                participants = etRanked.slice(0, 32);
+                participants = getRankingQualificationGroups(activeTournament, allPlayers).flatMap(group => group.players);
                 tournamentRound = 32;
             } else {
                 let qualified = new Set();
@@ -721,6 +711,8 @@ function skipActiveTournament() {
         }
 
         function simulateAImatch(p1, p2, matchFormat) {
+    const p1Ratings = typeof getWorldMastersMatchRatings === 'function' ? getWorldMastersMatchRatings(p1) : p1;
+    const p2Ratings = typeof getWorldMastersMatchRatings === 'function' ? getWorldMastersMatchRatings(p2) : p2;
     const p1PeakPerformance = typeof rollAiPeakMatchPerformance === 'function'
         ? rollAiPeakMatchPerformance(p1)
         : null;
@@ -731,6 +723,7 @@ function skipActiveTournament() {
     p1Chance = Math.max(0.05, Math.min(0.95, p1Chance +
         (((p1PeakPerformance?.ratingBoost || 0) - (p2PeakPerformance?.ratingBoost || 0)) / 100)));
     let p1Legs = 0, p2Legs = 0, p1Sets = 0, p2Sets = 0;
+    let p1LegsWon = 0, p2LegsWon = 0;
 
     let isSets = matchFormat.type === 'sets';
     let targetLegs = matchFormat.legsToWin || 6;
@@ -739,7 +732,8 @@ function skipActiveTournament() {
 
     // Szybka matematyczna symulacja meczu leg po legu
     while (true) {
-        if (Math.random() < p1Chance) p1Legs++; else p2Legs++;
+        if (Math.random() < p1Chance) { p1Legs++; p1LegsWon++; }
+        else { p2Legs++; p2LegsWon++; }
 
         if (isSets) {
             const isDecidingSet = matchFormat.decidingSetWinByTwo &&
@@ -751,7 +745,8 @@ function skipActiveTournament() {
                 p1Legs === matchFormat.decidingSetSuddenDeathAt &&
                 p2Legs === matchFormat.decidingSetSuddenDeathAt) {
                 // Sudden death rozstrzyga set i tym samym cały mecz.
-                if (Math.random() < p1Chance) p1Sets++; else p2Sets++;
+                if (Math.random() < p1Chance) { p1Sets++; p1LegsWon++; }
+                else { p2Sets++; p2LegsWon++; }
                 p1Legs = 0;
                 p2Legs = 0;
             } else if (setHasLegWinner && (!isDecidingSet || legDifference >= 2)) {
@@ -766,7 +761,8 @@ function skipActiveTournament() {
                 if ((p1Legs >= targetLegs || p2Legs >= targetLegs) && Math.abs(p1Legs - p2Legs) >= 2) break;
                 // Nagła śmierć (np. w World Matchplay)
                 if (p1Legs === matchFormat.suddenDeathAt && p2Legs === matchFormat.suddenDeathAt) {
-                    if (Math.random() < p1Chance) p1Legs++; else p2Legs++;
+                    if (Math.random() < p1Chance) { p1Legs++; p1LegsWon++; }
+                    else { p2Legs++; p2LegsWon++; }
                     break;
                 }
             } else {
@@ -785,8 +781,8 @@ function skipActiveTournament() {
     // Forma turniejowa wpływa także na wyświetlaną średnią, aby niespodzianka miała wiarygodne statystyki.
     const p1TournamentForm = getTournamentSimulationForm(p1);
     const p2TournamentForm = getTournamentSimulationForm(p2);
-    let p1BaseAvg = 60 + (p1.ovr * 0.42) + (p1TournamentForm * 0.4);
-    let p2BaseAvg = 60 + (p2.ovr * 0.42) + (p2TournamentForm * 0.4);
+    let p1BaseAvg = 60 + (p1Ratings.ovr * 0.42) + (p1TournamentForm * 0.4);
+    let p2BaseAvg = 60 + (p2Ratings.ovr * 0.42) + (p2TournamentForm * 0.4);
 
     // Wybitny występ AI ma odzwierciedlenie zarówno w większej szansie na wygraną,
     // jak i w średniej widocznej w wynikach symulacji.
@@ -799,10 +795,18 @@ function skipActiveTournament() {
     };
     let p1Avg = getSimulatedAverage(p1BaseAvg, p1Won, p1PeakPerformance);
     let p2Avg = getSimulatedAverage(p2BaseAvg, !p1Won, p2PeakPerformance);
+    const result = { p1Avg, p2Avg, p1Score: isSets ? p1Sets : p1Legs, p2Score: isSets ? p2Sets : p2Legs,
+        p1LegsWon, p2LegsWon };
+    if (typeof getQuickSimulatedMatchStats === 'function') {
+        Object.assign(result, getQuickSimulatedMatchStats(p1Ratings, p2Ratings, result));
+    }
 
     // Każdy symulowany oficjalny mecz, także AI kontra AI, aktualizuje rekord sezonu.
     recordSeasonHighestAverage(p1, Number(p1Avg));
     recordSeasonHighestAverage(p2, Number(p2Avg));
+    if (typeof recordPlayerMatchStats === 'function') {
+        recordPlayerMatchStats(p1, p2, result, { format: matchFormat });
+    }
 
     // --- AKTUALIZACJA REKORDÓW Z SYMULACJI ---
     if (isCurrentPlayer(p1) || isCurrentPlayer(p2)) {
@@ -816,13 +820,10 @@ function skipActiveTournament() {
     }
 
     return {
+        ...result,
         winner: p1Won ? p1 : p2,
         loser: p1Won ? p2 : p1,
-        scoreStr: scoreStr,
-        p1Avg: p1Avg,
-        p2Avg: p2Avg,
-        p1Score: isSets ? p1Sets : p1Legs,
-        p2Score: isSets ? p2Sets : p2Legs
+        scoreStr: scoreStr
     };
 }
 

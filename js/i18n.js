@@ -1735,31 +1735,31 @@ const translations = {
         const careerStartTranslations = {
             pl: {
                 title: '🎯 Graj jako zawodnik z bazy',
-                desc: 'Wybierz zawodnika z aktualnej bazy i rozpocznij jego karierę. Nie zostanie on już wylosowany jako rywal.',
+                desc: 'Rozpocznij karierę z podanym bazowym OVR i kwotą z głównego OOM. Wybrany zawodnik nie będzie już rywalem.',
                 label: 'Zawodnik:', button: 'Rozpocznij karierę tym zawodnikiem',
                 divider: 'LUB STWÓRZ WŁASNEGO ZAWODNIKA', empty: 'Brak zawodników w bazie.',
-                preview: '{country} · OVR {ovr} · ranking OOM #{rank} · £{prize}'
+                preview: '{country} · Bazowy OVR {ovr} · Główny OOM #{rank} · £{prize}'
             },
             en: {
                 title: '🎯 Play as a database player',
-                desc: 'Choose a player from the current database and begin their career. They will no longer be drawn as an opponent.',
+                desc: 'Start with the displayed base OVR and main Order of Merit total. Your chosen player will no longer be an opponent.',
                 label: 'Player:', button: 'Start this player\'s career',
                 divider: 'OR CREATE YOUR OWN PLAYER', empty: 'No players are available in the database.',
-                preview: '{country} · OVR {ovr} · Order of Merit #{rank} · £{prize}'
+                preview: '{country} · Base OVR {ovr} · Main Order of Merit #{rank} · £{prize}'
             },
             de: {
                 title: '🎯 Als Datenbankspieler spielen',
-                desc: 'Wähle einen Spieler aus der aktuellen Datenbank und beginne seine Karriere. Er wird nicht mehr als Gegner ausgelost.',
+                desc: 'Starte mit dem angezeigten Basis-OVR und Preisgeld der Haupt-Order-of-Merit. Dein Spieler tritt nicht mehr als Gegner an.',
                 label: 'Spieler:', button: 'Karriere mit diesem Spieler beginnen',
                 divider: 'ODER EIGENEN SPIELER ERSTELLEN', empty: 'Keine Spieler in der Datenbank verfügbar.',
-                preview: '{country} · OVR {ovr} · OOM-Rang #{rank} · £{prize}'
+                preview: '{country} · Basis-OVR {ovr} · Haupt-OOM #{rank} · £{prize}'
             },
             nl: {
                 title: '🎯 Speel als een speler uit de database',
-                desc: 'Kies een speler uit de huidige database en begin diens carrière. Deze speler wordt niet meer als tegenstander geloot.',
+                desc: 'Start met de getoonde basis-OVR en het prijzengeld op de hoofd-Order of Merit. Je speler wordt niet meer als tegenstander geloot.',
                 label: 'Speler:', button: 'Start carrière met deze speler',
                 divider: 'OF MAAK JE EIGEN SPELER', empty: 'Er zijn geen spelers beschikbaar in de database.',
-                preview: '{country} · OVR {ovr} · OOM-positie #{rank} · £{prize}'
+                preview: '{country} · Basis-OVR {ovr} · Hoofd-OOM #{rank} · £{prize}'
             }
         };
 
@@ -1921,6 +1921,7 @@ const translations = {
             if(typeof refreshPlayerProfileTranslations === 'function') refreshPlayerProfileTranslations();
             if(typeof refreshWorldCupTranslations === 'function') refreshWorldCupTranslations();
             if(typeof refreshWorldMastersTranslations === 'function') refreshWorldMastersTranslations();
+            if(typeof refreshCareerPlanningTranslations === 'function') refreshCareerPlanningTranslations();
             if(typeof activeTournament !== 'undefined' && activeTournament && typeof getTournamentDisplayName === 'function') {
                 const tournamentName = document.getElementById('tour-name-display');
                 if (tournamentName) tournamentName.innerText = getTournamentDisplayName(activeTournament);

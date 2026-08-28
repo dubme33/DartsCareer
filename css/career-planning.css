@@ -1,0 +1,49 @@
+.planning-menu-tile { font: inherit; color: inherit; text-align: center; }
+.planning-tabs, .planning-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-bottom: 16px; }
+.planning-tabs .action-btn { margin-top: 0; background: #34495e; min-height: 44px; }
+.planning-tabs [aria-pressed="true"] { background: #20864f; box-shadow: inset 0 -3px #85e4ac; }
+.planning-shortcut { margin: 0 0 15px; background: #34495e; padding: 12px; }
+.planning-event-link { display: block; margin-top: 6px; background: #34495e; min-height: 44px; white-space: normal; }
+.planning-label { display: block; margin: 15px 0 8px; color: #ecf0f1; font-weight: bold; }
+#planning-tournament { width: 100%; max-width: 100%; min-height: 44px; padding: 12px; border: 1px solid #536b87; border-radius: 6px; color: #fff; background: #0f1c35; font: inherit; }
+.planning-note { color: #bdc3c7; font-size: 13px; line-height: 1.6; margin: 12px 0; }
+.planning-rule { color: #d6e4f0; padding: 14px; border-left: 3px solid #5b9ed6; background: #14213a; font-size: 14px; line-height: 1.6; }
+.planning-status { padding: 18px; background: #0f213c; border: 1px solid #567698; border-radius: 8px; margin: 16px 0; overflow-wrap: anywhere; }
+.planning-status > strong { color: #f1c40f; font-size: 20px; }
+.planning-status p { margin: 8px 0 0; color: #e1e7ec; line-height: 1.5; }
+.planning-in, .planning-confirmed { border-color: #42be80; }
+.planning-in > strong, .planning-confirmed > strong { color: #72dea7; }
+.planning-pending { border-color: #f1c40f; }
+.planning-out { border-color: #e6897c; }
+.planning-out > strong { color: #ffaaa0; }
+.planning-field-count { font-size: 16px; }
+.planning-route { margin: 10px 0; border: 1px solid #3a506d; border-radius: 6px; background: #111c32; overflow: hidden; }
+.planning-route summary { padding: 14px; cursor: pointer; color: #e3e8ef; min-height: 20px; line-height: 1.5; }
+.planning-route summary > span { float: right; margin-left: 12px; color: #f1c40f; }
+.planning-route > p { margin: 8px 14px; }
+.planning-route ul { list-style: none; padding: 0 14px; margin: 0; max-height: 330px; overflow-y: auto; }
+.planning-route li { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 11px 0; border-top: 1px solid #2b3e58; color: #cbd5df; font-size: 13px; }
+.planning-route li > span:first-child { overflow-wrap: anywhere; }
+.planning-route li > span:last-child { white-space: nowrap; font-size: 12px; color: #b5c4d3; }
+.planning-route li.planning-me, .planning-route li.planning-me > span { color: #f1c40f; font-weight: bold; }
+.planning-card { padding: 18px; border: 1px solid #3a506d; border-radius: 8px; background: #14213a; min-width: 0; }
+.planning-card h3 { margin: 0 0 14px; border: 0; font-size: 16px; color: #edf0f3; }
+.planning-card > span, .planning-card small { color: #b9c8d5; font-size: 13px; }
+.planning-card .planning-loss { display: block; color: #ffbc77; font-size: 28px; margin-top: 5px; overflow-wrap: anywhere; }
+.planning-card p { font-size: 14px; line-height: 1.5; color: #e1e7ec; }
+.planning-table-wrap { max-width: 100%; overflow-x: auto; }
+.planning-table { border-collapse: collapse; width: 100%; font-size: 13px; color: #d1dce5; }
+.planning-table th, .planning-table td { padding: 12px 8px; text-align: left; border-bottom: 1px solid #30465f; }
+.planning-table th { color: #f1c40f; }
+.planning-table th:last-child, .planning-table td:last-child { text-align: right; white-space: nowrap; }
+#screen-planning button:focus-visible, #screen-planning summary:focus-visible, #screen-planning select:focus-visible, .planning-menu-tile:focus-visible { outline: 3px solid #f1c40f; outline-offset: 3px; }
+@media (max-width: 600px) {
+    .planning-grid { grid-template-columns: 1fr; }
+    .planning-tabs { gap: 8px; }
+    .planning-tabs .action-btn { font-size: 13px; padding: 12px 8px; }
+    .planning-route li { flex-direction: column; align-items: flex-start; gap: 5px; }
+    .planning-route summary { font-size: 13px; }
+    .planning-status > strong { font-size: 18px; }
+    .planning-card { padding: 14px; }
+    .planning-table td:nth-child(2) { overflow-wrap: anywhere; }
+}

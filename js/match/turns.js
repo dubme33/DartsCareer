@@ -11,6 +11,9 @@ function playerThrow() {
             let boostedPlayer = { ...player };
             let bStats = typeof getBoostedPlayerStats === 'function' ? getBoostedPlayerStats() : null;
             if(bStats) { boostedPlayer.scoring = bStats.scoring; boostedPlayer.doubles = bStats.doubles; }
+            if (currentMatch.isTournament && !currentMatch.isDoubles && typeof getWorldMastersMatchRatings === 'function') {
+                boostedPlayer = getWorldMastersMatchRatings(player, boostedPlayer);
+            }
             boostedPlayer = applyRivalryMatchModifier(boostedPlayer, true);
 
             if (currentMatch && currentMatch.p1Momentum !== undefined) {
@@ -41,6 +44,9 @@ function playerThrow() {
                 ? getDoublesCurrentThrower(isP1)
                 : (currentMatch.isSpectator && isP1 ? currentMatch.spectatorP1 : currentMatch.opponent);
             let aiStats = { ...aiPlayer };
+            if (currentMatch.isTournament && !currentMatch.isDoubles && typeof getWorldMastersMatchRatings === 'function') {
+                aiStats = getWorldMastersMatchRatings(aiPlayer, aiStats);
+            }
             const tournamentForm = currentMatch.isSpectator && typeof getTournamentSimulationForm === 'function'
                 ? getTournamentSimulationForm(aiPlayer)
                 : 0;

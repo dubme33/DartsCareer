@@ -134,6 +134,49 @@ function getMainOomCutoffTime(referenceTime) {
     return cutoff.getTime();
 }
 
+// Prognoza odczytuje historię kopii zawodnika. Nigdy nie przesuwa rankingu
+// ani nie usuwa nagród z prawdziwego zapisu przy oglądaniu przyszłych dat.
+function getMainOomDefence(candidate, referenceDate = currentDate) {
+    const now = getMainOomReferenceTime(referenceDate);
+    const cutoff = getMainOomCutoffTime(now);
+    const history = normaliseMainOrderOfMeritHistory({ ...candidate }, now)
+        .filter(entry => entry.earnedAt > cutoff && entry.earnedAt <= now);
+    const entries = history.map(entry => ({ ...entry, expiresAt: getMainOomExpiryTime(entry.earnedAt) }))
+        .sort((a, b) => a.expiresAt - b.expiresAt);
+    const total = history.reduce((sum, entry) => sum + entry.amount, 0);
+    const windows = [30, 90].map(days => {
+        const date = new Date(now);
+        date.setDate(date.getDate() + days);
+        const futureCutoff = getMainOomCutoffTime(date.getTime());
+        const expiring = history.filter(entry => entry.earnedAt <= futureCutoff)
+            .reduce((sum, entry) => sum + entry.amount, 0);
+        return { days, date: date.getTime(), expiring, remaining: total - expiring };
+    });
+    return { total, entries, windows };
+}
+
+function getMainOomDefenceOverview(candidate, candidates, referenceDate = currentDate) {
+    const key = p => p?.id || `${p?.name || ''}|${p?.country || ''}`;
+    const rows = candidates.filter(p => p && !p.isBye).map(p => ({
+        player: p, defence: getMainOomDefence(p, referenceDate)
+    }));
+    const ranked = [...rows].sort((a, b) => b.defence.total - a.defence.total);
+    const index = ranked.findIndex(row => key(row.player) === key(candidate));
+    const defence = index >= 0 ? ranked[index].defence : getMainOomDefence(candidate, referenceDate);
+    const windows = defence.windows.map((window, windowIndex) => {
+        const projected = [...rows].sort((a, b) => b.defence.windows[windowIndex].remaining - a.defence.windows[windowIndex].remaining);
+        return { ...window, rank: projected.findIndex(row => key(row.player) === key(candidate)) + 1 };
+    });
+    const targets = [64, 80].map(limit => {
+        const inside = index >= 0 && index < limit;
+        const boundary = ranked[inside ? limit : limit - 1];
+        return { limit, inside, boundary: boundary?.player || null,
+            difference: boundary ? Math.max(0, inside
+                ? defence.total - boundary.defence.total : boundary.defence.total - defence.total) : null };
+    });
+    return { ...defence, rank: index + 1, windows, targets };
+}
+
 function getMainOomHistoricalEntries(templateIndex) {
     if (!Number.isInteger(templateIndex) || typeof PDC_OOM_HISTORICAL_EVENTS === 'undefined') return [];
     const entries = PDC_OOM_HISTORICAL_EVENTS.flatMap(event => {

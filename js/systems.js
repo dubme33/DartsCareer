@@ -720,7 +720,9 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
                 });
                 if (typeof restorePlayerLifecycleState === 'function') restorePlayerLifecycleState(gameState.playerLifecycleState);
                 mergeNewDefaultPlayersIntoSave();
-                if (typeof applyKnownPlayerCorrections === 'function') applyKnownPlayerCorrections([player, ...pdcPlayers]);
+                if (typeof applyKnownPlayerCorrections === 'function') {
+                    applyKnownPlayerCorrections([player, ...pdcPlayers], { preserveProgress: true, careerPlayer: player });
+                }
                 if (typeof deduplicatePdcPlayers === 'function') deduplicatePdcPlayers();
                 // Zawodnicy dodani pierwotnie do regionalnych składów Pucharu
                 // Narodów zaczynają z zerowym rankingiem, ale od tej chwili są
@@ -729,8 +731,12 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
                 applyKnownPlayerBirthYears([player, ...pdcPlayers]);
                 if (typeof removeCareerPlayerFromAiPool === 'function') removeCareerPlayerFromAiPool();
                 normalizePlayerIds(pdcPlayers, player);
+                if (typeof removeLegacyPlayerForm === 'function') {
+                    removeLegacyPlayerForm(player, player);
+                    pdcPlayers.forEach(candidate => removeLegacyPlayerForm(candidate, player));
+                }
                 if (typeof enforcePlayerRatingLimits === 'function') {
-                    enforcePlayerRatingLimits(player);
+                    enforcePlayerRatingLimits(player, player);
                     pdcPlayers.forEach(candidate => enforcePlayerRatingLimits(candidate));
                 }
 
@@ -1489,6 +1495,9 @@ async function updateProfileWalkon(event) {
                 : (isP1 ? player : currentMatch.opponent);
             const isCareerThrower = isP1 && (!isDoublesMatch || (typeof isCurrentPlayer === 'function' && isCurrentPlayer(pObj)));
             let statsObj = isCareerThrower && typeof getBoostedPlayerStats === 'function' ? getBoostedPlayerStats() : pObj;
+            if (currentMatch.isTournament && !currentMatch.isDoubles && typeof getWorldMastersMatchRatings === 'function') {
+                statsObj = getWorldMastersMatchRatings(pObj, statsObj);
+            }
             statsObj = applyRivalryMatchModifier(statsObj, isCareerThrower);
             let startScore = isP1 ? currentMatch.p1Score : currentMatch.p2Score;
             let currentScore = startScore;
@@ -1517,14 +1526,14 @@ async function updateProfileWalkon(event) {
                 if (isP1) {
                     st.p1TotalDarts++; st.p1LegDarts++;
                     if (st.p1LegDarts <= 9 && newScore >= 0) { st.p1First9Score += points; st.p1First9Darts++; }
-                    if (currentScore <= 50 && aim.mult === 2 && points > 0) {
+                    if (aim.mult === 2 && (currentScore <= 40 || (currentScore === 50 && aim.sector === 25))) {
                         st.p1DoubleAttempts++;
                         if (newScore === 0 && hitMult === 2) st.p1DoubleHits++;
                     }
                 } else {
                     st.p2TotalDarts++; st.p2LegDarts++;
                     if (st.p2LegDarts <= 9 && newScore >= 0) { st.p2First9Score += points; st.p2First9Darts++; }
-                    if (currentScore <= 50 && aim.mult === 2 && points > 0) {
+                    if (aim.mult === 2 && (currentScore <= 40 || (currentScore === 50 && aim.sector === 25))) {
                         st.p2DoubleAttempts++;
                         if (newScore === 0 && hitMult === 2) st.p2DoubleHits++;
                     }
@@ -1635,12 +1644,17 @@ async function updateProfileWalkon(event) {
                     currentMatch.suddenDeath.p1Score = 0; currentMatch.suddenDeath.p2Score = 0;
                     currentMatch.suddenDeath.p1Darts = 0; currentMatch.suddenDeath.p2Darts = 0;
                     let statsObjP1 = typeof getBoostedPlayerStats === 'function' ? getBoostedPlayerStats() : player;
+                    let statsObjP2 = currentMatch.opponent;
+                    if (currentMatch.isTournament && !currentMatch.isDoubles && typeof getWorldMastersMatchRatings === 'function') {
+                        statsObjP1 = getWorldMastersMatchRatings(player, statsObjP1);
+                        statsObjP2 = getWorldMastersMatchRatings(currentMatch.opponent, statsObjP2);
+                    }
                     statsObjP1 = applyRivalryMatchModifier(statsObjP1, true);
                     
                     for(let i=0; i<3; i++) {
                         let resP1 = calculateThrow(20, 3, statsObjP1);
                         currentMatch.suddenDeath.p1Score += resP1.sector * resP1.mult;
-                        let resP2 = calculateThrow(20, 3, currentMatch.opponent);
+                        let resP2 = calculateThrow(20, 3, statsObjP2);
                         currentMatch.suddenDeath.p2Score += resP2.sector * resP2.mult;
                     }
                     if (currentMatch.suddenDeath.p1Score !== currentMatch.suddenDeath.p2Score) {

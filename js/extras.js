@@ -299,14 +299,14 @@ function initCareerChronicle() {
                     if (typeof applyKnownPlayerCorrections === 'function') applyKnownPlayerCorrections(pdcPlayers);
                     if (typeof deduplicatePdcPlayers === 'function') deduplicatePdcPlayers();
                     normalizePlayerIds(pdcPlayers, player);
-                    if (!options.deferPlayerFormInit) initPlayersForm();
                 }
                 if (modData.tournamentDatabase) {
                     tournamentDatabase.length = 0;
                     modData.tournamentDatabase.forEach(tournament => tournamentDatabase.push({ ...tournament }));
                 }
             } else {
-                // Podczas trwającej kariery pozostawiamy wyniki, OVR i identyfikatory zawodników.
+                // Mod zachowuje wyniki, rozwój i identyfikatory zawodników.
+                // Korekty ocen gry nakładamy poniżej jednorazowo, z zachowaniem rozwoju.
                 if (modData.pdcPlayers) {
                     const playersBySourceName = new Map(pdcPlayers.map(candidate => [candidate.sourceName || candidate.name, candidate]));
                     const normalizeSourceName = value => String(value || '').trim().replace(/\s+/g, ' ').toLocaleLowerCase('pl');
@@ -352,19 +352,23 @@ function initCareerChronicle() {
                                 candidate.defaultTemplateIndex = index;
                             }
                         } else {
-                            pdcPlayers.push({
+                            const newCandidate = {
                                 ...modPlayer,
                                 defaultTemplateIndex: Number.isInteger(modPlayer.defaultTemplateIndex)
                                     ? modPlayer.defaultTemplateIndex
                                     : index
-                            });
+                            };
+                            if (typeof applyKnownPlayerCorrections === 'function') applyKnownPlayerCorrections([newCandidate]);
+                            pdcPlayers.push(newCandidate);
                         }
                     });
                     // Mod nie może wskrzesić zawodnika usuniętego przez system
                     // emerytur — nawet gdy jego prawdziwe nazwisko różni się od
                     // bazowego pseudonimu.
                     if (typeof removeRetiredPlayersFromPool === 'function') removeRetiredPlayersFromPool(pdcPlayers);
-                    if (typeof applyKnownPlayerCorrections === 'function') applyKnownPlayerCorrections(pdcPlayers);
+                    if (typeof applyKnownPlayerCorrections === 'function') {
+                        applyKnownPlayerCorrections([player, ...pdcPlayers], { preserveProgress: true, careerPlayer: player });
+                    }
                     if (typeof deduplicatePdcPlayers === 'function') deduplicatePdcPlayers();
                     if (typeof removeCareerPlayerFromAiPool === 'function') removeCareerPlayerFromAiPool();
                     normalizePlayerIds(pdcPlayers, player);
@@ -427,6 +431,17 @@ function initCareerChronicle() {
             }
             if (typeof invalidatePlayerRankingCache === 'function') invalidatePlayerRankingCache();
 
+            if (typeof removeLegacyPlayerForm === 'function') {
+                if (isCareerActive) removeLegacyPlayerForm(player, player);
+                pdcPlayers.forEach(candidate => removeLegacyPlayerForm(candidate, player));
+            }
+            // Renderujemy wybór dopiero po przeliczeniu OOM, nie ze starych
+            // kwot zapisanych w ZIP-ie. Odtwarzany mod może odroczyć inicjalizację bazy.
+            if (!isCareerActive && modData.pdcPlayers && !options.deferPlayerFormInit) {
+                initPlayersForm();
+            } else if (typeof renderCareerPlayerOptions === 'function') {
+                renderCareerPlayerOptions();
+            }
             renderOpponentOptions();
             const tDescPlay = document.getElementById('t-desc-play'); if (tDescPlay) tDescPlay.innerText = 'Zmierz się z AI z PDC.';
             const tTilePdc = document.getElementById('t-tile-pdc'); if (tTilePdc) tTilePdc.innerText = '🏆 Baza PDC';

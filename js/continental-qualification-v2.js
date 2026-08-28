@@ -190,16 +190,7 @@ function repairMigratedContinentalCardQualification(mainTournament, state) {
     delete state.migratedLegacyQualification;
 }
 
-function ensureContinentalQualificationState(mainTournament, candidates = getContinentalQualificationPlayers()) {
-    if (!mainTournament) return null;
-    const season = getContinentalQualificationSeason();
-    const existing = mainTournament.continentalQualification;
-    if (existing?.version === CONTINENTAL_QUALIFICATION_VERSION && existing.year === season
-        && Array.isArray(existing.oomPlayerIds) && Array.isArray(existing.proTourPlayerIds)) {
-        repairMigratedContinentalCardQualification(mainTournament, existing);
-        return refreshContinentalQualificationAggregate(existing);
-    }
-
+function buildContinentalAutomaticField(candidates) {
     const allPlayers = candidates.filter(isContinentalQualificationPlayerEligible);
     const cardHolders = allPlayers.filter(candidate => candidate.hasTourCard === true);
     const oomPlayers = [...cardHolders]
@@ -217,6 +208,19 @@ function ensureContinentalQualificationState(mainTournament, candidates = getCon
         if (proTourPlayers.length === 16) break;
     }
 
+    return { oomPlayers, proTourPlayers };
+}
+
+function ensureContinentalQualificationState(mainTournament, candidates = getContinentalQualificationPlayers()) {
+    if (!mainTournament) return null;
+    const season = getContinentalQualificationSeason();
+    const existing = mainTournament.continentalQualification;
+    if (existing?.version === CONTINENTAL_QUALIFICATION_VERSION && existing.year === season
+        && Array.isArray(existing.oomPlayerIds) && Array.isArray(existing.proTourPlayerIds)) {
+        repairMigratedContinentalCardQualification(mainTournament, existing);
+        return refreshContinentalQualificationAggregate(existing);
+    }
+    const { oomPlayers, proTourPlayers } = buildContinentalAutomaticField(candidates);
     const state = {
         version: CONTINENTAL_QUALIFICATION_VERSION,
         year: season,

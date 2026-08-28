@@ -356,9 +356,6 @@ const pdcPlayers = [
 // Pozwalają naprawić pojedynczy błąd w bazie bez wymuszania nowej wersji moda.
 const playerDatabaseCorrections = {
     'brody kling': { ovr: 74, scoring: 75, doubles: 73 },
-    'alexis toylen': { ovr: 71, scoring: 72, doubles: 70 },
-    'andreas harrison': { ovr: 71, scoring: 72, doubles: 70 },
-    'andreas harrysson': { ovr: 71, scoring: 72, doubles: 70 },
     'jose de souza': { ovr: 70, scoring: 71, doubles: 69 },
     'jose de sousa': { ovr: 70, scoring: 71, doubles: 69 },
     'josé de sousa': { ovr: 70, scoring: 71, doubles: 69 },
@@ -379,7 +376,110 @@ const playerDatabaseCorrections = {
     'shane sawyer': { country: 'Bahamy' }
 };
 
-function applyKnownPlayerCorrections(players) {
+// Nazwa bazowa, nazwisko z moda, poprzedni OVR, nowy OVR i różnice
+// scoring/doubles względem OVR. ZIP-y modów mogą zachować stare wartości.
+// Poprzedni OVR pozostaje bazą migracji dla zapisów bez znacznika ratingUpdate.
+const playerRatingUpdates = [
+    ['Bo Graves', 'Beau Greaves', 66, 75, 1, -1],
+    ['Charles Manby', 'Charlie Manby', 64, 74, 1, -1],
+    ['Sebastian Bialecki', 'Sebastian Białecki', 74, 77, 1, -1],
+    ['Chris Reys', 'Cristo Reyes', 68, 74, 0, 0],
+    ['Oscar Lukas', 'Oskar Lukasiak', 64, 68, 1, -1],
+    ['Adam Gawel', 'Adam Gawlas', 60, 67, 0, 0],
+    ['Gerry Prices', 'Gerwyn Price', 92, 92, 1, -1],
+    ['Jeff De Zwaan', 'Jeffrey De Zwaan', 60, 66, 0, 0],
+    ['Garry Anders', 'Gary Anderson', 89, 90, 2, -2],
+    ['Mensa Sulovic', 'Mensur Suljovic', 75, 76, 1, -1],
+    ['Jamie Wadey', 'James Wade', 91, 91, 0, 0],
+    ['Andy Gilder', 'Andrew Gilding', 82, 84, -1, 1],
+    ['Joey Callen', 'Joe Cullen', 81, 82, 1, -1],
+    ['Krzysztof Ratajczyk', 'Krzysztof Ratajski', 85, 86, -1, 1],
+    ['Adam Leak', 'Adam Leek', 60, 69, 0, 0],
+    ['Harry Coaty', 'Henry Coates', 61, 71, 1, -1],
+    ['Jim van Ski', 'Jimmy van Schie', 63, 67, 0, 0],
+    ['Rian Serle', 'Ryan Searle', 89, 86, 1, -1],
+    ['Dan Noperts', 'Danny Noppert', 89, 87, 0, 0],
+    ['Mick De Deckers', 'Mike De Decker', 84, 80, 1, -1],
+    ['Damian Heat', 'Damon Heta', 85, 84, 1, -1],
+    ['Chris Doby', 'Chris Dobey', 88, 85, 1, -1],
+    ['Ross Smythe', 'Ross Smith', 87, 86, 3, -3],
+    ['Jeremy Wattimen', 'Jermaine Wattimena', 87, 84, 0, 0],
+    ['Rich Edhome', 'Ritchie Edhouse', 81, 75, 1, -1],
+    ['Rick Pietreczka', 'Ricardo Pietreczko', 80, 75, 1, -1],
+    ['Pete Right', 'Peter Wright', 80, 75, 1, -1],
+    ['Mike Smiths', 'Michael Smith', 80, 77, 2, -2],
+    ['Kev Dots', 'Kevin Doets', 81, 84, 1, -1],
+    ['Nick Spring', 'Niko Springer', 79, 82, 1, -1],
+    ['Joey Hunt', 'Joe Hunt', 64, 73, 0, 0],
+    ['Wes Plaiser', 'Wesley Plaisier', 69, 70, 1, -1],
+    ['Jeff de Giraffe', 'Jeffrey de Graaf', 76, 78, 1, -1],
+    ['Tom Pissel', 'Tom Bissell', 67, 74, 1, -1],
+    ['Luke Woodhome', 'Luke Woodhouse', 86, 84, 0, 0],
+    ['Marten Lukeboy', 'Martin Lukeman', 79, 75, 0, 0],
+    ['Andreas Harrison', 'Andreas Harrysson', 71, 69, 1, -1],
+    ['Alexis Toylen', 'Alexis Toylo', 71, 68, 1, -1]
+];
+
+function normalizePlayerRatingName(value) {
+    return String(value || '').trim().toLocaleLowerCase('pl').normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '').replace(/ł/g, 'l').replace(/\s+/g, ' ');
+}
+
+const playerRatingUpdatesByName = new Map();
+playerRatingUpdates.forEach(([sourceName, realName, previousOvr, ovr, scoringOffset, doublesOffset]) => {
+    const update = { key: normalizePlayerRatingName(sourceName), previousOvr, ovr,
+        scoring: ovr + scoringOffset, doubles: ovr + doublesOffset };
+    [sourceName, realName].forEach(name => playerRatingUpdatesByName.set(normalizePlayerRatingName(name), update));
+});
+// Dawne nazwy regionalnych duplikatów i warianty pisowni spotykane w modach.
+[['Oscar Lucasi', 'Oscar Lukas'], ['Adam Leeke', 'Adam Leak'], ['Sebastian Bielicki', 'Sebastian Bialecki'],
+    ['Wesley Plaiser', 'Wes Plaiser'], ['Luke Woohouse', 'Luke Woodhome'], ['Andreas Harryson', 'Andreas Harrison']]
+    .forEach(([alias, sourceName]) => playerRatingUpdatesByName.set(
+        normalizePlayerRatingName(alias), playerRatingUpdatesByName.get(normalizePlayerRatingName(sourceName))
+    ));
+
+function applyPlayerRatingUpdate(candidate, { preserveProgress = false, careerPlayer = null } = {}) {
+    if (!candidate || candidate.isBye || candidate.isNewgen) return;
+    // Inny zawodnik w tym samym slocie (np. polski mod) nie dziedziczy
+    // korekty prawdziwego gracza wyłącznie na podstawie sourceName.
+    const update = playerRatingUpdatesByName.get(normalizePlayerRatingName(candidate.name || candidate.sourceName));
+    if (!update) return;
+
+    const previousUpdate = candidate.ratingUpdate;
+    const previousOvr = previousUpdate?.key === update.key && Number.isFinite(previousUpdate.ovr)
+        ? previousUpdate.ovr : update.previousOvr;
+    const delta = update.ovr - previousOvr;
+    const clampRating = (value, max) => Math.max(40, Math.min(max, value));
+    const fields = [['ovr', 'baseOvr', 99], ['scoring', 'baseScoring', 100], ['doubles', 'baseDoubles', 100]];
+
+    if (!preserveProgress || delta !== 0) {
+        const currentOvr = Number(candidate === careerPlayer
+            ? candidate.overall ?? candidate.ovr : candidate.ovr ?? candidate.overall);
+        fields.forEach(([field, baseField, max]) => {
+            const currentValue = field === 'ovr' ? currentOvr : Number(candidate[field] ?? currentOvr);
+            candidate[field] = preserveProgress && Number.isFinite(currentValue)
+                ? clampRating(currentValue + delta, max) : update[field];
+            if (Number.isFinite(candidate[baseField])) {
+                candidate[baseField] = preserveProgress
+                    ? clampRating(candidate[baseField] + delta, max) : update[field];
+            }
+        });
+        // U AI forma jest nakładana na bazę. Przeliczenie jest konieczne także
+        // przy granicach skali, np. gdy poprzedni wyświetlany OVR wynosił 99.
+        if (preserveProgress && candidate !== careerPlayer && fields.every(([, baseField]) => Number.isFinite(candidate[baseField]))) {
+            const form = Number.isFinite(Number(candidate.form)) ? Math.round(Number(candidate.form)) : 0;
+            fields.forEach(([field, baseField, max]) => {
+                candidate[field] = clampRating(Math.round(candidate[baseField]) + form, max);
+            });
+        }
+        if (Object.prototype.hasOwnProperty.call(candidate, 'overall')) candidate.overall = candidate.ovr;
+    }
+    // Znacznik trafia do zapisu razem z zawodnikiem. Kolejne wczytanie gry lub
+    // tego samego moda nie nakłada ponownie różnicy ani nie zeruje rozwoju.
+    candidate.ratingUpdate = { key: update.key, ovr: update.ovr };
+}
+
+function applyKnownPlayerCorrections(players, options = {}) {
     if (!Array.isArray(players)) return;
     players.forEach(candidate => {
         if (!candidate || candidate.isBye) return;
@@ -395,7 +495,16 @@ function applyKnownPlayerCorrections(players) {
             .map(value => String(value || '').trim().toLocaleLowerCase('pl'))
             .filter(Boolean);
         const correction = identities.map(identity => playerDatabaseCorrections[identity]).find(Boolean);
-        if (correction) Object.assign(candidate, correction);
+        if (correction) {
+            Object.entries(correction).forEach(([field, value]) => {
+                // Oceny startowe nie mogą zastępować treningu ani wyników
+                // zapisanej kariery. Korekty nazw i krajów nadal obowiązują;
+                // jednorazowe zmiany OVR obsługuje applyPlayerRatingUpdate.
+                if (options.preserveProgress && ['ovr', 'scoring', 'doubles'].includes(field)) return;
+                candidate[field] = value;
+            });
+        }
+        applyPlayerRatingUpdate(candidate, options);
     });
 }
 

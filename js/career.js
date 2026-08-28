@@ -22,8 +22,8 @@ function showScreen(screenId) {
                     await waitForPersistedModRestore();
                 }
                 const select = document.getElementById('existing-player-select');
-                const selectedPlayer = select && typeof pdcPlayers !== 'undefined'
-                    ? pdcPlayers.find(candidate => candidate && candidate.id === select.value)
+                const selectedPlayer = select
+                    ? getCareerStartPlayers().find(candidate => candidate && candidate.id === select.value)
                     : null;
 
                 if (!selectedPlayer) {
@@ -31,20 +31,16 @@ function showScreen(screenId) {
                     return;
                 }
 
-                const asNumber = (value, fallback) => Number.isFinite(Number(value)) ? Number(value) : fallback;
-                const overall = Math.round(asNumber(selectedPlayer.ovr, 55));
-                const scoring = Math.round(asNumber(selectedPlayer.scoring, overall));
-                const doubles = Math.round(asNumber(selectedPlayer.doubles, overall));
-                const prizeMoney = asNumber(selectedPlayer.prizeMoney, 0);
-                const proTourPrizeMoney = asNumber(selectedPlayer.proTourPrizeMoney, 0);
-                const pcPrizeMoney = asNumber(selectedPlayer.pcPrizeMoney, 0);
-                const europeanTourPrizeMoney = asNumber(selectedPlayer.europeanTourPrizeMoney, 0);
                 const careerStartAssets = moddedAssets;
                 const careerStartPlayer = player;
                 const modMedia = await getModCareerProfileMedia(careerStartAssets, selectedPlayer.name);
                 if (typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy()) return false;
                 // W trakcie odczytu pliku użytkownik mógł wczytać inną karierę lub moda.
                 if (player !== careerStartPlayer || moddedAssets !== careerStartAssets || !pdcPlayers.includes(selectedPlayer)) return;
+
+                const { overall, scoring, doubles, prizeMoney, proTourPrizeMoney, pcPrizeMoney, europeanTourPrizeMoney }
+                    = getCareerStartPlayerStats(selectedPlayer);
+                const asNumber = (value, fallback) => Number.isFinite(Number(value)) ? Number(value) : fallback;
 
                 // Przenosimy dokładnie tego zawodnika z puli AI do kariery, bez tworzenia duplikatu.
                 const selectedIndex = pdcPlayers.indexOf(selectedPlayer);
@@ -898,6 +894,8 @@ function showScreen(screenId) {
                     ? `<button class="btn-sign" style="background:#3498db;" onclick="viewTournamentHistory(${idx})">${t('t-btn-results')}</button>` 
                     : `<span style="color:var(--accent-green)">${t('t-scheduled')}</span>`;
                     
+                const planningButton = !tour.completed && typeof getPlanningTournamentKind === 'function' && getPlanningTournamentKind(tour)
+                    ? `<button type="button" class="btn-sign planning-event-link" onclick="showCareerPlanning('qualification', ${idx})">${escapeHtml(trPlanning('qualification'))}</button>` : '';
                 const year = currentDate.getFullYear();
                 const startMonth = (tour.month + 1).toString().padStart(2, '0');
                 const endMonth = ((Number.isInteger(tour.endMonth) ? tour.endMonth : tour.month) + 1).toString().padStart(2, '0');
@@ -914,7 +912,7 @@ function showScreen(screenId) {
                             📍 ${escapeHtml(t(tour.city))}, ${getFlagImg(tour.country)} ${escapeHtml(t(tour.country))}
                         </small>
                     </div>
-                    <div>${statusBadge}</div>
+                    <div>${statusBadge}${planningButton}</div>
                 </div>`;
             });
             list.innerHTML = calendarHtml;
@@ -994,7 +992,6 @@ function showScreen(screenId) {
             if (choice.effect.prof) player.prof = clamp((player.prof || 50) + choice.effect.prof, 0, 100);
             if (choice.effect.pop) player.pop = clamp((player.pop || 20) + choice.effect.pop, 0, 100);
             if (choice.effect.stamina) player.stamina = clamp(player.stamina + choice.effect.stamina, 0, 100);
-            if (choice.effect.form) player.form = clamp((player.form || 0) + choice.effect.form, -5, 5);
 
             const outcomeMsg = choice[`outcome${langSuffix}`] || choice.outcome_pl;
             const xpSummary = eventXpChanges.length > 0 ? `\n\n${t('t-event-xp-summary')}: ${eventXpChanges.join(' | ')}` : '';
@@ -1307,8 +1304,6 @@ function showScreen(screenId) {
             }
             
             sortedPlayers.forEach((p, index) => {
-                let formVal = Math.round(p.form || 0);
-                let formText = formVal > 0 ? `<span style="color:var(--accent-green)">(+${formVal})</span>` : (formVal < 0 ? `<span style="color:var(--accent-red)">(${formVal})</span>` : `<span style="color:gray">(0)</span>`);
                 let isMe = isCurrentPlayer(p);
                 let bgStyle = isMe ? 'background: rgba(39, 174, 96, 0.2);' : '';
                 
@@ -1329,7 +1324,7 @@ function showScreen(screenId) {
                 rankingHtml += `<button type="button" class="ranking-player-row" data-player-id="${escapeHtml(p.id)}" style="border-bottom: 1px solid var(--border-color); ${bgStyle}">
                     <div>
                         <strong>#${index + 1}</strong> ${getFlagImg(p.country)} ${escapeHtml(p.name)}${tourCardBadge}
-                        <span style="color: #bdc3c7; font-size: 13px; margin-left: 5px;">OVR: ${displayOvr} ${formText}</span> ${isMe ? "<b>(TY)</b>" : ""}
+                        <span style="color: #bdc3c7; font-size: 13px; margin-left: 5px;">OVR: ${displayOvr}</span> ${isMe ? "<b>(TY)</b>" : ""}
                     </div>
                     <div style="color: #f1c40f; font-weight: bold;">
                         £${formattedPrize}

@@ -666,6 +666,24 @@
         .profile-list-item span { color: var(--accent-green); font-size: 13px; white-space: nowrap; }
         .profile-list-item small { display: block; margin-top: 3px; color: #bdc3c7; }
         .profile-empty { margin: 0; color: #bdc3c7; font-style: italic; }
+        .profile-match-stat-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); margin: 14px 0; }
+        .profile-match-stat-grid small, .profile-stats-note { color: #bdc3c7; font-size: 12px; line-height: 1.6; }
+        .profile-stats-note { margin: 8px 0; }
+        .profile-recent-balance { color: #fff; font-weight: bold; }
+        .profile-recent-match { display: grid; grid-template-columns: 85px minmax(0, 1fr) auto; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border-color); }
+        .profile-recent-match:last-child { border-bottom: 0; }
+        .profile-recent-match > div { min-width: 0; overflow-wrap: anywhere; }
+        .profile-recent-match small { display: block; color: #bdc3c7; font-size: 11px; line-height: 1.6; }
+        .profile-match-result { padding: 6px 8px; border-radius: 5px; text-align: center; font-size: 11px; font-weight: bold; }
+        .profile-match-win { color: #8ee6b2; background: #173c32; }
+        .profile-match-loss { color: #ffc2be; background: #492b32; }
+        .profile-match-score { text-align: right; }
+        .profile-match-score > strong { color: #f1c40f; font-size: 20px; }
+        @media (max-width: 600px) {
+            .profile-match-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            .profile-recent-match { grid-template-columns: minmax(0, 1fr) auto; gap: 6px 12px; }
+            .profile-match-result { grid-column: 1 / -1; justify-self: start; }
+        }
         .supporter-entry {
             display: flex;
             flex-wrap: wrap;

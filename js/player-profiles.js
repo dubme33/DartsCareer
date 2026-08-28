@@ -410,6 +410,7 @@ function openPlayerProfile(playerId, rankingType = 'main') {
         ${rankingMarkup}
         <div class="profile-ranking-card profile-average-card"><span>${trPlayerProfile('seasonHighestAverage')}</span><strong>${stats.highestAvg > 0 ? stats.highestAvg.toFixed(2) : '—'}</strong></div>
     </section>
+    ${typeof renderPlayerMatchStatistics === 'function' ? renderPlayerMatchStatistics(selectedPlayer) : ''}
     <section class="profile-panel">
         <h3>${trPlayerProfile('highlights', { year: stats.year })}</h3>
         <ul class="profile-list">${highlightsMarkup}</ul>
