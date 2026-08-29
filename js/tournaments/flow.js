@@ -33,6 +33,30 @@ function buildPlayersChampionshipField(cardHolders, replacementPoolOrRandom = []
     };
 }
 
+function getNonPrizeQualifierEliminationMessage(tournament = activeTournament, candidate = player) {
+    if (!tournament) return '';
+    if (typeof isContinentalQualifierTournament === 'function' && isContinentalQualifierTournament(tournament)) {
+        return typeof getContinentalQualifierOutcomeMessage === 'function'
+            ? getContinentalQualifierOutcomeMessage(false)
+            : '';
+    }
+    if (typeof isPdcTourCardQualifierTournament === 'function' && isPdcTourCardQualifierTournament(tournament)) {
+        return typeof getPdcTourCardQualifierOutcomeMessage === 'function'
+            ? getPdcTourCardQualifierOutcomeMessage(tournament, candidate)
+            : '';
+    }
+    if (typeof isPdcQSchoolTournament === 'function' && isPdcQSchoolTournament(tournament)) {
+        return typeof getPdcTourCardOutcomeMessage === 'function'
+            ? getPdcTourCardOutcomeMessage(candidate)
+            : '';
+    }
+    if (typeof isWorldMastersFinalsQualifierTournament === 'function'
+        && isWorldMastersFinalsQualifierTournament(tournament)) {
+        return typeof trWorldMasters === 'function' ? trWorldMasters('finalsRoleOut') : '';
+    }
+    return '';
+}
+
 function skipActiveTournament() {
             if (!activeTournament || (typeof currentMatch !== 'undefined' && currentMatch)
                 || (typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy())) return false;
@@ -729,10 +753,25 @@ function skipActiveTournament() {
     let targetLegs = matchFormat.legsToWin || 6;
     let targetSets = matchFormat.setsToWin || 3;
     let legsPerSet = matchFormat.legsPerSet || 3;
+    const mentalTotals = [0, 0];
+    let mentalLegCount = 0;
+    const legChance = () => {
+        let chance = typeof getEnduranceLegWinChance === 'function'
+            ? getEnduranceLegWinChance(p1Chance, p1, p2, p1LegsWon + p2LegsWon) : p1Chance;
+        if (typeof adjustCareerPreparationWinChance === 'function' && typeof getCareerPreparationMatchModifier === 'function') {
+            chance = adjustCareerPreparationWinChance(chance, getCareerPreparationMatchModifier(p1),
+                getCareerPreparationMatchModifier(p2), getTournamentSimulationProfile(activeTournament).ratingScale);
+        }
+        if (typeof getMentalLegPenalties !== 'function') return chance;
+        const penalties = getMentalLegPenalties(p1, p2, { isTournament: Boolean(activeTournament),
+            matchFormat, p1Legs, p2Legs, p1Sets, p2Sets });
+        mentalTotals[0] += penalties[0]; mentalTotals[1] += penalties[1]; mentalLegCount++;
+        return adjustMentalLegWinChance(chance, penalties, getTournamentSimulationProfile(activeTournament).ratingScale);
+    };
 
     // Szybka matematyczna symulacja meczu leg po legu
     while (true) {
-        if (Math.random() < p1Chance) { p1Legs++; p1LegsWon++; }
+        if (Math.random() < legChance()) { p1Legs++; p1LegsWon++; }
         else { p2Legs++; p2LegsWon++; }
 
         if (isSets) {
@@ -745,7 +784,7 @@ function skipActiveTournament() {
                 p1Legs === matchFormat.decidingSetSuddenDeathAt &&
                 p2Legs === matchFormat.decidingSetSuddenDeathAt) {
                 // Sudden death rozstrzyga set i tym samym cały mecz.
-                if (Math.random() < p1Chance) { p1Sets++; p1LegsWon++; }
+                if (Math.random() < legChance()) { p1Sets++; p1LegsWon++; }
                 else { p2Sets++; p2LegsWon++; }
                 p1Legs = 0;
                 p2Legs = 0;
@@ -761,7 +800,7 @@ function skipActiveTournament() {
                 if ((p1Legs >= targetLegs || p2Legs >= targetLegs) && Math.abs(p1Legs - p2Legs) >= 2) break;
                 // Nagła śmierć (np. w World Matchplay)
                 if (p1Legs === matchFormat.suddenDeathAt && p2Legs === matchFormat.suddenDeathAt) {
-                    if (Math.random() < p1Chance) { p1Legs++; p1LegsWon++; }
+                    if (Math.random() < legChance()) { p1Legs++; p1LegsWon++; }
                     else { p2Legs++; p2LegsWon++; }
                     break;
                 }
@@ -786,15 +825,23 @@ function skipActiveTournament() {
 
     // Wybitny występ AI ma odzwierciedlenie zarówno w większej szansie na wygraną,
     // jak i w średniej widocznej w wynikach symulacji.
-    const getSimulatedAverage = (baseAverage, won, peakPerformance) => {
-        const regularAverage = baseAverage + (Math.random() * 9 - 4) + (won ? 2 : 0);
+    const getSimulatedAverage = (candidate, baseAverage, won, peakPerformance, side) => {
+        const spread = typeof getConsistencySpread === 'function' ? getConsistencySpread(candidate) : 1;
+        const fatigue = typeof getEnduranceMatchPenalty === 'function'
+            ? getEnduranceMatchPenalty(candidate, (p1LegsWon + p2LegsWon) / 2) * 0.4 : 0;
+        const mentalPenalty = mentalLegCount ? mentalTotals[side] / mentalLegCount * 0.4 : 0;
+        const preparation = typeof getCareerPreparationMatchModifier === 'function'
+            ? getCareerPreparationMatchModifier(candidate) * 0.4
+            : 0;
+        const regularAverage = baseAverage + 0.5 + (Math.random() * 9 - 4.5) * spread + (won ? 2 : 0)
+            - fatigue - mentalPenalty + preparation;
         const exceptionalAverage = peakPerformance
             ? Math.max(regularAverage, peakPerformance.averageFloor)
             : regularAverage;
         return Math.max(45, Math.min(125, exceptionalAverage)).toFixed(2);
     };
-    let p1Avg = getSimulatedAverage(p1BaseAvg, p1Won, p1PeakPerformance);
-    let p2Avg = getSimulatedAverage(p2BaseAvg, !p1Won, p2PeakPerformance);
+    let p1Avg = getSimulatedAverage(p1, p1BaseAvg, p1Won, p1PeakPerformance, 0);
+    let p2Avg = getSimulatedAverage(p2, p2BaseAvg, !p1Won, p2PeakPerformance, 1);
     const result = { p1Avg, p2Avg, p1Score: isSets ? p1Sets : p1Legs, p2Score: isSets ? p2Sets : p2Legs,
         p1LegsWon, p2LegsWon };
     if (typeof getQuickSimulatedMatchStats === 'function') {

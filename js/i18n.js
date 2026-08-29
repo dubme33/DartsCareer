@@ -1922,6 +1922,12 @@ const translations = {
             if(typeof refreshWorldCupTranslations === 'function') refreshWorldCupTranslations();
             if(typeof refreshWorldMastersTranslations === 'function') refreshWorldMastersTranslations();
             if(typeof refreshCareerPlanningTranslations === 'function') refreshCareerPlanningTranslations();
+            if(typeof refreshWorldNewsTranslations === 'function') refreshWorldNewsTranslations();
+            if(typeof refreshSeasonArchiveTranslations === 'function') refreshSeasonArchiveTranslations();
+            if(typeof refreshPlayerStaffTranslations === 'function') refreshPlayerStaffTranslations();
+            if(typeof refreshPlayerTraitsTranslations === 'function') refreshPlayerTraitsTranslations();
+            if(typeof refreshCareerInfrastructureTranslations === 'function') refreshCareerInfrastructureTranslations();
+            if(typeof refreshCareerLifestyleTranslations === 'function') refreshCareerLifestyleTranslations();
             if(typeof activeTournament !== 'undefined' && activeTournament && typeof getTournamentDisplayName === 'function') {
                 const tournamentName = document.getElementById('tour-name-display');
                 if (tournamentName) tournamentName.innerText = getTournamentDisplayName(activeTournament);

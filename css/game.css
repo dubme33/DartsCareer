@@ -497,6 +497,36 @@
         .sponsor-details { font-size: 12px; color: #f1c40f; margin: 0; }
         .btn-sign { background: var(--accent-green); color: white; border: none; padding: 5px 10px; border-radius: 3px; cursor: pointer; font-weight: bold; font-size: 12px;}
         .btn-sign:hover { background: #2ecc71; }
+
+        #sponsor-season-goals { background: #0f3460; border: 1px solid #466781; border-radius: 10px; padding: 20px; margin-bottom: 22px; }
+        .sponsor-goal-heading, .sponsor-goal-card-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px; align-items: baseline; }
+        .sponsor-goal-heading h3 { margin: 0; color: #f1c40f; border: 0; }
+        .sponsor-goal-heading > strong { color: #ecf0f1; font-size: 13px; }
+        .sponsor-goals-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(240px, 100%), 1fr)); gap: 12px; margin-top: 16px; }
+        .sponsor-goal-card { background: #1a1a2e; border: 1px solid #52657b; border-radius: 8px; padding: 14px; min-width: 0; overflow-wrap: anywhere; }
+        .sponsor-goal-card p { font-size: 13px; line-height: 1.5; margin: 10px 0; }
+        .sponsor-goal-card.goal-completed { border-color: #2ecc71; }
+        .sponsor-goal-card-head { color: #fff; }
+        .sponsor-goal-card-head span { color: #bdc3c7; font-size: 12px; }
+        .sponsor-goal-reward { color: #f1c40f; font-size: 13px; line-height: 1.5; }
+        .sponsor-goal-note { color: #c2cedb; font-size: 12px; line-height: 1.5; }
+        .sponsor-goal-status { color: #d9e6f2; font-weight: bold; }
+        .sponsor-goal-card progress { display: block; width: 100%; height: 9px; accent-color: #2ecc71; }
+        .sponsor-goal-clause { margin-top: 10px; border-top: 1px solid #52657b; padding-top: 9px; font-size: 12px; line-height: 1.5; }
+        .sponsor-goal-clause > strong { color: #b4dbc7; }
+        .sponsor-goal-clause p { margin: 5px 0; }
+        .sponsor-goal-clause .btn-sign { margin-top: 6px; min-height: 36px; }
+        .sponsor-goal-history { margin-top: 18px; }
+        .sponsor-goal-history summary { cursor: pointer; color: #ecf0f1; padding: 8px 0; }
+        #screen-sponsors .sponsor-column { flex-basis: 320px !important; }
+        #screen-sponsors .sponsor-card { flex-wrap: wrap; gap: 10px; }
+        #screen-sponsors .sponsor-logo { flex-shrink: 0; }
+        #screen-sponsors .sponsor-info { flex: 1 1 160px; min-width: 0; overflow-wrap: anywhere; }
+        #screen-sponsors .sponsor-card > .btn-sign { min-height: 36px; margin-left: auto; }
+        @media (max-width: 600px) {
+            #sponsor-season-goals { padding: 14px; }
+            #screen-sponsors .sponsor-column { padding: 14px !important; }
+        }
     
 
         @keyframes pulse {

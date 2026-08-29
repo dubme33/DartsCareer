@@ -16,7 +16,9 @@ function changePlayerStamina(candidate, amount) {
 }
 
 function recoverDailyStamina(candidate = player) {
-    return changePlayerStamina(candidate, STAMINA_CONFIG.dailyRecovery);
+    const staffBonus = typeof getPlayerStaffRecoveryBonus === 'function' ? getPlayerStaffRecoveryBonus(candidate) : 0;
+    const baseBonus = typeof getCareerRecoveryStaminaBonus === 'function' ? getCareerRecoveryStaminaBonus(candidate) : 0;
+    return changePlayerStamina(candidate, STAMINA_CONFIG.dailyRecovery + staffBonus + baseBonus);
 }
 
 function getTournamentStaminaCost(tournament) {
@@ -56,7 +58,12 @@ function chargeTournamentParticipationStamina(tournament, participationDate = cu
     const participationYear = validDate.getFullYear();
     if (Number(tournament.staminaChargedYear) === participationYear) return 0;
 
-    const staminaCost = getTournamentStaminaCost(tournament);
+    const travel = typeof chargeCareerTournamentTravel === 'function'
+        ? chargeCareerTournamentTravel(tournament, validDate)
+        : null;
+    const baseCost = getTournamentStaminaCost(tournament);
+    const enduranceCost = typeof getEnduranceStaminaCost === 'function' ? getEnduranceStaminaCost(player, baseCost) : baseCost;
+    const staminaCost = Math.max(0, Math.round(enduranceCost * (Number(travel?.staminaMultiplier) || 1)));
     changePlayerStamina(player, -staminaCost);
     tournament.staminaChargedYear = participationYear;
     return staminaCost;

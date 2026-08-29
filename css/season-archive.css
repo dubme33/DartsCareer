@@ -1,0 +1,47 @@
+.season-archive-tile { font: inherit; }
+.season-archive-tile h3 { margin-bottom: 10px; }
+#screen-season-archive { text-align: left; }
+#season-archive-intro, .archive-note { color: #bdc3d4; font-size: 13px; line-height: 1.7; }
+.archive-controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin: 22px 0; }
+.archive-controls label { display: block; margin-bottom: 7px; font-size: 13px; color: #d7dfed; }
+.archive-controls select { width: 100%; min-height: 44px; box-sizing: border-box; font: inherit; font-size: 14px; color: #ecf0f7; background: #17233d; border: 1px solid #586886; border-radius: 6px; padding: 9px; }
+#screen-season-archive h3 { text-align: left; color: #e5ebf5; font-size: 18px; margin: 25px 0 13px; }
+#season-archive-chart { border: 1px solid #3d4b65; border-radius: 8px; background: #152039; padding: 12px; }
+#season-archive-chart svg { display: block; width: 100%; }
+.archive-chart-grid { stroke: #394762; stroke-width: 1; }
+.archive-chart-label { fill: #c0cbdd; font: 12px sans-serif; }
+.archive-chart-line { fill: none; stroke: #57d4ab; stroke-width: 3; stroke-linejoin: round; }
+.archive-chart-point { fill: #57d4ab; stroke: #132038; stroke-width: 2; }
+.archive-chart-live { fill: #152039; stroke: #f0c967; stroke-width: 3; }
+.archive-summary-head { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 14px; margin-top: 26px; }
+#screen-season-archive .archive-summary-head h3 { margin: 0; }
+.archive-status { padding: 5px 9px; background: #183e35; color: #8ee1bf; font-size: 11px; border-radius: 5px; }
+.archive-partial { background: #453722; color: #f6d185; }
+.archive-empty { padding: 16px; border: 1px dashed #53637e; border-radius: 7px; color: #bfcbdd; font-size: 13px; line-height: 1.7; }
+.archive-stat-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin: 18px 0; }
+.archive-stat-grid > div { min-width: 0; padding: 14px; background: #152039; border: 1px solid #394a67; border-radius: 7px; overflow-wrap: anywhere; }
+.archive-stat-grid span { display: block; color: #bdc3d4; font-size: 12px; margin-bottom: 8px; }
+.archive-stat-grid strong { display: block; color: #f0d47b; font-size: 23px; }
+.archive-awards-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.archive-award { min-width: 0; padding: 16px; border: 1px solid #6b603c; border-radius: 8px; background: #252739; overflow-wrap: anywhere; }
+.archive-award h4 { margin: 0 0 14px; color: #f0d47b; font-size: 14px; }
+.archive-award strong { color: #f3f5f8; font-size: 16px; }
+.archive-award p { font-size: 12px; color: #c5ccdc; line-height: 1.7; margin-bottom: 0; }
+.archive-table-wrap { max-width: 100%; overflow-x: auto; border: 1px solid #3d4b65; border-radius: 7px; }
+.archive-table { width: 100%; border-collapse: collapse; font-size: 12px; text-align: right; }
+.archive-table th, .archive-table td { padding: 13px 10px; border-bottom: 1px solid #39465e; white-space: nowrap; }
+.archive-table thead { background: #112039; color: #bed0e7; }
+.archive-table th:first-child { text-align: left; }
+.archive-table small { display: block; color: #aebbd0; font-size: 10px; font-weight: normal; margin-top: 4px; }
+.archive-selected-row { background: #21364a; }
+.archive-table tbody tr:last-child > * { border-bottom: 0; }
+.archive-rules { margin: 23px 0; color: #bdc3d4; font-size: 12px; line-height: 1.8; }
+.archive-rules summary { color: #d7dfed; cursor: pointer; padding: 5px 0; }
+#screen-season-archive :is(select, button, summary, [tabindex]):focus-visible, .season-archive-tile:focus-visible { outline: 3px solid #f1c40f; outline-offset: 3px; }
+@media (max-width: 650px) {
+    .archive-controls, .archive-awards-grid { grid-template-columns: minmax(0, 1fr); }
+    .archive-stat-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .archive-stat-grid > div { padding: 12px; }
+    .archive-stat-grid strong { font-size: 21px; }
+    #season-archive-chart { padding: 7px; }
+}

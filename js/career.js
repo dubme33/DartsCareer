@@ -113,6 +113,14 @@ function showScreen(screenId) {
                     migratePdcTourCardSystem([...pdcPlayers, player], currentDate);
                 }
                 initAllPlayerSeasonStats();
+                if (typeof resetSponsorOffers === 'function') resetSponsorOffers();
+                if (typeof initializeWorldNews === 'function') initializeWorldNews(true);
+                if (typeof initializeSeasonArchive === 'function') initializeSeasonArchive(true);
+                if (typeof initializePlayerStaff === 'function') initializePlayerStaff(true);
+                if (typeof initializeAllPlayerTraits === 'function') initializeAllPlayerTraits(true);
+                if (typeof initializeCareerInfrastructure === 'function') initializeCareerInfrastructure(true);
+                if (typeof initializeCareerLifestyle === 'function') initializeCareerLifestyle(true);
+                if (typeof initializePlayerEquipmentWear === 'function') initializePlayerEquipmentWear(true);
                 initCareerStats();
                 initCareerChronicle();
                 initRivalries();
@@ -153,6 +161,7 @@ function showScreen(screenId) {
                 name: document.getElementById('firstName').value + " " + document.getElementById('lastName').value,
                 country: document.getElementById('nationality').value,
                 birthYear: (currentDate instanceof Date ? currentDate.getFullYear() : 2026) - parseInt(document.getElementById('age').value, 10),
+                careerDebutSeason: currentDate.getFullYear(),
                 overall: ovr, ovr: ovr, scoring: ovr + 2, doubles: ovr - 2,
                 favoriteDouble: parseInt(document.getElementById('favorite-double').value),
                 budget: 150, prof: 50, pop: 20, stamina: 100,
@@ -183,6 +192,14 @@ function showScreen(screenId) {
             }
             if (typeof resetGrandSlamState === 'function') resetGrandSlamState();
             initAllPlayerSeasonStats();
+            if (typeof resetSponsorOffers === 'function') resetSponsorOffers();
+            if (typeof initializeWorldNews === 'function') initializeWorldNews(true);
+            if (typeof initializeSeasonArchive === 'function') initializeSeasonArchive(true);
+            if (typeof initializePlayerStaff === 'function') initializePlayerStaff(true);
+            if (typeof initializeAllPlayerTraits === 'function') initializeAllPlayerTraits(true);
+            if (typeof initializeCareerInfrastructure === 'function') initializeCareerInfrastructure(true);
+            if (typeof initializeCareerLifestyle === 'function') initializeCareerLifestyle(true);
+            if (typeof initializePlayerEquipmentWear === 'function') initializePlayerEquipmentWear(true);
 
             const photoInput = document.getElementById('photoUpload');
             const audioInput = document.getElementById('walkonUpload');
@@ -264,6 +281,11 @@ function showScreen(screenId) {
                 const rivalTileDesc = document.getElementById('rival-tile-desc');
                 if (rivalTileDesc) rivalTileDesc.innerText = trRival('active', { count: refreshActiveRivals().length });
             }
+            if (typeof updateWorldNewsBadge === 'function') updateWorldNewsBadge();
+            if (typeof updatePlayerStaffHub === 'function') updatePlayerStaffHub();
+            if (typeof renderPlayerTraitsHub === 'function') renderPlayerTraitsHub();
+            if (typeof updateCareerInfrastructureHub === 'function') updateCareerInfrastructureHub();
+            if (typeof updateCareerLifestyleHub === 'function') updateCareerLifestyleHub();
         }
 
         // --- 5. SYSTEM CZASU, POCZTY I KALENDARZA ---
@@ -552,6 +574,7 @@ function showScreen(screenId) {
                 : null;
             if (nameDisplay) nameDisplay.innerText = tournamentDisplayName;
             if (tournamentTile) tournamentTile.style.display = 'block';
+            if (typeof updateCareerInfrastructureHub === 'function') updateCareerInfrastructureHub();
             return tournament;
         }
 
@@ -582,7 +605,22 @@ function showScreen(screenId) {
                 return;
             }
 
+            if (currentDate.getMonth() === 11 && currentDate.getDate() === 31
+                && typeof finalizeSeasonArchive === 'function') {
+                finalizeSeasonArchive(currentDate.getFullYear());
+            }
+            if (currentDate.getMonth() === 11 && currentDate.getDate() === 31
+                && typeof settleSponsorGoals === 'function') {
+                settleSponsorGoals(currentDate.getFullYear());
+            }
             currentDate.setDate(currentDate.getDate() + 1);
+            const staffPayroll = typeof processPlayerStaffPayroll === 'function' ? processPlayerStaffPayroll() : null;
+            const infrastructureMaintenance = typeof processCareerInfrastructureMaintenance === 'function'
+                ? processCareerInfrastructureMaintenance()
+                : null;
+            const equipmentWear = typeof processPlayerEquipmentWear === 'function'
+                ? processPlayerEquipmentWear()
+                : null;
             if (typeof refreshMainOrderOfMerit === 'function') {
                 refreshMainOrderOfMerit([...pdcPlayers, player], currentDate);
             }
@@ -600,6 +638,7 @@ function showScreen(screenId) {
                     const currentStamina = Number.isFinite(Number(player.stamina)) ? Number(player.stamina) : 100;
                     player.stamina = Math.min(100, currentStamina + 10);
                 }
+                if (typeof recoverCareerPreparation === 'function') recoverCareerPreparation(player);
             }
             updateHub();
 
@@ -612,6 +651,8 @@ function showScreen(screenId) {
                     player.activeSponsors.forEach(s => { totalSponsorship += s.monthlyValue; s.months--; });
                     player.activeSponsors = player.activeSponsors.filter(s => s.months > 0);
                 }
+                const staffSponsorBonus = typeof getPlayerStaffSponsorBonus === 'function' ? getPlayerStaffSponsorBonus(totalSponsorship) : 0;
+                totalSponsorship += staffSponsorBonus;
                 if (player.technicalPartner) {
                     totalSponsorship += player.technicalPartner.monthlyValue;
                     player.technicalPartner.months--;
@@ -621,12 +662,16 @@ function showScreen(screenId) {
                     player.budget += totalSponsorship;
                     let subSpon = t('t-email-spon-sub');
                     let bodySpon = t('t-email-spon-body').replace('{amount}', totalSponsorship.toLocaleString('en-GB'));
+                    if (staffSponsorBonus > 0 && typeof trPlayerStaff === 'function') {
+                        bodySpon += `<p>${escapeHtml(trPlayerStaff('managerIncome', { amount: playerStaffMoney(staffSponsorBonus) }))}</p>`;
+                    }
                     addEmail(t('t-sender-acc'), subSpon, bodySpon);
                     generateOffers(); updateHub();
                 }
 
                 // 2. Reset rankingów liczonych w roku kalendarzowym (1 stycznia)
                 if (currentDate.getMonth() === 0) {
+                    if (typeof resetSponsorOffers === 'function') resetSponsorOffers();
                     const completedYear = currentDate.getFullYear() - 1;
                     addCareerChronicleEvent('season', {
                         year: completedYear,
@@ -654,18 +699,27 @@ function showScreen(screenId) {
                             tournament.historyLogs = '';
                             delete tournament.matchHistory;
                             delete tournament.staminaChargedYear;
+                            delete tournament.travelChargedYear;
+                            delete tournament.travelRequestedStandard;
+                            delete tournament.travelStandardUsed;
+                            delete tournament.travelCostPaid;
+                            delete tournament.travelPreparationLoss;
                         });
                     }
                     gdlTable = [];
                     resetAllPlayerSeasonStats(currentDate.getFullYear());
                     if (typeof resetWorldMastersSeason === 'function') resetWorldMastersSeason(currentDate.getFullYear());
+                    if (typeof initializeSeasonArchive === 'function') initializeSeasonArchive();
                     
                     // Powiadomienie e-mail o nowym sezonie
                     addEmail(t('t-sender-league'), t('t-email-newyear-sub'), t('t-email-newyear-body'));
                     updateHub();
                 }
             }
-            const shouldAutoSaveToday = currentDate.getDate() === 1 || currentDate.getDate() === 15;
+            if (typeof recordWorldNewsRankingChange === 'function') recordWorldNewsRankingChange();
+            const shouldAutoSaveToday = currentDate.getDate() === 1 || currentDate.getDate() === 15
+                || staffPayroll?.changed === true || infrastructureMaintenance?.changed === true
+                || equipmentWear?.changed === true;
 
             // --- Kwalifikacje do Ligi (1 lutego) ---
             if (currentDate.getMonth() === 1 && currentDate.getDate() === 1) {

@@ -1,0 +1,149 @@
+#screen-career-lifestyle { max-width: 1160px; }
+#career-lifestyle-content { text-align: left; }
+.career-lifestyle-intro, #screen-career-lifestyle section > p { color: #bdc9dc; line-height: 1.65; }
+.career-lifestyle-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 22px 0 16px; }
+.career-lifestyle-summary > div { display: flex; flex-direction: column; min-width: 0; padding: 15px; border: 1px solid #4c5f79; border-radius: 9px; background: #17263d; }
+.career-lifestyle-summary span, .career-trophy-room-head span { color: #aebcd0; font-size: 12px; }
+.career-lifestyle-summary strong, .career-trophy-room-head strong { margin-top: 6px; color: #f4d37d; font-size: 19px; overflow-wrap: anywhere; }
+.career-lifestyle-tabs { display: flex; gap: 8px; margin: 18px 0 28px; padding: 6px; border: 1px solid #405675; border-radius: 9px; background: #101d31; }
+.career-lifestyle-tabs button { flex: 1; min-height: 42px; padding: 9px 12px; color: #c9d4e4; font-weight: 800; border: 1px solid transparent; border-radius: 6px; background: transparent; cursor: pointer; }
+.career-lifestyle-tabs button.active { color: #fff; border-color: #62c8ae; background: #1a4c4b; }
+#screen-career-lifestyle section { margin: 25px 0 35px; }
+#screen-career-lifestyle section h3 { color: #edf3fb; text-align: left; }
+.career-lifestyle-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-top: 17px; }
+.property-grid { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.career-lifestyle-card { min-width: 0; overflow: hidden; border: 1px solid #465a78; border-radius: 10px; background: #17263d; transition: border-color .2s, transform .2s; }
+.career-lifestyle-card.active { border-color: #63cfb2; box-shadow: 0 0 0 1px rgba(99,207,178,.22); }
+.career-lifestyle-card.locked:not(.active) { border-style: dashed; }
+.career-lifestyle-card-body { display: flex; flex-direction: column; min-height: 250px; padding: 15px; }
+.career-lifestyle-card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.career-lifestyle-card-head h4 { margin: 0; color: #f0f5fb; font-size: 16px; }
+.career-lifestyle-card-head span { flex: none; padding: 3px 7px; color: #a8f0dc; font-size: 9px; font-weight: 900; text-transform: uppercase; border-radius: 9px; background: #23534d; }
+.career-lifestyle-card p { flex-grow: 1; color: #b9c6d8; font-size: 12px; line-height: 1.55; }
+.career-lifestyle-card strong { color: #f4d37d; font-size: 13px; }
+.career-lifestyle-card small { margin-top: 7px; color: #e0ae70; }
+.career-lifestyle-card .action-btn { width: 100%; margin-top: 14px; white-space: normal; }
+.career-lifestyle-card .action-btn:disabled { opacity: .62; cursor: not-allowed; }
+.lifestyle-preview { position: relative; display: grid; place-items: center; height: 95px; overflow: hidden; color: #fff; font-size: 31px; background: #24354d; }
+.lifestyle-preview::before, .lifestyle-preview::after { content: ''; position: absolute; inset: auto; }
+.lifestyle-preview span { position: relative; z-index: 2; filter: drop-shadow(0 3px 4px rgba(0,0,0,.5)); }
+.lifestyle-property-starterFlat { background: linear-gradient(145deg,#242b38,#111722); }
+.lifestyle-property-cityApartment { background: linear-gradient(145deg,#35546b,#152638 55%,#d6e9f4 56%,#486578 60%,#172336); }
+.lifestyle-property-familyHouse { background: linear-gradient(145deg,#704d35,#2d2525 55%,#d4a665 56%,#553621 60%,#251c1c); }
+.lifestyle-property-modernResidence { background: radial-gradient(circle at 50% 10%,#d9bd72 0 3%,transparent 4%),linear-gradient(145deg,#213e62,#101a31); }
+.lifestyle-property-championEstate { background: radial-gradient(circle,#f8de87 0 4%,transparent 5%),linear-gradient(145deg,#654c14,#18130a 62%,#9f7d22); }
+.lifestyle-displayCase-basicShelf { background: linear-gradient(#32425a 68%,#69778c 69% 74%,#202a3a 75%); }
+.lifestyle-displayCase-oakCabinet { background: linear-gradient(90deg,#56351f 0 8%,#b87a42 9% 12%,#25180f 13% 87%,#b87a42 88% 91%,#56351f 92%); }
+.lifestyle-displayCase-illuminatedGallery { background: radial-gradient(circle at 50% 35%,#d9ffff 0 5%,#325673 45%,#142234 70%); }
+.lifestyle-displayCase-championsHall { background: radial-gradient(circle at 50% 20%,#fff4bb 0 4%,#a47c22 35%,#251c0a 75%); }
+.lifestyle-shirt-classic { background: linear-gradient(135deg,#26354c 0 45%,#919bad 46% 52%,#142033 53%); }
+.lifestyle-shirt-crimson { background: linear-gradient(135deg,#8c1d2c 0 45%,#ffbac1 46% 52%,#3f0e17 53%); }
+.lifestyle-shirt-royal { background: linear-gradient(135deg,#1c4da0 0 45%,#badfff 46% 52%,#0c234e 53%); }
+.lifestyle-shirt-emerald { background: linear-gradient(135deg,#147353 0 45%,#b8ffe5 46% 52%,#07372b 53%); }
+.lifestyle-shirt-championGold { background: linear-gradient(135deg,#b18113 0 45%,#fff1a6 46% 52%,#4b3304 53%); }
+.lifestyle-preview-entrance { background: radial-gradient(circle at 50% 100%,#415b86,#12192b 62%); }
+.lifestyle-entrance-lights { background: conic-gradient(from 220deg,#cc2749,#2737cc,#23b78c,#cc2749); }
+.lifestyle-entrance-smoke { background: radial-gradient(circle at 30% 70%,#b7bfca,#30384e 32%,transparent 48%),radial-gradient(circle at 70% 65%,#d0d4dc,#38405a 35%,#141a2a 55%); }
+.lifestyle-entrance-ledScreens { background: repeating-linear-gradient(90deg,#143b72 0 8px,#24a2bb 9px 11px,#141c3b 12px 19px); }
+.lifestyle-entrance-pyrotechnics { background: radial-gradient(circle,#fff7c9 0 3%,#ff9a23 4% 12%,transparent 13%),conic-gradient(#731a0d,#d29315,#131723,#731a0d); }
+.career-lifestyle-section-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; }
+.career-lifestyle-section-head .action-btn { width: auto; flex: none; margin-top: 0; }
+.career-lifestyle-featured-title { margin: 24px 0 10px; color: #f4d37d; }
+.career-lifestyle-featured { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 12px; padding: 20px; border: 2px solid #52647b; border-radius: 12px; background: #111b2b; }
+.career-lifestyle-featured article { display: flex; flex-direction: column; align-items: center; min-width: 0; padding: 16px 10px; text-align: center; border-radius: 8px; background: rgba(255,255,255,.04); }
+.career-lifestyle-featured article > span { font-size: 39px; filter: drop-shadow(0 4px 5px rgba(0,0,0,.55)); }
+.career-lifestyle-featured article strong { margin-top: 8px; color: #f5e0a1; overflow-wrap: anywhere; }
+.career-lifestyle-featured article small { margin-top: 5px; color: #aebcd0; }
+.career-lifestyle-featured.lifestyle-displayCase-oakCabinet { border: 7px solid #704526; background: #20160f; }
+.career-lifestyle-featured.lifestyle-displayCase-illuminatedGallery { border-color: #82d9e5; box-shadow: inset 0 0 30px rgba(102,216,235,.22),0 0 14px rgba(102,216,235,.16); }
+.career-lifestyle-featured.lifestyle-displayCase-championsHall { border-color: #cfae47; background: radial-gradient(circle at 50% 0,#594613,#161307 68%); box-shadow: inset 0 0 30px rgba(230,191,66,.18); }
+.career-lifestyle-featured-note { color: #9baac0; font-size: 12px; }
+.career-lifestyle-empty { padding: 24px; color: #9baac0; text-align: center; border: 1px dashed #53647a; border-radius: 8px; }
+.career-lifestyle-no-bonus { padding: 12px 15px; color: #b8f1df; line-height: 1.5; border-left: 4px solid #57bba1; background: #152e36; }
+#career-lifestyle-feedback { min-height: 1.5em; color: #f4d37d; font-weight: 800; }
+
+/* Active homes are cosmetic themes applied to the career hub and Trophy Room. */
+#screen-hub.lifestyle-property-cityApartment, #screen-trophy.lifestyle-property-cityApartment { background-image: linear-gradient(rgba(15,28,48,.94),rgba(15,28,48,.94)),linear-gradient(135deg,#8ab7cc,#19283d); border-color: #6f9eb3; }
+#screen-hub.lifestyle-property-familyHouse, #screen-trophy.lifestyle-property-familyHouse { background-image: linear-gradient(rgba(37,27,28,.94),rgba(26,25,35,.96)),linear-gradient(135deg,#9c6c45,#35261f); border-color: #9c6c45; }
+#screen-hub.lifestyle-property-modernResidence, #screen-trophy.lifestyle-property-modernResidence { background-image: radial-gradient(circle at 50% -20%,rgba(207,174,71,.23),transparent 42%),linear-gradient(#101c35,#141a2d); border-color: #927a38; }
+#screen-hub.lifestyle-property-championEstate, #screen-trophy.lifestyle-property-championEstate { background-image: radial-gradient(circle at 50% -15%,rgba(255,220,98,.31),transparent 36%),linear-gradient(135deg,#17130a,#24213a 55%,#17130a); border-color: #d0aa3d; box-shadow: 0 0 30px rgba(210,169,51,.18); }
+.player-photo.lifestyle-shirt-crimson, #score-col-player.lifestyle-shirt-crimson { border-color: #d94155 !important; box-shadow: 0 0 14px rgba(217,65,85,.38); }
+.player-photo.lifestyle-shirt-royal, #score-col-player.lifestyle-shirt-royal { border-color: #4e8ee8 !important; box-shadow: 0 0 14px rgba(78,142,232,.38); }
+.player-photo.lifestyle-shirt-emerald, #score-col-player.lifestyle-shirt-emerald { border-color: #32be8c !important; box-shadow: 0 0 14px rgba(50,190,140,.38); }
+.player-photo.lifestyle-shirt-championGold, #score-col-player.lifestyle-shirt-championGold { border-color: #e0bb45 !important; box-shadow: 0 0 17px rgba(224,187,69,.5); }
+
+/* Every rival receives a mirrored neutral match theme. Player-owned shirt
+   themes remain exclusive to the career player and are never copied here. */
+#score-col-ai.match-opponent-card {
+    background:
+        radial-gradient(circle at 18% 18%,rgba(117,174,220,.16),transparent 31%),
+        linear-gradient(225deg,#214f78 0 44%,#e05a4e 45% 51%,#0c2948 52%);
+}
+
+.career-trophy-room-head { display: grid; grid-template-columns: 1fr 1fr auto; gap: 12px; align-items: stretch; margin-bottom: 22px; }
+.career-trophy-room-head > div { display: flex; flex-direction: column; padding: 13px 15px; border: 1px solid #506078; border-radius: 8px; background: rgba(13,30,51,.88); }
+.career-trophy-room-head .action-btn { align-self: stretch; width: auto; margin: 0; }
+#lifestyle-trophy-showcase { margin-bottom: 25px; }
+#lifestyle-trophy-showcase > h3 { color: #f4d37d; }
+.career-trophy-collection { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }
+.career-trophy-card { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; min-width: 0; padding: 12px; border: 1px solid #485a72; border-radius: 8px; background: rgba(18,35,58,.88); }
+.career-trophy-card.featured { border-color: #d3ae3e; background: rgba(75,59,16,.35); }
+.career-trophy-icon { font-size: 29px; }
+.career-trophy-card div { min-width: 0; }
+.career-trophy-card strong { display: block; color: #f3e2aa; overflow-wrap: anywhere; }
+.career-trophy-card small { display: block; margin-top: 4px; color: #9facc0; }
+.career-trophy-card .action-btn { width: auto; margin: 0; padding: 7px 9px; font-size: 11px; white-space: normal; }
+
+/* Walk-on visual runs inside the existing audio introduction and adds no delay. */
+#career-walkon-stage { position: relative; min-height: 150px; margin: 0 auto 16px; overflow: hidden; border: 2px solid #4a5d7a; border-radius: 11px; background: radial-gradient(circle at 50% 120%,#385077,#101627 62%); }
+#career-walkon-stage[hidden] { display: none; }
+.career-walkon-beams, .career-walkon-smoke, .career-walkon-sparks { position: absolute; inset: 0; pointer-events: none; }
+.career-walkon-beams::before, .career-walkon-beams::after { content: ''; position: absolute; top: -40%; bottom: -15%; width: 18%; opacity: .32; background: linear-gradient(transparent,currentColor 48%,transparent); transform-origin: 50% 0; animation: career-walkon-beam 2.2s ease-in-out infinite alternate; }
+.career-walkon-beams::before { left: 25%; transform: rotate(23deg); }
+.career-walkon-beams::after { right: 25%; transform: rotate(-23deg); animation-delay: -.8s; }
+.career-walkon-copy { position: relative; z-index: 4; display: flex; min-height: 150px; flex-direction: column; align-items: center; justify-content: center; padding: 18px; text-align: center; }
+#career-walkon-kicker { color: #9eb4cf; font-size: 11px; font-weight: 900; letter-spacing: 3px; }
+#career-walkon-name { margin-top: 5px; color: #fff; font-size: clamp(26px,5vw,46px); font-weight: 1000; letter-spacing: 1px; text-transform: uppercase; text-shadow: 0 3px 10px #000; }
+#career-walkon-country { margin-top: 4px; color: #d0dae7; font-weight: 700; }
+#career-walkon-stage[data-shirt="crimson"] { color: #ef4057; border-color: #ba3044; background: radial-gradient(circle at 50% 120%,#8f2636,#190e17 64%); }
+#career-walkon-stage[data-shirt="royal"] { color: #55a1ff; border-color: #3b75c4; background: radial-gradient(circle at 50% 120%,#285aa1,#0e1628 64%); }
+#career-walkon-stage[data-shirt="emerald"] { color: #43d29e; border-color: #2a9d76; background: radial-gradient(circle at 50% 120%,#176b50,#0e1e1a 64%); }
+#career-walkon-stage[data-shirt="championGold"] { color: #ffd95b; border-color: #cfab36; background: radial-gradient(circle at 50% 120%,#806516,#171306 64%); }
+#career-walkon-stage[data-entrance="standard"] .career-walkon-beams,
+#career-walkon-stage[data-entrance="standard"] .career-walkon-smoke,
+#career-walkon-stage[data-entrance="standard"] .career-walkon-sparks { display: none; }
+#career-walkon-stage[data-entrance="lights"] .career-walkon-smoke,
+#career-walkon-stage[data-entrance="lights"] .career-walkon-sparks { display: none; }
+.career-walkon-smoke { opacity: 0; background: radial-gradient(circle at 20% 100%,rgba(230,235,244,.6),transparent 35%),radial-gradient(circle at 75% 105%,rgba(220,226,237,.56),transparent 40%); animation: career-walkon-smoke 3s ease-out infinite; }
+#career-walkon-stage[data-entrance="smoke"] .career-walkon-sparks { display: none; }
+#career-walkon-stage[data-entrance="ledScreens"] { background-image: repeating-linear-gradient(90deg,rgba(77,183,230,.08) 0 3px,transparent 4px 12px),radial-gradient(circle at 50% 120%,#334f88,#0b1020 65%); }
+#career-walkon-stage[data-entrance="ledScreens"] .career-walkon-smoke,
+#career-walkon-stage[data-entrance="ledScreens"] .career-walkon-sparks { display: none; }
+.career-walkon-sparks { opacity: .8; background-image: radial-gradient(circle,#ffe69b 0 2px,transparent 3px),radial-gradient(circle,#ff9d2d 0 2px,transparent 3px); background-size: 47px 53px,61px 43px; animation: career-walkon-sparks 1.1s linear infinite; }
+#career-walkon-stage.playing .career-walkon-copy { animation: career-walkon-copy .55s ease-out both; }
+@keyframes career-walkon-beam { from { transform: rotate(33deg); opacity:.18; } to { transform: rotate(-10deg); opacity:.55; } }
+@keyframes career-walkon-smoke { 0% { opacity:0; transform:translateY(18px) scale(.9); } 45% { opacity:.65; } 100% { opacity:0; transform:translateY(-25px) scale(1.15); } }
+@keyframes career-walkon-sparks { from { transform:translateY(45px); } to { transform:translateY(-55px); } }
+@keyframes career-walkon-copy { from { opacity:0; transform:scale(.88); } to { opacity:1; transform:scale(1); } }
+
+#screen-career-lifestyle :is(button):focus-visible, .career-lifestyle-tile:focus-visible, .career-trophy-card button:focus-visible { outline: 3px solid #f1c40f; outline-offset: 3px; }
+@media (max-width: 1000px) {
+    .property-grid, .career-lifestyle-grid { grid-template-columns: repeat(2,minmax(0,1fr)); }
+}
+@media (max-width: 720px) {
+    .career-lifestyle-summary { grid-template-columns: repeat(2,minmax(0,1fr)); }
+    .career-trophy-collection { grid-template-columns: minmax(0,1fr); }
+}
+@media (max-width: 560px) {
+    .career-lifestyle-summary, .property-grid, .career-lifestyle-grid, .career-lifestyle-featured { grid-template-columns: minmax(0,1fr); }
+    .career-lifestyle-tabs { flex-direction: column; }
+    .career-lifestyle-card-body { min-height: 0; }
+    .career-lifestyle-section-head { flex-direction: column; }
+    .career-lifestyle-section-head .action-btn { width: 100%; }
+    .career-trophy-room-head { grid-template-columns: minmax(0,1fr); }
+    .career-trophy-card { grid-template-columns: auto 1fr; }
+    .career-trophy-card .action-btn { grid-column: 1 / -1; width: 100%; }
+}
+@media (prefers-reduced-motion: reduce) {
+    #career-walkon-stage * { animation: none !important; }
+}

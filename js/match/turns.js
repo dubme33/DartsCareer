@@ -21,7 +21,11 @@ function playerThrow() {
                 boostedPlayer.doubles = Math.min(100, boostedPlayer.doubles + (currentMatch.p1Momentum * 2.5));
             }
 
-            let result = calculateThrow(tSec, tMult, boostedPlayer); 
+            if (typeof applyPlayerTraitsToMatchStats === 'function') boostedPlayer = applyPlayerTraitsToMatchStats(player, boostedPlayer, true);
+            const mentalAim = { sector: tSec, mult: tMult };
+            if (typeof applyMentalPressureToStats === 'function') boostedPlayer = applyMentalPressureToStats(player, boostedPlayer, true, mentalAim, currentMatch.p1Score);
+            let result = calculateThrow(tSec, tMult, boostedPlayer);
+            if (typeof recordMentalThrowOutcome === 'function') recordMentalThrowOutcome(true, currentMatch.p1Score, mentalAim, result);
             processThrow(true, tSec, tMult, result.sector, result.mult);
         }
 
@@ -65,7 +69,10 @@ function playerThrow() {
                 aiStats.doubles = Math.min(100, aiStats.doubles + (momentum * 2.5));
             }
 
-            let result = calculateThrow(aim.sector, aim.mult, aiStats); 
+            if (typeof applyPlayerTraitsToMatchStats === 'function') aiStats = applyPlayerTraitsToMatchStats(aiPlayer, aiStats, isP1);
+            if (typeof applyMentalPressureToStats === 'function') aiStats = applyMentalPressureToStats(aiPlayer, aiStats, isP1, aim, score);
+            let result = calculateThrow(aim.sector, aim.mult, aiStats);
+            if (typeof recordMentalThrowOutcome === 'function') recordMentalThrowOutcome(isP1, score, aim, result);
             processThrow(isP1, aim.sector, aim.mult, result.sector, result.mult);
         }
 

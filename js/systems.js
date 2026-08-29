@@ -747,6 +747,8 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
                 if (typeof migrateWorldMastersCalendar === 'function') migrateWorldMastersCalendar();
                 if (typeof syncPdc2026TournamentCalendar === 'function') syncPdc2026TournamentCalendar();
                 currentDate = new Date(gameState.currentDate);
+                if (typeof normalizeSponsorGoals === 'function') normalizeSponsorGoals();
+                if (typeof resetSponsorOffers === 'function') resetSponsorOffers();
                 if (typeof migrateEuropeanTourOrderOfMeritFromHistory === 'function') {
                     migrateEuropeanTourOrderOfMeritFromHistory([player, ...pdcPlayers], tournamentDatabase);
                 }
@@ -838,6 +840,13 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
                 }
 
                 renderOpponentOptions();
+                if (typeof restoreWorldNews === 'function') restoreWorldNews();
+            if (typeof restoreSeasonArchive === 'function') restoreSeasonArchive();
+            if (typeof restorePlayerStaff === 'function') restorePlayerStaff();
+            if (typeof initializeAllPlayerTraits === 'function') initializeAllPlayerTraits();
+            if (typeof restoreCareerInfrastructure === 'function') restoreCareerInfrastructure();
+            if (typeof restoreCareerLifestyle === 'function') restoreCareerLifestyle();
+            if (typeof restorePlayerEquipmentWear === 'function') restorePlayerEquipmentWear();
                 updateDateDisplay(); updateMailBadge(); updateHub(); showScreen('screen-hub');
                 if (typeof clearTournamentSimulationSaveBlock === 'function') clearTournamentSimulationSaveBlock();
                 if (showFeedback) alert(t('t-alert-load-ok'));
@@ -995,6 +1004,11 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
         let availableSponsorOffers = [];
         let availableTechOffers = [];
 
+        function resetSponsorOffers() {
+            availableSponsorOffers = [];
+            availableTechOffers = [];
+        }
+
         function calculateBaseSponsorValue() {
             let rank = getPlayerRank('main');
             // Złoty środek: im wyższy OVR i im wyższy ranking, tym większa baza
@@ -1006,17 +1020,17 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
         }
 
         function generateOffers() {
-            availableSponsorOffers = [];
-            availableTechOffers = [];
+            resetSponsorOffers();
             
             let baseValue = calculateBaseSponsorValue();
+            const goalBonusPercent = typeof getSponsorOfferBonusPercent === 'function' ? getSponsorOfferBonusPercent() : 0;
 
             // Losowanie aż 8 zwykłych sponsorów z puli, by gracz miał w czym przebierać
-            let shuffledRegular = shuffle(regularSponsorsDB).slice(0, 8);
+            let shuffledRegular = shuffle(regularSponsorsDB).filter(name => !player.activeSponsors?.some(sponsor => sponsor.name === name)).slice(0, 8);
             shuffledRegular.forEach(name => {
                 // Skrajne rozbieżności: od 50% do aż 250% bazowej wartości!
                 let valueMultiplier = Math.random() * 2.0 + 0.5; 
-                let monthlyVal = Math.round(baseValue * valueMultiplier);
+                let monthlyVal = Math.round(baseValue * valueMultiplier * (1 + goalBonusPercent / 100));
                 
                 // Zwykle najwyższe stawki są na krótszy okres czasu (dylemat ryzyka)
                 let months = 6;
@@ -1027,6 +1041,7 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
                 availableSponsorOffers.push({
                     id: Math.random().toString(36).substr(2, 9), name: name, type: 'regular',
                     monthlyValue: monthlyVal,
+                    goalBonusPercent,
                     months: months
                 });
             });
@@ -1078,18 +1093,21 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
             
             // Jeśli nie ma ofert (pierwsze wejście), wygeneruj je
             if (availableSponsorOffers.length === 0) generateOffers();
+            if (typeof renderSponsorGoalsPanel === 'function') renderSponsorGoalsPanel();
+            if (typeof renderPlayerStaffContextNotes === 'function') renderPlayerStaffContextNotes();
 
             document.getElementById('sponsor-count').innerText = player.activeSponsors.length;
 
             // Renderowanie Aktywnych Zwykłych Sponsorów
             const actRegBox = document.getElementById('sponsors-active');
             actRegBox.innerHTML = player.activeSponsors.length === 0 ? `<span style='color:gray; font-size:13px;'>${t('t-no-active-reg')}</span>` : "";
-            player.activeSponsors.forEach(s => {
+            player.activeSponsors.forEach((s, index) => {
                 actRegBox.innerHTML += `<div class="sponsor-card">
                     ${getSponsorLogoHTML(s.name)}
                     <div class="sponsor-info">
                         <p class="sponsor-name">${escapeHtml(s.name)}</p>
                         <p class="sponsor-details">${t('t-payout')} £${s.monthlyValue}/mc | ${s.months} ${t('t-months')}</p>
+                        ${typeof renderSponsorGoalOffer === 'function' ? renderSponsorGoalOffer(s, index) : ''}
                     </div>
                 </div>`;
             });
@@ -1119,6 +1137,8 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
                     <div class="sponsor-info">
                         <p class="sponsor-name">${escapeHtml(s.name)}</p>
                         <p class="sponsor-details">${t('t-payout')} £${s.monthlyValue}/mc<br>${t('t-contract')} ${s.months} ${t('t-months')}</p>
+                        ${s.goalBonusPercent && typeof trSponsorGoal === 'function' ? `<p class="sponsor-goal-note">${escapeHtml(trSponsorGoal('monthlyBoost', { percent: s.goalBonusPercent }))}</p>` : ''}
+                        ${typeof renderSponsorGoalOffer === 'function' ? renderSponsorGoalOffer(s) : ''}
                     </div>
                     ${btn}
                 </div>`;
@@ -1143,17 +1163,25 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
         }
 
         function signContract(id, type) {
+            if (typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy()) return false;
+            if (!Array.isArray(player.activeSponsors)) player.activeSponsors = [];
             if (type === 'regular') {
                 let offerIndex = availableSponsorOffers.findIndex(o => o.id === id);
-                player.activeSponsors.push(availableSponsorOffers[offerIndex]);
+                const offer = availableSponsorOffers[offerIndex];
+                if (!offer || player.activeSponsors.length >= 3 || player.activeSponsors.some(sponsor => sponsor.name === offer.name)) return false;
+                player.activeSponsors.push(offer);
+                if (typeof acceptSponsorGoal === 'function') acceptSponsorGoal(offer);
                 availableSponsorOffers.splice(offerIndex, 1);
-            } else {
+            } else if (type === 'tech') {
                 let offerIndex = availableTechOffers.findIndex(o => o.id === id);
+                if (offerIndex < 0 || player.technicalPartner) return false;
                 player.technicalPartner = availableTechOffers[offerIndex];
                 availableTechOffers = []; 
-            }
+            } else return false;
+            if (typeof saveGame === 'function') saveGame(true);
             alert(t('t-alert-contract'));
             showSponsorsScreen();
+            return true;
         }
     
 // --- SYSTEM SKLEPU I SPRZĘTU ---
@@ -1235,7 +1263,8 @@ function getBoostedPlayerStats() {
         }
 
         function showShopScreen() {
-            if (!player.equipment) player.equipment = { board: 0, surround: 0, light: 0 };
+            if (typeof initializePlayerEquipmentWear === 'function') initializePlayerEquipmentWear();
+            else if (!player.equipment) player.equipment = { board: 0, surround: 0, light: 0 };
             
             document.getElementById('shop-budget').innerText = `£${player.budget.toLocaleString('en-GB')}`;
             
@@ -1269,24 +1298,51 @@ function getBoostedPlayerStats() {
             }
 
             // Renderowanie Wyposażenia Bazy
+            const wearRule = document.getElementById('shop-wear-rule');
+            if (wearRule && typeof trEquipmentWear === 'function') wearRule.textContent = trEquipmentWear('rule');
             let effTotal = 0;
             ['board', 'surround', 'light'].forEach(cat => {
                 let box = document.getElementById(`shop-cat-${cat}s`);
                 let catName = cat === 'board' ? t('t-board') : (cat === 'surround' ? t('t-surround') : t('t-light'));
                 let currentLvl = player.equipment[cat];
                 
-                let html = `<h4 style="background:#1a1a2e; padding:8px; border-radius:5px; margin-top:0;">${catName}</h4>`;
+                const nextWearOn = typeof getPlayerEquipmentNextWearOn === 'function'
+                    ? getPlayerEquipmentNextWearOn(cat)
+                    : '';
+                const tierStatus = currentLvl > 0 && typeof trEquipmentWear === 'function'
+                    ? trEquipmentWear('currentTier', { tier: currentLvl })
+                    : (typeof trEquipmentWear === 'function' ? trEquipmentWear('noEquipment') : 'Tier 0');
+                const wearStatus = currentLvl > 0 && nextWearOn && typeof trEquipmentWear === 'function'
+                    ? trEquipmentWear(currentLvl > 1 ? 'nextWear' : 'wearsOut', {
+                        tier: Math.max(0, currentLvl - 1),
+                        date: typeof formatPlayerEquipmentWearDate === 'function'
+                            ? formatPlayerEquipmentWearDate(nextWearOn)
+                            : nextWearOn
+                    })
+                    : '';
+                let html = `<h4 style="background:#1a1a2e; padding:8px; border-radius:5px; margin-top:0;">${catName}</h4>
+                    <div class="equipment-category-summary"><strong>${tierStatus}</strong>${wearStatus ? `<span class="equipment-wear-date">${wearStatus}</span>` : ''}</div>`;
                 
                 shopDatabase[cat].forEach(item => {
-                    let isOwned = currentLvl >= item.id;
-                    let btnHTML = isOwned 
-                        ? `<button class="btn-sign" disabled style="background:gray; width:100%;">${t('t-owned')}</button>`
-                        : `<button class="btn-sign" onclick="buyEquipment('${cat}', ${item.id}, ${item.price})" style="width:100%;">${t('t-buy')} £${item.price}</button>`;
+                    const isCurrent = currentLvl === item.id;
+                    const isReached = currentLvl > item.id;
+                    const isNext = currentLvl + 1 === item.id;
+                    let btnHTML;
+                    if (isCurrent) {
+                        btnHTML = `<button class="btn-sign" disabled style="background:gray;">${typeof trEquipmentWear === 'function' ? trEquipmentWear('inUse') : t('t-owned')}</button>`;
+                    } else if (isReached) {
+                        btnHTML = `<button class="btn-sign" disabled style="background:gray;">${typeof trEquipmentWear === 'function' ? trEquipmentWear('reached') : t('t-owned')}</button>`;
+                    } else if (isNext) {
+                        const priceText = `£${item.price.toLocaleString('en-GB')}`;
+                        btnHTML = `<button class="btn-sign" onclick="buyEquipment('${cat}', ${item.id})">${typeof trEquipmentWear === 'function' ? trEquipmentWear('buy', { price: priceText }) : `${t('t-buy')} ${priceText}`}</button>`;
+                    } else {
+                        btnHTML = `<button class="btn-sign" disabled style="background:#34495e;">🔒 ${typeof trEquipmentWear === 'function' ? trEquipmentWear('locked', { tier: item.id - 1 }) : `Tier ${item.id - 1}`}</button>`;
+                    }
                     
-                    if (isOwned && currentLvl === item.id) effTotal += item.eff;
+                    if (isCurrent) effTotal += item.eff;
 
                     html += `
-                    <div style="background:#16213e; padding:10px; margin-bottom:10px; border-radius:5px; border: 1px solid ${isOwned ? 'var(--accent-green)' : '#2c3e50'};">
+                    <div class="equipment-item-card ${isCurrent ? 'current' : (isReached ? 'reached' : (!isNext ? 'locked' : 'available'))}">
                         <div style="font-size:11px; margin-bottom:3px;">${getStarString(item.stars)}</div>
                         <div style="font-weight:bold; font-size:14px; margin-bottom:5px;">${t(item.name)}</div>
                         <div style="font-size:12px; color:#bdc3c7; margin-bottom:8px;">${t('t-train')} +${item.eff}%</div>
@@ -1301,17 +1357,32 @@ function getBoostedPlayerStats() {
             showScreen('screen-shop');
         }
 
-        function buyEquipment(category, itemId, price) {
-            if (player.budget < price) {
-                alert(t('t-alert-no-funds'));
-                return;
+        function buyEquipment(category, itemId) {
+            const item = shopDatabase[category]?.find(candidate => candidate.id === itemId);
+            if (!item) return false;
+            if (typeof initializePlayerEquipmentWear === 'function') initializePlayerEquipmentWear();
+            const canPurchase = typeof canPurchasePlayerEquipmentTier === 'function'
+                ? canPurchasePlayerEquipmentTier(category, itemId)
+                : itemId === (player.equipment?.[category] || 0) + 1;
+            if (!canPurchase) {
+                if (typeof trEquipmentWear === 'function') {
+                    alert(trEquipmentWear('sequenceAlert', { tier: Math.max(1, itemId - 1) }));
+                }
+                return false;
             }
-            if (!confirm(t('t-confirm-buy').replace('{price}', price))) return;
+            if (player.budget < item.price) {
+                alert(t('t-alert-no-funds'));
+                return false;
+            }
+            if (!confirm(t('t-confirm-buy').replace('{price}', item.price.toLocaleString('en-GB')))) return false;
 
-            player.budget -= price;
-            player.equipment[category] = itemId;
+            player.budget -= item.price;
+            if (typeof recordPlayerEquipmentPurchase === 'function') recordPlayerEquipmentPurchase(category, itemId);
+            else player.equipment[category] = itemId;
             updateHub();
             showShopScreen();
+            if (typeof saveGame === 'function') saveGame(true);
+            return true;
         }
 
         function convertFileToBase64(file) {
@@ -1422,6 +1493,7 @@ async function updateProfileWalkon(event) {
         function showTrainingScreen() {
             initPlayerXP();
             initTrainingLimit();
+            if (typeof renderPlayerStaffContextNotes === 'function') renderPlayerStaffContextNotes();
             const sessionsThisWeek = player.trainingSessionsThisWeek;
             const sessionsRemaining = TRAINING_CONFIG.weeklyLimit - sessionsThisWeek;
             
@@ -1446,11 +1518,24 @@ async function updateProfileWalkon(event) {
                 if (button) button.disabled = sessionsRemaining <= 0;
             });
 
+            if (typeof renderPlayerTraitTraining === 'function') renderPlayerTraitTraining(sessionsRemaining);
+
             showScreen('screen-training');
         }
 
         function performTraining(type) {
             if (typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy()) return false;
+            const isTrait = type === 'endurance' || type === 'consistency' || type === 'mental';
+            if (!['scoring', 'doubles', 'endurance', 'consistency', 'mental'].includes(type)
+                || (isTrait && typeof awardPlayerTraitXP !== 'function')) return false;
+            // Check calendar restrictions before spending energy, XP or a weekly session.
+            const pending = typeof getPendingTournamentForCareerDate === 'function'
+                ? getPendingTournamentForCareerDate(currentDate, true) : null;
+            if ((typeof activeTournament !== 'undefined' && activeTournament && !activeTournament.completed) || pending) {
+                if (typeof trPlayerTraits === 'function') alert(trPlayerTraits('tournamentBlocked'));
+                return false;
+            }
+            if (isTrait && getPlayerTrait(player, type) >= 100) return false;
             initPlayerXP();
             initTrainingLimit();
             if (player.trainingSessionsThisWeek >= TRAINING_CONFIG.weeklyLimit) {
@@ -1463,26 +1548,36 @@ async function updateProfileWalkon(event) {
             }
 
             changePlayerStamina(player, -TRAINING_CONFIG.staminaCost);
-            let currentStat = type === 'scoring' ? player.scoring : player.doubles;
-            let baseXP = 20;
+            if (isTrait) {
+                const gained = awardPlayerTraitXP(player, type, getPlayerTraitTrainingXP(type));
+                if (gained && typeof trPlayerTraits === 'function') alert(trPlayerTraits('levelUp', { trait: trPlayerTraits(type) }));
+            } else {
+                let currentStat = type === 'scoring' ? player.scoring : player.doubles;
+                let baseXP = 20;
             
-            if (currentStat >= 90) baseXP = 1;
-            else if (currentStat >= 85) baseXP = 3;
-            else if (currentStat >= 75) baseXP = 6;
-            else if (currentStat >= 65) baseXP = 12;
+                if (currentStat >= 90) baseXP = 1;
+                else if (currentStat >= 85) baseXP = 3;
+                else if (currentStat >= 75) baseXP = 6;
+                else if (currentStat >= 65) baseXP = 12;
 
-            const equipmentBonus = getTrainingEquipmentBonus();
-            const profMultiplier = 0.8 + (player.prof / 100) * 0.4; // 100 Profesjonalizmu daje 20% więcej XP za trening
-            const rawGainedXP = Math.max(1, baseXP + (Math.random() * 4 - 2)) * (1 + (equipmentBonus / 100)) * profMultiplier;
-            const gainedXP = typeof scalePlayerDevelopmentChange === 'function'
-                ? scalePlayerDevelopmentChange(player, rawGainedXP)
-                : rawGainedXP;
-            const levelsGained = awardPlayerStatXP(type, gainedXP);
-            if (levelsGained > 0) alert(type === 'scoring' ? t('t-alert-lvl-sc') : t('t-alert-lvl-db'));
+                const equipmentBonus = getTrainingEquipmentBonus();
+                const staffBonus = typeof getPlayerStaffTrainingBonus === 'function' ? getPlayerStaffTrainingBonus(type) : 0;
+                const analysisBonus = typeof getCareerAnalysisTrainingBonus === 'function' ? getCareerAnalysisTrainingBonus(player) : 0;
+                const profMultiplier = 0.8 + (player.prof / 100) * 0.4; // 100 Profesjonalizmu daje 20% więcej XP za trening
+                const rawGainedXP = Math.max(1, baseXP + (Math.random() * 4 - 2)) * (1 + (equipmentBonus / 100))
+                    * profMultiplier * (1 + staffBonus / 100) * (1 + analysisBonus / 100);
+                const gainedXP = typeof scalePlayerDevelopmentChange === 'function'
+                    ? scalePlayerDevelopmentChange(player, rawGainedXP)
+                    : rawGainedXP;
+                const levelsGained = awardPlayerStatXP(type, gainedXP);
+                if (levelsGained > 0) alert(type === 'scoring' ? t('t-alert-lvl-sc') : t('t-alert-lvl-db'));
+            }
 
             player.trainingSessionsThisWeek += 1;
+            if (typeof recordCareerTrainingPreparation === 'function') recordCareerTrainingPreparation(player);
             // Trening zajmuje cały dzień, więc nie jest jednocześnie dniem odpoczynku.
             advanceDay({ recoverStamina: false }); updateHub();
+            if (typeof saveGame === 'function') saveGame(true);
             if (document.getElementById('screen-training').classList.contains('active')) showTrainingScreen();
         }
 
@@ -1499,6 +1594,7 @@ async function updateProfileWalkon(event) {
                 statsObj = getWorldMastersMatchRatings(pObj, statsObj);
             }
             statsObj = applyRivalryMatchModifier(statsObj, isCareerThrower);
+            if (typeof applyPlayerTraitsToMatchStats === 'function') statsObj = applyPlayerTraitsToMatchStats(pObj, statsObj, isP1);
             let startScore = isP1 ? currentMatch.p1Score : currentMatch.p2Score;
             let currentScore = startScore;
             let st = currentMatch.stats;
@@ -1510,7 +1606,10 @@ async function updateProfileWalkon(event) {
             for (let i = 0; i < 3; i++) {
                 // Dodano przekazanie pozostałych lotek: 3 - i
                 let aim = getOptimalAim(currentScore, isDIDO, 3 - i); 
-                let result = calculateThrow(aim.sector, aim.mult, statsObj);
+                const throwStats = typeof applyMentalPressureToStats === 'function'
+                    ? applyMentalPressureToStats(pObj, statsObj, isP1, aim, currentScore) : statsObj;
+                let result = calculateThrow(aim.sector, aim.mult, throwStats);
+                if (typeof recordMentalThrowOutcome === 'function') recordMentalThrowOutcome(isP1, currentScore, aim, result);
             // ... reszta kodu ...
                 let hitSec = result.sector;
                 let hitMult = result.mult;

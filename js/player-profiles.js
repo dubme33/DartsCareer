@@ -285,10 +285,13 @@ function recordSeasonTournamentResult(candidate, tournament, details = {}) {
         timestamp
     };
     stats.results.push(result);
+    if (typeof recordSponsorGoalTournament === 'function') recordSponsorGoalTournament(candidate, tournament, result);
     if (won) {
         addPlayerCareerTitle(candidate, tournament, timestamp);
         result.careerTitleRecorded = true;
+        if (typeof initializePlayerTraits === 'function') initializePlayerTraits(candidate);
     }
+    if (typeof recordWorldNewsTournament === 'function') recordWorldNewsTournament(candidate, tournament, result);
     return result;
 }
 
@@ -410,6 +413,7 @@ function openPlayerProfile(playerId, rankingType = 'main') {
         ${rankingMarkup}
         <div class="profile-ranking-card profile-average-card"><span>${trPlayerProfile('seasonHighestAverage')}</span><strong>${stats.highestAvg > 0 ? stats.highestAvg.toFixed(2) : '—'}</strong></div>
     </section>
+    ${typeof renderPlayerTraitProfile === 'function' ? renderPlayerTraitProfile(selectedPlayer) : ''}
     ${typeof renderPlayerMatchStatistics === 'function' ? renderPlayerMatchStatistics(selectedPlayer) : ''}
     <section class="profile-panel">
         <h3>${trPlayerProfile('highlights', { year: stats.year })}</h3>
@@ -433,7 +437,8 @@ function openPlayerProfile(playerId, rankingType = 'main') {
 
 function updatePlayerProfileStaticStrings() {
     const button = document.getElementById('player-profile-back');
-    if (button) button.innerText = trPlayerProfile('back');
+    if (button) button.innerText = playerProfileReturnRanking === 'world-news' && typeof trWorldNews === 'function'
+        ? trWorldNews('backToNews') : trPlayerProfile('back');
 }
 
 function refreshPlayerProfileTranslations() {
@@ -445,5 +450,9 @@ function refreshPlayerProfileTranslations() {
 }
 
 function closePlayerProfile() {
+    if (playerProfileReturnRanking === 'world-news' && typeof returnToWorldNews === 'function') {
+        returnToWorldNews();
+        return;
+    }
     showPdcRankings(playerProfileReturnRanking);
 }

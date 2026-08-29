@@ -371,13 +371,21 @@ function startMatch(vsAI) {
                     saveGame(true);
 
                 } else if (!isP1Winner) {
-                    const isContinentalQualifier = typeof isContinentalQualifierTournament === 'function' && isContinentalQualifierTournament(activeTournament);
-                    if (isContinentalQualifier) {
-                        alert(getContinentalQualifierOutcomeMessage(false));
+                    const qualifierMessage = typeof getNonPrizeQualifierEliminationMessage === 'function'
+                        ? getNonPrizeQualifierEliminationMessage(activeTournament, player)
+                        : '';
+                    if (qualifierMessage) {
+                        alert(qualifierMessage);
                     } else {
-                        let myPrize = getPrizeMoney(activeTournament.name, tournamentRound * 2, false);
-                        alert(t('t-alert-knockout').replace('{tour}', activeTournament.name).replace('{prize}', myPrize.toLocaleString('en-GB')));
-                        sendTournamentSummaryEmail(activeTournament.name, myPrize, false);
+                        const myPrize = Number(getPrizeMoney(activeTournament.name, tournamentRound * 2, false));
+                        if (Number.isFinite(myPrize)) {
+                            alert(t('t-alert-knockout').replace('{tour}', activeTournament.name).replace('{prize}', myPrize.toLocaleString('en-GB')));
+                            sendTournamentSummaryEmail(activeTournament.name, myPrize, false);
+                        } else {
+                            // Modowane lub starsze kwalifikatory również mogą nie
+                            // mieć tabeli nagród. Brak kwoty nie może przerwać rundy.
+                            alert(t('t-alert-no-qual').replace('{tour}', activeTournament.name));
+                        }
                     }
                     
                     // KLUCZOWE ZABEZPIECZENIE: Czyścimy mecz po odpadnięciu!

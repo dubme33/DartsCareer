@@ -336,14 +336,15 @@ function getWorldCupTeamRating(team) {
     return Math.max(45, Math.min(96, teamRating));
 }
 
-function getWorldCupSimulatedAverage(team, won) {
+function getWorldCupSimulatedAverage(team, won, mentalPenalty = 0, preparationModifier = 0) {
     const players = team && Array.isArray(team.players) ? team.players : [];
     if (!players.length) return 60;
     const teamOverall = players.reduce((sum, candidate) => sum + (Number(candidate.ovr ?? candidate.overall) || 55), 0) / players.length;
     const form = typeof getTournamentSimulationForm === 'function'
         ? players.reduce((sum, candidate) => sum + (getTournamentSimulationForm(candidate) || 0), 0) / players.length
         : 0;
-    return Math.max(45, Math.min(125, 60 + teamOverall * 0.42 + form * 0.4 + (Math.random() * 9 - 4) + (won ? 2 : 0)));
+    return Math.max(45, Math.min(125, 60 + teamOverall * 0.42 + form * 0.4 + (Math.random() * 9 - 4)
+        + (won ? 2 : 0) - mentalPenalty * 0.4 + preparationModifier * 0.4));
 }
 
 function recordWorldCupTeamAverage(team, average) {
@@ -505,16 +506,32 @@ function simulateWorldCupMatch(match) {
     const team1 = getWorldCupTeam(match.team1Id);
     const team2 = getWorldCupTeam(match.team2Id);
     const format = getWorldCupMatchFormat(match.stage);
-    const team1Chance = Math.max(0.3, Math.min(0.7, 0.5 + (getWorldCupTeamRating(team1) - getWorldCupTeamRating(team2)) / 90));
+    let team1Chance = Math.max(0.3, Math.min(0.7, 0.5 + (getWorldCupTeamRating(team1) - getWorldCupTeamRating(team2)) / 90));
+    const preparationModifiers = [team1, team2].map(team => typeof getCareerPreparationMatchModifier === 'function'
+        ? team.players.reduce((sum, candidate) => sum + getCareerPreparationMatchModifier(candidate), 0) / team.players.length
+        : 0);
+    if (typeof adjustCareerPreparationWinChance === 'function') {
+        team1Chance = adjustCareerPreparationWinChance(team1Chance, preparationModifiers[0], preparationModifiers[1]);
+    }
+    const mentalTeams = typeof getMentalLegPenalties === 'function' ? [team1, team2].map(team => ({ traits: {
+        mental: team.players.reduce((sum, candidate) => sum + getPlayerTrait(candidate, 'mental'), 0) / team.players.length
+    } })) : null;
+    const mentalTotals = [0, 0];
     let score1 = 0;
     let score2 = 0;
 
     while (score1 < format.legsToWin && score2 < format.legsToWin) {
-        if (Math.random() < team1Chance) score1++; else score2++;
+        const penalties = mentalTeams ? getMentalLegPenalties(mentalTeams[0], mentalTeams[1], {
+            isTournament: true, worldCupStage: match.stage, matchFormat: format, p1Legs: score1, p2Legs: score2,
+            tournament: { name: WORLD_CUP_TOURNAMENT_NAME }
+        }) : [0, 0];
+        mentalTotals[0] += penalties[0]; mentalTotals[1] += penalties[1];
+        const chance = mentalTeams ? adjustMentalLegWinChance(team1Chance, penalties) : team1Chance;
+        if (Math.random() < chance) score1++; else score2++;
     }
     const team1Won = score1 > score2;
-    const team1Average = getWorldCupSimulatedAverage(team1, team1Won);
-    const team2Average = getWorldCupSimulatedAverage(team2, !team1Won);
+    const team1Average = getWorldCupSimulatedAverage(team1, team1Won, mentalTotals[0] / (score1 + score2), preparationModifiers[0]);
+    const team2Average = getWorldCupSimulatedAverage(team2, !team1Won, mentalTotals[1] / (score1 + score2), preparationModifiers[1]);
     recordWorldCupTeamAverage(team1, team1Average);
     recordWorldCupTeamAverage(team2, team2Average);
     finishWorldCupStateMatch(match, team1Won ? team1.id : team2.id, score1, score2);
@@ -608,6 +625,7 @@ function awardWorldCupTeamPrize(teamId, amount, stage, won = false) {
     if (!team) return;
     const individualPrize = amount / 2;
     team.players.filter(candidate => !candidate.isWorldCupGuest).forEach(candidate => {
+        if (typeof recordSeasonArchivePrize === 'function') recordSeasonArchivePrize(candidate, individualPrize, { name: WORLD_CUP_TOURNAMENT_NAME, specialType: 'worldCup' });
         // Puchar Narodów jest turniejem nierankingowym: tylko zawodnik kariery otrzymuje
         // swoją połowę do portfela, bez zmiany Order of Merit ani innych rankingów.
         if (isCurrentPlayer(candidate)) {
@@ -1326,6 +1344,7 @@ function startWorldCupMatch(match) {
         isDoubles: true,
         opponent: opponentTeam.players[0],
         worldCupMatchId: match.id,
+        worldCupStage: match.stage,
         worldCupTeamP1: playerTeam,
         worldCupTeamP2: opponentTeam,
         doublesThrower: { p1: playerTeam.players.findIndex(candidate => isCurrentPlayer(candidate)), p2: 0 },
@@ -1394,6 +1413,7 @@ function finishWorldCupTournament(winner) {
             players: winner.players.map(candidate => candidate.name)
         };
         activeTournament.historyLogs = buildWorldCupTournamentHistory(winner);
+        if (typeof recordWorldNewsTeamTitle === 'function') recordWorldNewsTeamTitle(winner, activeTournament);
     }
     const careerPlayerWon = teamContainsCareerPlayer(winner);
     if (careerPlayerWon) {

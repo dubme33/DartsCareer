@@ -30,6 +30,7 @@ function cancelMatchIntro() {
     if (window.speechSynthesis) window.speechSynthesis.cancel();
     releaseMatchWalkonAudio(currentWalkonAudio);
     releaseMatchWalkonAudio(oppAudio);
+    if (typeof hideCareerEntranceVisual === 'function') hideCareerEntranceVisual();
 }
 
 function startCrowd() {
@@ -108,6 +109,7 @@ function startCrowd() {
             p2Name = p2Candidate.name || p2Name;
             let p2CountryEn = enCountries[p2Candidate.country] || p2Candidate.country || '';
             let p1CountryEn = enCountries[p1Candidate.country] || p1Candidate.country || '';
+            if (typeof showCareerEntranceVisual === 'function') showCareerEntranceVisual(p2Candidate);
             
             let u1 = hasSpeechSynthesis
                 ? new SpeechSynthesisUtterance(`Ladies and gentlemen, please welcome... from ${p2CountryEn}... ${p2Name}!`)
@@ -169,6 +171,7 @@ function startCrowd() {
 
             function playPlayerIntro() { 
                 if (!isActive()) return;
+                if (typeof showCareerEntranceVisual === 'function') showCareerEntranceVisual(p1Candidate);
                 if (hasSpeechSynthesis) window.speechSynthesis.speak(u2);
                 else u2.onend();
             }
@@ -184,6 +187,7 @@ function startCrowd() {
             const generation = matchIntroGeneration;
             const introMatch = currentMatch;
             const isCurrent = () => generation === matchIntroGeneration && currentMatch === introMatch;
+            if (typeof hideCareerEntranceVisual === 'function') hideCareerEntranceVisual();
             startCrowd();
             
             // POPRAWKA: Zmienione ID przycisku na takie ze słownika

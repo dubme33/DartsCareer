@@ -170,8 +170,16 @@ function recordPlayerMatchStats(p1, p2, result, options = {}) {
             const oneEighties = getOptionalMatchStat(detail?.oneEighties);
             const won = scoreFor > scoreAgainst;
             stats.recordedKeys.push(key);
+            if (typeof awardOfficialMatchTraitXP === 'function') {
+                const totalLegs = Number.isFinite(result.totalLegsPlayed) ? result.totalLegsPlayed
+                    : (Number.isFinite(result.p1LegsWon) && Number.isFinite(result.p2LegsWon)
+                        ? result.p1LegsWon + result.p2LegsWon
+                        : (format.type === 'sets' ? 0 : score1 + score2));
+                awardOfficialMatchTraitXP(candidate, totalLegs);
+            }
             stats.played++;
             stats[won ? 'wins' : 'losses']++;
+            if (won && typeof recordSponsorGoalProgress === 'function') recordSponsorGoalProgress(candidate, 'wins');
             if (average !== null) { stats.averageTotal += average; stats.averageCount++; }
             if (Number.isInteger(hits) && Number.isInteger(attempts) && hits <= attempts) {
                 stats.doubleHits += hits; stats.doubleAttempts += attempts; stats.doubleMatches++;
@@ -189,6 +197,9 @@ function recordPlayerMatchStats(p1, p2, result, options = {}) {
             }, ...getRecentPlayerMatches(candidate)].slice(0, 10);
             recorded = true;
         });
+    if (recorded && typeof recordWorldNewsMatch === 'function') {
+        recordWorldNewsMatch(p1, p2, { ...result, p1Score: score1, p2Score: score2 }, { ...options, tournament }, key);
+    }
     return recorded;
 }
 
@@ -196,7 +207,8 @@ function recordCompletedSinglesMatch(match, tournament = activeTournament) {
     if (!match?.isTournament || match.isWorldCup || match.isDoubles || !match.stats) return false;
     const p1 = match.isSpectator ? match.spectatorP1 : player;
     const isSets = match.matchFormat?.type === 'sets';
-    const result = { p1Score: isSets ? match.p1Sets : match.p1Legs, p2Score: isSets ? match.p2Sets : match.p2Legs };
+    const result = { p1Score: isSets ? match.p1Sets : match.p1Legs, p2Score: isSets ? match.p2Sets : match.p2Legs,
+        totalLegsPlayed: match.totalLegsPlayed };
     for (const side of ['p1', 'p2']) {
         const darts = getOptionalMatchStat(match.stats[`${side}TotalDarts`]);
         const accumulated = getOptionalMatchStat(match.stats[`${side}AccumulatedScore`]);

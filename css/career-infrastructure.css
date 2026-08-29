@@ -1,0 +1,45 @@
+#screen-career-infrastructure { max-width: 1080px; }
+#career-infrastructure-content { text-align: left; }
+.career-infrastructure-intro, #screen-career-infrastructure section > p, .career-infrastructure-rules,
+.career-preparation-effect { color: #bdc9dc; line-height: 1.65; }
+.career-infrastructure-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 22px 0 14px; }
+.career-infrastructure-summary > div { display: flex; flex-direction: column; min-width: 0; padding: 15px; background: #17263d; border: 1px solid #465876; border-radius: 9px; }
+.career-infrastructure-summary span { color: #bdc9dc; font-size: 12px; }
+.career-infrastructure-summary strong { margin-top: 7px; color: #f4d37d; font-size: 21px; overflow-wrap: anywhere; }
+.career-infrastructure-summary small { margin-top: 5px; color: #8fa1b8; }
+.career-preparation-effect { margin: 0 0 26px; padding: 11px 14px; border-left: 4px solid #55bca7; background: #152c38; }
+#screen-career-infrastructure section { margin: 28px 0; padding-top: 5px; }
+#screen-career-infrastructure section h3 { color: #e2eaf6; text-align: left; }
+.career-infrastructure-context { color: #f4d37d !important; font-weight: 700; }
+.career-infrastructure-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-top: 16px; }
+.career-infrastructure-card { display: flex; flex-direction: column; min-width: 0; padding: 17px; background: #17263d; border: 1px solid #465876; border-radius: 9px; overflow-wrap: anywhere; }
+.career-infrastructure-card.selected { border-color: #5bc7ae; background: #17353a; box-shadow: 0 0 0 1px rgba(91,199,174,.2); }
+.career-infrastructure-card-head { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; }
+.career-infrastructure-card h4 { margin: 0; color: #f0f5fb; font-size: 17px; }
+.career-infrastructure-card-head strong { color: #f4d37d; white-space: nowrap; }
+.career-infrastructure-card p { flex-grow: 1; color: #bdc9dc; font-size: 13px; line-height: 1.55; }
+.career-infrastructure-card small { color: #8fa1b8; line-height: 1.5; }
+.career-infrastructure-card .action-btn { width: 100%; margin-top: 15px; white-space: normal; }
+.career-infrastructure-card .action-btn:disabled { opacity: .6; cursor: not-allowed; }
+.career-infrastructure-price { color: #f4d37d !important; font-weight: 700; }
+.career-infrastructure-max { color: #63c7ac !important; font-weight: 700; }
+.career-base-purchase, .career-base-suspended { padding: 18px; border: 1px solid #4c7188; border-radius: 9px; background: #172b3b; }
+.career-base-purchase strong { display: block; margin: 14px 0; color: #f4d37d; }
+.career-base-purchase .action-btn, .career-base-suspended .action-btn { width: auto; }
+.career-base-suspended { border-color: #b15a4c; background: #382126; }
+.career-infrastructure-next { color: #f4d37d !important; }
+.career-infrastructure-lock { padding: 10px 13px; border-radius: 7px; color: #ffd7a3 !important; background: #3a2c1e; border: 1px solid #8e6a3f; }
+.career-infrastructure-rules { margin: 25px 0; padding: 13px 16px; border: 1px solid #42617b; border-radius: 8px; }
+.career-infrastructure-rules summary { color: #e2eaf6; cursor: pointer; }
+#career-infrastructure-feedback { min-height: 1.5em; margin: 10px 0; color: #f4d37d; font-weight: 700; }
+#tournament-travel-summary { margin: 7px 0; color: #f8e8b1; font-size: 12px; }
+#tournament-travel-button { margin-top: 4px; padding: 7px; font-size: 12px; }
+#screen-career-infrastructure :is(button, summary):focus-visible, .career-infrastructure-tile:focus-visible { outline: 3px solid #f1c40f; outline-offset: 3px; }
+@media (max-width: 850px) {
+    .career-infrastructure-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .career-infrastructure-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 560px) {
+    .career-infrastructure-summary, .career-infrastructure-grid { grid-template-columns: minmax(0, 1fr); }
+    .career-infrastructure-card-head { align-items: center; }
+}

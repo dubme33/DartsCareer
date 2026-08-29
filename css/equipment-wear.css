@@ -1,0 +1,45 @@
+.equipment-wear-rule {
+    margin: -8px auto 20px;
+    padding: 10px 14px;
+    max-width: 860px;
+    border: 1px solid rgba(241, 196, 15, 0.5);
+    border-radius: 8px;
+    background: rgba(241, 196, 15, 0.08);
+    color: #f7dc6f;
+    font-size: 13px;
+    line-height: 1.45;
+    text-align: center;
+}
+
+.equipment-category-summary {
+    margin: -2px 0 10px;
+    min-height: 34px;
+    color: #bdc3c7;
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+.equipment-category-summary strong { color: #fff; }
+.equipment-wear-date { display: block; color: #f7dc6f; }
+
+.equipment-item-card {
+    padding: 10px;
+    margin-bottom: 10px;
+    border: 1px solid #2c3e50;
+    border-radius: 5px;
+    background: #16213e;
+}
+
+.equipment-item-card.current {
+    border-color: var(--accent-green);
+    box-shadow: inset 3px 0 0 var(--accent-green);
+}
+
+.equipment-item-card.reached { border-color: rgba(46, 204, 113, 0.35); }
+.equipment-item-card.locked { opacity: 0.68; }
+.equipment-item-card .btn-sign { width: 100%; }
+
+@media (max-width: 520px) {
+    .equipment-wear-rule { margin-top: 0; text-align: left; }
+    #screen-shop > div:first-of-type { align-items: flex-start !important; flex-direction: column; gap: 8px; }
+}

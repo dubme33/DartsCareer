@@ -92,6 +92,11 @@ function initCareerChronicle() {
             };
             const style = styles[event.type] || { icon: '📖', color: '#bdc3c7' };
 
+            if (event.type === 'sponsorSeason' && typeof trSponsorGoal === 'function') {
+                return { icon: '🤝', color: '#2ecc71', title: trSponsorGoal('seasonTitle', { year: event.year }),
+                    detail: trSponsorGoal('seasonDetail', { ...event, amount: `£${money}`, nextYear: event.year + 1 }) };
+            }
+
             if (event.type === 'trophy') {
                 const tournament = typeof getTournamentDisplayName === 'function'
                     ? getTournamentDisplayName(event.tournament)
@@ -184,15 +189,17 @@ function initCareerChronicle() {
             document.getElementById('trophy-180s').innerText = player.careerStats.total180s;
             document.getElementById('trophy-9darters').innerText = player.careerStats.nineDarters || 0;
 
-            const list = document.getElementById('trophy-list');
-            list.innerHTML = "";
-            if (player.careerStats.trophies.length === 0) {
-                list.innerHTML = `<p style="color: gray; text-align: center;">${t('t-no-trophy')}</p>`;
-            } else {
-                player.careerStats.trophies.forEach(tr => {
-                    const tournament = typeof getTournamentDisplayName === 'function' ? getTournamentDisplayName(tr) : tr;
-                    list.innerHTML += `<div style="padding: 5px; border-bottom: 1px solid #34495e;">🏆 ${escapeHtml(tournament)}</div>`;
-                });
+            if (typeof renderCareerLifestyleTrophyRoom !== 'function' || !renderCareerLifestyleTrophyRoom()) {
+                const list = document.getElementById('trophy-list');
+                list.innerHTML = "";
+                if (player.careerStats.trophies.length === 0) {
+                    list.innerHTML = `<p style="color: gray; text-align: center;">${t('t-no-trophy')}</p>`;
+                } else {
+                    player.careerStats.trophies.forEach(tr => {
+                        const tournament = typeof getTournamentDisplayName === 'function' ? getTournamentDisplayName(tr) : tr;
+                        list.innerHTML += `<div style="padding: 5px; border-bottom: 1px solid #34495e;">🏆 ${escapeHtml(tournament)}</div>`;
+                    });
+                }
             }
 
             // --- NOWOŚĆ: RENDEROWANIE OSIĄGNIĘĆ ---
@@ -283,6 +290,8 @@ function initCareerChronicle() {
         }
 
         function applyModData(modData, isCareerActive, options = {}) {
+            const seasonArchiveBeforeMod = isCareerActive && typeof snapshotSeasonArchiveModRatings === 'function'
+                ? snapshotSeasonArchiveModRatings() : null;
             if (typeof invalidatePlayerLifecycleCache === 'function') invalidatePlayerLifecycleCache();
             if (!isCareerActive) {
                 if (modData.pdcPlayers) {
@@ -435,6 +444,7 @@ function initCareerChronicle() {
                 if (isCareerActive) removeLegacyPlayerForm(player, player);
                 pdcPlayers.forEach(candidate => removeLegacyPlayerForm(candidate, player));
             }
+            if (isCareerActive && typeof initializeAllPlayerTraits === 'function') initializeAllPlayerTraits();
             // Renderujemy wybór dopiero po przeliczeniu OOM, nie ze starych
             // kwot zapisanych w ZIP-ie. Odtwarzany mod może odroczyć inicjalizację bazy.
             if (!isCareerActive && modData.pdcPlayers && !options.deferPlayerFormInit) {
@@ -451,7 +461,11 @@ function initCareerChronicle() {
             const btnRankPc = document.getElementById('btn-rank-pc'); if (btnRankPc) btnRankPc.innerText = 'Players Champ OOM';
             const btnRankEt = document.getElementById('btn-rank-et'); if (btnRankEt) btnRankEt.innerText = 'European Tour OOM';
             const screenCalH2 = document.querySelector('#screen-calendar h2'); if (screenCalH2) screenCalH2.innerText = 'Kalendarz Sezonu PDC';
-            if (isCareerActive) updateHub();
+            if (isCareerActive) {
+                if (typeof resetWorldNewsRankingBaseline === 'function') resetWorldNewsRankingBaseline();
+                if (typeof reconcileSeasonArchiveModRatings === 'function') reconcileSeasonArchiveModRatings(seasonArchiveBeforeMod);
+                updateHub();
+            }
         }
 
         function updatePersistedModControls(record) {

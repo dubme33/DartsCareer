@@ -80,6 +80,7 @@ function getPrizeMoney(tName, round, won) {
         function awardPrizeMoney(p, amount, tName) {
             if (!p || typeof amount !== 'number' || isNaN(amount) || amount <= 0) return;
             tName = String(tName || '');
+            if (typeof recordSeasonArchivePrize === 'function') recordSeasonArchivePrize(p, amount, tName);
             
             // Zabezpieczenie przed uszkodzonym zapisem (przywraca 0 zamiast błędu)
             if (typeof p.prizeMoney !== 'number' || isNaN(p.prizeMoney)) p.prizeMoney = 0;

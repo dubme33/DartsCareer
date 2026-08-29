@@ -481,6 +481,7 @@ function processAnnualPlayerLifecycle(completedYear) {
     const existingNames = new Set([...pdcPlayers, player].filter(Boolean).map(candidate => candidate.name));
     const newgens = Array.from({ length: newgenCount }, () => createAnnualNewgen(newSeasonYear, existingNames));
     pdcPlayers.push(...newgens);
+    if (typeof initializeAllPlayerTraits === 'function') initializeAllPlayerTraits();
 
     state.lastProcessedYear = completedYear;
     sendRetirementSummaryEmail(completedYear, retirements);

@@ -128,9 +128,16 @@
         }
 
         const AGE_DEVELOPMENT_PROFILES = Object.freeze({
-            // AI prospects improve the fastest. Young career players still develop
-            // above the normal rate, but cannot outpace the simulated AI by training.
-            young: { growthMultiplier: 1.65, careerGrowthMultiplier: 1.25, declineMultiplier: 0.8 },
+            // Młodzi reagują na wyniki nieco szybciej w obie strony. Dawne ×1,65
+            // wzrostu przy zaledwie ×0,8 spadku stale pompowało OVR całej grupy.
+            young: {
+                growthMultiplier: 1.15,
+                declineMultiplier: 1.15,
+                // Zachowujemy dotychczasowe tempo kariery gracza. Ta korekta
+                // dotyczy inflacji w puli AI, a nie jego treningu i rozwoju.
+                careerGrowthMultiplier: 1.25,
+                careerDeclineMultiplier: 0.8
+            },
             prime: { growthMultiplier: 1, declineMultiplier: 1 },
             // Wyniki weteranów nadal zmieniają ich poziom, ale w obie strony
             // jednakowo wolniej. Dzięki temu sam bilans meczów nie tworzy
@@ -154,9 +161,12 @@
             const growthMultiplier = isCareerPlayer && Number.isFinite(profile.careerGrowthMultiplier)
                 ? profile.careerGrowthMultiplier
                 : profile.growthMultiplier;
+            const declineMultiplier = isCareerPlayer && Number.isFinite(profile.careerDeclineMultiplier)
+                ? profile.careerDeclineMultiplier
+                : profile.declineMultiplier;
             return numericChange > 0
                 ? numericChange * growthMultiplier
-                : numericChange * profile.declineMultiplier;
+                : numericChange * declineMultiplier;
         }
 
         function samePlayer(first, second) {
@@ -658,6 +668,7 @@
 
                 const rank = rankByKey.get(key) || rankedPlayers.length;
                 let modifier = (Math.random() + Math.random() - 1) * profile.formSpread;
+                if (typeof getConsistencySpread === 'function') modifier *= getConsistencySpread(candidate);
 
                 // Zawodnicy spoza rozstawionej czołówki częściej mogą zagrać turniej życia,
                 // a ścisła czołówka czasem trafia na słabszy weekend. Parametry zależą
@@ -688,32 +699,45 @@
             let p2Ovr = (p2IsCareer ? p2Ratings.overall : p2Ratings.ovr) + getTournamentSimulationForm(p2);
 
             if (includeMatchNoise) {
-                p1Ovr += (Math.random() + Math.random() - 1) * profile.matchNoise;
-                p2Ovr += (Math.random() + Math.random() - 1) * profile.matchNoise;
+                p1Ovr += (Math.random() + Math.random() - 1) * profile.matchNoise * (typeof getConsistencySpread === 'function' ? getConsistencySpread(p1) : 1);
+                p2Ovr += (Math.random() + Math.random() - 1) * profile.matchNoise * (typeof getConsistencySpread === 'function' ? getConsistencySpread(p2) : 1);
             }
 
             return 1 / (1 + Math.exp(-(p1Ovr - p2Ovr) / profile.ratingScale));
         }
 
+        const AI_TOURNAMENT_RATING_TRANSFER = 0.2;
+        const CAREER_TOURNAMENT_RATING_TRANSFER = 0.8;
+
+        function getTournamentRatingTransferFactor(candidate) {
+            const rating = Number(isCurrentPlayer(candidate) ? player.overall
+                : candidate?.baseOvr ?? candidate?.ovr ?? candidate?.overall);
+            if (!Number.isFinite(rating) || rating <= 85) return 1;
+            // Wynik wciąż może przesunąć elitę, lecz jeden dobry sezon nie powinien
+            // zamieniać kilkunastu graczy 85–89 OVR w kolejną grupę 90+.
+            return Math.max(0.08, (97 - rating) / 12);
+        }
+
         function applyTournamentRatingChange(winner, loser, round) {
             const expectedWinner = getTournamentWinChance(winner, loser, false);
-            
-            // 1. Zmniejszone mnożniki dla rund (znacznie wolniejszy przyrost OVR za pojedynczy mecz)
+
+            // Finały ważą więcej, lecz przy ponad 60 imprezach w sezonie nawet
+            // wczesna runda musi być jedynie małą korektą długoterminowej oceny.
             const roundWeight = round === 2 ? 0.8 : round === 4 ? 0.6 : round === 8 ? 0.5 : 0.3;
-            
-            // 2. Zbalansowany system Elo (żeby średni OVR w lidze się zgadzał)
-            let winnerDelta = (1 - expectedWinner) * 0.8 * roundWeight;
-            let loserDelta = -(expectedWinner) * 0.8 * roundWeight;
 
-            // 3. "Szklany sufit" dla czołówki - drastycznie obcinamy punkty powyżej 90 OVR
-            const winnerOvr = isCurrentPlayer(winner) ? player.overall : (winner.baseOvr || winner.ovr);
-            if (winnerOvr >= 90) {
-                // Przy 95 OVR gracz dostaje 40% punktów, przy 98 OVR zaledwie 10%.
-                winnerDelta *= Math.max(0.1, (99 - winnerOvr) / 10); 
-            }
-
-            changeTournamentOverall(winner, winnerDelta);
-            changeTournamentOverall(loser, loserDelta);
+            // Prawdziwy transfer Elo: dokładnie ta sama bazowa wartość trafia do
+            // zwycięzcy i znika u przegranego. Poprzedni wzór odejmował od przegranego
+            // expectedWinner zamiast 1 - expectedWinner, więc niespodzianki tworzyły OVR.
+            // Mecze kariery zachowują dotychczasową siłę nagrody dla prowadzonego
+            // zawodnika. Mniejszy współczynnik stosujemy do licznych spotkań AI–AI,
+            // które były źródłem inflacji całej czołówki rankingu.
+            const transferRate = isCurrentPlayer(winner) || isCurrentPlayer(loser)
+                ? CAREER_TOURNAMENT_RATING_TRANSFER
+                : AI_TOURNAMENT_RATING_TRANSFER;
+            const transfer = (1 - expectedWinner) * transferRate * roundWeight
+                * Math.min(getTournamentRatingTransferFactor(winner), getTournamentRatingTransferFactor(loser));
+            changeTournamentOverall(winner, transfer);
+            changeTournamentOverall(loser, -transfer);
         }
 
         // --- SŁOWNIK TŁUMACZEŃ (UI) ---
