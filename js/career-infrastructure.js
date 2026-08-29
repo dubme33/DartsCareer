@@ -25,8 +25,8 @@ const CAREER_INFRASTRUCTURE_CONFIG = Object.freeze({
     }),
     travel: Object.freeze({
         economy: Object.freeze({ baseCost: 0, staminaMultiplier: 1, preparationLoss: 8 }),
-        comfort: Object.freeze({ baseCost: 2500, staminaMultiplier: 0.85, preparationLoss: 4 }),
-        premium: Object.freeze({ baseCost: 8000, staminaMultiplier: 0.7, preparationLoss: 1 })
+        comfort: Object.freeze({ baseCost: 1250, staminaMultiplier: 0.85, preparationLoss: 4 }),
+        premium: Object.freeze({ baseCost: 4000, staminaMultiplier: 0.7, preparationLoss: 1 })
     })
 });
 
@@ -379,19 +379,50 @@ function chargeCareerTournamentTravel(tournament, participationDate = currentDat
     const requestedStandard = state.travelStandard;
     let quote = getCareerTravelQuote(tournament, requestedStandard);
     let downgraded = false;
-    if ((Number(player.budget) || 0) < quote.cost) {
-        quote = getCareerTravelQuote(tournament, 'economy');
-        downgraded = requestedStandard !== 'economy';
+
+    // --- SPRAWDZANIE CZY GRACZ JUŻ JEST NA MIEJSCU (np. Players Championship dzień po dniu) ---
+    const currentLoc = `${tournament.city || ''}_${tournament.country || ''}`;
+    let isAlreadyAtLocation = false;
+
+    if (player.lastTournamentLocation && player.lastTournamentLocation === currentLoc && player.lastTournamentDate) {
+        const lastDate = new Date(player.lastTournamentDate);
+        const diffDays = Math.round(Math.abs((date - lastDate) / (1000 * 60 * 60 * 24)));
+        if (diffDays <= 2) { // Kolejny turniej następnego dnia lub po jednodniowej przerwie w tym samym miejscu
+            isAlreadyAtLocation = true;
+        }
     }
-    player.budget = Math.max(0, (Number(player.budget) || 0) - quote.cost);
-    const preparationLoss = Math.max(0, quote.preparationLoss - getCareerAnalysisTravelReduction(player));
-    changeCareerPreparation(-preparationLoss, player);
+
+    let finalCost = quote.cost;
+    let finalPrepLoss = quote.preparationLoss;
+
+    if (isAlreadyAtLocation) {
+        finalCost = 0;
+        finalPrepLoss = 0;
+    } else {
+        if ((Number(player.budget) || 0) < quote.cost) {
+            quote = getCareerTravelQuote(tournament, 'economy');
+            downgraded = requestedStandard !== 'economy';
+            finalCost = quote.cost;
+            finalPrepLoss = quote.preparationLoss;
+        }
+    }
+
+    player.budget = Math.max(0, (Number(player.budget) || 0) - finalCost);
+    const preparationLoss = Math.max(0, finalPrepLoss - (isAlreadyAtLocation ? 0 : getCareerAnalysisTravelReduction(player)));
+    if (preparationLoss > 0) {
+        changeCareerPreparation(-preparationLoss, player);
+    }
+
+    // Zapisujemy aktualną lokalizację i datę na zawodniku
+    player.lastTournamentLocation = currentLoc;
+    player.lastTournamentDate = date.toISOString();
+
     tournament.travelChargedYear = date.getFullYear();
     tournament.travelRequestedStandard = requestedStandard;
     tournament.travelStandardUsed = quote.standard;
-    tournament.travelCostPaid = quote.cost;
+    tournament.travelCostPaid = finalCost;
     tournament.travelPreparationLoss = preparationLoss;
-    const result = { ...quote, preparationLoss, requestedStandard, downgraded, alreadyCharged: false };
+    const result = { ...quote, cost: finalCost, preparationLoss, requestedStandard, downgraded, alreadyCharged: false, isAlreadyAtLocation };
     if (typeof notifyCareerTournamentTravel === 'function') notifyCareerTournamentTravel(result, tournament);
     if (typeof updateHub === 'function') updateHub();
     return result;
