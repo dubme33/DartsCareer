@@ -436,6 +436,9 @@ function processAnnualPlayerLifecycle(completedYear) {
     }
 
     const newSeasonYear = completedYear + 1;
+    // Także dla zapisów/wznowień rozpoczynających rozliczenie już 1 stycznia.
+    // Znacznik przy zawodniku zapobiega ponownemu naliczeniu rozwoju.
+    if (typeof settleAiSeasonDevelopment === 'function') settleAiSeasonDevelopment(completedYear);
     const rankingByPlayer = getPlayerLifecycleRankings();
     const retirements = [];
     const retiredIds = new Set();

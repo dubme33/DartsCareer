@@ -278,9 +278,9 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
             if (typeof isContinentalTourTournament === 'function' && isContinentalTourTournament(tournament)) {
                 const state = tournament.continentalQualification;
                 return state && typeof resolveContinentalQualificationPlayers === 'function'
-                    ? resolveContinentalQualificationPlayers([
+                    ? resolveContinentalQualificationPlayers(getContinentalEffectivePlayerIds([
                         ...(state.oomPlayerIds || []), ...(state.proTourPlayerIds || []), ...(state.qualifiedPlayerIds || [])
-                    ], candidates) : [];
+                    ], state), candidates) : [];
             }
             if (name.includes('grand slam') || name.includes("champion's slam")) {
                 const state = tournament.pdcTourCardQualification;
@@ -761,6 +761,8 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
                 if (typeof migratePdcTourCardSystem === 'function') {
                     migratePdcTourCardSystem([player, ...pdcPlayers], currentDate);
                 }
+                if (typeof initializeCareerRecords === 'function') initializeCareerRecords();
+                if (typeof initializeTournamentFinances === 'function') initializeTournamentFinances();
                 initAllPlayerSeasonStats();
                 emails = Array.isArray(gameState.emails) ? gameState.emails : [];
                 unreadMailsCount = Number.isFinite(gameState.unreadMailsCount) ? gameState.unreadMailsCount : 0;
@@ -1600,17 +1602,18 @@ async function updateProfileWalkon(event) {
             let st = currentMatch.stats;
             let turnScore = 0;
             let dartsThrown = 0;
-            // ... fragment w simulateTurnFast ...
             let isDIDO = activeTournament && activeTournament.format === 'DIDO';
+            const scoringVisit = !isCareerThrower && typeof createAiScoringVisit === 'function'
+                ? createAiScoringVisit() : null;
 
             for (let i = 0; i < 3; i++) {
-                // Dodano przekazanie pozostałych lotek: 3 - i
-                let aim = getOptimalAim(currentScore, isDIDO, 3 - i); 
+                let aim = scoringVisit ? getAiScoringAim(currentScore, isDIDO, 3 - i, scoringVisit)
+                    : getOptimalAim(currentScore, isDIDO, 3 - i);
                 const throwStats = typeof applyMentalPressureToStats === 'function'
                     ? applyMentalPressureToStats(pObj, statsObj, isP1, aim, currentScore) : statsObj;
                 let result = calculateThrow(aim.sector, aim.mult, throwStats);
+                if (scoringVisit) recordAiScoringObstruction(scoringVisit, aim, result, 3 - i);
                 if (typeof recordMentalThrowOutcome === 'function') recordMentalThrowOutcome(isP1, currentScore, aim, result);
-            // ... reszta kodu ...
                 let hitSec = result.sector;
                 let hitMult = result.mult;
                 let points = hitSec * hitMult;
@@ -1749,17 +1752,18 @@ async function updateProfileWalkon(event) {
                         statsObjP2 = getWorldMastersMatchRatings(currentMatch.opponent, statsObjP2);
                     }
                     statsObjP1 = applyRivalryMatchModifier(statsObjP1, true);
+                    const scoringVisitP2 = typeof createAiScoringVisit === 'function' ? createAiScoringVisit() : null;
                     
                     for(let i=0; i<3; i++) {
                         let resP1 = calculateThrow(20, 3, statsObjP1);
                         currentMatch.suddenDeath.p1Score += resP1.sector * resP1.mult;
-                        let resP2 = calculateThrow(20, 3, statsObjP2);
+                        const aimP2 = scoringVisitP2 ? getAiScoringAim(501, false, 3 - i, scoringVisitP2) : { sector: 20, mult: 3 };
+                        let resP2 = calculateThrow(aimP2.sector, aimP2.mult, statsObjP2);
+                        if (scoringVisitP2) recordAiScoringObstruction(scoringVisitP2, aimP2, resP2, 3 - i);
                         currentMatch.suddenDeath.p2Score += resP2.sector * resP2.mult;
                     }
                     if (currentMatch.suddenDeath.p1Score !== currentMatch.suddenDeath.p2Score) {
-                        let isP1 = currentMatch.suddenDeath.p1Score > currentMatch.suddenDeath.p2Score;
-                        currentMatch.suddenDeath = null;
-                        return finishMatch();
+                        return resolveSuddenDeath();
                     }
                 }
                 return;

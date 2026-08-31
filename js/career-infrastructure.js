@@ -316,20 +316,24 @@ function processCareerInfrastructureMaintenance() {
     return result;
 }
 
-function getCareerTournamentTravelMultiplier(tournament) {
+function getCareerTournamentTravelMultiplier(tournament, standard) {
     const text = typeof getTraitTournamentText === 'function'
         ? getTraitTournamentText(tournament).toLowerCase()
         : `${tournament?.name || ''} ${tournament?.sourceName || ''} ${tournament?.specialType || ''}`.toLowerCase();
+    const isEuropeanTour = /european tour|continental tour/.test(text);
+    // All European Tour qualifier paths use discounted rates: comfort £900, premium £3000.
+    if (tournament?.specialType === 'continentalQualifier'
+        || (isEuropeanTour && /qualifier|kwalifikac/.test(text))) return standard === 'comfort' ? 0.72 : 0.75;
     if (/world darts championship|global darts championship|world cup|worldcup|puchar narodów/.test(text)) return 2.5;
     if (typeof isMentalMajorTournament === 'function' && isMentalMajorTournament(tournament)) return 2;
-    if (/european tour|continental tour|world masters|worldmasters/.test(text)) return 1.5;
+    if (isEuropeanTour || /world masters|worldmasters/.test(text)) return 1.5;
     return 1;
 }
 
 function getCareerTravelQuote(tournament, standard = getCareerInfrastructureState()?.travelStandard || 'economy') {
     const selected = CAREER_TRAVEL_STANDARDS.includes(standard) ? standard : 'economy';
     const config = CAREER_INFRASTRUCTURE_CONFIG.travel[selected];
-    const eventMultiplier = getCareerTournamentTravelMultiplier(tournament);
+    const eventMultiplier = getCareerTournamentTravelMultiplier(tournament, selected);
     return {
         standard: selected,
         cost: Math.round(config.baseCost * eventMultiplier),
@@ -407,7 +411,10 @@ function chargeCareerTournamentTravel(tournament, participationDate = currentDat
         }
     }
 
-    player.budget = Math.max(0, (Number(player.budget) || 0) - finalCost);
+    const budgetBeforeTravel = Number(player.budget) || 0;
+    if (typeof initializeTournamentFinances === 'function') initializeTournamentFinances();
+    player.budget = Math.max(0, budgetBeforeTravel - finalCost);
+    if (typeof recordTournamentCash === 'function') recordTournamentCash(tournament, 'travel', Math.max(0, budgetBeforeTravel - player.budget), date);
     const preparationLoss = Math.max(0, finalPrepLoss - (isAlreadyAtLocation ? 0 : getCareerAnalysisTravelReduction(player)));
     if (preparationLoss > 0) {
         changeCareerPreparation(-preparationLoss, player);

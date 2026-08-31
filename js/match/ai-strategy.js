@@ -121,3 +121,54 @@ function getOptimalAim(score, isDIDO, dartsLeft = 3) {
 
     return getScoringSetupAim(normalizedScore, normalizedDartsLeft);
 }
+
+function createAiScoringVisit() {
+    return { blockedTriples: [], dartsThrown: 0 };
+}
+
+function getAiScoringVisit(match, isP1) {
+    const side = isP1 ? 'p1' : 'p2';
+    let visit = match.aiScoringVisit;
+    // Lotki są wyjmowane po podejściu. Nie przenosimy przesłony między
+    // zawodnikami, partnerami deblowymi, legami ani do kolejnej wizyty.
+    if (!visit || visit.side !== side || match.dartsThrown === 0 || visit.dartsThrown > match.dartsThrown) {
+        visit = match.aiScoringVisit = { ...createAiScoringVisit(), side };
+    }
+    return visit;
+}
+
+function getAiScoringAim(score, isDIDO, dartsLeft, visit) {
+    const aim = getOptimalAim(score, isDIDO, dartsLeft);
+    // Checkouty, podwójne otwierające i konkretne ustawienia mają pierwszeństwo
+    // przed zmianą sektora. Pierwsza lotka nie ma jeszcze czego omijać.
+    if (dartsLeft >= 3 || score <= 170 || aim.mult !== 3
+        || getHighScoreSetupAim(score, dartsLeft) || !visit?.blockedTriples?.includes(aim.sector)) return aim;
+    const hasCheckout = leave => Boolean(checkoutGuide[leave]) && !AI_BOGEY_SCORES.has(leave);
+    const originalLeave = score - aim.sector * 3;
+    for (const sector of [20, 19, 18, 17]) {
+        if (visit.blockedTriples.includes(sector)) continue;
+        const leave = score - sector * 3;
+        if (leave < 2 || AI_BOGEY_SCORES.has(leave)) continue;
+        if (dartsLeft === 1) {
+            if (hasCheckout(originalLeave) && !hasCheckout(leave)) continue;
+            // Także trafienie singla powinno zostawić rozsądny wynik. Np. na
+            // 181 T19/S19 i T18/S18 grożą bogey; wolne T17 zostawia 130/164.
+            if (AI_BOGEY_SCORES.has(score - sector)) continue;
+        }
+        return { sector, mult: 3 };
+    }
+    return aim;
+}
+
+function recordAiScoringObstruction(visit, aim, result, dartsLeft, random = Math.random) {
+    if (!visit) return;
+    visit.dartsThrown++;
+    if (dartsLeft <= 1 || aim?.mult !== 3 || ![20, 19, 18, 17].includes(aim.sector)
+        || result?.sector !== aim.sector || ![1, 3].includes(result.mult)
+        || visit.blockedTriples.includes(aim.sector)) return;
+    // Modelujemy kąt wbicia i lotkę blisko drutu, nie sam fakt trafienia T20.
+    // Dobry treble zwykle jest markerem i nadal pozwala rzucić 180. Single
+    // po próbie treble częściej zasłania mały sektor. Bez kary do celności/OVR.
+    const obstructionChance = result.mult === 1 ? 0.24 : 0.04;
+    if (random() < obstructionChance) visit.blockedTriples.push(aim.sector);
+}

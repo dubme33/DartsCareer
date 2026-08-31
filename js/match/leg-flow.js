@@ -36,6 +36,7 @@ function checkAchievements(type, data = null) {
                 if (unlock) {
                     player.achievements.push(ach.id);
                     player.budget += ach.rewardMoney;
+                    if (typeof recordTournamentAchievementCash === 'function') recordTournamentAchievementCash(ach.rewardMoney, type === 'tour_win' ? data : null);
                     let title = ach[`title${langSuffix}`] || ach.title_pl;
                     
                     const amount = ach.rewardMoney.toLocaleString('en-GB');
@@ -81,6 +82,7 @@ function checkAchievements(type, data = null) {
         }
 
         function resolveSuddenDeath() {
+            if (!currentMatch?.suddenDeath || currentMatch.isFinishing) return false;
             const suddenDeath = currentMatch.suddenDeath;
             const isP1 = suddenDeath.p1Score > suddenDeath.p2Score;
             if (suddenDeath.p1Score === suddenDeath.p2Score) {
@@ -108,8 +110,12 @@ function checkAchievements(type, data = null) {
                     : (isP1 ? player.name : currentMatch.opponent.name));
             logThrow(`⚡ ${winnerName} ${t('t-log-sd-win')}`, isP1 ? 'hit' : 'ai');
 
-            // W mistrzostwach świata sudden death rozstrzyga ostatni, decydujący set.
-            // Dopiero teraz dopisujemy go do wyniku meczu — nie do zwykłego licznika legów.
+            // Record the decider before the shared completion reads the score.
+            if (isP1) currentMatch.p1Legs++;
+            else currentMatch.p2Legs++;
+            currentMatch.totalLegsPlayed++;
+
+            // W mistrzostwach świata zwycięzca decidera dostaje również ostatni set.
             if (currentMatch.suddenDeathDecidesSet) {
                 if (isP1) currentMatch.p1Sets++;
                 else currentMatch.p2Sets++;
@@ -119,7 +125,8 @@ function checkAchievements(type, data = null) {
 
             currentMatch.suddenDeath = null;
             if (isP1 && !currentMatch.isSpectator) checkAchievements('sudden_death'); // <--- DODANE TUTAJ
-            finishMatch(isP1, winnerName);
+            updateScores();
+            return finishMatch();
         }
 
         function processSuddenDeathThrow(isP1, targetSec, targetMult, hitSec, hitMult) {

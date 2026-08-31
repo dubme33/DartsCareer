@@ -631,6 +631,7 @@ function awardWorldCupTeamPrize(teamId, amount, stage, won = false) {
         if (isCurrentPlayer(candidate)) {
             if (!Number.isFinite(Number(player.budget))) player.budget = 0;
             player.budget += individualPrize;
+            if (typeof recordTournamentCash === 'function') recordTournamentCash({ name: WORLD_CUP_TOURNAMENT_NAME, specialType: 'worldCup' }, 'prize', individualPrize);
         }
         if (typeof recordSeasonTournamentResult === 'function') {
             recordSeasonTournamentResult(candidate, { name: WORLD_CUP_TOURNAMENT_NAME }, {
@@ -1404,6 +1405,7 @@ function finishWorldCupMatch() {
 }
 
 function finishWorldCupTournament(winner) {
+    const completedFinanceTournament = activeTournament;
     worldCupState.phase = 'completed';
     worldCupState.completed = true;
     if (activeTournament) {
@@ -1412,6 +1414,7 @@ function finishWorldCupTournament(winner) {
             country: winner.country,
             players: winner.players.map(candidate => candidate.name)
         };
+        if (typeof recordCareerChampion === 'function') recordCareerChampion(activeTournament, winner);
         activeTournament.historyLogs = buildWorldCupTournamentHistory(winner);
         if (typeof recordWorldNewsTeamTitle === 'function') recordWorldNewsTeamTitle(winner, activeTournament);
     }
@@ -1435,4 +1438,5 @@ function finishWorldCupTournament(winner) {
     updateHub();
     saveGame(true);
     showScreen('screen-hub');
+    if (!isFastForwardingWorldCup && typeof showTournamentFinanceCompletion === 'function') showTournamentFinanceCompletion(completedFinanceTournament);
 }

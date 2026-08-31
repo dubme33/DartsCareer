@@ -112,6 +112,8 @@ function showScreen(screenId) {
                 if (typeof migratePdcTourCardSystem === 'function') {
                     migratePdcTourCardSystem([...pdcPlayers, player], currentDate);
                 }
+                if (typeof initializeCareerRecords === 'function') initializeCareerRecords(true);
+                if (typeof initializeTournamentFinances === 'function') initializeTournamentFinances(true);
                 initAllPlayerSeasonStats();
                 if (typeof resetSponsorOffers === 'function') resetSponsorOffers();
                 if (typeof initializeWorldNews === 'function') initializeWorldNews(true);
@@ -191,6 +193,8 @@ function showScreen(screenId) {
                 player.hasTourCard = startsWithTourCard;
             }
             if (typeof resetGrandSlamState === 'function') resetGrandSlamState();
+            if (typeof initializeCareerRecords === 'function') initializeCareerRecords(true);
+            if (typeof initializeTournamentFinances === 'function') initializeTournamentFinances(true);
             initAllPlayerSeasonStats();
             if (typeof resetSponsorOffers === 'function') resetSponsorOffers();
             if (typeof initializeWorldNews === 'function') initializeWorldNews(true);
@@ -606,6 +610,10 @@ function showScreen(screenId) {
             }
 
             if (currentDate.getMonth() === 11 && currentDate.getDate() === 31
+                && typeof settleAiSeasonDevelopment === 'function') {
+                settleAiSeasonDevelopment(currentDate.getFullYear());
+            }
+            if (currentDate.getMonth() === 11 && currentDate.getDate() === 31
                 && typeof finalizeSeasonArchive === 'function') {
                 finalizeSeasonArchive(currentDate.getFullYear());
             }
@@ -770,9 +778,9 @@ function showScreen(screenId) {
 
                     const isContinentalQualifier = typeof isContinentalQualifierTournament === 'function'
                         && isContinentalQualifierTournament(todayTournament);
-                    const playerHasDirectContinentalEntry = isContinentalQualifier
-                        && typeof isCareerPlayerDirectlyQualifiedForContinentalTour === 'function'
-                        && isCareerPlayerDirectlyQualifiedForContinentalTour(todayTournament);
+                    const playerSkipsContinentalQualifier = isContinentalQualifier
+                        && typeof getContinentalTourQualifierParticipants === 'function'
+                        && !getContinentalTourQualifierParticipants(todayTournament).some(isCurrentPlayer);
                     const cardHolderSkipsQSchool = typeof isPdcQSchoolTournament === 'function'
                         && isPdcQSchoolTournament(todayTournament)
                         && player?.hasTourCard === true;
@@ -781,10 +789,10 @@ function showScreen(screenId) {
                         && (player?.hasTourCard !== true
                             || (typeof isCareerPlayerAutomaticallyQualifiedForPdcCardQualifier === 'function'
                                 && isCareerPlayerAutomaticallyQualifiedForPdcCardQualifier(todayTournament)));
-                    if (playerHasDirectContinentalEntry || cardHolderSkipsQSchool || playerSkipsTourCardQualifier) {
-                        // Zawodnik z miejsc rankingowych ma już gwarantowany start w
-                        // turnieju głównym. Kwalifikacje rozstrzygamy w tle, aby nie
-                        // blokowały mu kalendarza ani nie wymagały kliknięcia „Odpuść”.
+                    if (playerSkipsContinentalQualifier || cardHolderSkipsQSchool || playerSkipsTourCardQualifier) {
+                        // Gracz nie bierze udziału w tej ścieżce kwalifikacji.
+                        // Rozstrzygamy ją w tle, bez otwierania drabinki i bez
+                        // konieczności wybierania opcji „Odpuść”.
                         activateTournamentFromCalendar(todayTournament);
                         if (shouldAutoSaveToday && typeof saveGame === 'function') saveGame(true);
                         return startTournament();
@@ -950,6 +958,10 @@ function showScreen(screenId) {
                     
                 const planningButton = !tour.completed && typeof getPlanningTournamentKind === 'function' && getPlanningTournamentKind(tour)
                     ? `<button type="button" class="btn-sign planning-event-link" onclick="showCareerPlanning('qualification', ${idx})">${escapeHtml(trPlanning('qualification'))}</button>` : '';
+                const championsButton = typeof isCareerChampionship === 'function' && isCareerChampionship(tour)
+                    ? `<button type="button" class="btn-sign records-event-link" onclick="showTournamentChampions(${idx})">${escapeHtml(trCareerRecords('champions'))}</button>` : '';
+                const financeButton = typeof trTournamentFinance === 'function'
+                    ? `<button type="button" class="btn-sign finance-event-link" onclick="showTournamentFinance(${idx})">${escapeHtml(trTournamentFinance('link'))}</button>` : '';
                 const year = currentDate.getFullYear();
                 const startMonth = (tour.month + 1).toString().padStart(2, '0');
                 const endMonth = ((Number.isInteger(tour.endMonth) ? tour.endMonth : tour.month) + 1).toString().padStart(2, '0');
@@ -966,7 +978,7 @@ function showScreen(screenId) {
                             📍 ${escapeHtml(t(tour.city))}, ${getFlagImg(tour.country)} ${escapeHtml(t(tour.country))}
                         </small>
                     </div>
-                    <div>${statusBadge}${planningButton}</div>
+                    <div${championsButton || financeButton ? ' class="calendar-event-actions"' : ''}>${statusBadge}${planningButton}${championsButton}${financeButton}</div>
                 </div>`;
             });
             list.innerHTML = calendarHtml;
@@ -995,6 +1007,7 @@ function showScreen(screenId) {
                 // Nowe podsumowania World Cup zawierają pełną fazę grupową i pucharową.
                 // Dla starych zapisów bez tego szczegółowego logu zostawiamy krótki komunikat o mistrzu.
                 document.getElementById('results-content').innerHTML = historyHtml;
+                if (typeof updateTournamentFinanceResults === 'function') updateTournamentFinanceResults(tour);
                 document.getElementById('t-btn-next-round').style.display = 'none';
                 const simulateTournamentButton = document.getElementById('t-btn-sim-tournament-results');
                 if (simulateTournamentButton) simulateTournamentButton.style.display = 'none';

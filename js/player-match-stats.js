@@ -8,7 +8,7 @@ const PLAYER_MATCH_STATS_TEXT = {
         recorded: 'Zarejestrowane mecze: {count} · od {date}', coverage: 'Dane z {count}/{total} meczów',
         estimatedCoverage: 'W tym szacowane: {count}',
         averageNote: 'Średnia sezonu to średnia arytmetyczna średnich meczowych. Mecze liczone lotka po lotce dostarczają dokładnych danych o podwójnych i 180. Szybka symulacja szacuje je z umiejętności, średniej i liczby legów. Znak ≈ oznacza wynik zawierający szacunki.',
-        scope: 'Tylko oficjalne mecze singlowe. Starsze, niezarejestrowane mecze nie są uzupełniane. Te statystyki nie zmieniają OVR.',
+        scope: 'Tylko oficjalne mecze singlowe. Starsze, niezarejestrowane mecze nie są uzupełniane. Nowe wyniki służą też do rocznej aktualizacji OVR AI względem siły rywali; średnie i szacowane statystyki nie przyznają dodatkowego OVR.',
         empty: 'Statystyki pojawią się po pierwszym zarejestrowanym meczu.', noRecent: 'Brak zarejestrowanych meczów.',
         recentNote: 'Od najnowszego, również z poprzedniego sezonu.', noData: 'Brak danych', noAttempts: 'Bez prób na podwójnej',
         recentBalance: '{wins} wygranych · {losses} przegranych', matchAverage: 'Śr. {average}'
@@ -20,7 +20,7 @@ const PLAYER_MATCH_STATS_TEXT = {
         recorded: 'Recorded matches: {count} · since {date}', coverage: 'Data from {count}/{total} matches',
         estimatedCoverage: 'Including estimated: {count}',
         averageNote: 'The season average is the arithmetic mean of match averages. Dart-by-dart matches provide exact checkout and 180 data. Quick simulation estimates them from skills, averages and legs played. The ≈ sign marks totals containing estimates.',
-        scope: 'Official singles matches only. Older, unrecorded matches are not reconstructed. These statistics do not change OVR.',
+        scope: 'Official singles matches only. Older, unrecorded matches are not reconstructed. New results also inform annual AI OVR updates relative to opponent strength; averages and estimated statistics do not award extra OVR.',
         empty: 'Statistics will appear after the first recorded match.', noRecent: 'No recorded matches.',
         recentNote: 'Newest first, including the previous season.', noData: 'No data', noAttempts: 'No checkout attempts',
         recentBalance: '{wins} wins · {losses} losses', matchAverage: 'Avg. {average}'
@@ -32,7 +32,7 @@ const PLAYER_MATCH_STATS_TEXT = {
         recorded: 'Erfasste Spiele: {count} · seit {date}', coverage: 'Daten aus {count}/{total} Spielen',
         estimatedCoverage: 'Davon geschätzt: {count}',
         averageNote: 'Der Saisonschnitt ist das arithmetische Mittel der Spieldurchschnitte. Einzeln berechnete Würfe liefern genaue Doppel- und 180er-Daten. Die schnelle Simulation schätzt sie anhand von Fähigkeiten, Schnitt und gespielten Legs. ≈ kennzeichnet Werte mit Schätzungen.',
-        scope: 'Nur offizielle Einzelspiele. Ältere, nicht erfasste Spiele werden nicht nachgebildet. Diese Statistiken ändern den OVR nicht.',
+        scope: 'Nur offizielle Einzelspiele. Ältere, nicht erfasste Spiele werden nicht nachgebildet. Neue Ergebnisse fließen relativ zur Gegnerstärke in die jährliche KI-OVR-Anpassung ein; Durchschnitte und geschätzte Statistiken vergeben keine zusätzlichen OVR-Punkte.',
         empty: 'Statistiken erscheinen nach dem ersten erfassten Spiel.', noRecent: 'Keine erfassten Spiele.',
         recentNote: 'Neueste zuerst, einschließlich der vorherigen Saison.', noData: 'Keine Daten', noAttempts: 'Keine Doppelversuche',
         recentBalance: '{wins} Siege · {losses} Niederlagen', matchAverage: 'Schnitt {average}'
@@ -44,7 +44,7 @@ const PLAYER_MATCH_STATS_TEXT = {
         recorded: 'Vastgelegde wedstrijden: {count} · sinds {date}', coverage: 'Gegevens uit {count}/{total} wedstrijden',
         estimatedCoverage: 'Waarvan geschat: {count}',
         averageNote: 'Het seizoensgemiddelde is het rekenkundige gemiddelde van de wedstrijdgemiddelden. Wedstrijden per dart leveren exacte checkout- en 180-gegevens. Snelle simulatie schat ze op basis van vaardigheden, gemiddelden en gespeelde legs. ≈ markeert waarden met schattingen.',
-        scope: 'Alleen officiële enkelwedstrijden. Oudere, niet vastgelegde wedstrijden worden niet gereconstrueerd. Deze statistieken veranderen de OVR niet.',
+        scope: 'Alleen officiële enkelwedstrijden. Oudere, niet vastgelegde wedstrijden worden niet gereconstrueerd. Nieuwe uitslagen tellen ten opzichte van de tegenstandersterkte mee voor de jaarlijkse AI-OVR-aanpassing; gemiddelden en geschatte statistieken leveren geen extra OVR op.',
         empty: 'Statistieken verschijnen na de eerste vastgelegde wedstrijd.', noRecent: 'Geen vastgelegde wedstrijden.',
         recentNote: 'Nieuwste eerst, inclusief het vorige seizoen.', noData: 'Geen gegevens', noAttempts: 'Geen checkoutpogingen',
         recentBalance: '{wins} gewonnen · {losses} verloren', matchAverage: 'Gem. {average}'
@@ -160,6 +160,7 @@ function recordPlayerMatchStats(p1, p2, result, options = {}) {
     const key = JSON.stringify([getCurrentSeasonYear(), tournament.sourceName || tournament.name,
         tournament.month, tournament.day, phase, [getPlayerMatchStatsKey(p1), getPlayerMatchStatsKey(p2)].sort()]);
     const format = options.format || {};
+    if (typeof initializeCareerRecords === 'function') initializeCareerRecords();
     let recorded = false;
     [[p1, p2, score1, score2, result.p1Avg, result.p1Stats], [p2, p1, score2, score1, result.p2Avg, result.p2Stats]]
         .forEach(([candidate, opponent, scoreFor, scoreAgainst, matchAverage, detail]) => {
@@ -170,6 +171,10 @@ function recordPlayerMatchStats(p1, p2, result, options = {}) {
             const oneEighties = getOptionalMatchStat(detail?.oneEighties);
             const won = scoreFor > scoreAgainst;
             stats.recordedKeys.push(key);
+            if (typeof recordAiDevelopmentMatch === 'function') {
+                recordAiDevelopmentMatch(candidate, opponent, won, tournament, format,
+                    options.round ?? (typeof tournamentRound !== 'undefined' ? tournamentRound : null));
+            }
             if (typeof awardOfficialMatchTraitXP === 'function') {
                 const totalLegs = Number.isFinite(result.totalLegsPlayed) ? result.totalLegsPlayed
                     : (Number.isFinite(result.p1LegsWon) && Number.isFinite(result.p2LegsWon)
@@ -197,6 +202,9 @@ function recordPlayerMatchStats(p1, p2, result, options = {}) {
             }, ...getRecentPlayerMatches(candidate)].slice(0, 10);
             recorded = true;
         });
+    if (recorded && typeof recordCareerHeadToHead === 'function') {
+        recordCareerHeadToHead(p1, p2, score1, score2, key);
+    }
     if (recorded && typeof recordWorldNewsMatch === 'function') {
         recordWorldNewsMatch(p1, p2, { ...result, p1Score: score1, p2Score: score2 }, { ...options, tournament }, key);
     }

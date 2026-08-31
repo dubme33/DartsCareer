@@ -228,7 +228,7 @@ function refreshPlayerStaffTranslations() {
         'player-staff-rules-title': 'rulesTitle', 'player-staff-rules': 'rules', 'player-staff-back': 'back' };
     for (const [id, key] of Object.entries(ids)) {
         const node = document.getElementById(id);
-        if (node) node.textContent = (key === 'title' ? '🤝 ' : '') + trPlayerStaff(key);
+        if (node) node.textContent = (key === 'title' ? '🧑‍🏫 ' : '') + trPlayerStaff(key);
     }
     const filter = document.getElementById('player-staff-filter');
     if (filter) {

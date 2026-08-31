@@ -13,7 +13,7 @@
 .planning-status p { margin: 8px 0 0; color: #e1e7ec; line-height: 1.5; }
 .planning-in, .planning-confirmed { border-color: #42be80; }
 .planning-in > strong, .planning-confirmed > strong { color: #72dea7; }
-.planning-pending { border-color: #f1c40f; }
+.planning-pending, .planning-reserve { border-color: #f1c40f; }
 .planning-out { border-color: #e6897c; }
 .planning-out > strong { color: #ffaaa0; }
 .planning-field-count { font-size: 16px; }

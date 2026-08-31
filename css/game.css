@@ -74,6 +74,45 @@
         .menu-tile h3 { border: none; margin: 0 0 10px 0; color: white; font-size: 18px;}
         .menu-tile p { margin: 0; color: #bdc3c7; font-size: 13px; }
 
+        /* Career sections keep their colour when hovered or translated. */
+        #screen-hub .menu-tile {
+            background-image: linear-gradient(145deg, rgba(255,255,255,.07), rgba(0,0,0,.08));
+            transition: transform .2s, box-shadow .2s, filter .2s;
+        }
+        #screen-hub .hub-feature-tile {
+            background-color: var(--tile-bg);
+            border-color: var(--tile-accent);
+            color: #fff;
+            font: inherit;
+        }
+        #screen-hub .hub-feature-tile p { color: #e0e9f5; line-height: 1.4; }
+        #screen-hub .menu-tile h3 { line-height: 1.35; }
+        #screen-hub .menu-tile:hover {
+            filter: brightness(1.12);
+            box-shadow: 0 6px 16px rgba(0,0,0,.2);
+        }
+        #screen-hub .menu-tile:focus-visible {
+            outline: 3px solid #f1c40f;
+            outline-offset: 4px;
+        }
+        #screen-hub .hub-tile-training { --tile-bg: #14554c; --tile-accent: #249989; }
+        #screen-hub .player-staff-tile { --tile-bg: #32467c; --tile-accent: #5d79bd; }
+        #screen-hub .career-infrastructure-tile { --tile-bg: #175779; --tile-accent: #3b91bd; }
+        #screen-hub .career-lifestyle-tile { --tile-bg: #794c2d; --tile-accent: #bd864f; }
+        #screen-hub .hub-tile-match { --tile-bg: #713543; --tile-accent: #bf647d; }
+        #screen-hub .hub-tile-mail { --tile-bg: #235f69; --tile-accent: #46a0ad; }
+        #screen-hub .world-news-tile { --tile-bg: #355278; --tile-accent: #638bbc; }
+        #screen-hub .season-archive-tile { --tile-bg: #55517c; --tile-accent: #928ac1; }
+        #screen-hub .hub-tile-calendar { --tile-bg: #356342; --tile-accent: #68a975; }
+        #screen-hub .hub-tile-players { --tile-bg: #314582; --tile-accent: #667ed0; }
+        #screen-hub .planning-menu-tile { --tile-bg: #4b5979; --tile-accent: #8399c5; }
+        #screen-hub .hub-tile-shop { --tile-bg: #794566; --tile-accent: #b6739d; }
+
+        @media (prefers-reduced-motion: reduce) {
+            #screen-hub .menu-tile { transition: none; }
+            #screen-hub .menu-tile:hover { transform: none; }
+        }
+
         /* Kronika kariery */
         .career-timeline { max-width: 820px; margin: 25px auto 0; }
         .career-entry { position: relative; margin-left: 14px; padding: 0 0 22px 28px; border-left: 2px solid #2c3e50; }
@@ -645,6 +684,8 @@
         .profile-career-titles li:last-child { border-bottom: 0; }
         .profile-career-titles li > span { min-width: 0; overflow-wrap: anywhere; }
         .profile-career-titles li > strong { flex: 0 0 auto; color: var(--accent-green); font-size: 13px; }
+        .profile-career-titles time { color: var(--accent-green); font-weight: bold; white-space: nowrap; }
+        .profile-career-title-unknown { color: #bdc3c7; font-size: 11px; }
         .profile-career-titles .profile-career-titles-empty {
             justify-content: center;
             padding: 25px 5px;
@@ -723,6 +764,7 @@
             min-height: 44px;
             padding: 6px 0;
         }
+        .supporter-x-link,
         .supporter-youtube-link {
             display: inline-flex;
             align-items: center;
@@ -739,6 +781,9 @@
             text-decoration: none;
         }
         .supporter-youtube-link:hover { background: #a80000; }
+        .supporter-x-link { background: #0f1419; }
+        .supporter-x-link:hover { background: #273340; }
+        .supporter-x-link:focus-visible,
         .supporter-youtube-link:focus-visible {
             outline: 3px solid #f1c40f;
             outline-offset: 4px;

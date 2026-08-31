@@ -127,12 +127,9 @@ const checkoutGuide = {
                     decidingSetSuddenDeathAt: 5
                 };
             }
-            if (name.includes("World Matchplay") || name.includes("Matchplay")) {
-                if (round === 32) return { type: 'legs', legsToWin: 10, winByTwo: true, suddenDeathAt: 12 };
-                if (round === 16) return { type: 'legs', legsToWin: 11 };
-                if (round === 8) return { type: 'legs', legsToWin: 16 };
-                if (round === 4) return { type: 'legs', legsToWin: 17 };
-                return { type: 'legs', legsToWin: 18 };
+            if (/matchplay/i.test(`${name} ${tournament?.sourceName || ''}`)) {
+                const legsToWin = round === 32 ? 10 : round === 16 ? 11 : round === 8 ? 16 : round === 4 ? 17 : 18;
+                return { type: 'legs', legsToWin, winByTwo: true, suddenDeathAt: legsToWin + 2 };
             }
             if (name.includes("Grand Prix")) {
                 // World Grand Prix: all legs are best of five under the tournament's DIDO rules.
@@ -194,7 +191,10 @@ const checkoutGuide = {
 
             if (match.matchFormat && match.matchFormat.winByTwo) {
                 const legDifference = Math.abs(match.p1Legs - match.p2Legs);
-                return (match.p1Legs >= match.legsToWin || match.p2Legs >= match.legsToWin) && legDifference >= 2;
+                const suddenDeathWon = match.matchFormat.suddenDeathAt > 0 && legDifference === 1
+                    && Math.min(match.p1Legs, match.p2Legs) === match.matchFormat.suddenDeathAt;
+                return (match.p1Legs >= match.legsToWin || match.p2Legs >= match.legsToWin)
+                    && (legDifference >= 2 || suddenDeathWon);
             }
 
             return match.p1Legs >= match.legsToWin || match.p2Legs >= match.legsToWin;

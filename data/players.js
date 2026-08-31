@@ -417,7 +417,9 @@ const playerRatingUpdates = [
     ['Luke Woodhome', 'Luke Woodhouse', 86, 84, 0, 0],
     ['Marten Lukeboy', 'Martin Lukeman', 79, 75, 0, 0],
     ['Andreas Harrison', 'Andreas Harrysson', 71, 69, 1, -1],
-    ['Alexis Toylen', 'Alexis Toylo', 71, 68, 1, -1]
+    ['Alexis Toylen', 'Alexis Toylo', 71, 68, 1, -1],
+    ["Will O'Conner", "William O'Connor", 79, 83, 1, -1],
+    ['Tom Sikes', 'Tom Sykes', 65, 73, 1, -1]
 ];
 
 function normalizePlayerRatingName(value) {

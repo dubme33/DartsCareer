@@ -172,6 +172,12 @@ function completeGrandSlamGroupStage() {
     const knockoutParticipants = GRAND_SLAM_KNOCKOUT_SEED_ORDER.map(seed => winnersBySeed.get(seed));
     if (knockoutParticipants.some(candidate => !candidate)) return null;
 
+    if (typeof recordTournamentFinanceResult === 'function'
+        && grandSlamState.groups.some(group => group.members.some(isCurrentPlayer))
+        && !knockoutParticipants.some(isCurrentPlayer)) {
+        recordTournamentFinanceResult(player, activeTournament, { round: 48, prizeMoney: 0, stage: 'groupExit' });
+    }
+
     grandSlamState.phase = 'knockout';
     grandSlamState.knockoutParticipantKeys = knockoutParticipants.map(candidate => candidate.id || `${candidate.name}|${candidate.country}`);
     tournamentBracket = knockoutParticipants;

@@ -201,6 +201,8 @@ function renderTournamentMatchHistory(history, { currentRoundOnly = false } = {}
 
 function finalizeTournamentMatchHistory(tournament, fallbackHtml = typeof lastTournamentResults === 'string' ? lastTournamentResults : '') {
     if (!tournament) return false;
+    if (typeof finishTournamentFinances === 'function') finishTournamentFinances(tournament);
+    if (typeof updateTournamentFinanceResults === 'function') updateTournamentFinanceResults(tournament);
     if (hasTournamentMatchHistory(tournamentMatchHistory)) {
         tournament.matchHistory = tournamentMatchHistory;
         tournament.historyLogs = '';
@@ -231,6 +233,7 @@ function restoreActiveTournamentMatchHistory(savedHistory, fallbackLastHtml = ''
 }
 
 function showRoundResults() {
+            if (typeof updateTournamentFinanceResults === 'function') updateTournamentFinanceResults(activeTournament);
             document.getElementById('t-tour-end-title').innerText = t('t-round-results');
             document.getElementById('results-content').innerHTML = currentRoundHTML;
             document.getElementById('t-btn-next-round').style.display = 'block';
@@ -247,6 +250,7 @@ function showRoundResults() {
         }
 
         function showTournamentEnd() {
+            if (typeof updateTournamentFinanceResults === 'function') updateTournamentFinanceResults(activeTournament || tournamentFinanceResultsEvent);
             document.getElementById('t-tour-end-title').innerText = t('t-tour-end-title');
             document.getElementById('results-content').innerHTML = lastTournamentResults;
             document.getElementById('t-btn-next-round').style.display = 'none';
@@ -259,6 +263,7 @@ function showRoundResults() {
         function showCompletedTournamentResults(tournament) {
             const historyHtml = getCompletedTournamentHistoryHtml(tournament);
             if (!historyHtml) return false;
+            if (typeof updateTournamentFinanceResults === 'function') updateTournamentFinanceResults(tournament);
             document.getElementById('t-tour-end-title').innerText = t('t-tour-end-title');
             document.getElementById('results-content').innerHTML = historyHtml;
             document.getElementById('t-btn-next-round').style.display = 'none';

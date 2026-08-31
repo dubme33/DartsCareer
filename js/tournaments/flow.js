@@ -301,7 +301,7 @@ function skipActiveTournament() {
                     ? CONTINENTAL_QUALIFICATION_VERSION
                     : 2;
             } else if (isContinentalMainEvent) {
-                const continentalField = getContinentalTourMainField(activeTournament);
+                const continentalField = prepareContinentalTourWithdrawals(activeTournament, { skipCareerPlayer: isSkippingTournament });
                 participants = continentalField
                     ? [...continentalField.oomPlayers, ...continentalField.proTourPlayers, ...continentalField.qualifiedPlayers]
                     : [];
@@ -359,6 +359,10 @@ function skipActiveTournament() {
             } else if (isTourCardQualifierEvent && !playerInTournament) {
                 // Brak karty albo bezpośrednia kwalifikacja wyłącza gracza z tego
                 // turnieju; wyniki pozostałych posiadaczy kart liczymy w tle.
+                isHeadlessSim = true;
+            } else if (isContinentalQualifier && !playerInTournament) {
+                // Dotyczy zarówno kwalifikacji dla posiadaczy kart, jak i ścieżek
+                // regionalnych. Pełna symulacja zachowuje wyniki i rezerwowych.
                 isHeadlessSim = true;
             } else if (!playerInTournament) {
                 // Jeśli gracz się nie zakwalifikował, tylko o tym informujemy, 
@@ -693,10 +697,10 @@ function skipActiveTournament() {
                 // Wypłaty za miejsca 5-8 po finałach Play-offs!
                 if (activeTournament.name.includes("Play-offs")) {
                     let sortedGDL = [...gdlTable].sort((a,b) => b.points - a.points || (b.legsWon - b.legsLost) - (a.legsWon - a.legsLost));
-                    if(sortedGDL[4]) awardPrizeMoney(sortedGDL[4].player, 95000, activeTournament.name);
-                    if(sortedGDL[5]) awardPrizeMoney(sortedGDL[5].player, 90000, activeTournament.name);
-                    if(sortedGDL[6]) awardPrizeMoney(sortedGDL[6].player, 85000, activeTournament.name);
-                    if(sortedGDL[7]) awardPrizeMoney(sortedGDL[7].player, 80000, activeTournament.name);
+                    Object.entries(GLOBAL_LEAGUE_PLACEMENT_PRIZES).forEach(([position, amount]) => {
+                        const row = sortedGDL[Number(position) - 1];
+                        if (row) awardPrizeMoney(row.player, amount, activeTournament.name);
+                    });
                 }
 
                 alert(t('t-alert-tour-sim-end').replace('{tour}', activeTournament.name).replace('{winner}', winner.name));
@@ -1054,6 +1058,9 @@ function skipActiveTournament() {
                     }
                 }
 
+                if (isContinentalQualifier && typeof recordContinentalQualifierFinalLoser === 'function') {
+                    recordContinentalQualifierFinalLoser(activeTournament, loser, tournamentRound);
+                }
                 if (!isNonPrizeQualifier) {
                     recordSeasonTournamentResult(loser, activeTournament, { round: tournamentRound, prizeMoney: prize });
                 }

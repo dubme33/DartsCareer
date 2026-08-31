@@ -22,15 +22,17 @@
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://dartscareer.pl">
     <link rel="icon" type="image/png" href="favicon.png">
-    <link rel="stylesheet" href="css/game.css?v=1.3.5&stats=1&goals=1">
-    <link rel="stylesheet" href="css/world-news.css?v=1.3.5&news=1">
-    <link rel="stylesheet" href="css/season-archive.css?v=1.3.5&archive=1">
-    <link rel="stylesheet" href="css/player-staff.css?v=1.3.5&staff=1&mental=1">
-    <link rel="stylesheet" href="css/player-traits.css?v=1.3.5&traits=2&mental=1">
-    <link rel="stylesheet" href="css/career-infrastructure.css?v=1.3.5&infrastructure=1">
-    <link rel="stylesheet" href="css/career-lifestyle.css?v=1.3.5&lifestyle=2">
-    <link rel="stylesheet" href="css/equipment-wear.css?v=1.3.5&equipment-wear=1">
-    <link rel="stylesheet" href="css/career-planning.css?v=1.3.5&fix=planning-2">
+    <link rel="stylesheet" href="css/game.css?v=1.3.6&stats=1&goals=1&titles=2&tiles=1&supporters=2">
+    <link rel="stylesheet" href="css/world-news.css?v=1.3.6&news=1">
+    <link rel="stylesheet" href="css/season-archive.css?v=1.3.6&archive=1">
+    <link rel="stylesheet" href="css/career-records.css?v=1.3.6&records=1">
+    <link rel="stylesheet" href="css/tournament-finance.css?v=1.3.6&finance=1">
+    <link rel="stylesheet" href="css/player-staff.css?v=1.3.6&staff=1&mental=1">
+    <link rel="stylesheet" href="css/player-traits.css?v=1.3.6&traits=2&mental=1">
+    <link rel="stylesheet" href="css/career-infrastructure.css?v=1.3.6&infrastructure=1">
+    <link rel="stylesheet" href="css/career-lifestyle.css?v=1.3.6&lifestyle=2">
+    <link rel="stylesheet" href="css/equipment-wear.css?v=1.3.6&equipment-wear=1">
+    <link rel="stylesheet" href="css/career-planning.css?v=1.3.6&fix=planning-2&et-reserves=1">
 </head>
 <body>
     <header>
@@ -69,6 +71,82 @@
         <!-- LEWA STRONA: CHANGELOG (Zawsze po angielsku) -->
         <div class="changelog-box">
             <h3>📢 What's New / Changelog</h3>
+
+            <!-- UPDATE V1.3.6 -->
+            <div class="changelog-version-badge">v1.3.6 · Smarter AI &amp; European Tour Update</div>
+
+            <div class="changelog-grid">
+                <div class="cl-item">
+                    <span class="cl-tag tweak">AI Development</span>
+                    <span class="cl-title">📈 Results-Based AI Season Development</span>
+                    <p class="cl-desc">Year-end AI rating changes now depend mainly on results compared with expectations for the player's rating, opponents and match format. Exceptional or disappointing seasons can produce changes of up to 10 OVR with enough recorded matches, including declines for younger players. Growth slows at elite ratings to limit inflation above 90. Existing careers start collecting the new data without inventing past results; career-player training is unchanged.</p>
+                </div>
+                <div class="cl-item">
+                    <span class="cl-tag feature">AI Scoring</span>
+                    <span class="cl-title">🎯 Smarter AI Scoring Switches</span>
+                    <p class="cl-desc">During a scoring visit, a dart can make the AI treat a treble as obstructed and switch from T20 to T19, then T18 or T17 when needed. Checkout routes and useful setup shots remain protected, and obstructions reset for the next visit. Available in played and watched matches, including fast-simulated AI turns, without making every visit follow the same pattern.</p>
+                </div>
+                <div class="cl-item">
+                    <span class="cl-tag feature">European Tour</span>
+                    <span class="cl-title">🎟️ European Tour Withdrawals &amp; Reserve List</span>
+                    <p class="cl-desc">Leading AI players can withdraw before a European Tour draw. Losing finalists from the Tour Card Holder Qualifier form a reserve list ordered by the main Order of Merit. Replacements inherit the withdrawn player's place, including a seeded start in round two. Qualification previews show reserves and replacements, and an inbox message confirms when your player receives a place.</p>
+                </div>
+                <div class="cl-item">
+                    <span class="cl-tag tweak">Qualification</span>
+                    <span class="cl-title">⏩ Automatic European Tour Qualifiers</span>
+                    <p class="cl-desc">European Tour qualifiers now complete automatically when your player is not in the field, covering Tour Card Holder and regional routes. The game records real match results and builds the reserve list without requiring you to open each new draw or pay travel costs for an event you do not enter.</p>
+                </div>
+                <div class="cl-item">
+                    <span class="cl-tag tweak">Travel Costs</span>
+                    <span class="cl-title">✈️ Cheaper European Tour Qualifier Travel</span>
+                    <p class="cl-desc">Paid travel to European Tour qualifiers is now roughly half the price of travel to the main event: comfort costs £900 and premium £3,000. Economy remains free, and the stamina and preparation benefits are unchanged. The discount covers every qualification route, with or without a mod.</p>
+                </div>
+                <div class="cl-item">
+                    <span class="cl-tag fix">World Matchplay</span>
+                    <span class="cl-title">⚔️ World Matchplay Tie-Breaks in Every Round</span>
+                    <p class="cl-desc">Every round now requires a two-leg winning margin until sudden death, rather than applying the rule only in round one. Sudden death starts at 12–12 in round one, 13–13 in round two, 18–18 in the quarter-finals, 19–19 in the semi-finals and 20–20 in the final. Played, watched and simulated matches use the same thresholds and correctly record the deciding result.</p>
+                </div>
+                <div class="cl-item">
+                    <span class="cl-tag tweak">Player Database</span>
+                    <span class="cl-title">📊 William O'Connor &amp; Tom Sykes Rating Update</span>
+                    <p class="cl-desc">William O'Connor's base rating is now 83 OVR and Tom Sykes' is 73 OVR. The corrections work with both the default database names and modded names, while preserving development already earned in saved careers.</p>
+                </div>
+                <div class="cl-item">
+                    <span class="cl-tag tweak">Player Profiles</span>
+                    <span class="cl-title">🏆 Clearer Career Trophy History</span>
+                    <p class="cl-desc">Players Championship and European Tour titles are grouped into series totals, such as Players Championship ×12. Major titles show the tournament name and year of victory instead of merging different editions. Existing trophy totals are retained, while unknown historical years are not guessed.</p>
+                </div>
+                <div class="cl-item">
+                    <span class="cl-tag feature">Career Records</span>
+                    <span class="cl-title">👑 Tournament Champions by Edition</span>
+                    <p class="cl-desc">Browse tournament winners across your career, see the defending or last recorded champion and find the players with the most titles in recorded history. Confirmed editions remain available across season changes; older saves recover only results with a known year.</p>
+                </div>
+                <div class="cl-item">
+                    <span class="cl-tag feature">Player Comparison</span>
+                    <span class="cl-title">🆚 Player Comparison &amp; Head-to-Head</span>
+                    <p class="cl-desc">Compare two players' ratings, season statistics, career titles and recent form side by side. Their official singles head-to-head record persists across seasons. Estimated statistics and incomplete historical coverage are clearly marked.</p>
+                </div>
+                <div class="cl-item">
+                    <span class="cl-tag feature">Tournament Finances</span>
+                    <span class="cl-title">💷 Tournament Prize Tables &amp; Financial Statements</span>
+                    <p class="cl-desc">View prize money by finishing position and see which rankings receive it. Your tournament statement tracks actual prizes, attributable cash bonuses and travel charges to show the event balance. Monthly sponsor income, staff salaries and base upkeep are not allocated to individual events; missing amounts in older saves remain marked as unknown.</p>
+                </div>
+                <div class="cl-item">
+                    <span class="cl-tag fix">Prize Money</span>
+                    <span class="cl-title">🌍 Correct World Series Finals Prize Money</span>
+                    <p class="cl-desc">The World Series of Darts Finals now uses its own prize table, with £100,000 for the champion instead of the £30,000 paid for winning a regular World Series event. Regular series events keep their separate payouts.</p>
+                </div>
+                <div class="cl-item">
+                    <span class="cl-tag tweak">Career Hub</span>
+                    <span class="cl-title">🎨 Colourful Career Hub &amp; Unique Icons</span>
+                    <p class="cl-desc">Career menu tiles now use distinct colours and unique emoji icons, making training, travel, staff, records and other screens easier to recognise without repeated symbols.</p>
+                </div>
+                <div class="cl-item">
+                    <span class="cl-tag feature">Community</span>
+                    <span class="cl-title">💖 Czy Seba Białecki wygrał mecz? Joins the Hall of Fame</span>
+                    <p class="cl-desc">Thank you to Czy Seba Białecki wygrał mecz? for supporting Darts Career.</p>
+                </div>
+            </div>
 
             <!-- UPDATE V1.3.5 -->
             <div class="changelog-version-badge">v1.3.5 · Career Expansion &amp; AI Balance</div>
@@ -990,49 +1068,50 @@
                 </div>
                 <button class="action-btn" id="t-btn-skip" onclick="skipActiveTournament()" style="margin-top: 0; background-color: #c0392b; border: 1px solid white; font-size: 13px; padding: 8px;">Odpuść (Symuluj w tle)</button>
                 <p id="tournament-travel-summary" hidden></p>
+                <button type="button" class="action-btn" id="finance-active-link" onclick="showTournamentFinance()">Nagrody / finanse</button>
                 <button type="button" class="action-btn" id="tournament-travel-button" hidden onclick="showCareerInfrastructure()">Zmień podróż</button>
             </div>
-            <div class="menu-tile" onclick="showTrainingScreen()">
+            <div class="menu-tile hub-feature-tile hub-tile-training" onclick="showTrainingScreen()">
                 <h3 id="t-tile-train">🎯 Baza Treningowa</h3>
                 <p id="t-desc-train">Rozwijaj swoje statystyki.</p>
             </div>
-            <button type="button" class="menu-tile player-staff-tile" onclick="showPlayerStaff()">
-                <h3 id="player-staff-tile-title">🤝 Sztab zawodnika</h3>
+            <button type="button" class="menu-tile hub-feature-tile player-staff-tile" onclick="showPlayerStaff()">
+                <h3 id="player-staff-tile-title">🧑‍🏫 Sztab zawodnika</h3>
                 <p id="player-staff-tile-desc">Trenerzy, regeneracja i finanse.</p>
             </button>
-            <button type="button" class="menu-tile career-infrastructure-tile" onclick="showCareerInfrastructure()">
-                <h3 id="career-infrastructure-tile-title">🏠 Baza i podróże</h3>
+            <button type="button" class="menu-tile hub-feature-tile career-infrastructure-tile" onclick="showCareerInfrastructure()">
+                <h3 id="career-infrastructure-tile-title">✈️ Baza i podróże</h3>
                 <p id="career-infrastructure-tile-desc">Przygotowanie 70/100 · brak własnej bazy</p>
             </button>
-            <button type="button" class="menu-tile career-lifestyle-tile" onclick="showCareerLifestyle()">
+            <button type="button" class="menu-tile hub-feature-tile career-lifestyle-tile" onclick="showCareerLifestyle()">
                 <h3 id="career-lifestyle-tile-title">🏡 Dom i personalizacja</h3>
                 <p id="career-lifestyle-tile-desc">Wynajęte mieszkanie · kolekcja £0</p>
             </button>
-            <div class="menu-tile" onclick="showOpponentSelection()">
+            <div class="menu-tile hub-feature-tile hub-tile-match" onclick="showOpponentSelection()">
                 <h3 id="t-tile-play">⚔️ Graj Mecz</h3>
                 <p id="t-desc-play">Zmierz się z graczami Pro Ligi.</p>
             </div>
-            <div class="menu-tile" onclick="showMailbox()">
+            <div class="menu-tile hub-feature-tile hub-tile-mail" onclick="showMailbox()">
                 <h3 style="margin-bottom:10px;"><span id="t-mail-title">📬 Skrzynka E-mail</span> <span id="mail-badge" class="badge" style="display:none;">0</span></h3>
                 <p id="t-mail-desc">Wiadomości i zaproszenia.</p>
             </div>
-            <button type="button" class="menu-tile world-news-tile" onclick="showWorldNews()">
+            <button type="button" class="menu-tile hub-feature-tile world-news-tile" onclick="showWorldNews()">
                 <h3><span id="world-news-tile-title">📰 Ze świata darta</span> <span id="world-news-badge" class="badge" style="display:none;">0</span></h3>
                 <p id="world-news-tile-desc">Wyniki, sensacje i bohaterowie sezonu.</p>
             </button>
-            <button type="button" class="menu-tile season-archive-tile" onclick="showSeasonArchive()">
+            <button type="button" class="menu-tile hub-feature-tile season-archive-tile" onclick="showSeasonArchive()">
                 <h3 id="season-archive-tile-title">⏳ Archiwum sezonów</h3>
                 <p id="season-archive-tile-desc">Porównaj lata, rozwój i nagrody roczne.</p>
             </button>
-            <div class="menu-tile" onclick="showCalendar()">
+            <div class="menu-tile hub-feature-tile hub-tile-calendar" onclick="showCalendar()">
                 <h3 id="t-cal-title">📅 Kalendarz</h3>
                 <p id="t-cal-desc">Nadchodzące turnieje.</p>
             </div>
-            <div class="menu-tile" onclick="showPdcRankings()">
-                <h3 id="t-tile-pdc">🏆 Baza Graczy</h3>
+            <div class="menu-tile hub-feature-tile hub-tile-players" onclick="showPdcRankings()">
+                <h3 id="t-tile-pdc">👥 Baza Graczy</h3>
                 <p id="t-desc-pdc">Ranking światowy.</p>
             </div>
-            <button type="button" class="menu-tile planning-menu-tile" onclick="showCareerPlanning()">
+            <button type="button" class="menu-tile hub-feature-tile planning-menu-tile" onclick="showCareerPlanning()">
                 <h3 id="planning-tile-title">📊 Kwalifikacje i OOM</h3>
                 <p id="planning-tile-desc">Sprawdź awans i pieniądze do obrony.</p>
             </button>
@@ -1044,8 +1123,8 @@
                 <h3 id="t-spo-title" style="color: white;">🤝 Sponsorzy</h3>
                 <p id="t-spo-desc" style="color: #ecf0f1;">Umowy i partnerzy techniczni.</p>
             </div>
-            <div class="menu-tile" onclick="showShopScreen()">
-                <h3 id="t-tile-home">🏠 Sklep ze sprzętem</h3>
+            <div class="menu-tile hub-feature-tile hub-tile-shop" onclick="showShopScreen()">
+                <h3 id="t-tile-home">🛒 Sklep ze sprzętem</h3>
                 <p id="t-desc-home">Kupuj bazę i sprawdzaj lotki.</p>
             </div>
             <div class="menu-tile" onclick="showTrophyRoom()" style="background-color: #f1c40f; border-color: #f39c12;">
@@ -1287,6 +1366,7 @@
   <!-- EKRAN 5: BAZA PDC -->
     <main id="screen-pdc" class="screen">
         <h2 id="t-pdc-header">Oficjalne Rankingi</h2>
+        <button id="comparison-ranking-link" class="action-btn records-shortcut" onclick="showPlayerComparison()">Porównaj zawodników</button>
         <button id="planning-ranking-link" class="action-btn planning-shortcut" onclick="showCareerPlanning('defence')">Pieniądze do obrony</button>
         <div style="display: flex; gap: 8px; margin-bottom: 15px; justify-content: center; flex-wrap: wrap;">
             <button id="btn-rank-main" class="action-btn green" style="flex: 1; min-width: 130px; font-size: 12px; padding: 10px; margin-top: 0;" onclick="showPdcRankings('main')">Główny Ranking</button>
@@ -1303,6 +1383,7 @@
     <!-- PROFIL ZAWODNIKA -->
     <main id="screen-player-profile" class="screen">
         <div id="player-profile-content"></div>
+        <button id="comparison-profile-link" class="action-btn records-shortcut" onclick="showPlayerComparison(currentPlayerProfileId)">Porównaj zawodników</button>
         <button id="player-profile-back" class="action-btn" onclick="closePlayerProfile()">Wróć do rankingów</button>
     </main>
 
@@ -1327,6 +1408,7 @@
         <div class="modal-content" style="max-height: 80vh; overflow-y: auto;">
             <h3 id="t-tour-end-title" style="color: var(--accent-green); border-bottom: 2px solid var(--accent-green); padding-bottom: 10px;">Koniec Turnieju!</h3>
             <div id="results-content" style="text-align: left; margin-bottom: 15px;"></div>
+            <div id="tournament-finance-results" hidden></div>
             <!-- NOWE PRZYCISKI -->
             <button id="t-btn-next-round" class="action-btn green" onclick="proceedToNextRound()" style="display:none; margin-bottom: 10px;">Przejdź do następnej rundy</button>
             <button id="t-btn-sim-tournament-results" class="action-btn" onclick="simulateRemainingTournament()" style="display:none; margin-bottom: 10px; background-color:#8e44ad;">Symuluj cały turniej</button>
@@ -1381,9 +1463,26 @@
     <!-- EKRAN KALENDARZA -->
     <main id="screen-calendar" class="screen">
         <h2 id="t-cal-header">Kalendarz Sezonu</h2>
+        <button id="champions-calendar-link" class="action-btn records-shortcut" onclick="showTournamentChampions()">Historia mistrzów</button>
+        <button id="finance-calendar-link" class="action-btn records-shortcut" onclick="showTournamentFinance()">Nagrody / finanse</button>
         <button id="planning-calendar-link" class="action-btn planning-shortcut" onclick="showCareerPlanning()">Podgląd kwalifikacji</button>
         <div class="log-box" id="calendar-list" style="height: 350px;"></div>
         <button class="action-btn" id="t-back-cal" onclick="showScreen('screen-hub')">Wróć do Menu</button>
+    </main>
+
+    <main id="screen-tournament-champions" class="screen">
+        <div id="tournament-champions-content"></div>
+        <button id="champions-back" class="action-btn" onclick="showCalendar()">Wróć</button>
+    </main>
+
+    <main id="screen-tournament-finance" class="screen">
+        <div id="tournament-finance-content"></div>
+        <button id="finance-back" class="action-btn" onclick="closeTournamentFinance()">Wróć</button>
+    </main>
+
+    <main id="screen-player-comparison" class="screen">
+        <div id="player-comparison-content"></div>
+        <button id="comparison-back" class="action-btn" onclick="closePlayerComparison()">Wróć</button>
     </main>
 
     <main id="screen-planning" class="screen">
@@ -1421,7 +1520,7 @@
     </div>
 
     <main id="screen-player-staff" class="screen" aria-labelledby="player-staff-title">
-        <h2 id="player-staff-title">🤝 Sztab zawodnika</h2>
+        <h2 id="player-staff-title">🧑‍🏫 Sztab zawodnika</h2>
         <p id="player-staff-intro"></p>
         <div id="player-staff-summary" class="staff-summary"></div>
         <p id="player-staff-terms" class="staff-note"></p>
@@ -1488,7 +1587,7 @@
     
 <!-- EKRAN SKLEPU ZE SPRZĘTEM -->
     <main id="screen-shop" class="screen">
-        <h2 id="t-shop-header">🏠 Sklep i Twoja Baza Treningowa</h2>
+        <h2 id="t-shop-header">🛒 Sklep i Twoja Baza Treningowa</h2>
         
         <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; background: #1a1a2e; padding: 15px; border-radius: 10px; border: 1px solid var(--accent-green);">
             <h3 style="margin: 0; border: none; color: white;"><span id="t-shop-budg">Budżet:</span> <span id="shop-budget" style="color: #f1c40f;">£0</span></h3>
@@ -1598,6 +1697,15 @@
                         <span>YouTube</span>
                     </a>
                 </li>
+                <li class="supporter-entry">
+                    <span>⭐ Czy Seba Białecki wygrał mecz?</span>
+                    <a class="supporter-x-link" href="https://x.com/czysebawygral" target="_blank" rel="noopener noreferrer" aria-label="Czy Seba Białecki wygrał mecz? — X">
+                        <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                            <path d="M18.901 1.153h3.68l-8.04 9.19L24 22.846h-7.406l-5.8-7.584-6.64 7.584H.47l8.6-9.835L0 1.153h7.594l5.243 6.932 6.064-6.932zM17.61 20.644h2.039L6.486 3.24H4.298L17.61 20.644z" fill="currentColor" />
+                        </svg>
+                        <span>X</span>
+                    </a>
+                </li>
             </ul>
         </div>
 
@@ -1647,69 +1755,74 @@
     </main>
     <!-- STOPKA AUTORSKA -->
     <footer style="width: 100%; text-align: center; padding: 25px 15px; margin-top: auto; color: #7f8c8d; font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 2px;">
-        <div style="margin-bottom: 5px; color: #bdc3c7;">V. 1.3.5</div>
+        <div style="margin-bottom: 5px; color: #bdc3c7;">V. 1.3.6</div>
         powered by dubme<br>
         <a href="mailto:dartscareer@gmail.com" style="color: #bdc3c7; text-decoration: none; text-transform: lowercase; display: inline-block; margin-top: 5px;">dartscareer@gmail.com</a>
     </footer>
 
     <!-- SKRYPTY -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <script src="data/players.js?v=1.3.5&fix=player-ratings-2"></script>
+    <script src="data/players.js?v=1.3.6&fix=player-ratings-3"></script>
     <script src="data/order-of-merit-history.js"></script>
     <script src="data/order-of-merit-opening-2026.js"></script>
     <script src="data/player-birth-years.js"></script>
-    <script src="data/newgen-names.js?v=1.3.5"></script>
-    <script src="data/tournaments.js?v=1.3.5"></script>
+    <script src="data/newgen-names.js?v=1.3.6"></script>
+    <script src="data/tournaments.js?v=1.3.6"></script>
     <script src="data/achievements.js"></script>
     <script src="data/interviews.js"></script>
     <script src="data/random-events.js"></script>
-    <script src="js/core.js?v=1.3.5&fix=career-progress-1&ws-local=1&traits=1&ai-growth=1"></script>
-    <script src="js/player-traits.js?v=1.3.5&traits=1&mental=1&infrastructure=1"></script>
-    <script src="js/match/pressure.js?v=1.3.5&mental=1"></script>
-    <script src="js/european-tour.js?v=1.3.5"></script>
-    <script src="js/order-of-merit.js?v=1.3.5&fix=planning-1"></script>
-    <script src="js/tour-cards.js?v=1.3.5"></script>
-    <script src="js/world-championship-qualification.js?v=1.3.5"></script>
-    <script src="js/stamina.js?v=1.3.5&staff=1&traits=1&infrastructure=1"></script>
-    <script src="js/i18n.js?v=1.3.5&fix=planning-1&news=1&archive=1&staff=1&traits=1&infrastructure=1&lifestyle=1"></script>
-    <script src="js/player-lifecycle.js?v=1.3.5&fix=no-random-form-1&traits=1"></script>
-    <script src="js/career.js?v=1.3.5&fix=no-random-form-1&planning=1&goals=1&news=1&archive=1&staff=1&traits=1&infrastructure=1&lifestyle=1"></script>
-    <script src="js/player-profiles.js?v=1.3.5&stats=1&goals=1&news=1&traits=1&mental=1"></script>
-    <script src="js/player-match-stats.js?v=1.3.5&stats=2&goals=1&news=1&traits=1"></script>
-    <script src="js/tournaments/results.js?v=1.3.5"></script>
-    <script src="js/tournaments/rules.js?v=1.3.5&fix=planning-1"></script>
-    <script src="js/match/ai-strategy.js"></script>
-    <script src="js/match/intro.js?v=1.3.5&lifestyle=1"></script>
-    <script src="js/tournaments/rewards.js?v=1.3.5&archive=1"></script>
-    <script src="js/grand-slam.js?v=1.3.5"></script>
-    <script src="js/tournaments/flow.js?v=1.3.5&fix=et-season-1&planning=1&stats=2&ws-local=1&traits=1&mental=1&infrastructure=1"></script>
-    <script src="js/tournaments/fast-forward.js?v=1.3.5"></script>
-    <script src="js/tournaments/spectator.js?v=1.3.5&stats=1"></script>
-    <script src="js/world-cup.js?v=1.3.5&news=1&archive=1&mental=1&infrastructure=1"></script>
-    <script src="js/continental-qualification-v2.js?v=1.3.5&fix=et-season-1&planning=1"></script>
-    <script src="js/world-masters.js?v=1.3.5&fix=planning-1&ws-local=1"></script>
-    <script src="js/match/setup.js?v=1.3.5&stats=1&qualifier-loss=1"></script>
-    <script src="js/match/leg-flow.js?v=1.3.5"></script>
+    <script src="js/core.js?v=1.3.6&fix=career-progress-1&ws-local=1&traits=1&ai-growth=2"></script>
+    <script src="js/ai-development.js?v=1.3.6&ai-growth=2"></script>
+    <script src="js/player-traits.js?v=1.3.6&traits=1&mental=1&infrastructure=1"></script>
+    <script src="js/match/pressure.js?v=1.3.6&mental=1"></script>
+    <script src="js/european-tour.js?v=1.3.6"></script>
+    <script src="js/order-of-merit.js?v=1.3.6&fix=planning-1"></script>
+    <script src="js/tour-cards.js?v=1.3.6"></script>
+    <script src="js/world-championship-qualification.js?v=1.3.6"></script>
+    <script src="js/stamina.js?v=1.3.6&staff=1&traits=1&infrastructure=1"></script>
+    <script src="js/i18n.js?v=1.3.6&fix=planning-1&news=1&archive=1&staff=1&traits=1&infrastructure=1&lifestyle=1&tiles=1&records=1&finance=1"></script>
+    <script src="js/player-lifecycle.js?v=1.3.6&fix=no-random-form-1&traits=1&ai-growth=2"></script>
+    <script src="js/career.js?v=1.3.6&fix=no-random-form-1&planning=1&goals=1&news=1&archive=1&staff=1&traits=1&infrastructure=1&lifestyle=1&records=1&finance=1&et-auto=1&ai-growth=2"></script>
+    <script src="js/player-profiles.js?v=1.3.6&stats=1&goals=1&news=1&traits=1&mental=1&titles=2&records=1&finance=1"></script>
+    <script src="js/player-match-stats.js?v=1.3.6&stats=2&goals=1&news=1&traits=1&records=1&ai-growth=2"></script>
+    <script src="js/career-records.js?v=1.3.6&records=1"></script>
+    <script src="js/career-records-ui.js?v=1.3.6&records=1"></script>
+    <script src="js/tournament-finance.js?v=1.3.6&finance=1"></script>
+    <script src="js/tournament-finance-ui.js?v=1.3.6&finance=1"></script>
+    <script src="js/tournaments/results.js?v=1.3.6&finance=1"></script>
+    <script src="js/tournaments/rules.js?v=1.3.6&fix=planning-1&matchplay=1"></script>
+    <script src="js/match/ai-strategy.js?v=1.3.6&cover=1"></script>
+    <script src="js/match/intro.js?v=1.3.6&lifestyle=1"></script>
+    <script src="js/tournaments/rewards.js?v=1.3.6&archive=1&finance=1"></script>
+    <script src="js/grand-slam.js?v=1.3.6&finance=1"></script>
+    <script src="js/tournaments/flow.js?v=1.3.6&fix=et-season-1&planning=1&stats=2&ws-local=1&traits=1&mental=1&infrastructure=1&finance=1&et-reserves=1&et-auto=1"></script>
+    <script src="js/tournaments/fast-forward.js?v=1.3.6&finance=1"></script>
+    <script src="js/tournaments/spectator.js?v=1.3.6&stats=1"></script>
+    <script src="js/world-cup.js?v=1.3.6&news=1&archive=1&mental=1&infrastructure=1&records=1&finance=1"></script>
+    <script src="js/continental-qualification-v2.js?v=1.3.6&fix=et-season-1&planning=1&et-reserves=1"></script>
+    <script src="js/world-masters.js?v=1.3.6&fix=planning-1&ws-local=1&prizes=2"></script>
+    <script src="js/match/setup.js?v=1.3.6&stats=1&qualifier-loss=1&finance=1"></script>
+    <script src="js/match/leg-flow.js?v=1.3.6&finance=1&matchplay=1"></script>
     <script src="js/match/audio.js"></script>
-    <script src="js/match/turns.js?v=1.3.5&ws-local=1&traits=1&mental=1"></script>
-    <script src="js/match/board.js?v=1.3.5"></script>
-    <script src="js/storage.js?v=1.3.5"></script>
-    <script src="js/sponsor-goals.js?v=1.3.5&goals=1"></script>
-    <script src="js/world-news.js?v=1.3.5&news=1"></script>
-    <script src="js/season-archive.js?v=1.3.5&archive=1"></script>
-    <script src="js/season-archive-ui.js?v=1.3.5&archive=1"></script>
-    <script src="js/player-staff.js?v=1.3.5&staff=2&traits=1&mental=1"></script>
-    <script src="js/player-staff-ui.js?v=1.3.5&staff=2&traits=1&mental=1"></script>
-    <script src="js/player-traits-ui.js?v=1.3.5&traits=2&mental=1"></script>
-    <script src="js/career-infrastructure.js?v=1.3.5&infrastructure=3"></script>
-    <script src="js/career-infrastructure-ui.js?v=1.3.5&infrastructure=2"></script>
-    <script src="js/career-lifestyle.js?v=1.3.5&lifestyle=1"></script>
-    <script src="js/career-lifestyle-ui.js?v=1.3.5&lifestyle=1"></script>
-    <script src="js/equipment-wear.js?v=1.3.5&equipment-wear=1"></script>
-    <script src="js/systems.js?v=1.3.5&fix=career-progress-1&stats=1&ws-local=1&goals=1&news=1&archive=1&staff=1&traits=1&mental=1&infrastructure=1&lifestyle=1&equipment-wear=1"></script>
-    <script src="js/mod-media.js?v=1.3.5"></script>
-    <script src="js/extras.js?v=1.3.5&fix=no-random-form-1&goals=1&news=1&archive=1&traits=1&lifestyle=1"></script>
-    <script src="js/career-planning.js?v=1.3.5&fix=planning-2"></script>
+    <script src="js/match/turns.js?v=1.3.6&ws-local=1&traits=1&mental=1&cover=1"></script>
+    <script src="js/match/board.js?v=1.3.6"></script>
+    <script src="js/storage.js?v=1.3.6"></script>
+    <script src="js/sponsor-goals.js?v=1.3.6&goals=1"></script>
+    <script src="js/world-news.js?v=1.3.6&news=1"></script>
+    <script src="js/season-archive.js?v=1.3.6&archive=1"></script>
+    <script src="js/season-archive-ui.js?v=1.3.6&archive=1&tiles=1"></script>
+    <script src="js/player-staff.js?v=1.3.6&staff=2&traits=1&mental=1"></script>
+    <script src="js/player-staff-ui.js?v=1.3.6&staff=2&traits=1&mental=1&tiles=1"></script>
+    <script src="js/player-traits-ui.js?v=1.3.6&traits=2&mental=1"></script>
+    <script src="js/career-infrastructure.js?v=1.3.6&infrastructure=5&finance=1"></script>
+    <script src="js/career-infrastructure-ui.js?v=1.3.6&infrastructure=2&tiles=1"></script>
+    <script src="js/career-lifestyle.js?v=1.3.6&lifestyle=1"></script>
+    <script src="js/career-lifestyle-ui.js?v=1.3.6&lifestyle=1"></script>
+    <script src="js/equipment-wear.js?v=1.3.6&equipment-wear=1"></script>
+    <script src="js/systems.js?v=1.3.6&fix=career-progress-1&stats=1&ws-local=1&goals=1&news=1&archive=1&staff=1&traits=1&mental=1&infrastructure=1&lifestyle=1&equipment-wear=1&records=1&finance=1&et-reserves=1&matchplay=1&cover=1"></script>
+    <script src="js/mod-media.js?v=1.3.6"></script>
+    <script src="js/extras.js?v=1.3.6&fix=no-random-form-1&goals=1&news=1&archive=1&traits=1&lifestyle=1&finance=1"></script>
+    <script src="js/career-planning.js?v=1.3.6&fix=planning-2&et-reserves=1"></script>
 
 </body>
 </html>

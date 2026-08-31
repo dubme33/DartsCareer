@@ -30,7 +30,7 @@ function playerThrow() {
         }
 
         function aiTurn() {
-            if (!currentMatch || currentMatch.isFinishing || currentMatch.dartsThrown >= 3) return;
+            if (!currentMatch || currentMatch.isFinishing || currentMatch.isTurnLocked || currentMatch.dartsThrown >= 3) return;
             if (currentMatch.isSpectator && currentMatch.spectatorPaused) return;
             const isP1 = currentMatch.turn === 'p1';
             if (!isP1 && currentMatch.turn !== 'p2') return;
@@ -41,8 +41,9 @@ function playerThrow() {
             let isDIDO = activeTournament && activeTournament.format === 'DIDO';
             let dartsLeft = 3 - currentMatch.dartsThrown;
             
-            // AI używa teraz jednej, wspólnej logiki ze wszystkimi wyjątkami!
-            let aim = getOptimalAim(score, isDIDO, dartsLeft);
+            const scoringVisit = typeof getAiScoringVisit === 'function' ? getAiScoringVisit(currentMatch, isP1) : null;
+            let aim = scoringVisit ? getAiScoringAim(score, isDIDO, dartsLeft, scoringVisit)
+                : getOptimalAim(score, isDIDO, dartsLeft);
             
             const aiPlayer = currentMatch.isDoubles
                 ? getDoublesCurrentThrower(isP1)
@@ -72,6 +73,7 @@ function playerThrow() {
             if (typeof applyPlayerTraitsToMatchStats === 'function') aiStats = applyPlayerTraitsToMatchStats(aiPlayer, aiStats, isP1);
             if (typeof applyMentalPressureToStats === 'function') aiStats = applyMentalPressureToStats(aiPlayer, aiStats, isP1, aim, score);
             let result = calculateThrow(aim.sector, aim.mult, aiStats);
+            if (scoringVisit) recordAiScoringObstruction(scoringVisit, aim, result, dartsLeft);
             if (typeof recordMentalThrowOutcome === 'function') recordMentalThrowOutcome(isP1, score, aim, result);
             processThrow(isP1, aim.sector, aim.mult, result.sector, result.mult);
         }

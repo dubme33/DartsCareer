@@ -1,6 +1,7 @@
 const CONTINENTAL_QUALIFIER_TYPE = 'continentalQualifier';
 const CONTINENTAL_QUALIFICATION_VERSION = 2;
 const CONTINENTAL_TOUR_FIELD_SIZE = 48;
+const CONTINENTAL_TOP_16_WITHDRAWAL_CHANCE = 0.15;
 
 const CONTINENTAL_QUALIFIER_PATHS = Object.freeze({
     card: { places: 10, label: 'Pro Card Qualifier' },
@@ -20,10 +21,10 @@ const CONTINENTAL_EAST_EUROPE_COUNTRIES = new Set([
 ]);
 
 const CONTINENTAL_QUALIFIER_TRANSLATIONS = {
-    pl: { qualified: 'Gratulacje! Awansujesz do {tournament}.', eliminated: 'Nie udało się wywalczyć awansu do {tournament}.' },
-    en: { qualified: 'Congratulations! You qualify for {tournament}.', eliminated: 'You did not qualify for {tournament}.' },
-    de: { qualified: 'Glückwunsch! Du qualifizierst dich für {tournament}.', eliminated: 'Du hast die Qualifikation für {tournament} verpasst.' },
-    nl: { qualified: 'Gefeliciteerd! Je plaatst je voor {tournament}.', eliminated: 'Je hebt de kwalificatie voor {tournament} gemist.' }
+    pl: { qualified: 'Gratulacje! Awansujesz do {tournament}.', eliminated: 'Nie udało się wywalczyć awansu do {tournament}.', reserve: 'Zajmujesz miejsce {position} na liście rezerwowej do {tournament}.', replacementSubject: 'European Tour: awans z listy rezerwowej', replacementBody: 'Zastępujesz {withdrawn} w {tournament}. Rozpoczynasz od rundy {round}.' },
+    en: { qualified: 'Congratulations! You qualify for {tournament}.', eliminated: 'You did not qualify for {tournament}.', reserve: 'You are reserve number {position} for {tournament}.', replacementSubject: 'European Tour: reserve entry confirmed', replacementBody: 'You replace {withdrawn} in {tournament}. You enter in round {round}.' },
+    de: { qualified: 'Glückwunsch! Du qualifizierst dich für {tournament}.', eliminated: 'Du hast die Qualifikation für {tournament} verpasst.', reserve: 'Du stehst auf Nachrückerplatz {position} für {tournament}.', replacementSubject: 'European Tour: Nachrückerplatz bestätigt', replacementBody: 'Du ersetzt {withdrawn} bei {tournament}. Du steigst in Runde {round} ein.' },
+    nl: { qualified: 'Gefeliciteerd! Je plaatst je voor {tournament}.', eliminated: 'Je hebt de kwalificatie voor {tournament} gemist.', reserve: 'Je bent reserve nummer {position} voor {tournament}.', replacementSubject: 'European Tour: reserveplaats bevestigd', replacementBody: 'Je vervangt {withdrawn} bij {tournament}. Je begint in ronde {round}.' }
 };
 
 function trContinentalQualifier(key, values = {}) {
@@ -391,7 +392,120 @@ function completeContinentalTourQualifier(qualifierTournament, qualifiedPlayers)
     pathState.completed = true;
     qualifierTournament.completed = true;
     qualifierTournament.historyLogs = typeof lastTournamentResults === 'string' ? lastTournamentResults : '';
+    if (path === 'card') {
+        pathState.reservePlayerIds = getContinentalTourReservePlayers(mainTournament, state, candidates)
+            .sort((first, second) => sortContinentalQualificationRank(first, second, 'prizeMoney'))
+            .map(getContinentalQualificationPlayerKey);
+    }
     return refreshContinentalQualificationAggregate(state);
+}
+
+function recordContinentalQualifierFinalLoser(qualifier, candidate, round) {
+    if (!isContinentalQualifierTournament(qualifier) || getContinentalQualifierPath(qualifier) !== 'card'
+        || Number(round) !== CONTINENTAL_QUALIFIER_PATHS.card.places * 2) return;
+    const main = getLinkedContinentalTour(qualifier);
+    if (!main || !isContinentalQualifierPathEligible(candidate, main, 'card')) return;
+    const state = ensureContinentalQualificationState(main);
+    const card = getContinentalQualificationPathState(state, 'card');
+    const key = getContinentalQualificationPlayerKey(candidate);
+    if (!card.participantIds.includes(key)) return;
+    if (!Array.isArray(card.reservePlayerIds)) card.reservePlayerIds = [];
+    if (!card.reservePlayerIds.includes(key)) card.reservePlayerIds.push(key);
+}
+
+// Older saves can recover actual final-round losers from compact match history.
+// Missing histories and automatically filled qualifier places never invent reserves.
+function recoverContinentalReservePlayerIds(main, state, candidates) {
+    if (!state?.paths?.card?.completed || state.paths.card.migratedWithoutQualifier) return [];
+    const qualifier = typeof tournamentDatabase !== 'undefined' && tournamentDatabase.find(event =>
+        isContinentalQualifierTournament(event) && getContinentalQualifierPath(event) === 'card'
+        && event.completed && getLinkedContinentalTour(event) === main);
+    if (!qualifier) return [];
+    const history = qualifier.matchHistory || (isActiveContinentalTournament(qualifier)
+        && typeof tournamentMatchHistory !== 'undefined' ? tournamentMatchHistory : null);
+    if (history?.version !== 1 || !Array.isArray(history.players) || !Array.isArray(history.blocks)) return [];
+    const byHistoryKey = new Map(candidates.map(candidate => [candidate.id ? `id:${candidate.id}`
+        : `name:${String(candidate.name || '').trim()}|${String(candidate.country || '').trim()}`, candidate]));
+    const losers = history.blocks.filter(block => block.type === 'round' && Number(block.round) === 20)
+        .flatMap(block => (block.matches || []).flatMap(match => {
+            if (!Array.isArray(match) || match.length < 4 || Number(match[2]) === Number(match[3])) return [];
+            const loserIndex = Number(match[2]) < Number(match[3]) ? match[0] : match[1];
+            const candidate = byHistoryKey.get(history.players[loserIndex]?.[0]);
+            return candidate ? [candidate] : [];
+        }));
+    return losers.sort((first, second) => sortContinentalQualificationRank(first, second, 'prizeMoney'))
+        .map(getContinentalQualificationPlayerKey);
+}
+
+function getContinentalEffectivePlayerIds(keys, state) {
+    const replacements = new Map((state?.withdrawals || []).map(entry =>
+        [entry.withdrawnPlayerId, entry.replacementPlayerId]));
+    return (keys || []).map(key => {
+        const seen = new Set();
+        while (replacements.has(key) && !seen.has(key)) {
+            seen.add(key);
+            key = replacements.get(key);
+        }
+        return key;
+    });
+}
+
+function getContinentalTourReservePlayers(main, state = main?.continentalQualification,
+    candidates = getContinentalQualificationPlayers()) {
+    if (state?.year !== getContinentalQualificationSeason() || !state.paths?.card?.completed) return [];
+    const card = state.paths.card;
+    const originalField = [...(state.oomPlayerIds || []), ...(state.proTourPlayerIds || []),
+        ...Object.values(state.paths || {}).flatMap(path => path.qualifiedPlayerIds || [])];
+    const excluded = new Set([...originalField, ...getContinentalEffectivePlayerIds(originalField, state),
+        ...(state.withdrawals || []).map(entry => entry.withdrawnPlayerId)]);
+    const ids = Array.isArray(card.reservePlayerIds) ? card.reservePlayerIds
+        : recoverContinentalReservePlayerIds(main, state, candidates);
+    return resolveContinentalQualificationPlayers([...new Set(ids)], candidates)
+        .filter(candidate => isContinentalQualifierPathEligible(candidate, main, 'card')
+            && !excluded.has(getContinentalQualificationPlayerKey(candidate)));
+}
+
+function prepareContinentalTourWithdrawals(main, { skipCareerPlayer = false, random = Math.random } = {}) {
+    if (!isContinentalTourTournament(main)) return null;
+    const field = getContinentalTourMainField(main);
+    if (!field || main.completed || hasContinentalTournamentStarted(main)) return field;
+    const state = field.state;
+    if (state.withdrawalsProcessed) return field;
+    const candidates = getContinentalQualificationPlayers();
+    const own = candidate => typeof isCurrentPlayer === 'function' && isCurrentPlayer(candidate);
+    const reserves = getContinentalTourReservePlayers(main, state, candidates)
+        .filter(candidate => !skipCareerPlayer || !own(candidate));
+    if (!Array.isArray(state.paths.card.reservePlayerIds)) {
+        state.paths.card.reservePlayerIds = getContinentalTourReservePlayers(main, state, candidates)
+            .map(getContinentalQualificationPlayerKey);
+    }
+    state.withdrawals = [];
+    const replace = (candidate, entryRound, forced = false) => {
+        if (!reserves.length && !forced) return;
+        const replacement = reserves.shift();
+        state.withdrawals.push({ withdrawnPlayerId: getContinentalQualificationPlayerKey(candidate),
+            replacementPlayerId: replacement ? getContinentalQualificationPlayerKey(replacement) : null,
+            withdrawnPlayerName: candidate.name, replacementPlayerName: replacement?.name || '',
+            entryRound });
+    };
+    // A deliberate career-player withdrawal uses the same queue, never a random outsider.
+    if (skipCareerPlayer) {
+        const careerEntrant = [...field.oomPlayers, ...field.proTourPlayers, ...field.qualifiedPlayers].find(own);
+        if (careerEntrant) replace(careerEntrant, field.oomPlayers.includes(careerEntrant) ? 32 : 64, true);
+    }
+    field.oomPlayers.forEach(candidate => {
+        if (candidate && !candidate.isBye && !own(candidate) && reserves.length
+            && random() < CONTINENTAL_TOP_16_WITHDRAWAL_CHANCE) replace(candidate, 32);
+    });
+    state.withdrawalsProcessed = true;
+    const careerEntry = state.withdrawals.find(entry => entry.replacementPlayerId
+        && entry.replacementPlayerId === getContinentalQualificationPlayerKey(typeof player !== 'undefined' ? player : null));
+    if (careerEntry && typeof addEmail === 'function' && typeof escapeHtml === 'function') {
+        addEmail('European Tour', trContinentalQualifier('replacementSubject'),
+            `<p>${escapeHtml(trContinentalQualifier('replacementBody', { withdrawn: careerEntry.withdrawnPlayerName,
+                tournament: main.name, round: careerEntry.entryRound === 32 ? 2 : 1 }))}</p>`);
+    }
+    return getContinentalTourMainField(main);
 }
 
 function automaticallyCompleteContinentalQualifierPath(mainTournament, path, candidates) {
@@ -415,14 +529,17 @@ function getContinentalTourMainField(mainTournament) {
     const state = ensureContinentalQualificationState(mainTournament, candidates);
     if (!state) return null;
     Object.keys(CONTINENTAL_QUALIFIER_PATHS).forEach(path => automaticallyCompleteContinentalQualifierPath(mainTournament, path, candidates));
+    const byKey = new Map(candidates.map(candidate => [getContinentalQualificationPlayerKey(candidate), candidate]));
+    const resolveField = ids => getContinentalEffectivePlayerIds(ids, state).flatMap(key => key === null
+        ? [createContinentalQualifierBye()] : byKey.has(key) ? [byKey.get(key)] : []);
     const paths = Object.fromEntries(Object.keys(CONTINENTAL_QUALIFIER_PATHS).map(path => [
         path,
-        resolveContinentalQualificationPlayers(getContinentalQualificationPathState(state, path).qualifiedPlayerIds, candidates)
+        resolveField(getContinentalQualificationPathState(state, path).qualifiedPlayerIds)
     ]));
     const qualifiedPlayers = Object.values(paths).flat();
-    const oomPlayers = resolveContinentalQualificationPlayers(state.oomPlayerIds, candidates);
-    const proTourPlayers = resolveContinentalQualificationPlayers(state.proTourPlayerIds, candidates);
-    const fieldSize = oomPlayers.length + proTourPlayers.length + qualifiedPlayers.length;
+    const oomPlayers = resolveField(state.oomPlayerIds);
+    const proTourPlayers = resolveField(state.proTourPlayerIds);
+    const fieldSize = [...oomPlayers, ...proTourPlayers, ...qualifiedPlayers].filter(candidate => !candidate.isBye).length;
     return {
         state,
         oomPlayers,
@@ -436,7 +553,11 @@ function getContinentalTourMainField(mainTournament) {
 
 function getContinentalQualifierOutcomeMessage(qualified) {
     const mainTournament = getLinkedContinentalTour(activeTournament);
-    return trContinentalQualifier(qualified ? 'qualified' : 'eliminated', {
+    const position = !qualified && mainTournament && typeof player !== 'undefined'
+        ? getContinentalTourReservePlayers(mainTournament).findIndex(candidate =>
+            getContinentalQualificationPlayerKey(candidate) === getContinentalQualificationPlayerKey(player)) + 1 : 0;
+    return trContinentalQualifier(qualified ? 'qualified' : position ? 'reserve' : 'eliminated', {
+        position,
         tournament: mainTournament?.name || activeTournament?.qualifierFor || ''
     });
 }

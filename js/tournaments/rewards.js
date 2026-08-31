@@ -9,6 +9,8 @@ const PLAYERS_CHAMPIONSHIP_PRIZE_MONEY = Object.freeze({
     128: 0
 });
 
+const GLOBAL_LEAGUE_PLACEMENT_PRIZES = Object.freeze({ 5: 95000, 6: 90000, 7: 85000, 8: 80000 });
+
 function getPrizeMoney(tName, round, won) {
     if (typeof isWorldMastersName === 'function' && isWorldMastersName(tName)) {
         return getWorldMastersPrizeMoney(tName, round, won);
@@ -80,6 +82,7 @@ function getPrizeMoney(tName, round, won) {
         function awardPrizeMoney(p, amount, tName) {
             if (!p || typeof amount !== 'number' || isNaN(amount) || amount <= 0) return;
             tName = String(tName || '');
+            if (typeof recordTournamentCash === 'function' && isCurrentPlayer(p)) recordTournamentCash(tName, 'prize', amount);
             if (typeof recordSeasonArchivePrize === 'function') recordSeasonArchivePrize(p, amount, tName);
             
             // Zabezpieczenie przed uszkodzonym zapisem (przywraca 0 zamiast błędu)

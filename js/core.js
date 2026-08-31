@@ -584,6 +584,7 @@
             const previous = p.baseOvr;
             p.baseOvr = clamp(previous + ageAdjustedDelta, 45, 99);
             const appliedDelta = p.baseOvr - previous;
+            if (typeof recordAiDevelopmentImmediateChange === 'function') recordAiDevelopmentImmediateChange(p, appliedDelta);
             p.baseScoring = clamp(p.baseScoring + appliedDelta, 45, 100);
             p.baseDoubles = clamp(p.baseDoubles + appliedDelta, 40, 100);
             applyForm(p);

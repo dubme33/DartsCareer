@@ -341,10 +341,10 @@ function startMatch(vsAI) {
                     // Wypłaty za miejsca 5-8 po finałach Play-offs!
                     if (activeTournament.name.includes("Play-offs")) {
                         let sortedGDL = [...gdlTable].sort((a,b) => b.points - a.points || (b.legsWon - b.legsLost) - (a.legsWon - a.legsLost));
-                        if(sortedGDL[4]) awardPrizeMoney(sortedGDL[4].player, 95000, activeTournament.name);
-                        if(sortedGDL[5]) awardPrizeMoney(sortedGDL[5].player, 90000, activeTournament.name);
-                        if(sortedGDL[6]) awardPrizeMoney(sortedGDL[6].player, 85000, activeTournament.name);
-                        if(sortedGDL[7]) awardPrizeMoney(sortedGDL[7].player, 80000, activeTournament.name);
+                        Object.entries(GLOBAL_LEAGUE_PLACEMENT_PRIZES).forEach(([position, amount]) => {
+                            const row = sortedGDL[Number(position) - 1];
+                            if (row) awardPrizeMoney(row.player, amount, activeTournament.name);
+                        });
                     }
 
                     if (isCurrentPlayer(winner)) {

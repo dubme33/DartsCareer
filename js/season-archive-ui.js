@@ -212,7 +212,7 @@ function refreshSeasonArchiveTranslations() {
         'season-archive-rules': 'criteria', 'season-archive-back': 'back' };
     for (const [id, key] of Object.entries(ids)) {
         const node = document.getElementById(id);
-        if (node) node.textContent = (key === 'title' ? '📊 ' : '') + trSeasonArchive(key);
+        if (node) node.textContent = (key === 'title' ? '⏳ ' : '') + trSeasonArchive(key);
     }
     if (document.getElementById('screen-season-archive')?.classList.contains('active')) renderSeasonArchive();
 }

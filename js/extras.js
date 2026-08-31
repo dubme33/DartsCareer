@@ -247,6 +247,7 @@ function initCareerChronicle() {
             if(overlay) overlay.style.display = 'flex';
             
             player.budget += 50000;
+            if (typeof recordTournamentAchievementCash === 'function') recordTournamentAchievementCash(50000);
             initCareerStats();
             player.careerStats.nineDarters++;
             

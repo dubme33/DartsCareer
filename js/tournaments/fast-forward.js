@@ -186,9 +186,8 @@ function awardGlobalLeaguePlayoffPlacementPrizes(tournament) {
     if (!tournament?.name?.includes('Play-offs') || typeof gdlTable === 'undefined' || !Array.isArray(gdlTable)) return;
     const sortedLeague = [...gdlTable].sort((first, second) => second.points - first.points
         || (second.legsWon - second.legsLost) - (first.legsWon - first.legsLost));
-    const placementPrizes = [95000, 90000, 85000, 80000];
-    placementPrizes.forEach((prize, index) => {
-        const row = sortedLeague[index + 4];
+    Object.entries(GLOBAL_LEAGUE_PLACEMENT_PRIZES).forEach(([position, prize]) => {
+        const row = sortedLeague[Number(position) - 1];
         if (row) awardPrizeMoney(row.player, prize, tournament.name);
     });
 }
@@ -306,10 +305,10 @@ function finishHeadlessTournament(specialTournamentOutcome) {
     // Wypłaty za miejsca 5-8 po finałach Play-offs
     if (activeTournament.name.includes("Play-offs")) {
         let sortedGDL = [...gdlTable].sort((a,b) => b.points - a.points || (b.legsWon - b.legsLost) - (a.legsWon - a.legsLost));
-        if(sortedGDL[4]) awardPrizeMoney(sortedGDL[4].player, 95000, activeTournament.name);
-        if(sortedGDL[5]) awardPrizeMoney(sortedGDL[5].player, 90000, activeTournament.name);
-        if(sortedGDL[6]) awardPrizeMoney(sortedGDL[6].player, 85000, activeTournament.name);
-        if(sortedGDL[7]) awardPrizeMoney(sortedGDL[7].player, 80000, activeTournament.name);
+        Object.entries(GLOBAL_LEAGUE_PLACEMENT_PRIZES).forEach(([position, amount]) => {
+            const row = sortedGDL[Number(position) - 1];
+            if (row) awardPrizeMoney(row.player, amount, activeTournament.name);
+        });
     }
     
     activeTournament = null; 

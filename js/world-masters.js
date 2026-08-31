@@ -645,11 +645,19 @@ function completeWorldMastersTournament(tournament, winner) {
 }
 
 function getWorldMastersPrizeMoney(tournament, round, won) {
-    if (isWorldMastersFinalsTournament(tournament) || tournament === WORLD_MASTERS_FINALS_NAME) {
+    // Match payouts pass a name, while previews can pass the event object.
+    // Resolve modded names before choosing Finals vs regular-series prizes.
+    const event = typeof tournament === 'string'
+        ? ((typeof tournamentDatabase !== 'undefined' && Array.isArray(tournamentDatabase)
+            ? tournamentDatabase.find(candidate => candidate.name === tournament || candidate.sourceName === tournament)
+            : null) || WORLD_MASTERS_CALENDAR.find(candidate => candidate.name === tournament))
+        : tournament;
+    if (!event) return 0;
+    if (isWorldMastersFinalsTournament(event)) {
         if (won && round === 2) return 100000;
         return ({ 2: 60000, 4: 30000, 8: 17500, 16: 10000, 32: 5000 })[round] || 0;
     }
-    if (isWorldMastersTournament(tournament) || isWorldMastersName(tournament)) {
+    if (isWorldMastersTournament(event)) {
         if (won && round === 2) return 30000;
         return ({ 2: 16000, 4: 10000, 8: 5000, 16: 1750 })[round] || 0;
     }
