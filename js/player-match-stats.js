@@ -108,7 +108,10 @@ function getQuickSimulatedMatchStats(p1, p2, result) {
         }
         const scoringVisits = limit(Math.round(501 / average) - 1, 2, 6);
         const losingVisits = Math.max(1, Math.round(scoringVisits * Math.min(1, average / otherAverage)));
-        const oneEightyChance = tripleChance ** 3;
+        // Ten sam efekt grupowania T20 co w calculateThrow:
+        // +8 p.p. po pierwszym i +12 p.p. po dwóch kolejnych trafieniach.
+        // Nadal tylko szacunek, bez nowych losowań ani zmiany wyniku meczu.
+        const oneEightyChance = tripleChance * Math.min(0.54, tripleChance + 0.08) * Math.min(0.54, tripleChance + 0.12);
         let oneEighties = 0;
         for (let leg = 0; leg < totalLegs; leg++) {
             let legOneEighties = 0;

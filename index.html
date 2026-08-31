@@ -22,17 +22,17 @@
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://dartscareer.pl">
     <link rel="icon" type="image/png" href="favicon.png">
-    <link rel="stylesheet" href="css/game.css?v=1.3.6&stats=1&goals=1&titles=2&tiles=1&supporters=2">
-    <link rel="stylesheet" href="css/world-news.css?v=1.3.6&news=1">
-    <link rel="stylesheet" href="css/season-archive.css?v=1.3.6&archive=1">
-    <link rel="stylesheet" href="css/career-records.css?v=1.3.6&records=1">
-    <link rel="stylesheet" href="css/tournament-finance.css?v=1.3.6&finance=1">
-    <link rel="stylesheet" href="css/player-staff.css?v=1.3.6&staff=1&mental=1">
-    <link rel="stylesheet" href="css/player-traits.css?v=1.3.6&traits=2&mental=1">
-    <link rel="stylesheet" href="css/career-infrastructure.css?v=1.3.6&infrastructure=1">
-    <link rel="stylesheet" href="css/career-lifestyle.css?v=1.3.6&lifestyle=2">
-    <link rel="stylesheet" href="css/equipment-wear.css?v=1.3.6&equipment-wear=1">
-    <link rel="stylesheet" href="css/career-planning.css?v=1.3.6&fix=planning-2&et-reserves=1">
+    <link rel="stylesheet" href="css/game.css?v=1.3.7&stats=1&goals=1&titles=2&tiles=1&supporters=3&aim=3&match-log=1&social=1&compact-match=1">
+    <link rel="stylesheet" href="css/world-news.css?v=1.3.7&news=1">
+    <link rel="stylesheet" href="css/season-archive.css?v=1.3.7&archive=1">
+    <link rel="stylesheet" href="css/career-records.css?v=1.3.7&records=1">
+    <link rel="stylesheet" href="css/tournament-finance.css?v=1.3.7&finance=1">
+    <link rel="stylesheet" href="css/player-staff.css?v=1.3.7&staff=1&mental=1">
+    <link rel="stylesheet" href="css/player-traits.css?v=1.3.7&traits=2&mental=1">
+    <link rel="stylesheet" href="css/career-infrastructure.css?v=1.3.7&infrastructure=1">
+    <link rel="stylesheet" href="css/career-lifestyle.css?v=1.3.7&lifestyle=2">
+    <link rel="stylesheet" href="css/equipment-wear.css?v=1.3.7&equipment-wear=1">
+    <link rel="stylesheet" href="css/career-planning.css?v=1.3.7&fix=planning-2&et-reserves=1">
 </head>
 <body>
     <header>
@@ -71,6 +71,52 @@
         <!-- LEWA STRONA: CHANGELOG (Zawsze po angielsku) -->
         <div class="changelog-box">
             <h3>📢 What's New / Changelog</h3>
+
+            <!-- UPDATE V1.3.7 -->
+            <div class="changelog-version-badge">v1.3.7 · Match Screen &amp; Training Balance</div>
+
+            <div class="changelog-grid">
+                <div class="cl-item">
+                    <span class="cl-tag tweak">Match Interface</span>
+                    <span class="cl-title">🎯 Larger Board &amp; Clearer Scorecards</span>
+                    <p class="cl-desc">Larger player photos and a larger dartboard restore the focus on the match. Remaining points, legs and sets now sit together in aligned groups. Throw and simulation controls sit directly below target selection on wide screens, removing the large empty gap. The scoreboard stays visible while scrolling, with a separate phone layout and a scrollable match log.</p>
+                </div>
+                <div class="cl-item">
+                    <span class="cl-tag feature">Touch Controls</span>
+                    <span class="cl-title">👆 Target Tiles &amp; Multiplier Buttons</span>
+                    <p class="cl-desc">Choose sectors 1–20, Outer Bull and Bull from large tiles, with separate Single, Double and Treble buttons and a highlighted selection. Returning from either bull target to a numbered sector restores Treble instead of carrying over Single or Double. Touch targets remain at least 44 pixels high.</p>
+                </div>
+                <div class="cl-item">
+                    <span class="cl-tag tweak">Throwing Balance</span>
+                    <span class="cl-title">🔥 Consecutive Treble &amp; Double Hits</span>
+                    <p class="cl-desc">Hitting the intended treble or double improves the chance of repeating that exact target during the same visit, making 180s and consecutive doubles more achievable for both players and AI. The bonus is capped and ends after a miss, a target change, the visit or the leg; it never carries into the next leg.</p>
+                </div>
+                <div class="cl-item">
+                    <span class="cl-tag fix">Match Log</span>
+                    <span class="cl-title">📝 Simulated Leg Winners in the Log</span>
+                    <p class="cl-desc">Simulating a leg now names its winner instead of only reporting that the leg was simulated. On wide screens, the log fills the statistics panel down to the Back to Menu button; on phones, it keeps its own bounded scrolling area.</p>
+                </div>
+                <div class="cl-item">
+                    <span class="cl-tag fix">Career Titles</span>
+                    <span class="cl-title">🏆 Premier League Nights &amp; Finals</span>
+                    <p class="cl-desc">Regular Premier League night wins are grouped into one career total, like Players Championship and European Tour titles. The Finals Night remains a separate major title with its year of victory, including in existing careers.</p>
+                </div>
+                <div class="cl-item">
+                    <span class="cl-tag tweak">Career Balance</span>
+                    <span class="cl-title">⚡ Energy-Based Training Efficiency</span>
+                    <p class="cl-desc">All five training types now scale XP with energy at the start of the session: 100% energy gives full XP, 80% gives 80%, and 50% gives half. The reduction also applies to equipment, staff and analysis bonuses. Training still costs 20 energy and uses the shared two-session weekly limit. The training screen shows current XP efficiency in all four languages.</p>
+                </div>
+                <div class="cl-item">
+                    <span class="cl-tag tweak">Career Flow</span>
+                    <span class="cl-title">📬 No Random Events or Filler Emails</span>
+                    <p class="cl-desc">Removed daily random events and all 80 filler email templates. Old saves are cleaned of random mail while preserving important career messages and their read status. Bundled mods no longer contain random events, and importing or restoring an older mod cannot bring them back. Post-match interviews remain available.</p>
+                </div>
+                <div class="cl-item">
+                    <span class="cl-tag feature">Community</span>
+                    <span class="cl-title">💖 New Supporters &amp; TikTok Links</span>
+                    <p class="cl-desc">Welcome anusiak, Sven Hoffmann and Rabarbar Darts to the Supporters Hall of Fame. Rabarbar Darts has a direct TikTok link beside their name. The official @dartscareerpl TikTok tile is also available on the player creation screen and in the career menu.</p>
+                </div>
+            </div>
 
             <!-- UPDATE V1.3.6 -->
             <div class="changelog-version-badge">v1.3.6 · Smarter AI &amp; European Tour Update</div>
@@ -1005,6 +1051,11 @@
                     <h3 id="t-x-title-start" style="color: white; border: none; margin: 0 0 10px 0; font-size: 18px;">🐦 X (Twitter)</h3>
                     <p id="t-x-desc-start" style="color: #ecf0f1; margin: 0; font-size: 13px;">Śledź nas, aby być na bieżąco z nowościami!</p>
                 </div>
+
+                <a class="menu-tile tiktok-tile" href="https://www.tiktok.com/@dartscareerpl" target="_blank" rel="noopener noreferrer" aria-labelledby="t-tiktok-title-start" aria-describedby="t-tiktok-desc-start">
+                    <h3 id="t-tiktok-title-start">🎵 TikTok</h3>
+                    <p id="t-tiktok-desc-start">Obserwuj @dartscareerpl na TikToku!</p>
+                </a>
                 
                 <div class="menu-tile" onclick="window.open('https://buymeacoffee.com/dartscareer', '_blank')" style="background-color: #FFDD00; border-color: #F39C12;">
                     <h3 id="t-bmc-title-start" style="color: #2c3e50; border: none; margin: 0 0 10px 0; font-size: 18px;">☕ Wesprzyj nas</h3>
@@ -1184,6 +1235,11 @@
                 <h3 id="t-x-title-hub" style="color: white; border: none; margin: 0 0 10px 0; font-size: 18px;">🐦 X (Twitter)</h3>
                 <p id="t-x-desc-hub" style="color: #ecf0f1; margin: 0; font-size: 13px;">Śledź nas, aby być na bieżąco z nowościami!</p>
             </div>
+
+            <a class="menu-tile tiktok-tile" href="https://www.tiktok.com/@dartscareerpl" target="_blank" rel="noopener noreferrer" aria-labelledby="t-tiktok-title-hub" aria-describedby="t-tiktok-desc-hub">
+                <h3 id="t-tiktok-title-hub">🎵 TikTok</h3>
+                <p id="t-tiktok-desc-hub">Obserwuj @dartscareerpl na TikToku!</p>
+            </a>
             
             <div class="menu-tile" onclick="window.open('https://buymeacoffee.com/dartscareer', '_blank')" style="background-color: #FFDD00; border-color: #F39C12;">
                 <h3 id="t-bmc-title-hub" style="color: #2c3e50; border: none; margin: 0 0 10px 0; font-size: 18px;">☕ Wesprzyj nas</h3>
@@ -1256,6 +1312,8 @@
                 <img id="score-photo-p1" class="score-photo" src="" alt="Ty" onerror="this.onerror=null; this.src='https://via.placeholder.com/100?text=TY';">
                 <div class="score-info">
                     <h4 id="match-p1-name">Ty</h4>
+                    <div class="score-totals">
+                        <div class="score-display" id="match-score-p1">501</div>
                     <div class="match-score-badges">
                         <div class="badge-box" id="badge-sets-p1" style="display:none;">
                             <span class="badge-label dyn-t" data-key="t-sets">SETY</span>
@@ -1266,8 +1324,8 @@
                             <span class="badge-value" id="val-legs-p1">0</span>
                         </div>
                     </div>
-                    <div class="score-display" id="match-score-p1">501</div>
-                    <div id="momentum-p1" style="font-size: 11px; font-weight: bold; margin-bottom: 5px; min-height: 14px; transition: 0.3s;">➖ Neutralnie</div>
+                    </div>
+                    <div id="momentum-p1" class="match-momentum">➖ Neutralnie</div>
                     <div id="checkout-p1" class="checkout-hint"></div>
                 </div>
             </div>
@@ -1276,6 +1334,8 @@
                 <img id="score-photo-p2" class="score-photo" src="" alt="Rywal" onerror="this.onerror=null; this.src='https://via.placeholder.com/100?text=AI';">
                 <div class="score-info">
                     <h4 id="match-p2-name">Rywal</h4>
+                    <div class="score-totals">
+                        <div class="score-display" id="match-score-p2">501</div>
                     <div class="match-score-badges">
                         <div class="badge-box" id="badge-sets-p2" style="display:none;">
                             <span class="badge-label dyn-t" data-key="t-sets">SETY</span>
@@ -1286,8 +1346,8 @@
                             <span class="badge-value" id="val-legs-p2">0</span>
                         </div>
                     </div>
-                    <div class="score-display" id="match-score-p2">501</div>
-                    <div id="momentum-p2" style="font-size: 11px; font-weight: bold; margin-bottom: 5px; min-height: 14px; transition: 0.3s;">➖ Neutralnie</div>
+                    </div>
+                    <div id="momentum-p2" class="match-momentum">➖ Neutralnie</div>
                     <div id="checkout-p2" class="checkout-hint"></div>
                 </div>
             </div>
@@ -1306,22 +1366,29 @@
                 </div>
 
                 <div class="aim-controls" id="player-controls">
-                    <div><select id="aim-sector"></select></div>
-                    <div>
-                        <select id="aim-multiplier">
-                            <option value="1" id="t-opt-single">Pojedyncze</option>
-                            <option value="2" id="t-opt-double">Podwójne</option>
-                            <option value="3" id="t-opt-treble" selected>Potrójne</option>
-                        </select>
+                    <input type="hidden" id="aim-sector" value="20">
+                    <fieldset class="aim-sector-picker">
+                        <legend id="t-aim-sector">Sektor</legend>
+                        <div class="aim-sector-numbers" id="aim-sector-numbers"></div>
+                        <div class="aim-bull-buttons">
+                            <button type="button" class="aim-sector-btn aim-bull-btn" data-sector="25" aria-pressed="false">25 <span>Outer Bull</span></button>
+                            <button type="button" class="aim-sector-btn aim-bull-btn" data-sector="50" aria-pressed="false">50 <span>Bull</span></button>
+                        </div>
+                    </fieldset>
+                    <input type="hidden" id="aim-multiplier" value="3">
+                    <div class="aim-multiplier-buttons" role="group" aria-labelledby="t-opt-single t-opt-double t-opt-treble">
+                        <button type="button" class="aim-multiplier-btn" id="t-opt-single" data-multiplier="1" aria-pressed="false">Pojedyncze</button>
+                        <button type="button" class="aim-multiplier-btn" id="t-opt-double" data-multiplier="2" aria-pressed="false">Podwójne</button>
+                        <button type="button" class="aim-multiplier-btn active" id="t-opt-treble" data-multiplier="3" aria-pressed="true">Potrójne</button>
                     </div>
                 </div>
                 
-                <div style="display: flex; gap: 10px; margin-top: 10px;">
+                <div class="match-actions">
                     <button id="throw-btn" class="action-btn green" onclick="playerThrow()" style="margin-top: 0; flex: 2;">Rzuć Lotką!</button>
                     <button class="action-btn" id="t-btn-sim-leg" onclick="simulateOneLegFast()" style="margin-top: 0; flex: 1; background: #f39c12; font-size: 14px;" title="Symuluj 1 Leg">⏩ Leg</button>
                     <button class="action-btn" id="t-btn-sim-match" onclick="simulateMatchFast()" style="margin-top: 0; flex: 1; background: #e74c3c; font-size: 14px;" title="Symuluj resztę meczu">⏭️ Mecz</button>
                 </div>
-                <button class="action-btn" id="t-btn-match-back" onclick="showScreen('screen-hub')" style="margin-top: 10px; background-color: var(--primary-color);">Wróć do Menu (Zapisz Postęp)</button>
+                <button class="action-btn" id="t-btn-match-back" onclick="showScreen('screen-hub')" style="background-color: var(--primary-color);">Wróć do Menu (Zapisz Postęp)</button>
             </div>
             
             <div class="match-stats">
@@ -1358,7 +1425,7 @@
                     <div class="m-stat-value" id="stat-180s">0</div>
                     <div class="m-stat-value" id="stat-opp-180s">0</div>
                 </div>
-                <div class="log-box" id="match-log" style="height: 180px;"></div>
+                <div class="log-box" id="match-log"></div>
             </div>
         </div>
     </main>
@@ -1706,6 +1773,17 @@
                         <span>X</span>
                     </a>
                 </li>
+                <li class="supporter-entry"><span>⭐ anusiak</span></li>
+                <li class="supporter-entry"><span>⭐ Sven Hoffmann</span></li>
+                <li class="supporter-entry">
+                    <span>⭐ Rabarbar Darts</span>
+                    <a class="supporter-tiktok-link" href="https://www.tiktok.com/@rabarbardarts" target="_blank" rel="noopener noreferrer" aria-label="Rabarbar Darts — TikTok">
+                        <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                            <path d="M16.5 3c.3 2.7 1.8 4.3 4.5 4.5V11a9.7 9.7 0 0 1-4.5-1.2v7a6.5 6.5 0 1 1-6.5-6.5v3.5a3 3 0 1 0 3 3V3z" fill="currentColor" />
+                        </svg>
+                        <span>TikTok</span>
+                    </a>
+                </li>
             </ul>
         </div>
 
@@ -1715,8 +1793,9 @@
 <!-- EKRAN TRENINGU -->
     <main id="screen-training" class="screen">
         <h2 id="t-train-title">🎯 Baza Treningowa</h2>
-        <p id="t-train-desc" style="text-align: center; color: #bdc3c7; margin-bottom: 8px;">Każda sesja treningowa przesuwa kalendarz o 1 dzień. Posiadany sprzęt przyspiesza postęp!</p>
-        <p id="train-weekly-limit" style="text-align: center; color: var(--accent-yellow); margin: 0 0 25px; font-size: 14px;"></p>
+        <p id="t-train-desc" style="text-align: center; color: #bdc3c7; margin-bottom: 8px;">Każda sesja treningowa przesuwa kalendarz o 1 dzień, kosztuje 20 energii i ma limit tygodniowy. Im mniej energii przed sesją, tym mniej XP z każdego treningu.</p>
+        <p id="train-weekly-limit" style="text-align: center; color: var(--accent-yellow); margin: 0 0 8px; font-size: 14px;"></p>
+        <p id="train-energy-efficiency" aria-live="polite" style="text-align: center; color: #f1c40f; margin: 0 0 25px; font-size: 14px; font-weight: bold;"></p>
         <p id="train-staff-note" class="staff-context-note"></p>
         
         <div style="display: flex; gap: 20px; flex-wrap: wrap; justify-content: center;">
@@ -1755,74 +1834,73 @@
     </main>
     <!-- STOPKA AUTORSKA -->
     <footer style="width: 100%; text-align: center; padding: 25px 15px; margin-top: auto; color: #7f8c8d; font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 2px;">
-        <div style="margin-bottom: 5px; color: #bdc3c7;">V. 1.3.6</div>
+        <div style="margin-bottom: 5px; color: #bdc3c7;">V. 1.3.7</div>
         powered by dubme<br>
         <a href="mailto:dartscareer@gmail.com" style="color: #bdc3c7; text-decoration: none; text-transform: lowercase; display: inline-block; margin-top: 5px;">dartscareer@gmail.com</a>
     </footer>
 
     <!-- SKRYPTY -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <script src="data/players.js?v=1.3.6&fix=player-ratings-3"></script>
+    <script src="data/players.js?v=1.3.7&fix=player-ratings-3"></script>
     <script src="data/order-of-merit-history.js"></script>
     <script src="data/order-of-merit-opening-2026.js"></script>
     <script src="data/player-birth-years.js"></script>
-    <script src="data/newgen-names.js?v=1.3.6"></script>
-    <script src="data/tournaments.js?v=1.3.6"></script>
+    <script src="data/newgen-names.js?v=1.3.7"></script>
+    <script src="data/tournaments.js?v=1.3.7"></script>
     <script src="data/achievements.js"></script>
     <script src="data/interviews.js"></script>
-    <script src="data/random-events.js"></script>
-    <script src="js/core.js?v=1.3.6&fix=career-progress-1&ws-local=1&traits=1&ai-growth=2"></script>
-    <script src="js/ai-development.js?v=1.3.6&ai-growth=2"></script>
-    <script src="js/player-traits.js?v=1.3.6&traits=1&mental=1&infrastructure=1"></script>
-    <script src="js/match/pressure.js?v=1.3.6&mental=1"></script>
-    <script src="js/european-tour.js?v=1.3.6"></script>
-    <script src="js/order-of-merit.js?v=1.3.6&fix=planning-1"></script>
-    <script src="js/tour-cards.js?v=1.3.6"></script>
-    <script src="js/world-championship-qualification.js?v=1.3.6"></script>
-    <script src="js/stamina.js?v=1.3.6&staff=1&traits=1&infrastructure=1"></script>
-    <script src="js/i18n.js?v=1.3.6&fix=planning-1&news=1&archive=1&staff=1&traits=1&infrastructure=1&lifestyle=1&tiles=1&records=1&finance=1"></script>
-    <script src="js/player-lifecycle.js?v=1.3.6&fix=no-random-form-1&traits=1&ai-growth=2"></script>
-    <script src="js/career.js?v=1.3.6&fix=no-random-form-1&planning=1&goals=1&news=1&archive=1&staff=1&traits=1&infrastructure=1&lifestyle=1&records=1&finance=1&et-auto=1&ai-growth=2"></script>
-    <script src="js/player-profiles.js?v=1.3.6&stats=1&goals=1&news=1&traits=1&mental=1&titles=2&records=1&finance=1"></script>
-    <script src="js/player-match-stats.js?v=1.3.6&stats=2&goals=1&news=1&traits=1&records=1&ai-growth=2"></script>
-    <script src="js/career-records.js?v=1.3.6&records=1"></script>
-    <script src="js/career-records-ui.js?v=1.3.6&records=1"></script>
-    <script src="js/tournament-finance.js?v=1.3.6&finance=1"></script>
-    <script src="js/tournament-finance-ui.js?v=1.3.6&finance=1"></script>
-    <script src="js/tournaments/results.js?v=1.3.6&finance=1"></script>
-    <script src="js/tournaments/rules.js?v=1.3.6&fix=planning-1&matchplay=1"></script>
-    <script src="js/match/ai-strategy.js?v=1.3.6&cover=1"></script>
-    <script src="js/match/intro.js?v=1.3.6&lifestyle=1"></script>
-    <script src="js/tournaments/rewards.js?v=1.3.6&archive=1&finance=1"></script>
-    <script src="js/grand-slam.js?v=1.3.6&finance=1"></script>
-    <script src="js/tournaments/flow.js?v=1.3.6&fix=et-season-1&planning=1&stats=2&ws-local=1&traits=1&mental=1&infrastructure=1&finance=1&et-reserves=1&et-auto=1"></script>
-    <script src="js/tournaments/fast-forward.js?v=1.3.6&finance=1"></script>
-    <script src="js/tournaments/spectator.js?v=1.3.6&stats=1"></script>
-    <script src="js/world-cup.js?v=1.3.6&news=1&archive=1&mental=1&infrastructure=1&records=1&finance=1"></script>
-    <script src="js/continental-qualification-v2.js?v=1.3.6&fix=et-season-1&planning=1&et-reserves=1"></script>
-    <script src="js/world-masters.js?v=1.3.6&fix=planning-1&ws-local=1&prizes=2"></script>
-    <script src="js/match/setup.js?v=1.3.6&stats=1&qualifier-loss=1&finance=1"></script>
-    <script src="js/match/leg-flow.js?v=1.3.6&finance=1&matchplay=1"></script>
+    <script src="js/core.js?v=1.3.7&fix=career-progress-1&ws-local=1&traits=1&ai-growth=2&aim=3"></script>
+    <script src="js/ai-development.js?v=1.3.7&ai-growth=2"></script>
+    <script src="js/player-traits.js?v=1.3.7&traits=1&mental=1&infrastructure=1"></script>
+    <script src="js/match/pressure.js?v=1.3.7&mental=1"></script>
+    <script src="js/european-tour.js?v=1.3.7"></script>
+    <script src="js/order-of-merit.js?v=1.3.7&fix=planning-1"></script>
+    <script src="js/tour-cards.js?v=1.3.7"></script>
+    <script src="js/world-championship-qualification.js?v=1.3.7"></script>
+    <script src="js/stamina.js?v=1.3.7&staff=1&traits=1&infrastructure=1"></script>
+    <script src="js/i18n.js?v=1.3.7&fix=planning-1&news=1&archive=1&staff=1&traits=1&infrastructure=1&lifestyle=1&tiles=1&records=1&finance=1&aim=3&social=1&training-energy=1"></script>
+    <script src="js/player-lifecycle.js?v=1.3.7&fix=no-random-form-1&traits=1&ai-growth=2"></script>
+    <script src="js/career.js?v=1.3.7&fix=no-random-form-1&planning=1&goals=1&news=1&archive=1&staff=1&traits=1&infrastructure=1&lifestyle=1&records=1&finance=1&et-auto=1&ai-growth=2&no-random-content=1"></script>
+    <script src="js/player-profiles.js?v=1.3.7&stats=1&goals=1&news=1&traits=1&mental=1&titles=3&records=1&finance=1"></script>
+    <script src="js/player-match-stats.js?v=1.3.7&stats=2&goals=1&news=1&traits=1&records=1&ai-growth=2&grouping=2"></script>
+    <script src="js/career-records.js?v=1.3.7&records=1"></script>
+    <script src="js/career-records-ui.js?v=1.3.7&records=1"></script>
+    <script src="js/tournament-finance.js?v=1.3.7&finance=1"></script>
+    <script src="js/tournament-finance-ui.js?v=1.3.7&finance=1"></script>
+    <script src="js/tournaments/results.js?v=1.3.7&finance=1"></script>
+    <script src="js/tournaments/rules.js?v=1.3.7&fix=planning-1&matchplay=1"></script>
+    <script src="js/match/ai-strategy.js?v=1.3.7&cover=1"></script>
+    <script src="js/match/intro.js?v=1.3.7&lifestyle=1"></script>
+    <script src="js/tournaments/rewards.js?v=1.3.7&archive=1&finance=1"></script>
+    <script src="js/grand-slam.js?v=1.3.7&finance=1"></script>
+    <script src="js/tournaments/flow.js?v=1.3.7&fix=et-season-1&planning=1&stats=2&ws-local=1&traits=1&mental=1&infrastructure=1&finance=1&et-reserves=1&et-auto=1"></script>
+    <script src="js/tournaments/fast-forward.js?v=1.3.7&finance=1"></script>
+    <script src="js/tournaments/spectator.js?v=1.3.7&stats=1"></script>
+    <script src="js/world-cup.js?v=1.3.7&news=1&archive=1&mental=1&infrastructure=1&records=1&finance=1"></script>
+    <script src="js/continental-qualification-v2.js?v=1.3.7&fix=et-season-1&planning=1&et-reserves=1"></script>
+    <script src="js/world-masters.js?v=1.3.7&fix=planning-1&ws-local=1&prizes=2"></script>
+    <script src="js/match/setup.js?v=1.3.7&stats=1&qualifier-loss=1&finance=1"></script>
+    <script src="js/match/leg-flow.js?v=1.3.7&finance=1&matchplay=1&grouping=3"></script>
     <script src="js/match/audio.js"></script>
-    <script src="js/match/turns.js?v=1.3.6&ws-local=1&traits=1&mental=1&cover=1"></script>
-    <script src="js/match/board.js?v=1.3.6"></script>
-    <script src="js/storage.js?v=1.3.6"></script>
-    <script src="js/sponsor-goals.js?v=1.3.6&goals=1"></script>
-    <script src="js/world-news.js?v=1.3.6&news=1"></script>
-    <script src="js/season-archive.js?v=1.3.6&archive=1"></script>
-    <script src="js/season-archive-ui.js?v=1.3.6&archive=1&tiles=1"></script>
-    <script src="js/player-staff.js?v=1.3.6&staff=2&traits=1&mental=1"></script>
-    <script src="js/player-staff-ui.js?v=1.3.6&staff=2&traits=1&mental=1&tiles=1"></script>
-    <script src="js/player-traits-ui.js?v=1.3.6&traits=2&mental=1"></script>
-    <script src="js/career-infrastructure.js?v=1.3.6&infrastructure=5&finance=1"></script>
-    <script src="js/career-infrastructure-ui.js?v=1.3.6&infrastructure=2&tiles=1"></script>
-    <script src="js/career-lifestyle.js?v=1.3.6&lifestyle=1"></script>
-    <script src="js/career-lifestyle-ui.js?v=1.3.6&lifestyle=1"></script>
-    <script src="js/equipment-wear.js?v=1.3.6&equipment-wear=1"></script>
-    <script src="js/systems.js?v=1.3.6&fix=career-progress-1&stats=1&ws-local=1&goals=1&news=1&archive=1&staff=1&traits=1&mental=1&infrastructure=1&lifestyle=1&equipment-wear=1&records=1&finance=1&et-reserves=1&matchplay=1&cover=1"></script>
-    <script src="js/mod-media.js?v=1.3.6"></script>
-    <script src="js/extras.js?v=1.3.6&fix=no-random-form-1&goals=1&news=1&archive=1&traits=1&lifestyle=1&finance=1"></script>
-    <script src="js/career-planning.js?v=1.3.6&fix=planning-2&et-reserves=1"></script>
+    <script src="js/match/turns.js?v=1.3.7&ws-local=1&traits=1&mental=1&cover=1&grouping=3"></script>
+    <script src="js/match/board.js?v=1.3.7"></script>
+    <script src="js/storage.js?v=1.3.7"></script>
+    <script src="js/sponsor-goals.js?v=1.3.7&goals=1"></script>
+    <script src="js/world-news.js?v=1.3.7&news=1"></script>
+    <script src="js/season-archive.js?v=1.3.7&archive=1"></script>
+    <script src="js/season-archive-ui.js?v=1.3.7&archive=1&tiles=1"></script>
+    <script src="js/player-staff.js?v=1.3.7&staff=2&traits=1&mental=1"></script>
+    <script src="js/player-staff-ui.js?v=1.3.7&staff=2&traits=1&mental=1&tiles=1"></script>
+    <script src="js/player-traits-ui.js?v=1.3.7&traits=2&mental=1"></script>
+    <script src="js/career-infrastructure.js?v=1.3.7&infrastructure=5&finance=1"></script>
+    <script src="js/career-infrastructure-ui.js?v=1.3.7&infrastructure=2&tiles=1"></script>
+    <script src="js/career-lifestyle.js?v=1.3.7&lifestyle=1"></script>
+    <script src="js/career-lifestyle-ui.js?v=1.3.7&lifestyle=1"></script>
+    <script src="js/equipment-wear.js?v=1.3.7&equipment-wear=1"></script>
+    <script src="js/systems.js?v=1.3.7&fix=career-progress-1&stats=1&ws-local=1&goals=1&news=1&archive=1&staff=1&traits=1&mental=1&infrastructure=1&lifestyle=1&equipment-wear=1&records=1&finance=1&et-reserves=1&matchplay=1&cover=1&grouping=3&leg-log=1&no-random-content=1&training-energy=1"></script>
+    <script src="js/mod-media.js?v=1.3.7"></script>
+    <script src="js/extras.js?v=1.3.7&fix=no-random-form-1&goals=1&news=1&archive=1&traits=1&lifestyle=1&finance=1&no-random-content=1"></script>
+    <script src="js/career-planning.js?v=1.3.7&fix=planning-2&et-reserves=1"></script>
 
 </body>
 </html>

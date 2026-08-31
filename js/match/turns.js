@@ -24,7 +24,7 @@ function playerThrow() {
             if (typeof applyPlayerTraitsToMatchStats === 'function') boostedPlayer = applyPlayerTraitsToMatchStats(player, boostedPlayer, true);
             const mentalAim = { sector: tSec, mult: tMult };
             if (typeof applyMentalPressureToStats === 'function') boostedPlayer = applyMentalPressureToStats(player, boostedPlayer, true, mentalAim, currentMatch.p1Score);
-            let result = calculateThrow(tSec, tMult, boostedPlayer);
+            let result = calculateVisitThrow(tSec, tMult, boostedPlayer, getMatchThrowGroupingVisit(currentMatch, true));
             if (typeof recordMentalThrowOutcome === 'function') recordMentalThrowOutcome(true, currentMatch.p1Score, mentalAim, result);
             processThrow(true, tSec, tMult, result.sector, result.mult);
         }
@@ -72,7 +72,7 @@ function playerThrow() {
 
             if (typeof applyPlayerTraitsToMatchStats === 'function') aiStats = applyPlayerTraitsToMatchStats(aiPlayer, aiStats, isP1);
             if (typeof applyMentalPressureToStats === 'function') aiStats = applyMentalPressureToStats(aiPlayer, aiStats, isP1, aim, score);
-            let result = calculateThrow(aim.sector, aim.mult, aiStats);
+            let result = calculateVisitThrow(aim.sector, aim.mult, aiStats, getMatchThrowGroupingVisit(currentMatch, isP1));
             if (scoringVisit) recordAiScoringObstruction(scoringVisit, aim, result, dartsLeft);
             if (typeof recordMentalThrowOutcome === 'function') recordMentalThrowOutcome(isP1, score, aim, result);
             processThrow(isP1, aim.sector, aim.mult, result.sector, result.mult);
@@ -86,7 +86,63 @@ function playerThrow() {
             return dartboardOrder[idx];
         }
 
-        function calculateThrow(targetSector, targetMult, stats) {
+        function createThrowGroupingVisit() {
+            return { dartsThrown: 0, sector: null, mult: null, streak: 0 };
+        }
+
+        function resetMatchThrowGrouping(match) {
+            delete match.throwGroupingVisit;
+            delete match.trebleGroupingVisit;
+        }
+
+        function getMatchThrowGroupingVisit(match, isP1) {
+            const side = isP1 ? 'p1' : 'p2';
+            const throwerIndex = match.isDoubles ? (match.doublesThrower?.[side] ?? null) : null;
+            const leg = match.totalLegsPlayed || 0;
+            // Zapis sprzed rozszerzenia mechanizmu pamiętał wyłącznie T20.
+            if (!match.throwGroupingVisit && match.trebleGroupingVisit) {
+                const { t20Streak, ...savedVisit } = match.trebleGroupingVisit;
+                match.throwGroupingVisit = { ...savedVisit, sector: 20, mult: 3, streak: t20Streak || 0 };
+            }
+            delete match.trebleGroupingVisit;
+            let visit = match.throwGroupingVisit;
+            if (!visit || match.dartsThrown === 0 || visit.dartsThrown !== match.dartsThrown
+                || visit.side !== side || visit.throwerIndex !== throwerIndex || visit.leg !== leg) {
+                visit = match.throwGroupingVisit = {
+                    ...createThrowGroupingVisit(), dartsThrown: match.dartsThrown || 0, side, throwerIndex, leg
+                };
+            }
+            return visit;
+        }
+
+        function isThrowGroupingTarget(sector, mult) {
+            return (Number.isInteger(sector) && sector >= 1 && sector <= 20 && (mult === 2 || mult === 3))
+                || (sector === 25 && mult === 2);
+        }
+
+        function getThrowGroupingBonus(visit, targetSector, targetMult) {
+            if (!visit || visit.dartsThrown < 1 || visit.dartsThrown > 2 || !visit.streak
+                || visit.sector !== targetSector || visit.mult !== targetMult
+                || !isThrowGroupingTarget(targetSector, targetMult)) return 0;
+            // Punkty procentowe, tylko na kolejną lotkę w dokładnie to samo pole.
+            return visit.streak >= 2 ? 12 : 8;
+        }
+
+        function calculateVisitThrow(targetSector, targetMult, stats, visit) {
+            const result = calculateThrow(targetSector, targetMult, stats, visit);
+            if (visit) {
+                const hitTarget = isThrowGroupingTarget(targetSector, targetMult)
+                    && result.sector === targetSector && result.mult === targetMult;
+                const sameTarget = visit.sector === targetSector && visit.mult === targetMult;
+                visit.streak = hitTarget ? Math.min(2, (sameTarget ? visit.streak || 0 : 0) + 1) : 0;
+                visit.sector = hitTarget ? targetSector : null;
+                visit.mult = hitTarget ? targetMult : null;
+                visit.dartsThrown++;
+            }
+            return result;
+        }
+
+        function calculateThrow(targetSector, targetMult, stats, groupingVisit = null) {
             // Dedykowana logika dla środka tarczy (Outer / Inner Bull)
             if (targetSector === 25) {
                 let stat = targetMult === 2 ? stats.doubles : stats.scoring;
@@ -95,8 +151,9 @@ function playerThrow() {
 
                 if (targetMult === 2) {
                     // Celowanie w 50 (Inner Bull)
-                    let bullHitChance = clamp(stat * 0.35, 10, 45);
-                    let outerHitChance = bullHitChance + 35; // Pudło ląduje w Outer Bull (25)
+                    const baseBullHitChance = clamp(stat * 0.35, 10, 45);
+                    const bullHitChance = Math.min(45, baseBullHitChance + getThrowGroupingBonus(groupingVisit, targetSector, targetMult));
+                    const outerHitChance = baseBullHitChance + 35; // Pudło ląduje w Outer Bull (25)
 
                     if (roll <= bullHitChance) {
                         return { sector: 25, mult: 2 }; // Trafienie 50 (D-Bull)
@@ -126,8 +183,12 @@ function playerThrow() {
             const isFavoriteDouble = targetMult === 2 && stats.favoriteDouble === targetSector;
 
             if (targetMult === 3) {
-                const tripleHitChance = clamp(stat * 0.42, 12, 54);
-                const targetSingleChance = Math.min(98, tripleHitChance + 65); 
+                const baseTripleHitChance = clamp(stat * 0.42, 12, 54);
+                const groupingBonus = getThrowGroupingBonus(groupingVisit, targetSector, targetMult);
+                const tripleHitChance = Math.min(54, baseTripleHitChance + groupingBonus);
+                // Marker zamienia część singli w celowane triple, bez zmiany
+                // szansy na sąsiednie sektory ani bazowych ocen zawodnika.
+                const targetSingleChance = Math.min(98, baseTripleHitChance + 65);
                 
                 if (roll <= tripleHitChance) { 
                     hitMult = 3; 
@@ -138,10 +199,11 @@ function playerThrow() {
                     hitMult = Math.random() < 0.10 ? 3 : 1; 
                 }
             } else if (targetMult === 2) {
-                const doubleHitChance = clamp(stat * 0.45 + (isFavoriteDouble ? 5 : 0), 12, 57);
+                const baseDoubleHitChance = clamp(stat * 0.45 + (isFavoriteDouble ? 5 : 0), 12, 57);
+                const doubleHitChance = Math.min(57, baseDoubleHitChance + getThrowGroupingBonus(groupingVisit, targetSector, targetMult));
                 
-                // ZMNIEJSZONO z 55 na 25. Teraz lotka wpada w singla tylko w ok. 25% przypadków pudeł.
-                const targetSingleChance = Math.min(90, doubleHitChance + 25);
+                // Bonus zamienia część singli w double, bez zmiany szansy na dalsze pudła.
+                const targetSingleChance = Math.min(90, baseDoubleHitChance + 25);
                 
                 if (roll <= doubleHitChance) {
                     hitMult = 2;

@@ -323,8 +323,19 @@ function getPlayerCareerTitleTournament(title) {
     };
 }
 
+function getPlayerCareerTitlePremierLeagueStage(tournament) {
+    const names = `${tournament.name || ''} ${tournament.sourceName || ''}`;
+    if (!/premier\s+league|global\s+darts\s+league/i.test(names)
+        || /qualif|kwalifikac|q.?school/i.test(`${names} ${tournament.specialType || ''}`)) return null;
+    if (/\bfinals?\b|\bplay[\s-]*offs?\b/i.test(names)) return 'finals';
+    return /\bnight\s*\d+\b|\bwiecz[oó]r\s*\d+\b/i.test(names) ? 'night' : null;
+}
+
 function getPlayerCareerTitleDisplayName(title) {
     const displayTarget = getPlayerCareerTitleTournament(title);
+    if (getPlayerCareerTitlePremierLeagueStage(displayTarget) === 'finals') {
+        return 'Premier League - Finals Night';
+    }
     return typeof getTournamentDisplayName === 'function'
         ? getTournamentDisplayName(displayTarget)
         : (displayTarget.name || title.sourceName || '');
@@ -333,8 +344,11 @@ function getPlayerCareerTitleDisplayName(title) {
 function getPlayerCareerTitleSeries(title) {
     const tournament = getPlayerCareerTitleTournament(title);
     const names = `${tournament.name} ${tournament.sourceName || ''} ${tournament.specialType || ''}`;
-    // Finals and qualifiers are separate events, never floor-tour titles.
-    if (/final|qualifier|kwalifikac|q-school|qschool/i.test(names)) return null;
+    // Finals and qualifiers stay separate from the series win counters.
+    if (/final|play[\s-]*off|qualifier|kwalifikac|q-school|qschool/i.test(names)) return null;
+    if (getPlayerCareerTitlePremierLeagueStage(tournament) === 'night') {
+        return 'Premier League - Nights';
+    }
     if (typeof isPlayersChampionshipTournament === 'function' && isPlayersChampionshipTournament(tournament)) {
         return 'Players Championship';
     }

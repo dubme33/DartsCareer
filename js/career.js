@@ -298,254 +298,6 @@ function showScreen(screenId) {
             document.getElementById('game-date-display').innerText = currentDate.toLocaleDateString('pl-PL', options);
         }
 
-        // --- BAZA LOSOWYCH E-MAILI (40 WIADOMOŚCI) ---
-        const randomEmailsDB = [
-    { sender_pl: "Wierny Fan", sender_en: "Loyal Fan", sender_de: "Treuer Fan", sender_nl: "Trouwe fan", subject_pl: "Jesteś niesamowity!", subject_en: "You're amazing!", subject_de: "Du bist großartig!", subject_nl: "Je bent geweldig!", body_pl: "Oglądam wszystkie Twoje mecze. Kiedyś też chciałbym rzucać ze średnią powyżej 90. Trzymaj się!", body_en: "I watch all your matches. One day I'd like to throw with an average over 90. Keep it up!", body_de: "Ich schaue alle deine Spiele. Eines Tages möchte ich mit einem Durchschnitt über 90 werfen. Mach weiter!", body_nl: "Ik kijk al je wedstrijden. Op een dag wil ik graag met een gemiddelde boven de 90 gooien. Doorgaan!" },
-    { sender_pl: "Złośliwy Hater", sender_en: "Malicious Hater", sender_de: "Bösartiger Hasser", sender_nl: "Boosaardige hater", subject_pl: "Fart", subject_en: "Pure Luck", subject_de: "Reines Glück", subject_nl: "Puur Geluk", body_pl: "Widziałem Twój wczorajszy mecz. Te podwójne to czysty przypadek, fuks i nic więcej. Niedługo wrócisz do grania w garażu.", body_en: "I saw your match yesterday. Those doubles are pure chance, luck and nothing more. You'll be back in the garage soon.", body_de: "Ich habe dein Spiel gestern gesehen. Diese Doubles sind reiner Zufall, Glück und nichts anderes. Du wirst bald wieder in der Garage spielen.", body_nl: "Ik zag je gisterenavond spelen. Die doubles zijn puur toeval, geluk en niets meer. Je bent binnenkort terug in de garage." },
-    { sender_pl: "Dziwny Kibic", sender_en: "Strange Fan", sender_de: "Seltsamer Fan", sender_nl: "Vreemde fan", subject_pl: "Nietypowa prośba", subject_en: "Unusual Request", subject_de: "Ungewöhnliche Anfrage", subject_nl: "Ongebruikelijk verzoek", body_pl: "Kolekcjonuję przepocone ręczniki graczy. Czy byłaby szansa, żebyś po kolejnym turnieju nie wrzucał go do pralki, tylko wysłał mi pocztą? Płacę za przesyłkę!", body_en: "I collect sweaty player towels. Would it be possible for you to mail me your towel after your next tournament instead of washing it? I'll pay for shipping!", body_de: "Ich sammle verschwitztes Handtücher von Spielern. Wäre es möglich, dass du mir dein Handtuch nach deinem nächsten Turnier zuschickst, anstatt es zu waschen? Ich zahle das Porto!", body_nl: "Ik verzamel bezwete handdoeken van spelers. Zou het mogelijk zijn om je handdoek na je volgende toernooi naar me toe te sturen in plaats van hem te wassen? Ik betaal de verzending!" },
-    { sender_pl: "Kolega z Touru", sender_en: "Tour Buddy", sender_de: "Tour-Kollege", sender_nl: "Tourbuddy", subject_pl: "Idziemy na piwo?", subject_en: "Going for a beer?", subject_de: "Gehen wir ein Bier trinken?", subject_nl: "Gaan we bier drinken?", body_pl: "Stary, dzisiaj wieczorem po sesji wpadamy do pubu obok hotelu. Stawiam pierwszą kolejkę, nie może Cię zabraknąć!", body_en: "Hey mate, tonight after the session we're heading to the pub next to the hotel. First round's on me, you can't miss it!", body_de: "Hey Kumpel, heute Abend nach der Sitzung gehen wir in die Kneipe neben dem Hotel. Erste Runde geht auf meine Rechnung, du darfst nicht fehlen!", body_nl: "Hé makker, vanavond na de sessie gaan we naar de kroeg naast het hotel. Eerste rondje van mij, je mag niet missen!" },
-    { sender_pl: "SPAM", sender_en: "SPAM", sender_de: "SPAM", sender_nl: "SPAM", subject_pl: "Wygrałeś milion funtów!", subject_en: "You won a million pounds!", subject_de: "Du hast eine Million Pfund gewonnen!", subject_nl: "Je hebt een miljoen pond gewonnen!", body_pl: "Gratulacje! Twój e-mail został wylosowany w Wielkiej Loterii. Podaj numer karty i kod CVV, by odebrać nagrodę.", body_en: "Congratulations! Your email was selected in the Great Lottery. Provide your card number and CVV code to claim the prize.", body_de: "Glückwunsch! Deine E-Mail wurde in der Großen Lotterie ausgewählt. Gib deine Kartennummer und deinen CVV-Code an, um den Preis zu beanspruchen.", body_nl: "Gefeliciteerd! Je e-mailadres is geselecteerd in de Grote Loterij. Geef je rekeningnummer en CVV-code op om de prijs op te eisen." },
-    { sender_pl: "Administracja", sender_en: "Administration", sender_de: "Verwaltung", sender_nl: "Administratie", subject_pl: "Dress code", subject_en: "Dress code", subject_de: "Kleiderordnung", subject_nl: "Dresscode", body_pl: "Przypominamy, że noszenie czarnych butów bez widocznego logo jest rygorystycznie egzekwowane. Prosimy o przestrzeganie regulaminu.", body_en: "We remind you that wearing black shoes without a visible logo is strictly enforced. Please comply with the regulations.", body_de: "Wir möchten Sie darauf hinweisen, dass das Tragen schwarzer Schuhe ohne sichtbares Logo streng durchgesetzt wird. Bitte beachten Sie die Vorschriften.", body_nl: "We herinneren u eraan dat het dragen van zwarte schoenen zonder zichtbaar logo strikt wordt gehandhaafd. Neem alstublieft de voorschriften in acht." },
-    { sender_pl: "Lokalna Pizzeria", sender_en: "Local Pizzeria", sender_de: "Lokale Pizzeria", sender_nl: "Lokale pizzeria", subject_pl: "Darmowa pizza dla graczy", subject_en: "Free pizza for players", subject_de: "Kostenlose Pizza für Spieler", subject_nl: "Gratis pizza voor spelers", body_pl: "Z okazji turnieju w naszym mieście, oferujemy darmową pizzę każdemu zawodnikowi. Wpadnij do nas z kartą zawodnika!", body_en: "For the occasion of the tournament in our city, we offer free pizza to every player. Visit us with your player card!", body_de: "Anlässlich des Turniers in unserer Stadt bieten wir jedem Spieler kostenlose Pizza an. Besuchen Sie uns mit Ihrer Spielerkarte!", body_nl: "Ter gelegenheid van het toernooi in onze stad bieden we gratis pizza aan elke speler. Bezoek ons met je speelerskaart!" },
-    { sender_pl: "DartsPlanet (Magazyn)", sender_en: "DartsPlanet (Magazine)", sender_de: "DartsPlanet (Magazin)", sender_nl: "DartsPlanet (Tijdschrift)", subject_pl: "Prośba o wywiad", subject_en: "Interview Request", subject_de: "Interviewanfrage", subject_nl: "Interviewverzoek", body_pl: "Piszę artykuł o wschodzących gwiazdach i zawodnikach w formie. Zgodziłbyś się na krótką, 10-minutową rozmowę przez telefon po weekendzie?", body_en: "I'm writing an article about rising stars and in-form players. Would you agree to a short 10-minute phone interview after the weekend?", body_de: "Ich schreibe einen Artikel über aufstrebende Stars und formstarke Spieler. Würdest du einem kurzen 10-minütigen Telefoninterview nach dem Wochenende zustimmen?", body_nl: "Ik schrijf een artikel over opkomende sterren en formsterkere spelers. Zou je akkoord gaan met een kort 10-minuten telefonisch interview na het weekend?" },
-    { sender_pl: "Początkujący Gracz", sender_en: "Beginner Player", sender_de: "Anfängerspieler", sender_nl: "Beginnende speler", subject_pl: "Jak trenujesz podwójne?", subject_en: "How do you train doubles?", subject_de: "Wie trainierst du Doubles?", subject_nl: "Hoe train je doubles?", body_pl: "Mam problem z trafianiem D20 pod presją. Masz może jakieś porady, jak uspokoić głowę? Jesteś moją inspiracją.", body_en: "I have trouble hitting D20 under pressure. Do you have any tips on how to calm your mind? You're my inspiration.", body_de: "Ich habe Schwierigkeiten, D20 unter Druck zu treffen. Hast du Tipps, wie man den Kopf beruhigt? Du bist meine Inspiration.", body_nl: "Ik heb moeite om D20 onder druk te raken. Heb je tips hoe je je hoofd kalm houdt? Je bent mijn inspiratie." },
-    { sender_pl: "SPAM", sender_en: "SPAM", sender_de: "SPAM", sender_nl: "SPAM", subject_pl: "Zarabiaj na krypto", subject_en: "Earn on crypto", subject_de: "Mit Krypto Geld verdienen", subject_nl: "Verdien geld met crypto", body_pl: "Koniec z rzucaniem lotkami! Zarabiaj 5 tysięcy funtów dziennie, nie ruszając się z kanapy. Kliknij tutaj.", body_en: "Stop throwing darts! Earn 5 thousand pounds a day without moving from the couch. Click here.", body_de: "Keine Darts mehr werfen! Verdiene 5.000 Pfund pro Tag, ohne die Couch zu verlassen. Klick hier.", body_nl: "Geen pijlen meer gooien! Verdien 5.000 pond per dag zonder van de bank af te gaan. Klik hier." },
-    { sender_pl: "Wściekły Gracz Otwarty", sender_en: "Angry Open Player", sender_de: "Wütender Open-Spieler", sender_nl: "Boze Open Speler", subject_pl: "Zabrałeś mi miejsce", subject_en: "You took my spot", subject_de: "Du hast meinen Platz genommen", subject_nl: "Je nam mijn plek in", body_pl: "Gdyby nie Ty, to ja bym się zakwalifikował. Następnym razem udowodnię Ci przy tarczy, że jestem lepszy.", body_en: "If it wasn't for you, I would have qualified. Next time I'll prove to you at the board that I'm better.", body_de: "Wärst du nicht gewesen, hätte ich mich qualifiziert. Beim nächsten Mal werde ich dir am Board beweisen, dass ich besser bin.", body_nl: "Als jij er niet was geweest, had ik me gekwalificeerd. De volgende keer zal ik je op het bord bewijzen dat ik beter ben." },
-    { sender_pl: "Recepcja Hotelowa", sender_en: "Hotel Reception", sender_de: "Hotelrezeption", sender_nl: "Hotelreceptie", subject_pl: "Znaleziona ładowarka", subject_en: "Found charger", subject_de: "Gefundenes Ladegerät", subject_nl: "Gevonden oplader", body_pl: "Informujemy, że podczas sprzątania Pana pokoju po ostatnim turnieju znaleźliśmy ładowarkę do telefonu. Przesyłka jest w drodze do Pana bazy.", body_en: "Please be informed that while cleaning your room after the last tournament, we found a phone charger. The package is on its way to your home.", body_de: "Bitte seien Sie darüber informiert, dass wir beim Reinigen Ihres Zimmers nach dem letzten Turnier ein Handy-Ladegerät gefunden haben. Das Paket ist auf dem Weg zu Ihnen.", body_nl: "Houd er rekening mee dat we tijdens het schoonmaken van je kamer na het laatste toernooi een telefoonoplader hebben gevonden. Het pakket is onderweg naar je huis." },
-    { sender_pl: "Kibic z Niemiec", sender_en: "Fan from Germany", sender_de: "Fan aus Deutschland", sender_nl: "Fan uit Duitsland", subject_pl: "Kiedy Continental Tour?", subject_en: "When is the Continental Tour?", subject_de: "Wann ist die Continental Tour?", subject_nl: "Wanneer is de Continental Tour?", body_pl: "Cześć! Czekamy tu na Ciebie w Monachium z kuflem zimnego piwa. Mam nadzieję, że zjawisz się w dobrej formie!", body_en: "Hi! We're waiting for you here in Munich with a cold pint of beer. I hope you arrive in good form!", body_de: "Hi! Wir warten hier in München mit einem kalten Bier auf dich. Ich hoffe, du bist in guter Form!", body_nl: "Hoi! We wachten hier op je in München met een koud biertje. Ik hoop dat je in goede vorm aankomt!" },
-    { sender_pl: "Trener Mentalny", sender_en: "Mental Coach", sender_de: "Mentaltrainer", sender_nl: "Mentale Coach", subject_pl: "Oferta współpracy", subject_en: "Cooperation offer", subject_de: "Kooperationsangebot", subject_nl: "Samenwerkingsaanbod", body_pl: "Widziałem Twoje nerwy w ostatnich legach. Oferuję sesje oddechowe i trening wyobrażeniowy. Pierwsze spotkanie za pół ceny.", body_en: "I saw your nerves in the final legs. I offer breathing sessions and visualization training. First meeting is half price.", body_de: "Ich sah deine Nervosität in den letzten Legs. Ich biete Atemsitzungen und Visualisierungstraining an. Das erste Treffen kostet den halben Preis.", body_nl: "Ik zag je zenuwen in de laatste legs. Ik bied ademhalingssessies en visualisatietraining aan. De eerste bijeenkomst is voor de helft van de prijs." },
-    { sender_pl: "Mama", sender_en: "Mom", sender_de: "Mama", sender_nl: "Mama", subject_pl: "Pamiętaj o witaminach", subject_en: "Remember your vitamins", subject_de: "Denk an deine Vitamine", subject_nl: "Denk aan je vitamines", body_pl: "Synek, widziałam Cię wczoraj w telewizji. Wyglądasz trochę blado, pamiętaj żeby jeść owoce a nie same kebaby z tymi Twoimi kolegami.", body_en: "Son, I saw you on TV yesterday. You look a bit pale, remember to eat fruit and not just kebabs with your friends.", body_de: "Sohn, ich habe dich gestern im Fernsehen gesehen. Du siehst etwas blass aus, denk daran, Obst zu essen und nicht nur Kebabs mit deinen Freunden.", body_nl: "Zoon, ik zag je gisteren op tv. Je ziet er een beetje bleek uit, vergeet niet om fruit te eten en niet alleen kebabs met je vrienden." },
-    { sender_pl: "Organizator Turnieju", sender_en: "Tournament Organizer", sender_de: "Turnierorganisator", sender_nl: "Toernooiorganisator", subject_pl: "Opóźnienia", subject_en: "Delays", subject_de: "Verzögerungen", subject_nl: "Vertragingen", body_pl: "Uprzejmie informujemy, że z powodu problemów ze światłem na scenie numer 2, harmonogram dzisiejszej sesji przesuwa się o około 30 minut.", body_en: "Please be advised that due to lighting issues on Stage 2, today's session schedule is delayed by about 30 minutes.", body_de: "Bitte beachten Sie, dass sich der Zeitplan der heutigen Sitzung aufgrund von Beleuchtungsproblemen auf Bühne 2 um etwa 30 Minuten verzögert.", body_nl: "Houd er rekening mee dat door verlichtingsproblemen op podium 2 het schema van de sessie van vandaag met ongeveer 30 minuten is vertraagd." },
-    { sender_pl: "Sponsor: Cuespirit", sender_en: "Sponsor: Cuespirit", sender_de: "Sponsor: Cuespirit", sender_nl: "Sponsor: Cuespirit", subject_pl: "Nowe lotki", subject_en: "New darts", subject_de: "Neue Darts", subject_nl: "Nieuwe pijlen", body_pl: "Wysłaliśmy Ci najnowszy prototyp naszych 23-gramowych lotek z miedzianym akcentem. Daj znać, czy balans Ci odpowiada.", body_en: "We've sent you the latest prototype of our 23-gram darts with a copper accent. Let us know if the balance suits you.", body_de: "Wir haben dir den neuesten Prototyp unserer 23-Gramm-Darts mit Kupferakzent geschickt. Lass uns wissen, ob dir die Balance gefällt.", body_nl: "We hebben je het nieuwste prototype van onze 23-gram darts met een koperaccent gestuurd. Laat ons weten of de balans je bevalt." },
-    { sender_pl: "Fanatyk Sprzętu", sender_en: "Gear Fanatic", sender_de: "Ausrüstungs-Fanatiker", sender_nl: "Uitrusting Fanaticus", subject_pl: "Jakich piórek używasz?", subject_en: "What flights do you use?", subject_de: "Welche Flights benutzt du?", subject_nl: "Welke flights gebruik je?", body_pl: "Zauważyłem, że Twoje lotki lecą bardzo płasko. Czy to standardowe piórka Number 6, czy może używasz Kytów?", body_en: "I noticed your darts fly very flat. Are they standard Number 6 flights, or maybe you use Kites?", body_de: "Mir ist aufgefallen, dass deine Darts sehr flach fliegen. Sind das Standard-Number-6-Flights oder verwendest du Kites?", body_nl: "Het viel me op dat je pijlen erg vlak vliegen. Zijn het standaard Number 6 flights, of gebruik je misschien Kites?" },
-    { sender_pl: "Klub Rzutkowy Sosnowiec", sender_en: "Local Darts Club", sender_de: "Lokaler Dartverein", sender_nl: "Lokale Dartclub", subject_pl: "Zaproszenie", subject_en: "Invitation", subject_de: "Einladung", subject_nl: "Uitnodiging", body_pl: "Panie Mistrzu! Zapraszamy na gościnny występ u nas. Chłopaki nie mogą się doczekać, żeby dostać od Pana łomot 0:6.", body_en: "Master! We invite you for a guest appearance at our club. The boys can't wait to get a 0:6 beating from you.", body_de: "Meister! Wir laden dich zu einem Gastauftritt in unserem Club ein. Die Jungs können es kaum erwarten, von dir mit 0:6 besiegt zu werden.", body_nl: "Meester! We nodigen je uit voor een gastoptreden bij onze club. De jongens kunnen niet wachten om een 0:6 pak slaag van je te krijgen." },
-    { sender_pl: "Sfrustrowany Fan", sender_en: "Frustrated Fan", sender_de: "Frustrierter Fan", sender_nl: "Gefrustreerde Fan", subject_pl: "Zrujnowałeś mi kupon", subject_en: "You ruined my bet", subject_de: "Du hast meine Wette ruiniert", subject_nl: "Je hebt mijn weddenschap verpest", body_pl: "Przez Ciebie przegrałem wczoraj 50 funtów u bukmachera. Miałeś trafić minimum trzy maxy, a rzuciłeś ledwo jednego...", body_en: "Because of you, I lost 50 pounds at the bookmaker yesterday. You were supposed to hit at least three maxes, and you barely threw one...", body_de: "Wegen dir habe ich gestern beim Buchmacher 50 Pfund verloren. Du solltest mindestens drei Maxima werfen und hast kaum eins geworfen...", body_nl: "Door jou ben ik gisteren 50 pond kwijtgeraakt bij de bookmaker. Je zou minstens drie maximums gooien, en je gooide er amper één..." },
-    { sender_pl: "Finanse", sender_en: "Finance Dept", sender_de: "Finanzabteilung", sender_nl: "Financiële Afdeling", subject_pl: "Powiadomienie podatkowe", subject_en: "Tax notification", subject_de: "Steuermitteilung", subject_nl: "Belastingmelding", body_pl: "Prosimy o upewnienie się, że Pana dane rozliczeniowe są zaktualizowane przed końcem kwartału, aby uniknąć opóźnień w wypłatach.", body_en: "Please ensure your billing details are up to date before the end of the quarter to avoid delays in payouts.", body_de: "Bitte stellen Sie sicher, dass Ihre Rechnungsdaten vor Ende des Quartals auf dem neuesten Stand sind, um Verzögerungen bei Auszahlungen zu vermeiden.", body_nl: "Zorg ervoor dat je factuurgegevens vóór het einde van het kwartaal up-to-date zijn om vertragingen in uitbetalingen te voorkomen." },
-    { sender_pl: "Początkujący Gracz", sender_en: "Beginner Player", sender_de: "Anfängerspieler", sender_nl: "Beginnende speler", subject_pl: "Rzuciłem 180!", subject_en: "I hit a 180!", subject_de: "Ich habe eine 180 geworfen!", subject_nl: "Ik heb een 180 gegooid!", body_pl: "Chciałem się tylko pochwalić, że po miesiącach prób w końcu wrzuciłem 3 lotki w czerwoną część 20! Jaram się jak dziecko!", body_en: "I just wanted to brag that after months of trying, I finally put 3 darts in the red part of the 20! I'm as excited as a kid!", body_de: "Ich wollte nur angeben, dass ich nach monatelangen Versuchen endlich 3 Darts in den roten Teil der 20 geworfen habe! Ich freue mich wie ein Kind!", body_nl: "Ik wilde even opscheppen dat ik na maanden proberen eindelijk 3 pijltjes in het rode deel van de 20 heb gegooid! Ik ben zo blij als een kind!" },
-    { sender_pl: "SPAM", sender_en: "SPAM", sender_de: "SPAM", sender_nl: "SPAM", subject_pl: "Tabletki na skupienie", subject_en: "Focus pills", subject_de: "Fokus-Pillen", subject_nl: "Focuspillen", body_pl: "Odkryto naturalny środek z Azji, który wyostrza wzrok i redukuje stres. Zamów dwa opakowania w cenie jednego.", body_en: "A natural remedy from Asia has been discovered that sharpens vision and reduces stress. Order two packs for the price of one.", body_de: "Ein natürliches Heilmittel aus Asien wurde entdeckt, das das Sehvermögen schärft und Stress reduziert. Bestelle zwei Packungen zum Preis von einer.", body_nl: "Een natuurlijke remedie uit Azië is ontdekt die het gezichtsvermogen verscherpt en stress vermindert. Bestel twee pakjes voor de prijs van één." },
-    { sender_pl: "Hater", sender_en: "Hater", sender_de: "Hater", sender_nl: "Hater", subject_pl: "Brak stylu", subject_en: "No style", subject_de: "Kein Stil", subject_nl: "Geen stijl", body_pl: "Zmień muzykę na wejście, bo uszy więdną. Do tego zrób coś z fryzurą, wyglądasz jak po ciężkiej nocy.", body_en: "Change your walk-on music because my ears are bleeding. Plus, do something with your hair, you look like you had a rough night.", body_de: "Ändere deine Walk-on-Musik, denn meine Ohren bluten. Außerdem tu was mit deinen Haaren, du siehst aus, als hättest du eine harte Nacht gehabt.", body_nl: "Verander je walk-on muziek, want mijn oren bloeden. En doe iets met je haar, je ziet eruit alsof je een zware nacht hebt gehad." },
-    { sender_pl: "Dawny Znajomy", sender_en: "Old Friend", sender_de: "Alter Freund", sender_nl: "Oude Vriend", subject_pl: "Pożyczka?", subject_en: "A loan?", subject_de: "Ein Darlehen?", subject_nl: "Een lening?", body_pl: "Kopę lat! Super Ci idzie w telewizji. Słuchaj, miałbyś pożyczyć 200 funtów do pierwszego? Oddam z nawiązką.", body_en: "Long time no see! You're doing great on TV. Listen, could you lend me 200 pounds until the 1st? I'll pay you back with interest.", body_de: "Lange nicht gesehen! Du machst dich toll im Fernsehen. Hör zu, könntest du mir 200 Pfund bis zum Ersten leihen? Ich zahle es mit Zinsen zurück.", body_nl: "Lang niet gezien! Je doet het geweldig op tv. Luister, zou je me 200 pond kunnen lenen tot de 1e? Ik betaal het je terug met rente." },
-    { sender_pl: "Anonimowa Fanka", sender_en: "Anonymous Fan Girl", sender_de: "Anonymer weiblicher Fan", sender_nl: "Anonieme Fan Girl", subject_pl: "Zostaniesz moim mężem?", subject_en: "Will you be my husband?", subject_de: "Willst du mein Mann werden?", subject_nl: "Wil je mijn man worden?", body_pl: "Wydrukowałam sobie wielki plakat z Twoim zdjęciem i powiesiłam nad łóżkiem. Wyślesz mi autograf z dedykacją?", body_en: "I printed a huge poster with your photo and hung it over my bed. Will you send me an autograph with a dedication?", body_de: "Ich habe ein riesiges Poster mit deinem Foto gedruckt und über mein Bett gehängt. Schickst du mir ein Autogramm mit Widmung?", body_nl: "Ik heb een enorme poster met je foto afgedrukt en boven mijn bed gehangen. Stuur je me een handtekening met een opdracht?" },
-    { sender_pl: "Menadżer Pubu", sender_en: "Pub Manager", sender_de: "Kneipenmanager", sender_nl: "Pub Manager", subject_pl: "Urwana Tarcza", subject_en: "Torn Board", subject_de: "Abgerissenes Dartboard", subject_nl: "Afgescheurd Bord", body_pl: "Pamiętasz jak wczoraj po treningu wyrwałeś nam tarczę ze ściany? Ochrona kazała napisać, żebyś nie wracał bez wiertarki.", body_en: "Remember how you ripped our dartboard off the wall after practice yesterday? Security told me to write to you not to come back without a drill.", body_de: "Erinnerst du dich, wie du gestern nach dem Training unser Dartboard von der Wand gerissen hast? Der Sicherheitsdienst hat mir gesagt, ich soll dir schreiben, dass du ohne Bohrmaschine nicht zurückkommen sollst.", body_nl: "Weet je nog hoe je gisteren na de training ons dartbord van de muur trok? De beveiliging vertelde me je te schrijven om niet terug te komen zonder een boor." },
-    { sender_pl: "Zarząd Europe", sender_en: "Europe Board", sender_de: "Europa-Vorstand", sender_nl: "Europa Bestuur", subject_pl: "Bilety lotnicze", subject_en: "Flight tickets", subject_de: "Flugtickets", subject_nl: "Vliegtickets", body_pl: "Informujemy, że proces zwrotu kosztów za przeloty na ostatnie turnieje z cyklu Continental Tour został zakończony.", body_en: "We inform you that the reimbursement process for flights to recent Continental Tour events has been completed.", body_de: "Wir teilen Ihnen mit, dass der Erstattungsprozess für Flüge zu den jüngsten Continental-Tour-Events abgeschlossen ist.", body_nl: "Wij informeren u dat het vergoedingsproces voor vluchten naar recente Continental Tour-evenementen is afgerond." },
-    { sender_pl: "Bystry Widz", sender_en: "Sharp Viewer", sender_de: "Aufmerksamer Zuschauer", sender_nl: "Scherpe Kijker", subject_pl: "Literówka na koszulce", subject_en: "Typo on your shirt", subject_de: "Tippfehler auf deinem Hemd", subject_nl: "Typfout op je shirt", body_pl: "Hej, nie wiem czy wiesz, ale chyba firma szyjąca Twoje koszulki pomyliła jedną literę w Twoim nazwisku z tyłu. Zgłoś to!", body_en: "Hey, I don't know if you know, but the company making your shirts misspelled a letter in your name on the back. Report it!", body_de: "Hey, ich weiß nicht, ob du es weißt, aber die Firma, die deine Hemden herstellt, hat einen Buchstaben in deinem Namen auf dem Rücken falsch geschrieben. Melde das!", body_nl: "Hé, ik weet niet of je het weet, maar het bedrijf dat je shirts maakt heeft een letter in je naam op de achterkant verkeerd gespeld. Meld het!" },
-    { sender_pl: "Wesoły Taksówkarz", sender_en: "Cheerful Cabbie", sender_de: "Fröhlicher Taxifahrer", sender_nl: "Vrolijke Taxichauffeur", subject_pl: "Dzięki za napiwek", subject_en: "Thanks for the tip", subject_de: "Danke für das Trinkgeld", subject_nl: "Bedankt voor de fooi", body_pl: "Wiozłem Cię wczoraj spod hali pod hotel. Dzięki za tę dychę napiwku, włączyłem żonie powtórkę Twojego meczu wieczorem!", body_en: "I drove you from the venue to the hotel yesterday. Thanks for the tenner tip, I put on a replay of your match for my wife in the evening!", body_de: "Ich bin dich gestern von der Arena zum Hotel gefahren. Danke für das Zehner-Trinkgeld, ich habe abends die Wiederholung deines Spiels für meine Frau eingeschaltet!", body_nl: "Ik heb je gisteren van de locatie naar het hotel gereden. Bedankt voor de fooi van een tientje, ik heb 's avonds een herhaling van je wedstrijd voor mijn vrouw opgezet!" },
-    { sender_pl: "Hater", sender_en: "Hater", sender_de: "Hater", sender_nl: "Hater", subject_pl: "Mickael Cię zniszczy", subject_en: "Mickael will destroy you", subject_de: "Mickael wird dich zerstören", subject_nl: "Mickael zal je vernietigen", body_pl: "Ciesz się swoimi wygranymi w pierwszych rundach. Jak tylko trafisz na Van Gervyna albo Humpreysa, to z płaczem wrócisz do domu.", body_en: "Enjoy your wins in the early rounds. As soon as you face Van Gervyn or Humpreys, you'll go home crying.", body_de: "Genieße deine Siege in den ersten Runden. Sobald du auf Van Gervyn oder Humpreys triffst, wirst du weinend nach Hause gehen.", body_nl: "Geniet van je overwinningen in de eerste rondes. Zodra je tegenover Van Gervyn of Humpreys staat, ga je huilend naar huis." },
-    { sender_pl: "Sklep Darts Pro", sender_en: "Darts Pro Shop", sender_de: "Darts Pro Shop", sender_nl: "Darts Pro Winkel", subject_pl: "Promocja", subject_en: "Promotion", subject_de: "Aktion", subject_nl: "Promotie", body_pl: "Wielka zimowa wyprzedaż! Wszystkie tarcze treningowe tańsze o 15%. Skorzystaj, póki mamy sprzęt na stanie.", body_en: "Huge winter sale! All practice boards are 15% off. Take advantage while we have gear in stock.", body_de: "Riesiger Winterschlussverkauf! Alle Trainingsboards sind um 15 % reduziert. Greif zu, solange wir Ausrüstung auf Lager haben.", body_nl: "Grote winteruitverkoop! Alle trainingsborden hebben 15% korting. Profiteer ervan zolang we uitrusting op voorraad hebben." },
-    { sender_pl: "Kolega z Touru", sender_en: "Tour Buddy", sender_de: "Tour-Kollege", sender_nl: "Tourbuddy", subject_pl: "Zgubiłem lotki", subject_en: "I lost my darts", subject_de: "Ich habe meine Darts verloren", subject_nl: "Ik ben mijn pijlen kwijt", body_pl: "Stary, nie masz gdzieś w zapasie kompletu mosiężnych lotek 22g? Bagaż mi utknął na lotnisku, a gram za 2 godziny!", body_en: "Mate, do you happen to have a spare set of 22g brass darts? My luggage got stuck at the airport, and I play in 2 hours!", body_de: "Kumpel, hast du zufällig ein Ersatzset 22g-Messing-Darts? Mein Gepäck steckt am Flughafen fest, und ich spiele in 2 Stunden!", body_nl: "Makker, heb je toevallig een reserveset koperen pijlen van 22g? Mijn bagage is vast komen te zitten op de luchthaven en ik speel over 2 uur!" },
-    { sender_pl: "Fizjoterapeuta", sender_en: "Physiotherapist", sender_de: "Physiotherapeut", sender_nl: "Fysiotherapeut", subject_pl: "Zadbaj o łokieć", subject_en: "Take care of your elbow", subject_de: "Pass auf deinen Ellenbogen auf", subject_nl: "Zorg voor je elleboog", body_pl: "Przypominam, że rzucanie po 5 godzin dziennie mocno obciąża staw łokciowy. Rób przerwy i stosuj zimne okłady!", body_en: "A reminder that throwing for 5 hours a day puts a lot of strain on the elbow joint. Take breaks and use cold compresses!", body_de: "Zur Erinnerung: 5 Stunden tägliches Werfen belastet das Ellenbogengelenk stark. Mach Pausen und benutze kalte Kompressen!", body_nl: "Een herinnering dat 5 uur per dag gooien veel druk op het ellebooggewricht legt. Neem pauzes en gebruik koude kompressen!" },
-    { sender_pl: "Młody Fan", sender_en: "Young Fan", sender_de: "Junger Fan", sender_nl: "Jonge Fan", subject_pl: "Chcę być jak Ty", subject_en: "I want to be like you", subject_de: "Ich möchte so sein wie du", subject_nl: "Ik wil zoals jij zijn", body_pl: "Rodzice kupili mi pierwszą tarczę pod choinkę. Marzę, żeby za kilka lat zagrać z Tobą na Mistrzostwach Świata!", body_en: "My parents bought me my first dartboard for Christmas. I dream of playing against you at the World Championship in a few years!", body_de: "Meine Eltern haben mir mein erstes Dartboard zu Weihnachten gekauft. Ich träume davon, in ein paar Jahren gegen dich bei der Weltmeisterschaft zu spielen!", body_nl: "Mijn ouders hebben me mijn eerste dartbord voor Kerstmis gekocht. Ik droom ervan om over een paar jaar tegen je te spelen op het Wereldkampioenschap!" },
-    { sender_pl: "Dziennikarz", sender_en: "Journalist", sender_de: "Journalist", sender_nl: "Journalist", subject_pl: "Plotki", subject_en: "Rumors", subject_de: "Gerüchte", subject_nl: "Geruchten", body_pl: "Dotarły do nas słuchy, że zmieniasz sponsora sprzętowego. Czy zechciałbyś udzielić nam ekskluzywnego komentarza w tej sprawie?", body_en: "We've heard rumors that you're changing your equipment sponsor. Would you like to give us an exclusive comment on this matter?", body_de: "Wir haben Gerüchte gehört, dass du deinen Ausrüstungssponsor wechselst. Möchtest du uns einen exklusiven Kommentar zu dieser Angelegenheit geben?", body_nl: "We hebben geruchten gehoord dat je van materiaalsponsor verandert. Wil je ons hierover een exclusief commentaar geven?" },
-    { sender_pl: "Kibic z Australii", sender_en: "Fan from Australia", sender_de: "Fan aus Australien", sender_nl: "Fan uit Australië", subject_pl: "Pozdrowienia z antypodów", subject_en: "Greetings from Down Under", subject_de: "Grüße von Down Under", subject_nl: "Groeten uit Down Under", body_pl: "Wstaję o 3 w nocy, żeby oglądać Twoje mecze. Rób swoje i nie oglądaj się na innych, masz tu wierne grono fanów!", body_en: "I wake up at 3 AM to watch your matches. Keep doing your thing and don't look at others, you have a loyal fan base here!", body_de: "Ich wache um 3 Uhr morgens auf, um deine Spiele anzusehen. Mach weiter dein Ding und schau nicht auf die anderen, du hast hier eine treue Fangemeinde!", body_nl: "Ik word om 3 uur 's nachts wakker om je wedstrijden te bekijken. Blijf je ding doen en kijk niet naar anderen, je hebt hier een trouwe schare fans!" },
-    { sender_pl: "Firma kurierska", sender_en: "Courier Company", sender_de: "Kurierunternehmen", sender_nl: "Koeriersbedrijf", subject_pl: "Nieudana próba doręczenia", subject_en: "Failed delivery attempt", subject_de: "Fehlgeschlagener Zustellversuch", subject_nl: "Mislukte bezorgpoging", body_pl: "Kurier nie zastał Pana pod adresem domowym. Przesyłka ze sprzętem darterskim oczekuje w lokalnym punkcie odbioru.", body_en: "The courier did not find you at your home address. The package with darts equipment is waiting at the local pickup point.", body_de: "Der Kurier hat Sie unter Ihrer Privatadresse nicht angetroffen. Das Paket mit der Dartausrüstung wartet an der lokalen Abholstation.", body_nl: "De koerier trof u niet aan op uw huisadres. Het pakket met dartuitrusting wacht op het lokale ophaalpunt." },
-    { sender_pl: "Dietetyk sportowy", sender_en: "Sports Dietitian", sender_de: "Sportdiätassistent", sender_nl: "Sportdiëtist", subject_pl: "Więcej wody", subject_en: "More water", subject_de: "Mehr Wasser", subject_nl: "Meer water", body_pl: "Proszę, pamiętaj o nawodnieniu w trakcie meczów, szczególnie na tych gorących halach pod reflektorami telewizyjnymi.", body_en: "Please remember to hydrate during matches, especially in those hot venues under the TV spotlights.", body_de: "Bitte denke daran, dich während der Spiele zu hydratisieren, besonders an diesen heißen Veranstaltungsorten unter den TV-Scheinwerfern.", body_nl: "Vergeet niet om te hydrateren tijdens wedstrijden, vooral op die hete locaties onder de tv-spots." },
-    { sender_pl: "Hater", sender_en: "Hater", sender_de: "Hater", sender_nl: "Hater", subject_pl: "Emerytura", subject_en: "Retirement", subject_de: "Ruhestand", subject_nl: "Pensioen", body_pl: "Skończ już rzucać. Twoje ostatnie występy to jest jakaś kpina z tego pięknego sportu.", body_en: "Stop throwing already. Your recent performances are a mockery of this beautiful sport.", body_de: "Hör endlich auf zu werfen. Deine jüngsten Auftritte sind ein Hohn auf diesen schönen Sport.", body_nl: "Stop al met gooien. Je recente optredens zijn een aanfluiting van deze prachtige sport." },
-    
-    { 
-        sender_pl: "Menedżer Hotelu", sender_en: "Hotel Manager", sender_de: "Hotelmanager", sender_nl: "Hotelmanager", 
-        subject_pl: "Hałas w nocy", subject_en: "Noise at night", subject_de: "Lärm in der Nacht", subject_nl: "Lawaai 's nachts", 
-        body_pl: "Goście z pokoju obok skarżyli się, że wczoraj rzucałeś do tarczy do 3 nad ranem. Proszę o zachowanie ciszy nocnej.", body_en: "Guests from the next room complained that you were throwing darts until 3 AM. Please respect quiet hours.", body_de: "Gäste aus dem Nachbarzimmer haben sich beschwert, dass du bis 3 Uhr morgens Darts geworfen hast. Bitte respektiere die Nachtruhe.", body_nl: "Gasten uit de kamer naast je klaagden dat je tot 3 uur 's nachts aan het darten was. Respecteer de nachtrust." 
-    },
-    { 
-        sender_pl: "Była Dziewczyna", sender_en: "Ex-Girlfriend", sender_de: "Ex-Freundin", sender_nl: "Ex-vriendin", 
-        subject_pl: "Widziałam Cię w TV", subject_en: "Saw you on TV", subject_de: "Habe dich im TV gesehen", subject_nl: "Zag je op tv", 
-        body_pl: "Cześć... widziałam Twój wczorajszy mecz. Zmieniłeś się. Może skoczymy na kawę jak wrócisz z turnieju?", body_en: "Hi... I saw your match yesterday. You've changed. Maybe we could grab a coffee when you're back?", body_de: "Hi... ich habe dein Spiel gestern gesehen. Du hast dich verändert. Vielleicht können wir einen Kaffee trinken, wenn du zurück bist?", body_nl: "Hoi... ik zag je wedstrijd gisteren. Je bent veranderd. Misschien kunnen we koffie drinken als je terug bent?" 
-    },
-    { 
-        sender_pl: "Wściekły Bukmacher", sender_en: "Angry Bettor", sender_de: "Wütender Wetter", sender_nl: "Boze Gokker", 
-        subject_pl: "Zepsułeś mi życie!", subject_en: "You ruined my life!", subject_de: "Du hast mein Leben ruiniert!", subject_nl: "Je hebt mijn leven verpest!", 
-        body_pl: "Postawiłem wypłatę na to, że zamkniesz lega z 170. Rzuciłeś w 5! Jesteś mi winien pieniądze!", body_en: "I bet my paycheck that you'd check out 170. You hit a 5! You owe me money!", body_de: "Ich habe mein Gehalt darauf gewettet, dass du 170 checkst. Du hast eine 5 getroffen! Du schuldest mir Geld!", body_nl: "Ik wedde mijn salaris dat je 170 zou uitgooien. Je gooide een 5! Je bent me geld schuldig!" 
-    },
-    { 
-        sender_pl: "SPAM", sender_en: "SPAM", sender_de: "SPAM", sender_nl: "SPAM", 
-        subject_pl: "Nigeryjski Książę Darta", subject_en: "Nigerian Darts Prince", subject_de: "Nigerianischer Darts-Prinz", subject_nl: "Nigeriaanse Darts Prins", 
-        body_pl: "Witam. Mam do przekazania spadek po mistrzu darta z Nigerii. Wyślij mi 500 funtów, aby odblokować miliony.", body_en: "Hello. I have an inheritance from a Nigerian darts champion. Send me 500 pounds to unlock millions.", body_de: "Hallo. Ich habe ein Erbe von einem nigerianischen Darts-Champion. Sende mir 500 Pfund, um Millionen freizuschalten.", body_nl: "Hallo. Ik heb een erfenis van een Nigeriaanse dartskampioen. Stuur me 500 pond om miljoenen te ontgrendelen." 
-    },
-    { 
-        sender_pl: "Producent Butów", sender_en: "Shoe Manufacturer", sender_de: "Schuhhersteller", sender_nl: "Schoenenfabrikant", 
-        subject_pl: "Współpraca", subject_en: "Collab", subject_de: "Zusammenarbeit", subject_nl: "Samenwerking", 
-        body_pl: "Mamy nowy model butów lakierowanych z wbudowaną amortyzacją do darta. Chcesz przetestować je na scenie?", body_en: "We have a new model of dress shoes with built-in cushioning for darts. Want to test them on stage?", body_de: "Wir haben ein neues Lackschuhmodell mit eingebauter Dämpfung für Darts. Möchtest du sie auf der Bühne testen?", body_nl: "We hebben een nieuw model lakschoenen met ingebouwde demping voor darten. Wil je ze testen op het podium?" 
-    },
-    { 
-        sender_pl: "Dentysta", sender_en: "Dentist", sender_de: "Zahnarzt", sender_nl: "Tandarts", 
-        subject_pl: "Wizyta kontrolna", subject_en: "Check-up", subject_de: "Kontrolltermin", subject_nl: "Controle", 
-        body_pl: "Widziałem, jak zaciskasz zęby po pudłach. Zapraszam na wizytę kontrolną, zanim zetrzesz szkliwo!", body_en: "I saw you clenching your teeth after misses. Come in for a check-up before you wear down your enamel!", body_de: "Ich habe gesehen, wie du nach Fehlschüssen die Zähne zusammenbeißt. Komm zur Kontrolle, bevor dein Zahnschmelz abgenutzt ist!", body_nl: "Ik zag je tanden op elkaar klemmen na missers. Kom voor een controle voordat je je glazuur verslijt!" 
-    },
-    { 
-        sender_pl: "Twórca Memów", sender_en: "Meme Creator", sender_de: "Meme-Ersteller", sender_nl: "Meme Maker", 
-        subject_pl: "Hicior w sieci", subject_en: "Internet hit", subject_de: "Internet-Hit", subject_nl: "Internet hit", 
-        body_pl: "Wrzuciłem Twoją minę po wczorajszym pudle na TikToka. Ma już 2 miliony wyświetleń! Jesteś legendą.", body_en: "I posted your face after yesterday's miss on TikTok. It has 2 million views! You're a legend.", body_de: "Ich habe dein Gesicht nach dem gestrigen Fehlschuss auf TikTok gepostet. Es hat 2 Millionen Aufrufe! Du bist eine Legende.", body_nl: "Ik heb je gezicht na de misser van gisteren op TikTok geplaatst. Het heeft 2 miljoen views! Je bent een legende." 
-    },
-    { 
-        sender_pl: "Producent Muzyczny", sender_en: "Music Producer", sender_de: "Musikproduzent", sender_nl: "Muziekproducent", 
-        subject_pl: "Nowy Walk-on", subject_en: "New Walk-on", subject_de: "Neuer Walk-on", subject_nl: "Nieuwe Walk-on", 
-        body_pl: "Mogę zremiksować Twój utwór na wejście dodając ciężkie basy. Fani oszaleją. Koszt to tylko £300.", body_en: "I can remix your walk-on track adding heavy bass. Fans will go crazy. Cost is only £300.", body_de: "Ich kann deinen Walk-on-Track mit schweren Bässen remixen. Die Fans werden ausrasten. Kostet nur £300.", body_nl: "Ik kan je walk-on nummer remixen met zware bassen. Fans zullen gek worden. Kost slechts £300." 
-    },
-    { 
-        sender_pl: "Stary Nauczyciel", sender_en: "Old Teacher", sender_de: "Alter Lehrer", sender_nl: "Oude Leraar", 
-        subject_pl: "Gratulacje", subject_en: "Congratulations", subject_de: "Herzlichen Glückwunsch", subject_nl: "Gefeliciteerd", 
-        body_pl: "Zawsze powtarzałem, że matematyka przyda Ci się w życiu. Świetne liczenie w końcówkach. Jestem dumny!", body_en: "I always said math would be useful in your life. Great counting on the checkouts. I'm proud!", body_de: "Ich habe immer gesagt, Mathematik wird im Leben nützlich sein. Tolles Zählen bei den Checkouts. Ich bin stolz!", body_nl: "Ik zei altijd al dat wiskunde nuttig zou zijn in je leven. Geweldig rekenwerk bij de checkouts. Ik ben trots!" 
-    },
-    { 
-        sender_pl: "Rywal z PDC", sender_en: "PDC Rival", sender_de: "PDC-Rivale", sender_nl: "PDC Rivaal", 
-        subject_pl: "Sparing?", subject_en: "Practice?", subject_de: "Sparring?", subject_nl: "Oefenen?", 
-        body_pl: "Jestem w Twoim mieście w ten weekend. Chcesz wynająć pokój w pubie i porzucać do tarczy bez presji?", body_en: "I'm in your city this weekend. Want to rent a room in a pub and throw some darts without pressure?", body_de: "Ich bin dieses Wochenende in deiner Stadt. Willst du einen Raum in einem Pub mieten und ohne Druck ein paar Darts werfen?", body_nl: "Ik ben dit weekend in jouw stad. Wil je een kamer huren in een pub en zonder druk wat darten?" 
-    },
-    { 
-        sender_pl: "Fundacja Dziecięca", sender_en: "Children's Charity", sender_de: "Kinderhilfswerk", sender_nl: "Kindergoed Doel", 
-        subject_pl: "Aukcja charytatywna", subject_en: "Charity auction", subject_de: "Wohltätigkeitsauktion", subject_nl: "Liefdadigheidsveiling", 
-        body_pl: "Czy zechciałbyś przekazać swoją meczową koszulkę na naszą aukcję? Bardzo pomożesz potrzebującym dzieciom.", body_en: "Would you be willing to donate your match shirt for our auction? It will greatly help children in need.", body_de: "Wärst du bereit, dein Spielhemd für unsere Auktion zu spenden? Das würde bedürftigen Kindern sehr helfen.", body_nl: "Zou je je wedstrijdshirt willen doneren voor onze veiling? Het zal kinderen in nood enorm helpen." 
-    },
-    { 
-        sender_pl: "Urząd Skarbowy", sender_en: "Tax Office", sender_de: "Finanzamt", sender_nl: "Belastingdienst", 
-        subject_pl: "Rozliczenie nagród", subject_en: "Prize money tax", subject_de: "Preisgeldsteuer", subject_nl: "Belasting prijzengeld", 
-        body_pl: "Zauważyliśmy wzrost Pana dochodów. Prosimy o zgłoszenie się do urzędu celem wyjaśnienia kwestii podatku od wygranych.", body_en: "We noticed an increase in your income. Please report to the office to clarify the tax on your winnings.", body_de: "Wir haben einen Anstieg Ihres Einkommens festgestellt. Bitte melden Sie sich beim Amt, um die Steuern auf Ihre Gewinne zu klären.", body_nl: "We hebben een stijging van uw inkomen opgemerkt. Meld u zich bij het kantoor om de belasting over uw winsten te verduidelijken." 
-    },
-    { 
-        sender_pl: "Kolega z liceum", sender_en: "High School Buddy", sender_de: "Schulfreund", sender_nl: "Middelbare School Vriend", 
-        subject_pl: "Bilety VIP?", subject_en: "VIP Tickets?", subject_de: "VIP-Tickets?", subject_nl: "VIP-tickets?", 
-        body_pl: "Siemka! Pamiętasz mnie z chemii? Super Ci idzie. Dałbyś radę załatwić mi 4 darmowe bilety na Mistrzostwa?", body_en: "Hey! Remember me from chemistry? You're doing great. Could you get me 4 free tickets to the Championship?", body_de: "Hey! Erinnerst du dich an mich aus der Chemie? Du machst das super. Könntest du mir 4 Freikarten für die Meisterschaft besorgen?", body_nl: "Hé! Ken je me nog van scheikunde? Je doet het geweldig. Kun je me 4 gratis kaartjes voor het kampioenschap bezorgen?" 
-    },
-    { 
-        sender_pl: "Nawiedzony Fan", sender_en: "Crazy Fan", sender_de: "Verrückter Fan", sender_nl: "Gekke Fan", 
-        subject_pl: "Wiem, gdzie mieszkasz", subject_en: "I know where you live", subject_de: "Ich weiß, wo du wohnst", subject_nl: "Ik weet waar je woont", 
-        body_pl: "Nie martw się, nie przyjdę! Ale ten nowy kolor rolet w salonie bardzo do Ciebie pasuje. Rzucaj same 180!", body_en: "Don't worry, I won't come over! But that new blind color in your living room really suits you. Hit only 180s!", body_de: "Keine Sorge, ich komme nicht vorbei! Aber die neue Farbe der Jalousien in deinem Wohnzimmer steht dir wirklich gut. Wirf nur 180er!", body_nl: "Maak je geen zorgen, ik kom niet langs! Maar die nieuwe kleur jaloezieën in je woonkamer staat je echt goed. Gooi alleen 180s!" 
-    },
-    { 
-        sender_pl: "Agent Nieruchomości", sender_en: "Real Estate Agent", sender_de: "Immobilienmakler", sender_nl: "Makelaar", 
-        subject_pl: "Nowa posiadłość", subject_en: "New mansion", subject_de: "Neues Anwesen", subject_nl: "Nieuw landhuis", 
-        body_pl: "Gratulacje wygranych! Może czas wymienić mieszkanie na wille z basenem i prywatną salą treningową?", body_en: "Congrats on your wins! Maybe it's time to upgrade your flat to a mansion with a pool and a private practice room?", body_de: "Glückwunsch zu deinen Siegen! Vielleicht ist es Zeit, deine Wohnung gegen eine Villa mit Pool und privatem Trainingsraum einzutauschen?", body_nl: "Gefeliciteerd met je winst! Misschien is het tijd om je appartement in te ruilen voor een landhuis met een zwembad en een privé oefenruimte?" 
-    },
-    { 
-        sender_pl: "Linie Lotnicze", sender_en: "Airlines", sender_de: "Fluggesellschaft", sender_nl: "Luchtvaartmaatschappij", 
-        subject_pl: "Opóźniony lot", subject_en: "Flight delayed", subject_de: "Flug verspätet", subject_nl: "Vlucht vertraagd", 
-        body_pl: "Twój lot do Niemiec na kolejny turniej Continental Tour jest opóźniony o 4 godziny. Przepraszamy za niedogodności.", body_en: "Your flight to Germany for the next Continental Tour is delayed by 4 hours. We apologize for the inconvenience.", body_de: "Dein Flug nach Deutschland zur nächsten Continental Tour hat 4 Stunden Verspätung. Wir entschuldigen uns für die Unannehmlichkeiten.", body_nl: "Je vlucht naar Duitsland voor de volgende Continental Tour is met 4 uur vertraagd. Onze excuses voor het ongemak." 
-    },
-    { 
-        sender_pl: "Siłownia", sender_en: "Gym", sender_de: "Fitnessstudio", sender_nl: "Sportschool", 
-        subject_pl: "Koniec karnetu", subject_en: "Membership expired", subject_de: "Mitgliedschaft abgelaufen", subject_nl: "Abonnement verlopen", 
-        body_pl: "Twój roczny karnet dobiega końca. W rzutkach też trzeba dbać o kondycję. Kliknij tu, aby odnowić subskrypcję.", body_en: "Your annual membership is ending. In darts, you also need to stay in shape. Click here to renew your subscription.", body_de: "Deine Jahresmitgliedschaft endet. Auch beim Darts musst du in Form bleiben. Klicke hier, um dein Abo zu erneuern.", body_nl: "Je jaarabonnement loopt af. In darts moet je ook in vorm blijven. Klik hier om je abonnement te verlengen." 
-    },
-    { 
-        sender_pl: "Masażysta", sender_en: "Masseur", sender_de: "Masseur", sender_nl: "Masseur", 
-        subject_pl: "Napięcie w barku", subject_en: "Shoulder tension", subject_de: "Schulterverspannung", subject_nl: "Schouderspanning", 
-        body_pl: "Zauważyłem w TV, że dziwnie układasz prawy bark. Zarezerwuj wizytę, zanim nabawisz się przewlekłej kontuzji.", body_en: "I noticed on TV that you're holding your right shoulder weirdly. Book a visit before you get a chronic injury.", body_de: "Mir ist im TV aufgefallen, dass du deine rechte Schulter seltsam hältst. Buche einen Termin, bevor du dich chronisch verletzt.", body_nl: "Ik zag op tv dat je je rechterschouder raar vasthoudt. Boek een afspraak voordat je een chronische blessure oploopt." 
-    },
-    { 
-        sender_pl: "Hater", sender_en: "Hater", sender_de: "Hater", sender_nl: "Hater", 
-        subject_pl: "Wygrałeś fuksem", subject_en: "You got lucky", subject_de: "Du hattest Glück", subject_nl: "Je had geluk", 
-        body_pl: "Przeciwnik miał gorszy dzień, a Ty myślisz, że jesteś bogiem darta. Prawda jest taka, że jesteś średniakiem.", body_en: "Your opponent had a bad day, and you think you're the god of darts. The truth is, you're just average.", body_de: "Dein Gegner hatte einen schlechten Tag, und du denkst, du bist der Darts-Gott. Die Wahrheit ist, du bist nur Durchschnitt.", body_nl: "Je tegenstander had een slechte dag en jij denkt dat je de god van darts bent. De waarheid is, je bent gewoon gemiddeld." 
-    },
-    { 
-        sender_pl: "Producent Telewizyjny", sender_en: "TV Producer", sender_de: "TV-Produzent", sender_nl: "TV Producent", 
-        subject_pl: "Reality Show", subject_en: "Reality Show", subject_de: "Reality-Show", subject_nl: "Reality Show", 
-        body_pl: "Tworzymy nowy program 'Taniec z Darterami'. Szukamy charyzmatycznych graczy. Jesteś zainteresowany?", body_en: "We're making a new show 'Dancing with Darts Players'. We are looking for charismatic players. Are you interested?", body_de: "Wir machen eine neue Show 'Dancing with Darts Players'. Wir suchen charismatische Spieler. Bist du interessiert?", body_nl: "We maken een nieuwe show 'Dancing with Darts Players'. We zijn op zoek naar charismatische spelers. Ben je geïnteresseerd?" 
-    },
-    { 
-        sender_pl: "Sąsiad", sender_en: "Neighbour", sender_de: "Nachbar", sender_nl: "Buurman", 
-        subject_pl: "Paczka", subject_en: "Package", subject_de: "Paket", subject_nl: "Pakketje", 
-        body_pl: "Hej, odebrałem za Ciebie wielką paczkę od jakiegoś sponsora. Kiedy wracasz z tego turnieju? Zajmuje mi pół przedpokoju.", body_en: "Hey, I received a huge package for you from some sponsor. When are you back from the tour? It's taking up half my hallway.", body_de: "Hey, ich habe ein riesiges Paket von einem Sponsor für dich angenommen. Wann kommst du vom Turnier zurück? Es nimmt meinen halben Flur ein.", body_nl: "Hé, ik heb een enorm pakket voor je aangenomen van een sponsor. Wanneer ben je terug van het toernooi? Het neemt mijn halve gang in beslag." 
-    },
-    { 
-        sender_pl: "Wynajmujący", sender_en: "Landlord", sender_de: "Vermieter", sender_nl: "Huisbaas", 
-        subject_pl: "Dziury w ścianie", subject_en: "Holes in the wall", subject_de: "Löcher in der Wand", subject_nl: "Gaten in de muur", 
-        body_pl: "Byłem w Twoim mieszkaniu. Dlaczego ściana dookoła tarczy jest cała w dziurach? Będziesz musiał pokryć koszty malowania!", body_en: "I visited your flat. Why is the wall around the dartboard full of holes? You will have to cover the painting costs!", body_de: "Ich war in deiner Wohnung. Warum ist die Wand um das Dartboard herum voller Löcher? Du musst die Streichkosten übernehmen!", body_nl: "Ik ben in je appartement geweest. Waarom zit de muur rond het dartbord vol gaten? Je zult de schilderkosten moeten betalen!" 
-    },
-    { 
-        sender_pl: "Klub Rzutkowy", sender_en: "Local Darts Club", sender_de: "Lokaler Dartverein", sender_nl: "Lokale Dartclub", 
-        subject_pl: "Mistrzostwa Pubu", subject_en: "Pub Championship", subject_de: "Pub-Meisterschaft", subject_nl: "Pub Kampioenschap", 
-        body_pl: "Wiemy, że grasz w Pro Tourze, ale może wpadniesz w czwartek bronić tytułu mistrza naszego osiedlowego pubu?", body_en: "We know you play on the Pro Tour, but maybe you'll drop by on Thursday to defend your local pub championship title?", body_de: "Wir wissen, dass du auf der Pro Tour spielst, aber vielleicht kommst du am Donnerstag vorbei, um deinen lokalen Pub-Meistertitel zu verteidigen?", body_nl: "We weten dat je op de Pro Tour speelt, maar misschien kom je donderdag langs om je lokale pubkampioenschapstitel te verdedigen?" 
-    },
-    { 
-        sender_pl: "Kolekcjoner", sender_en: "Collector", sender_de: "Sammler", sender_nl: "Verzamelaar", 
-        subject_pl: "Kupię Twoje lotki", subject_en: "Buying your darts", subject_de: "Kaufe deine Darts", subject_nl: "Koop je pijlen", 
-        body_pl: "Dam £1000 za zestaw lotek, którymi wrzuciłeś swoją pierwszą telewizyjną 180-tkę. Odbiór osobisty w Londynie.", body_en: "I'll give you £1000 for the set of darts you used to throw your first televised 180. Personal collection in London.", body_de: "Ich gebe dir £1000 für das Dartset, mit dem du deine erste 180 im Fernsehen geworfen hast. Persönliche Abholung in London.", body_nl: "Ik geef je £1000 voor de set pijlen waarmee je je eerste tv 180 gooide. Persoonlijk afhalen in Londen." 
-    },
-    { 
-        sender_pl: "Trener Psów", sender_en: "Dog Trainer", sender_de: "Hundetrainer", sender_nl: "Hondentrainer", 
-        subject_pl: "Twój pies", subject_en: "Your dog", subject_de: "Dein Hund", subject_nl: "Je hond", 
-        body_pl: "Twój pies znowu zjadł zapasowe piórka. Musisz chować sprzęt darterski poza jego zasięgiem!", body_en: "Your dog ate the spare flights again. You need to keep your darts gear out of his reach!", body_de: "Dein Hund hat schon wieder die Ersatzflights gefressen. Du musst deine Dartausrüstung außer seiner Reichweite aufbewahren!", body_nl: "Je hond heeft de reserve flights weer opgegeten. Je moet je dartspullen buiten zijn bereik houden!" 
-    },
-    { 
-        sender_pl: "Dziennikarz Tabloidu", sender_en: "Tabloid Journalist", sender_de: "Boulevardjournalist", sender_nl: "Tabloid Journalist", 
-        subject_pl: "Zdjęcia z klubu", subject_en: "Photos from the club", subject_de: "Fotos aus dem Club", subject_nl: "Foto's uit de club", 
-        body_pl: "Mamy kompromitujące zdjęcia z Twojego wczorajszego świętowania. Jeśli nie udzielisz nam wywiadu, opublikujemy je jutro.", body_en: "We have compromising photos of your celebration last night. If you don't give us an interview, we will publish them tomorrow.", body_de: "Wir haben kompromittierende Fotos von deiner gestrigen Feier. Wenn du uns kein Interview gibst, veröffentlichen wir sie morgen.", body_nl: "We hebben compromitterende foto's van je feest gisteravond. Als je ons geen interview geeft, publiceren we ze morgen." 
-    },
-    { 
-        sender_pl: "Menedżer", sender_en: "Manager", sender_de: "Manager", sender_nl: "Manager", 
-        subject_pl: "Wywiad dla radio", subject_en: "Radio interview", subject_de: "Radio-Interview", subject_nl: "Radio-interview", 
-        body_pl: "Załatwiłem Ci wejście do porannego pasma w radiu. Pamiętaj: unikaj tematów o alkoholu i promuj zdrowy sport!", body_en: "I got you a spot on the morning radio show. Remember: avoid talking about alcohol and promote healthy sports!", body_de: "Ich habe dir einen Platz in der Morgen-Radioshow besorgt. Denk dran: Vermeide Alkoholthemen und bewirb gesunden Sport!", body_nl: "Ik heb een plekje voor je geregeld in de ochtendradioshow. Onthoud: vermijd praten over alcohol en promoot gezonde sporten!" 
-    },
-    { 
-        sender_pl: "Sklep Internetowy", sender_en: "Online Store", sender_de: "Online-Shop", sender_nl: "Webshop", 
-        subject_pl: "Wysyłka zamówienia", subject_en: "Order shipped", subject_de: "Bestellung versandt", subject_nl: "Bestelling verzonden", 
-        body_pl: "Twój nowy zapas 50 kompletów piórek i szaftów został wysłany. Życzymy samych podwójnych!", body_en: "Your new supply of 50 sets of flights and shafts has been shipped. We wish you nothing but doubles!", body_de: "Dein neuer Vorrat an 50 Sets Flights und Schäften wurde versandt. Wir wünschen dir nur Doubles!", body_nl: "Je nieuwe voorraad van 50 sets flights en shafts is verzonden. We wensen je alleen maar doubles!" 
-    },
-    { 
-        sender_pl: "Brat", sender_en: "Brother", sender_de: "Bruder", sender_nl: "Broer", 
-        subject_pl: "Darmowe piwo", subject_en: "Free beer", subject_de: "Freibier", subject_nl: "Gratis bier", 
-        body_pl: "Od kiedy jesteś w TOP rankingach, w lokalnym pubie stawiają mi kolejki za to, że jesteśmy braćmi. Dzięki, braszku!", body_en: "Since you're in the top rankings, the local pub buys me rounds just for being your brother. Thanks, bro!", body_de: "Seitdem du in den Top-Ranglisten bist, gibt mir der lokale Pub Runden aus, nur weil wir Brüder sind. Danke, Bruder!", body_nl: "Sinds je in de top ranking staat, geeft de lokale kroeg me rondjes omdat we broers zijn. Bedankt, broer!" 
-    },
-    { 
-        sender_pl: "Gracz Fantasy Darts", sender_en: "Fantasy Darts Player", sender_de: "Fantasy Darts-Spieler", sender_nl: "Fantasy Darts Speler", 
-        subject_pl: "Nie zawiedź mnie", subject_en: "Don't let me down", subject_de: "Lass mich nicht im Stich", subject_nl: "Stel me niet teleur", 
-        body_pl: "Ustawiłem Cię na kapitana mojej drużyny w Fantasy Darts. Rzucaj dużo 180, bo walczę o konsolę w nagrodę główną!", body_en: "I made you the captain of my Fantasy Darts team. Throw a lot of 180s, I'm fighting for a console as the main prize!", body_de: "Ich habe dich zum Kapitän meines Fantasy Darts-Teams gemacht. Wirf viele 180er, ich kämpfe um eine Konsole als Hauptpreis!", body_nl: "Ik heb je de aanvoerder van mijn Fantasy Darts-team gemaakt. Gooi veel 180s, ik vecht voor een console als hoofdprijs!" 
-    },
-    { 
-        sender_pl: "Wydawca Gry", sender_en: "Game Publisher", sender_de: "Spiele-Herausgeber", sender_nl: "Speluitgever", 
-        subject_pl: "Prawa do wizerunku", subject_en: "Image rights", subject_de: "Bildrechte", subject_nl: "Portretrechten", 
-        body_pl: "Chcemy umieścić Twoją postać w naszej najnowszej konsolowej grze o darta. Podeślemy kontrakt wkrótce.", body_en: "We want to feature your character in our newest console darts game. We'll send the contract soon.", body_de: "Wir möchten deinen Charakter in unserem neuesten Konsolen-Dartspiel verwenden. Wir senden den Vertrag in Kürze.", body_nl: "We willen je personage in ons nieuwste console dartspel gebruiken. We sturen het contract binnenkort." 
-    },
-    { 
-        sender_pl: "Anonim", sender_en: "Anonymous", sender_de: "Anonym", sender_nl: "Anoniem", 
-        subject_pl: "Wiem jak oszukiwać", subject_en: "I know how to cheat", subject_de: "Ich weiß, wie man betrügt", subject_nl: "Ik weet hoe je moet valsspelen", 
-        body_pl: "Znam sekretny sposób na szlifowanie grotów, by wywoływać bouncery u przeciwników. Płatność tylko w krypto.", body_en: "I know a secret way to sharpen points to cause bounce-outs for your opponents. Payment in crypto only.", body_de: "Ich kenne eine geheime Methode, um Spitzen so zu schärfen, dass sie beim Gegner Bouncer verursachen. Zahlung nur in Krypto.", body_nl: "Ik ken een geheime manier om punten te slijpen om bounce-outs bij je tegenstanders te veroorzaken. Betaling alleen in crypto." 
-    },
-    { 
-        sender_pl: "Kolega z touru", sender_en: "Tour Buddy", sender_de: "Tour-Kollege", sender_nl: "Tourbuddy", 
-        subject_pl: "Zatrucie...", subject_en: "Food poisoning...", subject_de: "Lebensmittelvergiftung...", subject_nl: "Voedselvergiftiging...", 
-        body_pl: "Zjadłem wczoraj ostrygi i wycofuję się z turnieju. Uważaj na bufet na hali, bo spędzisz dzień w toalecie.", body_en: "I ate oysters yesterday and I'm withdrawing from the tournament. Watch out for the buffet at the venue or you'll spend the day in the toilet.", body_de: "Ich habe gestern Austern gegessen und ziehe mich aus dem Turnier zurück. Pass auf das Buffet in der Halle auf, sonst verbringst du den Tag auf der Toilette.", body_nl: "Ik heb gisteren oesters gegeten en trek me terug uit het toernooi. Pas op voor het buffet in de hal, anders breng je de dag door op het toilet." 
-    },
-    { 
-        sender_pl: "Starszy Pan z Pubu", sender_en: "Old Man from Pub", sender_de: "Alter Mann aus dem Pub", sender_nl: "Oude Man uit Pub", 
-        subject_pl: "Złe nawyki", subject_en: "Bad habits", subject_de: "Schlechte Angewohnheiten", subject_nl: "Slechte gewoontes", 
-        body_pl: "Obserwuję twój rzut od lat. Zauważyłem, że minimalnie opuszczasz łokieć przy ostatniej lotce. Zwróć na to uwagę.", body_en: "I've been watching your throw for years. I noticed you drop your elbow slightly on the last dart. Pay attention to that.", body_de: "Ich beobachte deinen Wurf seit Jahren. Mir ist aufgefallen, dass du beim letzten Dart den Ellenbogen leicht senkst. Achte darauf.", body_nl: "Ik kijk al jaren naar je worp. Het viel me op dat je je elleboog iets laat zakken bij de laatste pijl. Let daar op." 
-    },
-    { 
-        sender_pl: "SPAM", sender_en: "SPAM", sender_de: "SPAM", sender_nl: "SPAM", 
-        subject_pl: "Powiększ swój...", subject_en: "Enlarge your...", subject_de: "Vergrößern Sie Ihre...", subject_nl: "Vergroot je...", 
-        body_pl: "...arsenał lotek o naszą najnowszą dostawę złotych grotów! Zamów teraz z 50% zniżką.", body_en: "...dart arsenal with our newest shipment of gold points! Order now with a 50% discount.", body_de: "...Dart-Arsenal mit unserer neuesten Lieferung von Goldspitzen! Bestellen Sie jetzt mit 50% Rabatt.", body_nl: "...dartarsenaal met onze nieuwste lading gouden punten! Bestel nu met 50% korting." 
-    },
-    { 
-        sender_pl: "Psycholog Darta", sender_en: "Darts Psychologist", sender_de: "Darts-Psychologe", sender_nl: "Darts Psycholoog", 
-        subject_pl: "Presja na podwójnych", subject_en: "Pressure on doubles", subject_de: "Druck auf Doubles", subject_nl: "Druk op doubles", 
-        body_pl: "Chcesz przestać trzęść się przy rzutach kończących? Zapraszam na warsztaty mentalne w przyszły wtorek.", body_en: "Want to stop shaking on finishing throws? I invite you to mental workshops next Tuesday.", body_de: "Willst du beim Checkout nicht mehr zittern? Ich lade dich nächsten Dienstag zu mentalen Workshops ein.", body_nl: "Wil je stoppen met trillen bij checkouts? Ik nodig je aanstaande dinsdag uit voor mentale workshops." 
-    },
-    { 
-        sender_pl: "Producent Tarczy", sender_en: "Dartboard Manufacturer", sender_de: "Dartboard-Hersteller", sender_nl: "Dartbord Fabrikant", 
-        subject_pl: "Nowy Sizal", subject_en: "New Sisal", subject_de: "Neues Sisal", subject_nl: "Nieuw Sisal", 
-        body_pl: "Stworzyliśmy nowy, bezszwowy rodzaj tarczy. Chcemy wysłać Ci prototyp do testów. Oczekuj kuriera wkrótce.", body_en: "We've created a new, seamless type of board. We want to send you a prototype for testing. Expect a courier soon.", body_de: "Wir haben eine neue, nahtlose Art von Board entwickelt. Wir möchten dir einen Prototyp zum Testen senden. Erwarte bald einen Kurier.", body_nl: "We hebben een nieuw, naadloos type bord gemaakt. We willen je een prototype sturen om te testen. Verwacht binnenkort een koerier." 
-    },
-    { 
-        sender_pl: "Osobisty Trener", sender_en: "Personal Trainer", sender_de: "Personal Trainer", sender_nl: "Personal Trainer", 
-        subject_pl: "Zadbaj o core", subject_en: "Core strength", subject_de: "Rumpfmuskulatur", subject_nl: "Core stabiliteit", 
-        body_pl: "Stabilność rzutu zaczyna się od brzucha i pleców. Nie omijaj treningu siłowego, to widać na długich turniejach.", body_en: "Throw stability starts from the core. Don't skip strength training, it shows in long tournaments.", body_de: "Wurfstabilität beginnt in der Rumpfmuskulatur. Überspringe kein Krafttraining, das macht sich in langen Turnieren bemerkbar.", body_nl: "Werpstabiliteit begint bij de core. Sla krachttraining niet over, het is te zien in lange toernooien." 
-    },
-    { 
-        sender_pl: "E-Sport Event", sender_en: "Esports Event", sender_de: "Esport-Event", sender_nl: "Esports Evenement", 
-        subject_pl: "Turniej Gwiazd", subject_en: "Star Tournament", subject_de: "Star-Turnier", subject_nl: "Sterren Toernooi", 
-        body_pl: "Szukamy profesjonalnych graczy w darta, którzy chcieliby zagrać w wirtualnego darta z YouTuberami na streamie charytatywnym.", body_en: "We are looking for professional darts players who would like to play virtual darts with YouTubers on a charity stream.", body_de: "Wir suchen professionelle Darts-Spieler, die Lust haben, in einem Charity-Stream virtuelles Darts mit YouTubern zu spielen.", body_nl: "We zijn op zoek naar professionele darters die virtueel willen darten met YouTubers op een liefdadigheidsstream." 
-    },
-    { 
-        sender_pl: "Oszust Biletowy", sender_en: "Ticket Scammer", sender_de: "Ticket-Betrüger", sender_nl: "Ticket Oplichter", 
-        subject_pl: "Kupię wejściówki", subject_en: "Buying tickets", subject_de: "Kaufe Tickets", subject_nl: "Koop tickets", 
-        body_pl: "Odkupię od Ciebie za potrójną cenę zaproszenia dla graczy, żeby móc kręcić się po zapleczu z VIP-ami. Wchodzisz w to?", body_en: "I'll buy your player guest passes for triple the price so I can hang around backstage with VIPs. Are you in?", body_de: "Ich kaufe dir deine Spieler-Gästepässe zum dreifachen Preis ab, damit ich mich mit VIPs im Backstage-Bereich herumtreiben kann. Bist du dabei?", body_nl: "Ik koop je gastenpassen voor spelers voor drie keer de prijs, zodat ik backstage kan rondhangen met VIPs. Doe je mee?" 
-    }
-
-    
-];
-
-
         function getPendingTournamentForCareerDate(date = currentDate, includeOverdue = false) {
             if (!(date instanceof Date) || Number.isNaN(date.getTime())
                 || typeof tournamentDatabase === 'undefined' || !Array.isArray(tournamentDatabase)) return null;
@@ -810,15 +562,7 @@ function showScreen(screenId) {
 
             if (shouldAutoSaveToday && typeof saveGame === 'function') saveGame(true);
 
-            if (Math.random() < 0.15 && typeof randomEventsDatabase !== 'undefined') { triggerRandomEvent(); return; }
-            if (Math.random() < 0.12) { 
-                let randomMail = randomEmailsDB[Math.floor(Math.random() * randomEmailsDB.length)];
-                addEmail(randomMail.sender_pl, randomMail.subject_pl, randomMail.body_pl, { kind: 'random' }); 
-            }
         }
-
-    const RANDOM_EMAIL_RETENTION_MS = 30 * 24 * 60 * 60 * 1000;
-    const RANDOM_EMAIL_ARCHIVE_LIMIT = 50;
 
     function getStoredEmailTimestamp(email) {
         const storedTimestamp = Number(email?.createdAt);
@@ -834,16 +578,76 @@ function showScreen(screenId) {
         return Number.isFinite(parsedTimestamp) ? parsedTimestamp : null;
     }
 
+    // Tylko odciski dawnych maili w czterech językach, do czyszczenia starych zapisów.
+    // Nie zawierają treści ani szablonów do generowania nowych wiadomości.
+    const LEGACY_RANDOM_EMAIL_FINGERPRINTS = new Set([
+        "133:e544ed12", "122:c62fb748", "142:3890e6cc", "136:dc1660eb", "148:708b5085", "150:9775ffed",
+        "179:37477dd9", "158:67757c63", "194:986372ae", "191:6b44ee08", "221:7d4a084e", "223:11f71e80",
+        "152:763e938", "156:92642d52", "191:9602365d", "154:fe9808cc", "147:31df6941", "159:90d06937",
+        "193:38c4321", "177:4c0cc8be", "163:ba1c1f34", "153:b51f3f34", "184:679d2cf", "179:bf6eedcc",
+        "164:d63e5af", "162:ded31318", "180:7f1d3342", "168:696ec53a", "183:98a0e9ee", "183:f4680e4d",
+        "206:6bbee18a", "203:e9479121", "160:24be6594", "162:16a99e59", "173:8d25dcb0", "154:a8e719d",
+        "137:e0ecb1a9", "120:b7af2349", "134:6f86a1cc", "130:e0fbfd34", "154:eb52ffe4", "146:a0b8b83d",
+        "184:94b0183d", "165:b3cb4159", "187:4b10f913", "179:da00f337", "213:f8909389", "201:6073f135",
+        "156:d7f406a0", "153:14559167", "155:e0705bf0", "155:5d0c5111", "164:424492e5", "159:2480eae8",
+        "186:b5c917c6", "188:c58a4dae", "167:97afbadb", "148:7da5a549", "180:b6c94b65", "168:adf63bfe",
+        "176:8ed5bea5", "150:d97b5d15", "181:260b7854", "179:252ab1d9", "155:606c81e2", "153:9773b205",
+        "169:5069d752", "168:5c225cad", "153:68f67a74", "141:867de6c0", "175:3b94f370", "169:4857cec4",
+        "158:a5e75c00", "144:348d6a16", "173:96ec1bab", "170:606a6c24", "162:bf9f380", "176:4659f56d",
+        "188:d81d7930", "189:a557aaf2", "167:7b18f681", "145:cdf6533", "190:b5c5c86", "174:de2bcafe",
+        "162:9da31e49", "161:b2431fba", "197:9e013618", "191:76a0e498", "144:6727aca3", "150:b08dd125",
+        "173:53f0c0f0", "168:5ce30415", "125:5c6182e8", "150:cd207f02", "166:bff40404", "152:9b4ab101",
+        "139:16461b5c", "155:6a1c7593", "178:dbd8377f", "163:2a903eee", "155:e153d834", "164:f144f09c",
+        "184:a664b340", "171:96edb804", "156:2acdc270", "174:6fde53dd", "256:b07367cb", "193:7f0ff59c",
+        "152:36259456", "146:a0187f4e", "154:86ead9ef", "147:d1e698ff", "162:8447e4e0", "162:511d3d4f",
+        "221:9422b941", "185:87b6e56d", "162:101e17f5", "180:268c7af0", "217:18a9b096", "220:784a87b9",
+        "162:260a4a38", "142:4c2a38c9", "166:a28f24cf", "163:3e36378f", "139:42948260", "127:12c9d4ab",
+        "155:5c91e484", "155:ce76e5f0", "151:cdae0dae", "154:7d5ad3ae", "175:96798b7c", "183:ef87f6b3",
+        "148:32efd4cb", "168:96ea4dab", "176:ee48392a", "166:e071242f", "144:bd545afa", "167:fd3ccdde",
+        "199:fcb58572", "189:62685c6b", "153:5acecf9e", "152:1f8a1188", "173:27851185", "147:338553b8",
+        "162:55b0facb", "173:8896f6f1", "198:1057295e", "196:9edaf611", "163:92c61994", "169:55289b41",
+        "190:e7a5fed", "151:3f273a3e", "154:58e03dbb", "134:f6218ba", "174:8945e1b1", "129:eeb4bf69",
+        "109:eeb2e79b", "111:4478644c", "115:b28c934c", "110:8a2dcefa", "151:37b06094", "142:5ab8f058",
+        "168:8244a22b", "147:91d6eef2", "144:ce25b320", "132:c20bc269", "175:82bb27e7", "142:650a889a",
+        "138:1303a5e5", "115:8185cf62", "160:fe09cdfe", "138:b177200d", "143:9471ad4", "134:df913fa3",
+        "155:b34985d0", "145:484eae90", "138:66088179", "131:b00ccb85", "148:9712cbee", "144:138a28f8",
+        "130:4e598dbc", "126:75fb7d3d", "157:42498fdb", "126:23382378", "134:33d68f44", "127:e19d2b2b",
+        "158:ae18bb7e", "144:3cd62998", "136:33d9196", "123:b8158203", "139:dc241749", "132:7b6c9114",
+        "137:3e33159e", "128:b990e999", "154:6db21277", "143:5e0c64c2", "128:c31b55c4", "126:86b91f85",
+        "150:986f8487", "121:fd209394", "152:edfd6e70", "146:10690c55", "151:7af63e4a", "143:7920c36a",
+        "159:46f6d877", "138:9496069d", "163:5439836b", "173:a4592b66", "141:22858edb", "144:d1607c01",
+        "161:d0e36559", "162:7cd42623", "149:da539cc7", "149:aea64689", "177:cbe8f16a", "166:bcadb8a6",
+        "142:541e62cc", "151:ea4f9147", "174:8a92ae7", "172:55e032af", "151:220d9221", "143:a65942a9",
+        "172:5b931256", "161:7f1e76c8", "141:759d7b08", "145:94f50ba3", "161:1420261c", "146:b9c27921",
+        "143:d17579d4", "143:7918a4d6", "162:ce3fd761", "149:23d9a1ba", "138:d1cf8c6b", "130:ab82375c",
+        "153:b63c33c1", "147:d6d9fac", "142:d8994022", "146:1b0627e6", "146:4beb5fd3", "156:37a6b95f",
+        "141:6195f403", "148:ed8250a7", "161:1a216c22", "164:e95378d3", "156:cc585e61", "150:d389e4d4",
+        "159:e5beb91", "157:29bea6d3", "146:e6b35a56", "157:70aa6ca1", "189:2ad0c255", "169:88d39e79",
+        "146:54dce7a6", "151:ef23ecd7", "156:6df0106d", "137:efb6a718", "120:e11d0659", "117:23d3da67",
+        "153:580cf30d", "128:eb47118e", "164:886af16", "173:94eb9f36", "174:b15f7226", "163:caad45d6",
+        "142:536da52c", "141:26ebb76", "150:a327bcde", "155:546b3163", "133:b998825f", "134:16127a79",
+        "135:a2e134ab", "133:127450de", "140:cdf0522d", "130:345b14fd", "139:f0eb4dbc", "130:97277f0f",
+        "156:a0bd236b", "162:809928b9", "177:ad05e6c5", "167:c2e7247e", "140:2bd91fcb", "133:4e35b411",
+        "149:4c675baf", "137:f3aa4d48", "140:9d0125ca", "140:4de036ff", "164:ec413bce", "172:bfa4e0f",
+        "140:75cea5ca", "178:11b28976", "203:6f29aee2", "184:89e6b8f7", "150:d0cd8fe2", "156:869a47cf",
+        "185:5ead344", "158:b8b061e3", "114:ce3e879", "116:9539c937", "135:d8c4fb4", "110:dc73ab39",
+        "147:30ef69bd", "135:9397d51a", "145:ad1c1441", "141:95ae8f8e", "141:92f1146f", "153:35d60666",
+        "173:aa82a89d", "168:8a0b3f15", "149:b41a9953", "136:7d3a69ae", "165:7b1ae0aa", "143:e0dab644",
+        "161:dd1002ea", "156:dde9e8d7", "157:b3461a39", "155:dae8332c", "158:c9fa23ad", "146:200777da",
+        "180:db214187", "155:5b6e0d89"
+    ]);
+
     function isStoredRandomEmail(email) {
         if (email?.kind === 'random') return true;
         if (email?.kind === 'system') return false;
         if (!email || typeof email !== 'object') return false;
 
-        return randomEmailsDB.some(template => ['pl', 'en', 'de', 'nl'].some(language =>
-            email.sender === template[`sender_${language}`]
-            && email.subject === template[`subject_${language}`]
-            && email.body === template[`body_${language}`]
-        ));
+        const text = JSON.stringify([email.sender, email.subject, email.body]);
+        let hash = 2166136261;
+        for (let index = 0; index < text.length; index++) {
+            hash = Math.imul(hash ^ text.charCodeAt(index), 16777619);
+        }
+        return LEGACY_RANDOM_EMAIL_FINGERPRINTS.has(`${text.length}:${(hash >>> 0).toString(16)}`);
     }
 
     function normalizeStoredEmails(sourceEmails, legacyUnreadCount = 0) {
@@ -867,44 +671,23 @@ function showScreen(screenId) {
         });
     }
 
-    function pruneExpiredRandomEmails(referenceDate = currentDate, legacyUnreadCount = unreadMailsCount) {
-        const referenceTimestamp = referenceDate instanceof Date
-            ? referenceDate.getTime()
-            : Number(referenceDate);
-        let retainedRandomEmails = 0;
-
-        emails = normalizeStoredEmails(emails, legacyUnreadCount).filter(email => {
-            if (email.kind !== 'random') return true;
-
-            const isExpired = email.read === true
-                && Number.isFinite(referenceTimestamp)
-                && Number.isFinite(email.createdAt)
-                && referenceTimestamp - email.createdAt > RANDOM_EMAIL_RETENTION_MS;
-            if (isExpired) return false;
-
-            retainedRandomEmails++;
-            return email.read !== true || retainedRandomEmails <= RANDOM_EMAIL_ARCHIVE_LIMIT;
-        });
+    function removeRetiredRandomEmails(legacyUnreadCount = unreadMailsCount) {
+        // Najpierw odtwarzamy stan przeczytania, dopiero potem usuwamy losowe maile.
+        // Ich usunięcie nie może przesunąć granicy nieprzeczytanych wiadomości w starym zapisie.
+        emails = normalizeStoredEmails(emails, legacyUnreadCount).filter(email => email.kind !== 'random');
         unreadMailsCount = emails.reduce((count, email) => count + (email.read === true ? 0 : 1), 0);
         return emails;
     }
 
-    function addEmail(senderKey, subjectKey, bodyKey, options = {}) {
-        const langSuffix = `_${currentLang}`;
-        const emailTemplate = randomEmailsDB.find(e =>
-            (e[`sender${langSuffix}`] === senderKey || e.sender_pl === senderKey)
-        );
-        const sender = emailTemplate ? (emailTemplate[`sender${langSuffix}`] || emailTemplate.sender_pl) : senderKey;
-        const subject = emailTemplate ? (emailTemplate[`subject${langSuffix}`] || emailTemplate.subject_pl) : subjectKey;
-        const body = emailTemplate ? (emailTemplate[`body${langSuffix}`] || emailTemplate.body_pl) : bodyKey;
-
+    function addEmail(sender, subject, body, options = {}) {
+        if (isStoredRandomEmail({ sender, subject, body, kind: options.kind })) return false;
         emails.unshift({
             sender,
             subject,
             body,
             date: currentDate.toLocaleDateString('pl-PL'),
             createdAt: currentDate.getTime(),
-            kind: options.kind === 'random' ? 'random' : 'system',
+            kind: 'system',
             read: false
         });
         unreadMailsCount++;
@@ -922,7 +705,7 @@ function showScreen(screenId) {
 
         function showMailbox() {
     const list = document.getElementById('email-list');
-    pruneExpiredRandomEmails();
+    removeRetiredRandomEmails();
     const mailboxHtml = emails.map(e => `<div style="background:#0f3460; padding:10px; margin-bottom:10px; border-radius:5px; border-left:4px solid var(--accent-green);">
             <small style="color:#bdc3c7;">${escapeHtml(e.date)} | ${t('t-from')}: <strong>${escapeHtml(e.sender)}</strong></small>
             <h4 style="margin:5px 0;">${escapeHtml(e.subject)}</h4>
@@ -1017,60 +800,6 @@ function showScreen(screenId) {
                 alert(t('t-alert-no-history'));
             }
         }
-
-        function triggerRandomEvent() {
-    const ev = randomEventsDatabase[Math.floor(Math.random() * randomEventsDatabase.length)];
-    
-    // Wybiór języka
-    const langSuffix = `_${currentLang}`;
-    
-    document.getElementById('event-title').innerText = ev[`title${langSuffix}`] || ev.title_pl;
-    document.getElementById('event-desc').innerText = ev[`desc${langSuffix}`] || ev.desc_pl;
-    
-    const choicesDiv = document.getElementById('event-choices');
-    choicesDiv.innerHTML = "";
-    
-    ev.choices.forEach((choice) => {
-        const btn = document.createElement('button');
-        btn.className = "choice-btn";
-        
-        const choiceText = choice[`text${langSuffix}`] || choice.text_pl;
-        btn.textContent = choiceText;
-        
-        btn.onclick = function() {
-            if (choice.effect.budget) player.budget += choice.effect.budget;
-            const eventXpChanges = [];
-            if (choice.effect.scoring && typeof awardPlayerStatXP === 'function') {
-                const rawXpChange = choice.effect.scoring * TRAINING_CONFIG.randomEventXpPerStatPoint;
-                const xpChange = typeof scalePlayerDevelopmentChange === 'function'
-                    ? scalePlayerDevelopmentChange(player, rawXpChange)
-                    : rawXpChange;
-                awardPlayerStatXP('scoring', xpChange);
-                eventXpChanges.push(`${t('t-score')} XP ${xpChange > 0 ? '+' : ''}${Math.round(xpChange * 10) / 10}`);
-            }
-            if (choice.effect.doubles && typeof awardPlayerStatXP === 'function') {
-                const rawXpChange = choice.effect.doubles * TRAINING_CONFIG.randomEventXpPerStatPoint;
-                const xpChange = typeof scalePlayerDevelopmentChange === 'function'
-                    ? scalePlayerDevelopmentChange(player, rawXpChange)
-                    : rawXpChange;
-                awardPlayerStatXP('doubles', xpChange);
-                eventXpChanges.push(`${t('t-doubles')} XP ${xpChange > 0 ? '+' : ''}${Math.round(xpChange * 10) / 10}`);
-            }
-            if (choice.effect.prof) player.prof = clamp((player.prof || 50) + choice.effect.prof, 0, 100);
-            if (choice.effect.pop) player.pop = clamp((player.pop || 20) + choice.effect.pop, 0, 100);
-            if (choice.effect.stamina) player.stamina = clamp(player.stamina + choice.effect.stamina, 0, 100);
-
-            const outcomeMsg = choice[`outcome${langSuffix}`] || choice.outcome_pl;
-            const xpSummary = eventXpChanges.length > 0 ? `\n\n${t('t-event-xp-summary')}: ${eventXpChanges.join(' | ')}` : '';
-            alert(`${outcomeMsg}${xpSummary}`);
-
-            updateHub();
-            document.getElementById('event-modal').style.display = "none";
-        };
-        choicesDiv.appendChild(btn);
-    });
-    document.getElementById('event-modal').style.display = "flex";
-}
 
         function triggerInterview() {
     if (typeof interviewsDB === 'undefined' || interviewsDB.length === 0) return;

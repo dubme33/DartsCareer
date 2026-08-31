@@ -415,27 +415,51 @@
 
     renderNationalityDropdown();
 
-            const selectSector = document.getElementById('aim-sector');
-            if(selectSector) {
-                selectSector.innerHTML = "";
-                for(let i = 20; i >= 1; i--) selectSector.innerHTML += `<option value="${i}">${i}</option>`;
-                selectSector.innerHTML += `<option value="25">25 (Outer Bull)</option>`;
-                selectSector.innerHTML += `<option value="50">50 (Inner Bull)</option>`;
+            const aimSector = document.getElementById('aim-sector');
+            const sectorNumbers = document.getElementById('aim-sector-numbers');
+            if (sectorNumbers) {
+                sectorNumbers.innerHTML = Array.from({ length: 20 }, (_, index) => {
+                    const sector = 20 - index;
+                    return `<button type="button" class="aim-sector-btn" data-sector="${sector}" aria-pressed="false">${sector}</button>`;
+                }).join('');
             }
 
-            const selectMultiplier = document.getElementById('aim-multiplier');
-            if (selectSector && selectMultiplier) {
-                selectSector.addEventListener('change', function() {
-                    if (this.value === "25") {
-                        selectMultiplier.value = "1";
-                        selectMultiplier.disabled = true;
-                    } else if (this.value === "50") {
-                        selectMultiplier.value = "2";
-                        selectMultiplier.disabled = true;
-                    } else {
-                        selectMultiplier.disabled = false;
-                    }
+            const aimMultiplier = document.getElementById('aim-multiplier');
+            if (aimSector && aimMultiplier) {
+                const sectorButtons = document.querySelectorAll('.aim-sector-btn');
+                const multiplierButtons = document.querySelectorAll('.aim-multiplier-btn');
+                let wasAimingAtBull = false;
+                const updateAimButtons = () => {
+                    const bullMultiplier = aimSector.value === '25' ? '1' : aimSector.value === '50' ? '2' : null;
+                    if (bullMultiplier) aimMultiplier.value = bullMultiplier;
+                    else if (wasAimingAtBull) aimMultiplier.value = '3';
+                    wasAimingAtBull = Boolean(bullMultiplier);
+                    sectorButtons.forEach(button => {
+                        const isSelected = button.dataset.sector === aimSector.value;
+                        button.classList.toggle('active', isSelected);
+                        button.setAttribute('aria-pressed', String(isSelected));
+                    });
+                    multiplierButtons.forEach(button => {
+                        const isSelected = button.dataset.multiplier === aimMultiplier.value;
+                        button.classList.toggle('active', isSelected);
+                        button.setAttribute('aria-pressed', String(isSelected));
+                        button.disabled = Boolean(bullMultiplier) && !isSelected;
+                    });
+                };
+                sectorButtons.forEach(button => {
+                    button.addEventListener('click', () => {
+                        aimSector.value = button.dataset.sector;
+                        updateAimButtons();
+                    });
                 });
+                multiplierButtons.forEach(button => {
+                    button.addEventListener('click', () => {
+                        aimMultiplier.value = button.dataset.multiplier;
+                        updateAimButtons();
+                    });
+                });
+                aimSector.addEventListener('change', updateAimButtons);
+                updateAimButtons();
             }
 
             const favoriteDoubleSelect = document.getElementById('favorite-double');

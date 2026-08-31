@@ -268,7 +268,7 @@ function initCareerChronicle() {
         function validateModData(modData) {
             if (!isPlainObject(modData)) throw new Error('mod.json musi zawierać obiekt JSON.');
 
-            const arrayFields = ['pdcPlayers', 'tournamentDatabase', 'randomEventsDatabase', 'techSponsorsDB'];
+            const arrayFields = ['pdcPlayers', 'tournamentDatabase', 'techSponsorsDB'];
             arrayFields.forEach(field => {
                 if (modData[field] !== undefined && !Array.isArray(modData[field])) {
                     throw new Error(`Pole ${field} musi być tablicą.`);
@@ -404,10 +404,6 @@ function initCareerChronicle() {
                 }
             }
 
-            if (modData.randomEventsDatabase && typeof randomEventsDatabase !== 'undefined') {
-                randomEventsDatabase.length = 0;
-                modData.randomEventsDatabase.forEach(randomEvent => randomEventsDatabase.push(randomEvent));
-            }
             if (modData.techSponsorsDB) {
                 techSponsorsDB.length = 0;
                 modData.techSponsorsDB.forEach(sponsor => techSponsorsDB.push(sponsor));
@@ -485,6 +481,9 @@ function initCareerChronicle() {
             const configEntry = zipContent.file('mod.json');
             const modData = configEntry ? JSON.parse(await configEntry.async('string')) : {};
             validateModData(modData);
+            // Stare ZIP-y pozostają zgodne, ale nie przywracają wycofanych treści losowych.
+            delete modData.randomEventsDatabase;
+            delete modData.randomEmailsDB;
             const loadedAssets = await readModAssets(zipContent);
             return { modData, loadedAssets };
         }

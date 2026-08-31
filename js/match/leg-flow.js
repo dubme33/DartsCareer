@@ -55,6 +55,7 @@ function checkAchievements(type, data = null) {
         }
 
         function startSuddenDeath() {
+            resetMatchThrowGrouping(currentMatch);
             const st = currentMatch.stats;
             st.p1AccumulatedScore += (501 - currentMatch.p1Score);
             st.p2AccumulatedScore += (501 - currentMatch.p2Score);
@@ -83,6 +84,7 @@ function checkAchievements(type, data = null) {
 
         function resolveSuddenDeath() {
             if (!currentMatch?.suddenDeath || currentMatch.isFinishing) return false;
+            resetMatchThrowGrouping(currentMatch);
             const suddenDeath = currentMatch.suddenDeath;
             const isP1 = suddenDeath.p1Score > suddenDeath.p2Score;
             if (suddenDeath.p1Score === suddenDeath.p2Score) {
@@ -155,6 +157,7 @@ function checkAchievements(type, data = null) {
             updateDartDots();
 
             if (isP1 && suddenDeath.p1Darts === 3) {
+                resetMatchThrowGrouping(currentMatch);
                 currentMatch.turn = 'p2';
                 currentMatch.dartsThrown = 0;
                 setTurnUI();
@@ -175,6 +178,7 @@ function checkAchievements(type, data = null) {
         }
 
        function handleCompletedLeg(isP1, playerName) {
+            resetMatchThrowGrouping(currentMatch);
             const st = currentMatch.stats;
             // --- SPRAWDZANIE 9-DARTERA ---
             if (isP1 && !currentMatch.isSpectator && st.p1LegDarts === 9 && (!currentMatch.isDoubles || isCareerPlayerThrowing(true))) {
@@ -391,6 +395,7 @@ function checkAchievements(type, data = null) {
 
             const legCompleted = newScore === 0 && hitMult === 2;
             if (currentMatch.dartsThrown >= 3 || legCompleted) {
+                resetMatchThrowGrouping(currentMatch);
                 currentMatch.isTurnLocked = true;
                 const throwButton = document.getElementById('throw-btn');
                 if (throwButton) throwButton.disabled = true;
@@ -452,6 +457,7 @@ function checkAchievements(type, data = null) {
 
         function endTurn() {
             if (!currentMatch || currentMatch.isFinishing) return;
+            resetMatchThrowGrouping(currentMatch);
             let wasP1 = currentMatch.turn === 'p1';
             
             if (currentMatch.dartsThrown === 3) {

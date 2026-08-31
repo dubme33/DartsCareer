@@ -50,8 +50,8 @@ function startMatch(vsAI) {
         function updateScores() {
             const isSetMatch = currentMatch.matchFormat && currentMatch.matchFormat.type === 'sets';
             
-            document.getElementById('badge-sets-p1').style.display = isSetMatch ? 'block' : 'none';
-            document.getElementById('badge-sets-p2').style.display = isSetMatch && currentMatch.vsAI ? 'block' : 'none';
+            document.getElementById('badge-sets-p1').style.display = isSetMatch ? 'flex' : 'none';
+            document.getElementById('badge-sets-p2').style.display = isSetMatch && currentMatch.vsAI ? 'flex' : 'none';
 
             if (isSetMatch) {
                 document.getElementById('val-sets-p1').innerText = currentMatch.p1Sets;

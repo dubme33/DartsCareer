@@ -137,7 +137,7 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
         }
 
         function buildGameState() {
-            if (typeof pruneExpiredRandomEmails === 'function') pruneExpiredRandomEmails(currentDate, unreadMailsCount);
+            if (typeof removeRetiredRandomEmails === 'function') removeRetiredRandomEmails(unreadMailsCount);
             const hasActiveCompactHistory = Boolean(activeTournament
                 && typeof hasTournamentMatchHistory === 'function'
                 && hasTournamentMatchHistory(tournamentMatchHistory));
@@ -766,8 +766,8 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
                 initAllPlayerSeasonStats();
                 emails = Array.isArray(gameState.emails) ? gameState.emails : [];
                 unreadMailsCount = Number.isFinite(gameState.unreadMailsCount) ? gameState.unreadMailsCount : 0;
-                if (typeof pruneExpiredRandomEmails === 'function') {
-                    pruneExpiredRandomEmails(currentDate, unreadMailsCount);
+                if (typeof removeRetiredRandomEmails === 'function') {
+                    removeRetiredRandomEmails(unreadMailsCount);
                 }
 
                 gdlTable = (gameState.gdlTable || [])
@@ -1422,9 +1422,13 @@ async function updateProfileWalkon(event) {
         const TRAINING_CONFIG = Object.freeze({
             weeklyLimit: 2,
             staminaCost: STAMINA_CONFIG.trainingCost,
-            equipmentBonusCap: 50,
-            randomEventXpPerStatPoint: 12
+            equipmentBonusCap: 50
         });
+
+        function getTrainingEnergyMultiplier(candidate = player) {
+            const stamina = Number(candidate?.stamina);
+            return Number.isFinite(stamina) ? Math.max(0, Math.min(100, stamina)) / 100 : 1;
+        }
 
         function getTrainingWeekKey(date = currentDate) {
             const calendarDate = date instanceof Date && !Number.isNaN(date.getTime())
@@ -1515,9 +1519,17 @@ async function updateProfileWalkon(event) {
                     .replace('{remaining}', sessionsRemaining);
             }
 
+            const energyEfficiency = document.getElementById('train-energy-efficiency');
+            if (energyEfficiency) {
+                const energyPercent = Math.round(getTrainingEnergyMultiplier() * 100);
+                energyEfficiency.innerText = t('t-train-energy-efficiency')
+                    .replace('{energy}', energyPercent)
+                    .replace('{efficiency}', energyPercent);
+            }
+
             ['t-train-sc-btn', 't-train-db-btn'].forEach(buttonId => {
                 const button = document.getElementById(buttonId);
-                if (button) button.disabled = sessionsRemaining <= 0;
+                if (button) button.disabled = sessionsRemaining <= 0 || player.stamina < TRAINING_CONFIG.staminaCost;
             });
 
             if (typeof renderPlayerTraitTraining === 'function') renderPlayerTraitTraining(sessionsRemaining);
@@ -1549,9 +1561,11 @@ async function updateProfileWalkon(event) {
                 return;
             }
 
+            // Efektywność zależy od energii przed sesją, a nie po odjęciu jej kosztu.
+            const energyMultiplier = getTrainingEnergyMultiplier();
             changePlayerStamina(player, -TRAINING_CONFIG.staminaCost);
             if (isTrait) {
-                const gained = awardPlayerTraitXP(player, type, getPlayerTraitTrainingXP(type));
+                const gained = awardPlayerTraitXP(player, type, getPlayerTraitTrainingXP(type) * energyMultiplier);
                 if (gained && typeof trPlayerTraits === 'function') alert(trPlayerTraits('levelUp', { trait: trPlayerTraits(type) }));
             } else {
                 let currentStat = type === 'scoring' ? player.scoring : player.doubles;
@@ -1571,7 +1585,7 @@ async function updateProfileWalkon(event) {
                 const gainedXP = typeof scalePlayerDevelopmentChange === 'function'
                     ? scalePlayerDevelopmentChange(player, rawGainedXP)
                     : rawGainedXP;
-                const levelsGained = awardPlayerStatXP(type, gainedXP);
+                const levelsGained = awardPlayerStatXP(type, gainedXP * energyMultiplier);
                 if (levelsGained > 0) alert(type === 'scoring' ? t('t-alert-lvl-sc') : t('t-alert-lvl-db'));
             }
 
@@ -1605,13 +1619,15 @@ async function updateProfileWalkon(event) {
             let isDIDO = activeTournament && activeTournament.format === 'DIDO';
             const scoringVisit = !isCareerThrower && typeof createAiScoringVisit === 'function'
                 ? createAiScoringVisit() : null;
+            resetMatchThrowGrouping(currentMatch);
+            const groupingVisit = createThrowGroupingVisit();
 
             for (let i = 0; i < 3; i++) {
                 let aim = scoringVisit ? getAiScoringAim(currentScore, isDIDO, 3 - i, scoringVisit)
                     : getOptimalAim(currentScore, isDIDO, 3 - i);
                 const throwStats = typeof applyMentalPressureToStats === 'function'
                     ? applyMentalPressureToStats(pObj, statsObj, isP1, aim, currentScore) : statsObj;
-                let result = calculateThrow(aim.sector, aim.mult, throwStats);
+                let result = calculateVisitThrow(aim.sector, aim.mult, throwStats, groupingVisit);
                 if (scoringVisit) recordAiScoringObstruction(scoringVisit, aim, result, 3 - i);
                 if (typeof recordMentalThrowOutcome === 'function') recordMentalThrowOutcome(isP1, currentScore, aim, result);
                 let hitSec = result.sector;
@@ -1696,6 +1712,7 @@ async function updateProfileWalkon(event) {
         }
 
         function handleFastLegWin(isP1) {
+            resetMatchThrowGrouping(currentMatch);
             const st = currentMatch.stats;
             const isSetMatch = currentMatch.matchFormat && currentMatch.matchFormat.type === 'sets';
             let setWasWon = false;
@@ -1709,10 +1726,17 @@ async function updateProfileWalkon(event) {
             currentMatch.totalLegsPlayed++;
             if (isP1) currentMatch.p1Legs++; else currentMatch.p2Legs++;
 
+            const winnerName = currentMatch.isDoubles
+                ? getDoublesTeamName(isP1)
+                : (typeof getCurrentSinglesMatchPlayerName === 'function'
+                    ? getCurrentSinglesMatchPlayerName(isP1)
+                    : (isP1 ? player.name : currentMatch.opponent.name));
+            logThrow(`⏩ ${winnerName} ${t('t-log-wins-leg')}`, 'system');
+
             if (isSetMatch && (currentMatch.p1Legs >= currentMatch.matchFormat.legsPerSet || currentMatch.p2Legs >= currentMatch.matchFormat.legsPerSet)) {
                 setWasWon = true;
                 if (isP1) currentMatch.p1Sets++; else currentMatch.p2Sets++;
-                logThrow(`🏆 ${isP1 ? player.name : currentMatch.opponent.name} wygrywa seta!`, 'system');
+                logThrow(`🏆 ${winnerName} ${t('t-log-wins-set')}`, 'system');
             }
 
             if (currentMatch.matchFormat && currentMatch.matchFormat.suddenDeathAt && currentMatch.p1Legs === currentMatch.matchFormat.suddenDeathAt && currentMatch.p2Legs === currentMatch.matchFormat.suddenDeathAt) {
@@ -1740,6 +1764,7 @@ async function updateProfileWalkon(event) {
         }
 
         function processFastLeg() {
+            resetMatchThrowGrouping(currentMatch);
             if (currentMatch.suddenDeath) {
                 // Szybkie rozwiązanie nagłej śmierci (Sudden Death)
                 while(currentMatch.suddenDeath) {
@@ -1753,12 +1778,14 @@ async function updateProfileWalkon(event) {
                     }
                     statsObjP1 = applyRivalryMatchModifier(statsObjP1, true);
                     const scoringVisitP2 = typeof createAiScoringVisit === 'function' ? createAiScoringVisit() : null;
+                    const groupingVisitP1 = createThrowGroupingVisit();
+                    const groupingVisitP2 = createThrowGroupingVisit();
                     
                     for(let i=0; i<3; i++) {
-                        let resP1 = calculateThrow(20, 3, statsObjP1);
+                        let resP1 = calculateVisitThrow(20, 3, statsObjP1, groupingVisitP1);
                         currentMatch.suddenDeath.p1Score += resP1.sector * resP1.mult;
                         const aimP2 = scoringVisitP2 ? getAiScoringAim(501, false, 3 - i, scoringVisitP2) : { sector: 20, mult: 3 };
-                        let resP2 = calculateThrow(aimP2.sector, aimP2.mult, statsObjP2);
+                        let resP2 = calculateVisitThrow(aimP2.sector, aimP2.mult, statsObjP2, groupingVisitP2);
                         if (scoringVisitP2) recordAiScoringObstruction(scoringVisitP2, aimP2, resP2, 3 - i);
                         currentMatch.suddenDeath.p2Score += resP2.sector * resP2.mult;
                     }
@@ -1786,7 +1813,6 @@ async function updateProfileWalkon(event) {
                 if (currentMatch.turn === 'p1') currentMatch.p1TurnStartScore = currentMatch.p1Score;
                 else currentMatch.p2TurnStartScore = currentMatch.p2Score;
             }
-            logThrow(`⏩ ${t('t-log-sim')}`, "system");
         }
 
         function simulateOneLegFast() {
