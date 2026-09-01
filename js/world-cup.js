@@ -1372,6 +1372,9 @@ function startWorldCupMatch(match) {
     document.getElementById('score-photo-p2').src = getWorldCupFlagUrl(opponentTeam.country);
     document.getElementById('score-photo-p1').classList.add('world-cup-flag-photo');
     document.getElementById('score-photo-p2').classList.add('world-cup-flag-photo');
+    if (typeof applyMatchPlayerPresentationThemes === 'function') {
+        applyMatchPlayerPresentationThemes(player, opponentTeam);
+    }
     document.getElementById('t-btn-sim-leg').style.display = '';
     document.getElementById('t-btn-sim-match').style.display = '';
     updateScores();

@@ -80,6 +80,32 @@
         linear-gradient(225deg,#214f78 0 44%,#e05a4e 45% 51%,#0c2948 52%);
 }
 
+/* AI players keep a stable colour identity derived from their player data. */
+.score-col.ai-player-theme {
+    position: relative;
+    border-color: var(--player-frame-accent) !important;
+    box-shadow: 0 0 14px var(--player-frame-glow);
+}
+#score-col-player.ai-player-theme {
+    background:
+        radial-gradient(circle at 82% 18%,var(--player-frame-glow),transparent 30%),
+        linear-gradient(135deg,var(--player-frame-surface) 0 44%,var(--player-frame-accent) 45% 51%,#0c1729 52%);
+}
+#score-col-ai.match-opponent-card.ai-player-theme {
+    background:
+        radial-gradient(circle at 18% 18%,var(--player-frame-glow),transparent 30%),
+        linear-gradient(225deg,var(--player-frame-surface) 0 44%,var(--player-frame-accent) 45% 51%,#0c1729 52%);
+}
+.score-col.ai-player-theme.active-turn {
+    outline: 2px solid rgba(255,255,255,.9);
+    outline-offset: 2px;
+    box-shadow: 0 0 20px var(--player-frame-glow);
+}
+.score-col.ai-player-theme .score-photo.ai-player-photo-theme {
+    border-color: var(--player-frame-accent) !important;
+    box-shadow: 0 0 13px var(--player-frame-glow),0 5px 15px rgba(0,0,0,.5);
+}
+
 .career-trophy-room-head { display: grid; grid-template-columns: 1fr 1fr auto; gap: 12px; align-items: stretch; margin-bottom: 22px; }
 .career-trophy-room-head > div { display: flex; flex-direction: column; padding: 13px 15px; border: 1px solid #506078; border-radius: 8px; background: rgba(13,30,51,.88); }
 .career-trophy-room-head .action-btn { align-self: stretch; width: auto; margin: 0; }
@@ -97,6 +123,15 @@
 /* Walk-on visual runs inside the existing audio introduction and adds no delay. */
 #career-walkon-stage { position: relative; min-height: 150px; margin: 0 auto 16px; overflow: hidden; border: 2px solid #4a5d7a; border-radius: 11px; background: radial-gradient(circle at 50% 120%,#385077,#101627 62%); }
 #career-walkon-stage[hidden] { display: none; }
+#career-walkon-stage.ai-player-walkon {
+    color: var(--player-frame-accent);
+    border: 3px solid var(--player-frame-accent);
+    background:
+        radial-gradient(circle at 50% 118%,var(--player-frame-surface),transparent 58%),
+        linear-gradient(145deg,#111b2e,#080d18 68%);
+    box-shadow: inset 0 0 42px var(--player-frame-glow),0 0 20px var(--player-frame-glow);
+}
+#career-walkon-stage.ai-player-walkon #career-walkon-kicker { color: var(--player-frame-accent); text-shadow: 0 1px 5px #000; }
 .career-walkon-beams, .career-walkon-smoke, .career-walkon-sparks { position: absolute; inset: 0; pointer-events: none; }
 .career-walkon-beams::before, .career-walkon-beams::after { content: ''; position: absolute; top: -40%; bottom: -15%; width: 18%; opacity: .32; background: linear-gradient(transparent,currentColor 48%,transparent); transform-origin: 50% 0; animation: career-walkon-beam 2.2s ease-in-out infinite alternate; }
 .career-walkon-beams::before { left: 25%; transform: rotate(23deg); }

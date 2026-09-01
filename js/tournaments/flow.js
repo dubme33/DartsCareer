@@ -1173,10 +1173,17 @@ function skipActiveTournament() {
             document.getElementById('score-photo-p1').src = p1PhotoSrc;
             
             let p2Img = document.getElementById('score-photo-p2');
-            // Zamiast korzystać z domyślnych plików, używamy tych z wybranego moda (jeśli są)
-            p2Img.src = moddedAssets.photos[currentMatch.opponent.name] || `zdjecia/${currentMatch.opponent.name}.png`;
+            const customOpponentPhoto = typeof getPlayerProfilePhoto === 'function'
+                ? getPlayerProfilePhoto(currentMatch.opponent)
+                : (currentMatch.opponent.photo || moddedAssets.photos[currentMatch.opponent.name]);
+            const bundledOpponentName = currentMatch.opponent.sourceName || currentMatch.opponent.name;
+            p2Img.src = customOpponentPhoto || `zdjecia/${encodeURIComponent(bundledOpponentName)}.png`;
             p2Img.onerror = function() { this.onerror=null; this.src='https://placehold.co/100/16213e/FFFFFF?text=AI'; };
             // -----------------------------------
+
+            if (typeof applyMatchPlayerPresentationThemes === 'function') {
+                applyMatchPlayerPresentationThemes(player, currentMatch.opponent);
+            }
 
             updateScores(); updateMatchStatsUI(); setTurnUI(); showScreen('screen-match');
             playMatchIntro(player.name, currentMatch.opponent.name);

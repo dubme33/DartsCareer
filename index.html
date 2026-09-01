@@ -22,7 +22,7 @@
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://dartscareer.pl">
     <link rel="icon" type="image/png" href="favicon.png">
-    <link rel="stylesheet" href="css/game.css?v=1.3.7&stats=1&goals=1&titles=2&tiles=1&supporters=3&aim=3&match-log=1&social=1&compact-match=1">
+    <link rel="stylesheet" href="css/game.css?v=1.3.7&stats=1&goals=1&titles=2&tiles=1&supporters=3&aim=3&match-log=1&social=1&compact-match=4">
     <link rel="stylesheet" href="css/world-news.css?v=1.3.7&news=1">
     <link rel="stylesheet" href="css/season-archive.css?v=1.3.7&archive=1">
     <link rel="stylesheet" href="css/career-records.css?v=1.3.7&records=1">
@@ -30,9 +30,12 @@
     <link rel="stylesheet" href="css/player-staff.css?v=1.3.7&staff=1&mental=1">
     <link rel="stylesheet" href="css/player-traits.css?v=1.3.7&traits=2&mental=1">
     <link rel="stylesheet" href="css/career-infrastructure.css?v=1.3.7&infrastructure=1">
-    <link rel="stylesheet" href="css/career-lifestyle.css?v=1.3.7&lifestyle=2">
+    <link rel="stylesheet" href="css/career-lifestyle.css?v=1.3.7&lifestyle=3">
     <link rel="stylesheet" href="css/equipment-wear.css?v=1.3.7&equipment-wear=1">
     <link rel="stylesheet" href="css/career-planning.css?v=1.3.7&fix=planning-2&et-reserves=1">
+    <link rel="stylesheet" href="css/tutorial.css?v=1.3.7&tutorial=1">
+    <link rel="stylesheet" href="css/hub-navigation.css?v=1.3.7&hub-nav=5">
+    <link rel="stylesheet" href="css/player-editor.css?v=1.3.7&player-editor=2">
 </head>
 <body>
     <header>
@@ -79,7 +82,7 @@
                 <div class="cl-item">
                     <span class="cl-tag tweak">Match Interface</span>
                     <span class="cl-title">🎯 Larger Board &amp; Clearer Scorecards</span>
-                    <p class="cl-desc">Larger player photos and a larger dartboard restore the focus on the match. Remaining points, legs and sets now sit together in aligned groups. Throw and simulation controls sit directly below target selection on wide screens, removing the large empty gap. The scoreboard stays visible while scrolling, with a separate phone layout and a scrollable match log.</p>
+                    <p class="cl-desc">Larger player photos and a larger dartboard restore the focus on the match. Remaining points stay centred, while legs and sets use high-contrast framed counters beneath them so custom player backgrounds cannot hide the score. AI players keep stable individual colour themes across match cards, photo frames and walk-ons. Throw and simulation controls sit directly below target selection on wide screens, removing the large empty gap. The scoreboard stays visible while scrolling, with a separate phone layout and a scrollable match log.</p>
                 </div>
                 <div class="cl-item">
                     <span class="cl-tag feature">Touch Controls</span>
@@ -1111,8 +1114,68 @@
             <button class="action-btn green" id="t-sim" onclick="advanceDay()" style="width: auto; padding: 8px 15px; margin: 0;">Symuluj 1 Dzień ▶</button>
         </div>
 
-        <div class="menu-grid">
-            <div class="menu-tile" id="tile-tournament" style="display: none; background-color: var(--accent-red); border: 2px solid white;">
+        <section class="hub-now-panel" id="hub-now-panel" aria-labelledby="hub-now-title">
+            <div class="hub-now-heading">
+                <div>
+                    <span class="hub-now-eyebrow" id="hub-now-eyebrow">CENTRUM KARIERY</span>
+                    <h2 id="hub-now-title">🧭 Co teraz?</h2>
+                </div>
+                <p id="hub-now-summary">Najważniejsze informacje i jedna rekomendowana akcja na dziś.</p>
+            </div>
+            <div class="hub-now-status-grid">
+                <article class="hub-now-status-card">
+                    <span id="hub-now-next-label">Następny turniej</span>
+                    <strong id="hub-now-next-value">—</strong>
+                    <small id="hub-now-next-meta">—</small>
+                </article>
+                <article class="hub-now-status-card">
+                    <span id="hub-now-qualification-label">Kwalifikacja</span>
+                    <strong id="hub-now-qualification-value">—</strong>
+                    <small id="hub-now-qualification-meta">—</small>
+                </article>
+                <article class="hub-now-status-card">
+                    <span id="hub-now-readiness-label">Gotowość</span>
+                    <strong id="hub-now-readiness-value">—</strong>
+                    <small id="hub-now-readiness-meta">—</small>
+                </article>
+                <article class="hub-now-status-card">
+                    <span id="hub-now-sponsor-label">Cel sponsora</span>
+                    <strong id="hub-now-sponsor-value">—</strong>
+                    <small id="hub-now-sponsor-meta">—</small>
+                </article>
+            </div>
+            <div class="hub-now-recommendation">
+                <div>
+                    <span id="hub-now-recommendation-label">REKOMENDOWANA AKCJA</span>
+                    <strong id="hub-now-action-title">Sprawdź plan kariery</strong>
+                    <p id="hub-now-action-desc">Zobacz najbliższe wydarzenia i zaplanuj kolejne dni.</p>
+                </div>
+                <div class="hub-now-actions">
+                    <button type="button" id="hub-now-action-button" onclick="runHubRecommendedAction()">Otwórz kalendarz</button>
+                    <button type="button" id="hub-now-skip-button" hidden onclick="skipHubRecommendedTournament()">Odpuść (symuluj)</button>
+                </div>
+            </div>
+        </section>
+
+        <nav class="hub-category-nav" aria-labelledby="hub-category-nav-title">
+            <div class="hub-category-heading">
+                <div>
+                    <span id="hub-category-nav-title">SEKCJE HUBA</span>
+                    <strong id="hub-category-active-title">Kariera</strong>
+                </div>
+                <small id="hub-category-active-desc">Najważniejsze działania i historia kariery.</small>
+            </div>
+            <div class="hub-category-tabs" role="tablist" aria-label="Sekcje huba">
+                <button type="button" role="tab" data-hub-tab="career" aria-selected="true" aria-controls="hub-menu-grid">🏠 <span>Kariera</span></button>
+                <button type="button" role="tab" data-hub-tab="calendar" aria-selected="false" aria-controls="hub-menu-grid">📅 <span>Kalendarz</span></button>
+                <button type="button" role="tab" data-hub-tab="rankings" aria-selected="false" aria-controls="hub-menu-grid">📊 <span>Rankingi</span></button>
+                <button type="button" role="tab" data-hub-tab="player" aria-selected="false" aria-controls="hub-menu-grid">🎯 <span>Zawodnik</span></button>
+                <button type="button" role="tab" data-hub-tab="more" aria-selected="false" aria-controls="hub-menu-grid">⚙️ <span>Więcej</span></button>
+            </div>
+        </nav>
+
+        <div class="menu-grid" id="hub-menu-grid" role="tabpanel" aria-live="polite">
+            <div class="menu-tile" id="tile-tournament" data-hub-category="calendar" style="display: none; background-color: var(--accent-red); border: 2px solid white;">
                 <div onclick="startTournament()" style="cursor: pointer;">
                     <h3 id="t-tile-tour">🏆 Zagraj Turniej!</h3>
                     <p id="tour-name-display" style="color: white; font-weight: bold; margin-bottom: 10px;">Nazwa Turnieju</p>
@@ -1122,87 +1185,92 @@
                 <button type="button" class="action-btn" id="finance-active-link" onclick="showTournamentFinance()">Nagrody / finanse</button>
                 <button type="button" class="action-btn" id="tournament-travel-button" hidden onclick="showCareerInfrastructure()">Zmień podróż</button>
             </div>
-            <div class="menu-tile hub-feature-tile hub-tile-training" onclick="showTrainingScreen()">
+            <button type="button" class="menu-tile hub-feature-tile tutorial-tile" data-hub-category="career" onclick="showTutorial()">
+                <span id="tutorial-tile-badge" class="tutorial-tile-badge">NOWE</span>
+                <h3 id="tutorial-tile-title">🎓 Samouczek</h3>
+                <p id="tutorial-tile-desc">Poznaj mechaniki gry i wszystkie ekrany kariery.</p>
+            </button>
+            <div class="menu-tile hub-feature-tile hub-tile-training" data-hub-category="player" onclick="showTrainingScreen()">
                 <h3 id="t-tile-train">🎯 Baza Treningowa</h3>
                 <p id="t-desc-train">Rozwijaj swoje statystyki.</p>
             </div>
-            <button type="button" class="menu-tile hub-feature-tile player-staff-tile" onclick="showPlayerStaff()">
+            <button type="button" class="menu-tile hub-feature-tile player-staff-tile" data-hub-category="player" onclick="showPlayerStaff()">
                 <h3 id="player-staff-tile-title">🧑‍🏫 Sztab zawodnika</h3>
                 <p id="player-staff-tile-desc">Trenerzy, regeneracja i finanse.</p>
             </button>
-            <button type="button" class="menu-tile hub-feature-tile career-infrastructure-tile" onclick="showCareerInfrastructure()">
+            <button type="button" class="menu-tile hub-feature-tile career-infrastructure-tile" data-hub-category="player" onclick="showCareerInfrastructure()">
                 <h3 id="career-infrastructure-tile-title">✈️ Baza i podróże</h3>
                 <p id="career-infrastructure-tile-desc">Przygotowanie 70/100 · brak własnej bazy</p>
             </button>
-            <button type="button" class="menu-tile hub-feature-tile career-lifestyle-tile" onclick="showCareerLifestyle()">
+            <button type="button" class="menu-tile hub-feature-tile career-lifestyle-tile" data-hub-category="player" onclick="showCareerLifestyle()">
                 <h3 id="career-lifestyle-tile-title">🏡 Dom i personalizacja</h3>
                 <p id="career-lifestyle-tile-desc">Wynajęte mieszkanie · kolekcja £0</p>
             </button>
-            <div class="menu-tile hub-feature-tile hub-tile-match" onclick="showOpponentSelection()">
+            <div class="menu-tile hub-feature-tile hub-tile-match" data-hub-category="career" onclick="showOpponentSelection()">
                 <h3 id="t-tile-play">⚔️ Graj Mecz</h3>
                 <p id="t-desc-play">Zmierz się z graczami Pro Ligi.</p>
             </div>
-            <div class="menu-tile hub-feature-tile hub-tile-mail" onclick="showMailbox()">
+            <div class="menu-tile hub-feature-tile hub-tile-mail" data-hub-category="career" onclick="showMailbox()">
                 <h3 style="margin-bottom:10px;"><span id="t-mail-title">📬 Skrzynka E-mail</span> <span id="mail-badge" class="badge" style="display:none;">0</span></h3>
                 <p id="t-mail-desc">Wiadomości i zaproszenia.</p>
             </div>
-            <button type="button" class="menu-tile hub-feature-tile world-news-tile" onclick="showWorldNews()">
+            <button type="button" class="menu-tile hub-feature-tile world-news-tile" data-hub-category="career" onclick="showWorldNews()">
                 <h3><span id="world-news-tile-title">📰 Ze świata darta</span> <span id="world-news-badge" class="badge" style="display:none;">0</span></h3>
                 <p id="world-news-tile-desc">Wyniki, sensacje i bohaterowie sezonu.</p>
             </button>
-            <button type="button" class="menu-tile hub-feature-tile season-archive-tile" onclick="showSeasonArchive()">
+            <button type="button" class="menu-tile hub-feature-tile season-archive-tile" data-hub-category="rankings" onclick="showSeasonArchive()">
                 <h3 id="season-archive-tile-title">⏳ Archiwum sezonów</h3>
                 <p id="season-archive-tile-desc">Porównaj lata, rozwój i nagrody roczne.</p>
             </button>
-            <div class="menu-tile hub-feature-tile hub-tile-calendar" onclick="showCalendar()">
+            <div class="menu-tile hub-feature-tile hub-tile-calendar" data-hub-category="calendar" onclick="showCalendar()">
                 <h3 id="t-cal-title">📅 Kalendarz</h3>
                 <p id="t-cal-desc">Nadchodzące turnieje.</p>
             </div>
-            <div class="menu-tile hub-feature-tile hub-tile-players" onclick="showPdcRankings()">
+            <div class="menu-tile hub-feature-tile hub-tile-players" data-hub-category="rankings" onclick="showPdcRankings()">
                 <h3 id="t-tile-pdc">👥 Baza Graczy</h3>
                 <p id="t-desc-pdc">Ranking światowy.</p>
             </div>
-            <button type="button" class="menu-tile hub-feature-tile planning-menu-tile" onclick="showCareerPlanning()">
+            <button type="button" class="menu-tile hub-feature-tile planning-menu-tile" data-hub-category="calendar" onclick="showCareerPlanning()">
                 <h3 id="planning-tile-title">📊 Kwalifikacje i OOM</h3>
                 <p id="planning-tile-desc">Sprawdź awans i pieniądze do obrony.</p>
             </button>
-            <div class="menu-tile" onclick="showRivalriesScreen()" style="background-color: #922b21; border-color: #e74c3c;">
+            <div class="menu-tile" data-hub-category="rankings" onclick="showRivalriesScreen()" style="background-color: #922b21; border-color: #e74c3c;">
                 <h3 id="rival-tile-title" style="color: white;">🔥 Rywale</h3>
                 <p id="rival-tile-desc" style="color: #f5b7b1;">Bilans bezpośrednich pojedynków.</p>
             </div>
-            <div class="menu-tile" onclick="showSponsorsScreen()" style="background-color: #8e44ad; border-color: #9b59b6;">
+            <div class="menu-tile" data-hub-category="career" onclick="showSponsorsScreen()" style="background-color: #8e44ad; border-color: #9b59b6;">
                 <h3 id="t-spo-title" style="color: white;">🤝 Sponsorzy</h3>
                 <p id="t-spo-desc" style="color: #ecf0f1;">Umowy i partnerzy techniczni.</p>
             </div>
-            <div class="menu-tile hub-feature-tile hub-tile-shop" onclick="showShopScreen()">
+            <div class="menu-tile hub-feature-tile hub-tile-shop" data-hub-category="player" onclick="showShopScreen()">
                 <h3 id="t-tile-home">🛒 Sklep ze sprzętem</h3>
                 <p id="t-desc-home">Kupuj bazę i sprawdzaj lotki.</p>
             </div>
-            <div class="menu-tile" onclick="showTrophyRoom()" style="background-color: #f1c40f; border-color: #f39c12;">
+            <div class="menu-tile" data-hub-category="rankings" onclick="showTrophyRoom()" style="background-color: #f1c40f; border-color: #f39c12;">
                 <h3 id="t-tro-title" style="color: #2c3e50;">🥇 Sala Trofeów</h3>
                 <p id="t-tro-desc" style="color: #34495e;">Twoje puchary i rekordy kariery.</p>
             </div>
-            <div class="menu-tile" onclick="showCareerChronicle()" style="background-color: #1f618d; border-color: #3498db;">
+            <div class="menu-tile" data-hub-category="career" onclick="showCareerChronicle()" style="background-color: #1f618d; border-color: #3498db;">
                 <h3 id="chronicle-tile-title" style="color: white;">📖 Kronika kariery</h3>
                 <p id="chronicle-tile-desc" style="color: #d6eaf8;">Najważniejsze chwile na osi czasu.</p>
             </div>
             
-            <div class="menu-tile" onclick="saveGame()" style="background-color: #27ae60; border-color: #2ecc71;">
+            <div class="menu-tile" data-hub-category="more" onclick="saveGame()" style="background-color: #27ae60; border-color: #2ecc71;">
                 <h3 id="t-save-title" style="color: white;">💾 Zapisz grę</h3>
                 <p id="t-save-desc" style="color: #ecf0f1;">Zapisz postępy w karierze.</p>
             </div>
             
-            <div class="menu-tile" onclick="loadGame()" style="background-color: #e67e22; border-color: #d35400;">
+            <div class="menu-tile" data-hub-category="more" onclick="loadGame()" style="background-color: #e67e22; border-color: #d35400;">
                 <h3 id="t-load-title" style="color: white;">📂 Wczytaj grę</h3>
                 <p id="t-load-desc" style="color: #ecf0f1;">Wróć do ostatniego zapisu.</p>
             </div>
 
-            <div class="menu-tile" onclick="exportSaveToFile()" style="background-color: #1e8449; border-color: #27ae60;">
+            <div class="menu-tile" data-hub-category="more" onclick="exportSaveToFile()" style="background-color: #1e8449; border-color: #27ae60;">
                 <h3 id="t-export-title" style="color: white;">⬇️ Pobierz plik zapisu</h3>
                 <p id="t-export-desc" style="color: #ecf0f1;">Zabezpiecz karierę na swoim dysku.</p>
             </div>
             
-            <div class="menu-tile" style="background-color: #d35400; border-color: #e67e22; padding: 0;">
+            <div class="menu-tile" data-hub-category="more" style="background-color: #d35400; border-color: #e67e22; padding: 0;">
                 <label for="hub-import-upload" style="display: block; cursor: pointer; padding: 20px; height: 100%; box-sizing: border-box;">
                     <h3 id="t-import-title" style="color: white; border: none; margin: 0 0 10px 0; font-size: 18px;">⬆️ Wgraj plik zapisu</h3>
                     <p id="t-import-desc" style="color: #ecf0f1; margin: 0; font-size: 13px;">Przywróć karierę z pliku .JSON.</p>
@@ -1210,14 +1278,7 @@
                 <input type="file" id="hub-import-upload" accept=".json" style="display: none;" onchange="importSaveFromFile(event)">
             </div>
 
-            <!-- Ostrzeżenie na pełną szerokość -->
-            <div style="grid-column: 1 / -1; text-align: center; margin: 10px 0; background: rgba(241, 196, 15, 0.1); border: 1px dashed #f1c40f; padding: 10px; border-radius: 5px;">
-                <p id="t-save-warn" style="color: #f1c40f; font-size: 14px; font-weight: bold; margin: 0;">
-                    ⚠️ Pamięć przeglądarki jest ulotna! Przed dłuższą przerwą zalecamy pobranie pliku zapisu na dysk.
-                </p>
-            </div>
-
-            <div class="menu-tile" style="background-color: #8e44ad; border-color: #9b59b6; padding: 0;">
+            <div class="menu-tile" data-hub-category="more" style="background-color: #8e44ad; border-color: #9b59b6; padding: 0;">
                 <label for="hub-mod-upload" style="display: block; cursor: pointer; padding: 20px; height: 100%; box-sizing: border-box;">
                     <h3 id="t-mod-title" style="color: white; border: none; margin: 0 0 10px 0; font-size: 18px;">📦 Wgraj Moda</h3>
                     <p id="t-mod-desc" style="color: #ecf0f1; margin: 0; font-size: 13px;">Przywróć media po wczytaniu zapisu.</p>
@@ -1225,32 +1286,155 @@
                 <input type="file" id="hub-mod-upload" accept=".zip" style="display: none;" onchange="loadMod(event)">
             </div>
 
+            <button type="button" class="menu-tile player-editor-tile" data-hub-category="more" onclick="showPlayerEditor()">
+                <h3 id="player-editor-tile-title">🪪 Edytor zawodników</h3>
+                <p id="player-editor-tile-desc">Edytuj bazę, statystyki i zdjęcia lub dodaj nową postać.</p>
+            </button>
+
+            <!-- Ostrzeżenie na pełną szerokość -->
+            <div data-hub-category="more" style="grid-column: 1 / -1; text-align: center; margin: 10px 0; background: rgba(241, 196, 15, 0.1); border: 1px dashed #f1c40f; padding: 10px; border-radius: 5px;">
+                <p id="t-save-warn" style="color: #f1c40f; font-size: 14px; font-weight: bold; margin: 0;">
+                    ⚠️ Pamięć przeglądarki jest ulotna! Przed dłuższą przerwą zalecamy pobranie pliku zapisu na dysk.
+                </p>
+            </div>
+
+            <div class="hub-community-divider" data-hub-category="more" data-hub-shared="true" role="group" aria-labelledby="hub-community-title">
+                <h3>🤝 <span id="hub-community-title">Społeczność</span></h3>
+                <p id="hub-community-desc">Bądź z nami na bieżąco i obserwuj nasze social media.</p>
+            </div>
+
             <!-- Kafelki Społecznościowe -->
-            <div class="menu-tile" onclick="window.open('https://discord.gg/zevPhs74H', '_blank')" style="background-color: #5865F2; border-color: #4752C4;">
+            <div class="menu-tile" data-hub-category="more" data-hub-shared="true" onclick="window.open('https://discord.gg/zevPhs74H', '_blank')" style="background-color: #5865F2; border-color: #4752C4;">
                 <h3 id="t-dis-title-hub" style="color: white; border: none; margin: 0 0 10px 0; font-size: 18px;">💬 Discord</h3>
                 <p id="t-dis-desc-hub" style="color: #ecf0f1; margin: 0; font-size: 13px;">Dołącz do naszej społeczności i pomóż nam ulepszać grę!</p>
             </div>
 
-            <div class="menu-tile" onclick="window.open('https://x.com/DartsCareer', '_blank')" style="background-color: #000000; border-color: #333333;">
+            <div class="menu-tile" data-hub-category="more" data-hub-shared="true" onclick="window.open('https://x.com/DartsCareer', '_blank')" style="background-color: #000000; border-color: #333333;">
                 <h3 id="t-x-title-hub" style="color: white; border: none; margin: 0 0 10px 0; font-size: 18px;">🐦 X (Twitter)</h3>
                 <p id="t-x-desc-hub" style="color: #ecf0f1; margin: 0; font-size: 13px;">Śledź nas, aby być na bieżąco z nowościami!</p>
             </div>
 
-            <a class="menu-tile tiktok-tile" href="https://www.tiktok.com/@dartscareerpl" target="_blank" rel="noopener noreferrer" aria-labelledby="t-tiktok-title-hub" aria-describedby="t-tiktok-desc-hub">
+            <a class="menu-tile tiktok-tile" data-hub-category="more" data-hub-shared="true" href="https://www.tiktok.com/@dartscareerpl" target="_blank" rel="noopener noreferrer" aria-labelledby="t-tiktok-title-hub" aria-describedby="t-tiktok-desc-hub">
                 <h3 id="t-tiktok-title-hub">🎵 TikTok</h3>
                 <p id="t-tiktok-desc-hub">Obserwuj @dartscareerpl na TikToku!</p>
             </a>
             
-            <div class="menu-tile" onclick="window.open('https://buymeacoffee.com/dartscareer', '_blank')" style="background-color: #FFDD00; border-color: #F39C12;">
+            <div class="menu-tile" data-hub-category="more" data-hub-shared="true" onclick="window.open('https://buymeacoffee.com/dartscareer', '_blank')" style="background-color: #FFDD00; border-color: #F39C12;">
                 <h3 id="t-bmc-title-hub" style="color: #2c3e50; border: none; margin: 0 0 10px 0; font-size: 18px;">☕ Wesprzyj nas</h3>
                 <p id="t-bmc-desc-hub" style="color: #34495e; margin: 0; font-size: 13px;">Podoba Ci się nasz projekt? Postaw nam wirtualną kawę!</p>
             </div>
 
             <!-- Kafelek Supporters -->
-            <div class="menu-tile" onclick="showSupportersScreen()" style="background-color: #e84393; border-color: #fd79a8;">
+            <div class="menu-tile" data-hub-category="more" data-hub-shared="true" onclick="showSupportersScreen()" style="background-color: #e84393; border-color: #fd79a8;">
                 <h3 id="t-sup-title" style="color: white; border: none; margin: 0 0 10px 0; font-size: 18px;">💖 Supporters</h3>
                 <p id="t-sup-desc" style="color: #ecf0f1; margin: 0; font-size: 13px;">Hall of fame for everyone who supports the game.</p>
             </div>
+        </div>
+    </main>
+
+    <!-- EKRAN: EDYTOR ZAWODNIKÓW -->
+    <main id="screen-player-editor" class="screen player-editor-screen">
+        <header class="player-editor-header">
+            <div>
+                <span id="player-editor-eyebrow">BAZA ZAWODNIKÓW</span>
+                <h2 id="player-editor-title">🪪 Edytor zawodników</h2>
+                <p id="player-editor-intro">Zmiany dotyczą bieżącej kariery i zostaną zapisane razem z nią.</p>
+            </div>
+            <span id="player-editor-mode" class="player-editor-mode">Gra podstawowa</span>
+        </header>
+
+        <div class="player-editor-layout">
+            <aside class="player-editor-roster" aria-labelledby="player-editor-roster-title">
+                <div class="player-editor-roster-heading">
+                    <div>
+                        <strong id="player-editor-roster-title">Zawodnicy</strong>
+                        <small id="player-editor-roster-count">0 zawodników</small>
+                    </div>
+                    <button type="button" id="player-editor-new" onclick="startAddingPlayer()">＋ Dodaj</button>
+                </div>
+                <label class="player-editor-search">
+                    <span class="sr-only" id="player-editor-search-label">Szukaj zawodnika</span>
+                    <input id="player-editor-search" type="search" autocomplete="off" placeholder="Szukaj po nazwisku lub kraju…" oninput="renderPlayerEditorRoster()">
+                </label>
+                <div id="player-editor-roster-list" class="player-editor-roster-list"></div>
+            </aside>
+
+            <form id="player-editor-form" class="player-editor-form" onsubmit="savePlayerEditor(event)">
+                <div class="player-editor-form-heading">
+                    <div>
+                        <span id="player-editor-form-kicker">EDYCJA WPISU</span>
+                        <h3 id="player-editor-form-title">Wybierz zawodnika</h3>
+                    </div>
+                    <span id="player-editor-origin" class="player-editor-origin"></span>
+                </div>
+
+                <div class="player-editor-profile-row">
+                    <div class="player-editor-photo-wrap">
+                        <img id="player-editor-photo-preview" alt="Zdjęcie zawodnika">
+                        <span id="player-editor-photo-empty">BRAK ZDJĘCIA</span>
+                    </div>
+                    <div class="player-editor-photo-actions">
+                        <strong id="player-editor-photo-title">Zdjęcie zawodnika</strong>
+                        <p id="player-editor-photo-hint">PNG, JPG lub WebP, maksymalnie 2 MB.</p>
+                        <div>
+                            <label id="player-editor-photo-upload-label" for="player-editor-photo-input">Wybierz zdjęcie</label>
+                            <input id="player-editor-photo-input" type="file" accept="image/png,image/jpeg,image/webp" onchange="loadPlayerEditorPhoto(event)">
+                            <button type="button" id="player-editor-photo-remove" onclick="removePlayerEditorPhoto()">Usuń zdjęcie</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="player-editor-walkon-row">
+                    <div class="player-editor-walkon-icon" aria-hidden="true">🎵</div>
+                    <div class="player-editor-walkon-content">
+                        <strong id="player-editor-walkon-title">Muzyka wejściowa (walk-on)</strong>
+                        <p id="player-editor-walkon-hint">MP3, WAV lub OGG, maksymalnie 4 MB.</p>
+                        <span id="player-editor-walkon-source" class="player-editor-walkon-source">Brak własnego utworu</span>
+                        <audio id="player-editor-walkon-preview" controls preload="metadata" hidden></audio>
+                        <div class="player-editor-walkon-actions">
+                            <label id="player-editor-walkon-upload-label" for="player-editor-walkon-input">Wybierz utwór</label>
+                            <input id="player-editor-walkon-input" type="file" accept="audio/mpeg,audio/wav,audio/x-wav,audio/ogg,.mp3,.wav,.ogg" onchange="loadPlayerEditorWalkon(event)">
+                            <button type="button" id="player-editor-walkon-remove" onclick="removePlayerEditorWalkon()">Przywróć domyślny</button>
+                        </div>
+                    </div>
+                </div>
+
+                <section class="player-editor-section" aria-labelledby="player-editor-personal-title">
+                    <h4 id="player-editor-personal-title">Dane zawodnika</h4>
+                    <div class="player-editor-fields player-editor-fields-personal">
+                        <label><span id="player-editor-first-name-label">Imię</span><input id="player-editor-first-name" type="text" maxlength="40" required></label>
+                        <label><span id="player-editor-last-name-label">Nazwisko</span><input id="player-editor-last-name" type="text" maxlength="60" required></label>
+                        <label><span id="player-editor-country-label">Kraj</span><select id="player-editor-country" required></select></label>
+                        <label><span id="player-editor-birth-year-label">Rok urodzenia</span><input id="player-editor-birth-year" type="number" min="1900" max="2014" required></label>
+                        <label><span id="player-editor-gender-label">Płeć</span><select id="player-editor-gender"><option value="male">Mężczyzna</option><option value="female">Kobieta</option></select></label>
+                        <label><span id="player-editor-favorite-double-label">Ulubiony double</span><select id="player-editor-favorite-double"></select></label>
+                    </div>
+                </section>
+
+                <section class="player-editor-section" aria-labelledby="player-editor-ratings-title">
+                    <h4 id="player-editor-ratings-title">Oceny meczowe</h4>
+                    <div class="player-editor-fields player-editor-rating-fields">
+                        <label><span id="player-editor-overall-label">Overall</span><input id="player-editor-overall" type="number" min="40" max="99" required></label>
+                        <label><span id="player-editor-scoring-label">Punktowanie</span><input id="player-editor-scoring" type="number" min="40" max="100" required></label>
+                        <label><span id="player-editor-doubles-label">Podwójne</span><input id="player-editor-doubles" type="number" min="40" max="100" required></label>
+                    </div>
+                </section>
+
+                <section class="player-editor-section" aria-labelledby="player-editor-traits-title">
+                    <h4 id="player-editor-traits-title">Cechy dodatkowe</h4>
+                    <div class="player-editor-fields player-editor-rating-fields">
+                        <label><span id="player-editor-endurance-label">Wytrzymałość</span><input id="player-editor-endurance" type="number" min="0" max="100" required></label>
+                        <label><span id="player-editor-consistency-label">Regularność</span><input id="player-editor-consistency" type="number" min="0" max="100" required></label>
+                        <label><span id="player-editor-mental-label">Mental</span><input id="player-editor-mental" type="number" min="0" max="100" required></label>
+                    </div>
+                </section>
+
+                <p id="player-editor-status" class="player-editor-status" role="status" aria-live="polite"></p>
+                <div class="player-editor-footer-actions">
+                    <button type="button" id="player-editor-back" onclick="closePlayerEditor()">Wróć do menu</button>
+                    <button type="submit" id="player-editor-save">Zapisz zmiany</button>
+                </div>
+            </form>
         </div>
     </main>
 
@@ -1312,20 +1496,20 @@
                 <img id="score-photo-p1" class="score-photo" src="" alt="Ty" onerror="this.onerror=null; this.src='https://via.placeholder.com/100?text=TY';">
                 <div class="score-info">
                     <h4 id="match-p1-name">Ty</h4>
-                    <div class="score-totals">
-                        <div class="score-display" id="match-score-p1">501</div>
-                    <div class="match-score-badges">
-                        <div class="badge-box" id="badge-sets-p1" style="display:none;">
-                            <span class="badge-label dyn-t" data-key="t-sets">SETY</span>
-                            <span class="badge-value" id="val-sets-p1">0</span>
+                    <div class="score-display" id="match-score-p1">501</div>
+                    <div class="score-status-row">
+                        <div class="match-score-badges">
+                            <div class="badge-box" id="badge-sets-p1" style="display:none;">
+                                <span class="badge-label dyn-t" data-key="t-sets">SETY</span>
+                                <span class="badge-value" id="val-sets-p1">0</span>
+                            </div>
+                            <div class="badge-box" id="badge-legs-p1">
+                                <span class="badge-label dyn-t" data-key="t-legs">LEGI</span>
+                                <span class="badge-value" id="val-legs-p1">0</span>
+                            </div>
                         </div>
-                        <div class="badge-box" id="badge-legs-p1">
-                            <span class="badge-label dyn-t" data-key="t-legs">LEGI</span>
-                            <span class="badge-value" id="val-legs-p1">0</span>
-                        </div>
+                        <div id="momentum-p1" class="match-momentum">➖ Neutralnie</div>
                     </div>
-                    </div>
-                    <div id="momentum-p1" class="match-momentum">➖ Neutralnie</div>
                     <div id="checkout-p1" class="checkout-hint"></div>
                 </div>
             </div>
@@ -1334,20 +1518,20 @@
                 <img id="score-photo-p2" class="score-photo" src="" alt="Rywal" onerror="this.onerror=null; this.src='https://via.placeholder.com/100?text=AI';">
                 <div class="score-info">
                     <h4 id="match-p2-name">Rywal</h4>
-                    <div class="score-totals">
-                        <div class="score-display" id="match-score-p2">501</div>
-                    <div class="match-score-badges">
-                        <div class="badge-box" id="badge-sets-p2" style="display:none;">
-                            <span class="badge-label dyn-t" data-key="t-sets">SETY</span>
-                            <span class="badge-value" id="val-sets-p2">0</span>
+                    <div class="score-display" id="match-score-p2">501</div>
+                    <div class="score-status-row">
+                        <div class="match-score-badges">
+                            <div class="badge-box" id="badge-sets-p2" style="display:none;">
+                                <span class="badge-label dyn-t" data-key="t-sets">SETY</span>
+                                <span class="badge-value" id="val-sets-p2">0</span>
+                            </div>
+                            <div class="badge-box" id="badge-legs-p2">
+                                <span class="badge-label dyn-t" data-key="t-legs">LEGI</span>
+                                <span class="badge-value" id="val-legs-p2">0</span>
+                            </div>
                         </div>
-                        <div class="badge-box" id="badge-legs-p2">
-                            <span class="badge-label dyn-t" data-key="t-legs">LEGI</span>
-                            <span class="badge-value" id="val-legs-p2">0</span>
-                        </div>
+                        <div id="momentum-p2" class="match-momentum">➖ Neutralnie</div>
                     </div>
-                    </div>
-                    <div id="momentum-p2" class="match-momentum">➖ Neutralnie</div>
                     <div id="checkout-p2" class="checkout-hint"></div>
                 </div>
             </div>
@@ -1488,6 +1672,19 @@
         <h2 id="t-mail-header">Skrzynka Odbiorcza E-mail</h2>
         <div class="log-box" id="email-list" style="height: 350px;"></div>
         <button class="action-btn" id="t-back-mail" onclick="showScreen('screen-hub')">Wróć do Menu</button>
+    </main>
+
+    <!-- EKRAN SAMOUCZKA -->
+    <main id="screen-tutorial" class="screen" aria-labelledby="tutorial-title">
+        <div class="tutorial-heading">
+            <div>
+                <h2 id="tutorial-title">🎓 Samouczek</h2>
+                <p id="tutorial-intro">Poznaj najważniejsze mechaniki i dowiedz się, do czego służy każdy kafelek.</p>
+            </div>
+            <div id="tutorial-progress" class="tutorial-progress" aria-live="polite">0/8</div>
+        </div>
+        <div id="tutorial-sections" class="tutorial-sections"></div>
+        <button type="button" class="action-btn" id="tutorial-back" onclick="showScreen('screen-hub')">Wróć do Menu</button>
     </main>
 
     <main id="screen-world-news" class="screen" aria-labelledby="world-news-title">
@@ -1834,7 +2031,7 @@
     </main>
     <!-- STOPKA AUTORSKA -->
     <footer style="width: 100%; text-align: center; padding: 25px 15px; margin-top: auto; color: #7f8c8d; font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 2px;">
-        <div style="margin-bottom: 5px; color: #bdc3c7;">V. 1.3.7</div>
+        <div style="margin-bottom: 5px; color: #bdc3c7;">V. 1.3.8</div>
         powered by dubme<br>
         <a href="mailto:dartscareer@gmail.com" style="color: #bdc3c7; text-decoration: none; text-transform: lowercase; display: inline-block; margin-top: 5px;">dartscareer@gmail.com</a>
     </footer>
@@ -1858,9 +2055,12 @@
     <script src="js/tour-cards.js?v=1.3.7"></script>
     <script src="js/world-championship-qualification.js?v=1.3.7"></script>
     <script src="js/stamina.js?v=1.3.7&staff=1&traits=1&infrastructure=1"></script>
-    <script src="js/i18n.js?v=1.3.7&fix=planning-1&news=1&archive=1&staff=1&traits=1&infrastructure=1&lifestyle=1&tiles=1&records=1&finance=1&aim=3&social=1&training-energy=1"></script>
+    <script src="js/i18n.js?v=1.3.7&fix=planning-1&news=1&archive=1&staff=1&traits=1&infrastructure=1&lifestyle=1&tiles=1&records=1&finance=1&aim=3&social=1&training-energy=1&tutorial=1&hub-nav=2&player-editor=1"></script>
     <script src="js/player-lifecycle.js?v=1.3.7&fix=no-random-form-1&traits=1&ai-growth=2"></script>
-    <script src="js/career.js?v=1.3.7&fix=no-random-form-1&planning=1&goals=1&news=1&archive=1&staff=1&traits=1&infrastructure=1&lifestyle=1&records=1&finance=1&et-auto=1&ai-growth=2&no-random-content=1"></script>
+    <script src="js/career.js?v=1.3.7&fix=no-random-form-1&planning=1&goals=1&news=1&archive=1&staff=1&traits=1&infrastructure=1&lifestyle=1&records=1&finance=1&et-auto=1&ai-growth=2&no-random-content=1&tutorial=1&hub-nav=2"></script>
+    <script src="js/tutorial.js?v=1.3.7&tutorial=1"></script>
+    <script src="js/hub-navigation.js?v=1.3.7&hub-nav=5"></script>
+    <script src="js/player-editor.js?v=1.3.7&player-editor=4"></script>
     <script src="js/player-profiles.js?v=1.3.7&stats=1&goals=1&news=1&traits=1&mental=1&titles=3&records=1&finance=1"></script>
     <script src="js/player-match-stats.js?v=1.3.7&stats=2&goals=1&news=1&traits=1&records=1&ai-growth=2&grouping=2"></script>
     <script src="js/career-records.js?v=1.3.7&records=1"></script>
@@ -1873,13 +2073,13 @@
     <script src="js/match/intro.js?v=1.3.7&lifestyle=1"></script>
     <script src="js/tournaments/rewards.js?v=1.3.7&archive=1&finance=1"></script>
     <script src="js/grand-slam.js?v=1.3.7&finance=1"></script>
-    <script src="js/tournaments/flow.js?v=1.3.7&fix=et-season-1&planning=1&stats=2&ws-local=1&traits=1&mental=1&infrastructure=1&finance=1&et-reserves=1&et-auto=1"></script>
+    <script src="js/tournaments/flow.js?v=1.3.7&fix=et-season-1&planning=1&stats=2&ws-local=1&traits=1&mental=1&infrastructure=1&finance=1&et-reserves=1&et-auto=1&presentation=1"></script>
     <script src="js/tournaments/fast-forward.js?v=1.3.7&finance=1"></script>
-    <script src="js/tournaments/spectator.js?v=1.3.7&stats=1"></script>
-    <script src="js/world-cup.js?v=1.3.7&news=1&archive=1&mental=1&infrastructure=1&records=1&finance=1"></script>
+    <script src="js/tournaments/spectator.js?v=1.3.7&stats=1&presentation=1"></script>
+    <script src="js/world-cup.js?v=1.3.7&news=1&archive=1&mental=1&infrastructure=1&records=1&finance=1&presentation=1"></script>
     <script src="js/continental-qualification-v2.js?v=1.3.7&fix=et-season-1&planning=1&et-reserves=1"></script>
     <script src="js/world-masters.js?v=1.3.7&fix=planning-1&ws-local=1&prizes=2"></script>
-    <script src="js/match/setup.js?v=1.3.7&stats=1&qualifier-loss=1&finance=1"></script>
+    <script src="js/match/setup.js?v=1.3.7&stats=1&qualifier-loss=1&finance=1&presentation=1"></script>
     <script src="js/match/leg-flow.js?v=1.3.7&finance=1&matchplay=1&grouping=3"></script>
     <script src="js/match/audio.js"></script>
     <script src="js/match/turns.js?v=1.3.7&ws-local=1&traits=1&mental=1&cover=1&grouping=3"></script>
@@ -1895,7 +2095,7 @@
     <script src="js/career-infrastructure.js?v=1.3.7&infrastructure=5&finance=1"></script>
     <script src="js/career-infrastructure-ui.js?v=1.3.7&infrastructure=2&tiles=1"></script>
     <script src="js/career-lifestyle.js?v=1.3.7&lifestyle=1"></script>
-    <script src="js/career-lifestyle-ui.js?v=1.3.7&lifestyle=1"></script>
+    <script src="js/career-lifestyle-ui.js?v=1.3.7&lifestyle=2"></script>
     <script src="js/equipment-wear.js?v=1.3.7&equipment-wear=1"></script>
     <script src="js/systems.js?v=1.3.7&fix=career-progress-1&stats=1&ws-local=1&goals=1&news=1&archive=1&staff=1&traits=1&mental=1&infrastructure=1&lifestyle=1&equipment-wear=1&records=1&finance=1&et-reserves=1&matchplay=1&cover=1&grouping=3&leg-log=1&no-random-content=1&training-energy=1"></script>
     <script src="js/mod-media.js?v=1.3.7"></script>

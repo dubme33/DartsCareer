@@ -99,7 +99,12 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
                     ...gameState.player,
                     photo: '',
                     walkon: null
-                }
+                },
+                pdcPlayers: Array.isArray(gameState.pdcPlayers)
+                    ? gameState.pdcPlayers.map(candidate => candidate && typeof candidate === 'object'
+                        ? { ...candidate, photo: '', walkon: null }
+                        : candidate)
+                    : gameState.pdcPlayers
             };
         }
 
@@ -649,7 +654,7 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
                 if (!result.success) {
                     alert('Nie udało się zapisać kariery w pamięci przeglądarki. Pobierz plik .JSON, aby nie utracić postępów.');
                 } else if (result.omittedMedia) {
-                    alert('Kariera została zapisana bez zdjęcia i muzyki profilu z powodu limitu pamięci. Aby zachować je również, pobierz plik .JSON.');
+                    alert('Kariera została zapisana bez multimediów profilu i edytora z powodu limitu pamięci. Aby zachować je również, pobierz plik .JSON.');
                 } else {
                     alert(t('t-alert-save-ok'));
                 }
@@ -849,6 +854,7 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
             if (typeof restoreCareerInfrastructure === 'function') restoreCareerInfrastructure();
             if (typeof restoreCareerLifestyle === 'function') restoreCareerLifestyle();
             if (typeof restorePlayerEquipmentWear === 'function') restorePlayerEquipmentWear();
+            if (typeof restoreTutorialState === 'function') restoreTutorialState();
                 updateDateDisplay(); updateMailBadge(); updateHub(); showScreen('screen-hub');
                 if (typeof clearTournamentSimulationSaveBlock === 'function') clearTournamentSimulationSaveBlock();
                 if (showFeedback) alert(t('t-alert-load-ok'));

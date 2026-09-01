@@ -181,8 +181,11 @@ function setSpectatorPlayerPhoto(elementId, candidate, fallbackLabel) {
     const image = document.getElementById(elementId);
     if (!image) return;
     image.classList.remove('world-cup-flag-photo');
-    const modPhoto = typeof moddedAssets !== 'undefined' ? moddedAssets.photos?.[candidate.name] : null;
-    image.src = candidate.photo || modPhoto || `zdjecia/${candidate.name}.png`;
+    const customPhoto = typeof getPlayerProfilePhoto === 'function' ? getPlayerProfilePhoto(candidate) : candidate.photo;
+    const modPhoto = typeof moddedAssets !== 'undefined'
+        ? (moddedAssets.photos?.[candidate.name] || moddedAssets.photos?.[candidate.sourceName])
+        : null;
+    image.src = customPhoto || modPhoto || `zdjecia/${encodeURIComponent(candidate.sourceName || candidate.name)}.png`;
     image.onerror = function spectatorPhotoFallback() {
         this.onerror = null;
         this.src = `https://placehold.co/100/16213e/FFFFFF?text=${fallbackLabel}`;
@@ -248,6 +251,9 @@ function startSpectatingTournamentMatch(bracketIndex) {
     document.getElementById('match-title').innerText = `👁 ${t('t-spectator-title')}: ${getRoundName(tournamentRound)} (${getMatchFormatLabel(matchFormat)})`;
     setSpectatorPlayerPhoto('score-photo-p1', p1, 'P1');
     setSpectatorPlayerPhoto('score-photo-p2', p2, 'P2');
+    if (typeof applyMatchPlayerPresentationThemes === 'function') {
+        applyMatchPlayerPresentationThemes(p1, p2);
+    }
     setSpectatorMatchControls(true);
 
     drawDartboard();

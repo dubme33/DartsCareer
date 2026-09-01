@@ -95,6 +95,94 @@ const CAREER_LIFESTYLE_TEXT = {
     }
 };
 
+const AI_PLAYER_PRESENTATION_THEMES = Object.freeze([
+    { id: 'ocean', accent: '#4ea1ff', glow: 'rgba(78,161,255,.48)', surface: '#183f69' },
+    { id: 'crimson', accent: '#ff6074', glow: 'rgba(255,96,116,.46)', surface: '#682334' },
+    { id: 'amber', accent: '#f2b84b', glow: 'rgba(242,184,75,.46)', surface: '#654715' },
+    { id: 'violet', accent: '#a97bff', glow: 'rgba(169,123,255,.48)', surface: '#452d73' },
+    { id: 'cyan', accent: '#35c6d4', glow: 'rgba(53,198,212,.45)', surface: '#145460' },
+    { id: 'coral', accent: '#ff7c55', glow: 'rgba(255,124,85,.46)', surface: '#6b3020' },
+    { id: 'magenta', accent: '#e967ba', glow: 'rgba(233,103,186,.46)', surface: '#61254e' },
+    { id: 'teal', accent: '#39c9a5', glow: 'rgba(57,201,165,.44)', surface: '#185547' },
+    { id: 'indigo', accent: '#718aff', glow: 'rgba(113,138,255,.48)', surface: '#2c3978' },
+    { id: 'lime', accent: '#b7d85a', glow: 'rgba(183,216,90,.42)', surface: '#465b18' }
+]);
+
+function getAiPlayerPresentationKey(candidate) {
+    if (!candidate) return 'unknown-player';
+    const teamPlayers = Array.isArray(candidate.players)
+        ? candidate.players.map(member => member?.name || '').filter(Boolean).join('/')
+        : '';
+    const stableIdentity = [candidate.name, candidate.country, teamPlayers]
+        .filter(value => value !== undefined && value !== null && value !== '')
+        .join('|');
+    return stableIdentity || String(candidate.id || 'unknown-player');
+}
+
+function getAiPlayerPresentationTheme(candidate) {
+    const key = getAiPlayerPresentationKey(candidate);
+    let hash = 2166136261;
+    for (let index = 0; index < key.length; index++) {
+        hash ^= key.charCodeAt(index);
+        hash = Math.imul(hash, 16777619);
+    }
+    return AI_PLAYER_PRESENTATION_THEMES[(hash >>> 0) % AI_PLAYER_PRESENTATION_THEMES.length];
+}
+
+function isCareerPresentationPlayer(candidate) {
+    if (!candidate || typeof player === 'undefined' || !player) return false;
+    return candidate === player || (typeof isCurrentPlayer === 'function' && isCurrentPlayer(candidate));
+}
+
+function clearPlayerPresentationVariables(node) {
+    if (!node) return;
+    ['--player-frame-accent', '--player-frame-glow', '--player-frame-surface'].forEach(property => node.style.removeProperty(property));
+}
+
+function setPlayerPresentationVariables(node, theme) {
+    if (!node || !theme) return;
+    node.style.setProperty('--player-frame-accent', theme.accent);
+    node.style.setProperty('--player-frame-glow', theme.glow);
+    node.style.setProperty('--player-frame-surface', theme.surface);
+}
+
+function applyMatchPlayerPresentationTheme(cardId, photoId, candidate) {
+    if (typeof document === 'undefined') return null;
+    const card = document.getElementById(cardId);
+    const photo = document.getElementById(photoId);
+    if (!card) return null;
+
+    card.classList.remove('ai-player-theme');
+    if (photo) photo.classList.remove('ai-player-photo-theme');
+    clearPlayerPresentationVariables(card);
+    clearPlayerPresentationVariables(photo);
+
+    const isCareer = isCareerPresentationPlayer(candidate);
+    if (cardId === 'score-col-player' && typeof CAREER_LIFESTYLE_CATALOG !== 'undefined') {
+        Object.keys(CAREER_LIFESTYLE_CATALOG.shirt).forEach(id => card.classList.remove(`lifestyle-shirt-${id}`));
+        if (isCareer && typeof getCareerLifestyleState === 'function') {
+            card.classList.add(`lifestyle-shirt-${getCareerLifestyleState().activeShirt}`);
+        }
+    }
+    if (!candidate || isCareer) return null;
+
+    const theme = getAiPlayerPresentationTheme(candidate);
+    card.classList.add('ai-player-theme');
+    setPlayerPresentationVariables(card, theme);
+    if (photo) {
+        photo.classList.add('ai-player-photo-theme');
+        setPlayerPresentationVariables(photo, theme);
+    }
+    return theme;
+}
+
+function applyMatchPlayerPresentationThemes(p1Candidate, p2Candidate) {
+    return {
+        p1: applyMatchPlayerPresentationTheme('score-col-player', 'score-photo-p1', p1Candidate),
+        p2: applyMatchPlayerPresentationTheme('score-col-ai', 'score-photo-p2', p2Candidate)
+    };
+}
+
 let careerLifestyleTab = 'home';
 let careerLifestyleFeedback = { key: '', params: {} };
 
@@ -272,6 +360,9 @@ function showCareerEntranceVisual(candidate) {
     const state = isCareer ? getCareerLifestyleState() : null;
     const entrance = state?.activeEntrance || 'standard';
     const shirt = state?.activeShirt || 'classic';
+    stage.classList.toggle('ai-player-walkon', !isCareer);
+    clearPlayerPresentationVariables(stage);
+    if (!isCareer) setPlayerPresentationVariables(stage, getAiPlayerPresentationTheme(candidate));
     stage.dataset.entrance = entrance;
     stage.dataset.shirt = shirt;
     stage.querySelector('#career-walkon-kicker').textContent = trCareerLifestyle('walkon');

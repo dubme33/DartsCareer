@@ -136,7 +136,7 @@
         .match-board {
             display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(250px, 1fr);
             grid-template-areas: "board aim" "board actions" "dots back";
-            grid-template-rows: auto auto auto; align-content: start; gap: 10px 14px;
+            grid-template-rows: auto auto 1fr; align-content: start; gap: 10px 14px;
         }
         .match-board .dartboard-container { grid-area: board; align-self: center; margin: 0; min-width: 0; }
         .match-board canvas { display: block; width: min(100%, 380px); height: auto; box-sizing: border-box; margin: auto; }
@@ -144,7 +144,7 @@
         .match-board .dart-dot { width: 14px; height: 14px; }
         .match-board .aim-controls { grid-area: aim; align-self: start; gap: 8px; margin-bottom: 0; }
         .match-actions { grid-area: actions; display: flex; gap: 8px; }
-        #t-btn-match-back { grid-area: back; }
+        #t-btn-match-back { grid-area: back; align-self: end; }
         .match-board .action-btn { margin-top: 0; min-height: 44px; padding: 10px 8px; font-size: 14px; }
         .match-board #throw-btn { font-size: 16px; }
         .match-board button { scroll-margin-top: 200px; }
@@ -190,16 +190,22 @@
         .score-col { display: flex; align-items: center; flex: 1; min-width: 0; gap: 14px; background: #0f3460; border-radius: 10px; padding: 10px 14px; box-sizing: border-box; transition: border-color .2s, box-shadow .2s; border: 2px solid transparent; }
         .score-col.active-turn { border-color: var(--accent-green); box-shadow: 0 0 15px rgba(39, 174, 96, 0.4); }
         .score-photo { flex: 0 0 auto; width: 104px; height: 140px; box-sizing: border-box; object-fit: contain; background: #16213e; border-radius: 8px; border: 2px solid var(--accent-red); margin: 0; box-shadow: 0 5px 15px rgba(0,0,0,0.5); }
-        .score-info { flex: 1; min-width: 0; display: grid; justify-items: center; align-content: center; gap: 4px; text-align: center; }
+        .score-info { flex: 1; min-width: 0; display: grid; justify-items: center; align-content: center; gap: 3px; text-align: center; }
         .score-info h4 { margin: 0; min-height: 2.4em; font-size: 18px; line-height: 1.2; color: white; overflow-wrap: anywhere; display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2; overflow: hidden; }
         .score-info h4 img { vertical-align: middle; margin-right: 4px; }
-        .score-totals { display: flex; align-items: center; justify-content: center; gap: 16px; max-width: 100%; }
-        .match-score-badges { display: flex; align-items: stretch; justify-content: center; gap: 6px; }
-        .badge-box { display: flex; flex-direction: column; justify-content: center; min-width: 48px; min-height: 50px; box-sizing: border-box; background: #16213e; border: 1px solid var(--accent-green); border-radius: 6px; padding: 5px 8px; text-align: center; }
-        .badge-box .badge-label { display: block; font-size: 10px; line-height: 1.2; color: #bdc3c7; font-weight: bold; letter-spacing: .3px; }
-        .badge-box .badge-value { display: block; font-size: 24px; line-height: 1.2; font-variant-numeric: tabular-nums; color: white; font-weight: bold; }
+        .score-status-row { min-height: 48px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; max-width: 100%; }
+        .match-score-badges { display: flex; align-items: center; justify-content: center; gap: 6px; }
+        .badge-box {
+            display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+            min-width: 82px; height: 34px; box-sizing: border-box; padding: 4px 10px;
+            border: 2px solid #f1c40f; border-radius: 7px; background: #0b1222;
+            box-shadow: 0 3px 8px rgba(0, 0, 0, .4), inset 0 0 0 1px rgba(255, 255, 255, .05);
+            text-align: center;
+        }
+        .badge-box .badge-label { display: block; font-size: 10px; line-height: 1; color: #d7dee8; font-weight: 800; letter-spacing: .7px; text-transform: uppercase; }
+        .badge-box .badge-value { display: block; min-width: 1ch; font-size: 20px; line-height: 1; font-variant-numeric: tabular-nums; color: #fff; font-weight: 900; text-shadow: 0 1px 2px #000; }
         .score-display { min-width: 3ch; font-size: 54px; font-weight: bold; font-variant-numeric: tabular-nums; color: white; line-height: 1; text-shadow: 2px 2px 4px rgba(0,0,0,0.5); }
-        .match-momentum { font-size: 11px; line-height: 1.2; font-weight: bold; min-height: 14px; transition: .3s; }
+        .match-momentum { font-size: 10px; line-height: 1.2; font-weight: bold; min-height: 12px; transition: .3s; white-space: nowrap; }
         .checkout-hint { color: #f1c40f; font-weight: bold; min-height: 16px; font-size: 13px; line-height: 1.2; }
         
         .dartboard-container { text-align: center; margin: 20px 0; }
@@ -305,16 +311,49 @@
 }
 @media (max-width: 600px) {
     .match-board { grid-template-columns: minmax(0, 1fr); grid-template-areas: "board" "dots" "aim" "actions" "back"; grid-template-rows: auto; }
-    .match-board canvas { width: min(100%, 300px); }
+    .match-board canvas { width: min(100%, 280px); }
+    /* Na telefonie wynik przewija się normalnie, a tarcza przejmuje górę
+       ekranu podczas wybierania celu. Dzięki temu panel wyniku jej nie zasłania. */
+    #screen-match .score-board { position: relative; top: auto; z-index: 1; }
+    #screen-match .match-board { overflow: visible; padding-bottom: 84px; }
+    #screen-match .match-board .dartboard-container {
+        position: sticky;
+        top: 8px;
+        z-index: 20;
+        width: 100%;
+        margin: 0;
+        padding: 6px 0;
+        border-radius: 10px;
+        background: #0f3460;
+        box-shadow: 0 8px 18px rgba(0, 0, 0, 0.32);
+    }
+    /* Najważniejsze akcje są zawsze pod kciukiem — rzut nie wymaga
+       przewinięcia poniżej całego selektora sektorów. */
+    #screen-match.active .match-actions {
+        position: fixed;
+        left: max(10px, env(safe-area-inset-left));
+        right: max(10px, env(safe-area-inset-right));
+        bottom: max(8px, env(safe-area-inset-bottom));
+        z-index: 80;
+        gap: 6px;
+        padding: 8px;
+        border: 1px solid rgba(52, 152, 219, 0.55);
+        border-radius: 12px;
+        background: rgba(10, 35, 67, 0.96);
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.55);
+        backdrop-filter: blur(6px);
+    }
+    #screen-match .match-actions .action-btn { min-height: 52px; }
     .score-board .score-photo { width: clamp(44px, 14vw, 64px); height: clamp(62px, 19vw, 86px); }
     .score-info { gap: 3px; }
     .score-info h4 { font-size: 12px; }
-    .score-info .score-totals { flex-direction: column; gap: 4px; }
     .score-info .score-display { font-size: 32px; }
-    .score-info .badge-box { min-width: 28px; min-height: 29px; padding: 2px 3px; }
-    .badge-box .badge-label { font-size: 8px; letter-spacing: 0; }
-    .badge-box .badge-value { font-size: 14px; }
-    .match-momentum { font-size: 9px; min-height: 11px; }
+    .score-status-row { min-height: 39px; gap: 3px; flex-direction: column; }
+    .match-score-badges { gap: 3px; flex-wrap: wrap; }
+    .score-info .badge-box { min-width: 54px; height: 28px; padding: 3px 6px; gap: 4px; border-width: 1px; border-radius: 5px; }
+    .badge-box .badge-label { font-size: 7px; letter-spacing: .2px; }
+    .badge-box .badge-value { font-size: 15px; }
+    .match-momentum { font-size: 8px; min-height: 10px; }
     .checkout-hint { font-size: 10px; min-height: 12px; }
 }
         /* Poprawki widoku meczu dla urządzeń mobilnych */
@@ -345,9 +384,8 @@
         height: 96px;
         margin: 0;
     }
-    .score-totals { gap: 8px; }
     .score-display { font-size: 42px; }
-    .badge-box { min-width: 36px; min-height: 42px; padding: 4px; }
+    .badge-box { min-width: 64px; height: 30px; padding: 3px 7px; }
     /* BEZWZGLĘDNIE blokuje przewijanie strony na boki */
     body {
         overflow-x: hidden;

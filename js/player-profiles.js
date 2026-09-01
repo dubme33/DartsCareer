@@ -495,7 +495,7 @@ function formatPlayerProfileDate(timestamp) {
 function getPlayerProfilePhoto(candidate) {
     if (candidate && candidate.photo) return candidate.photo;
     if (typeof moddedAssets !== 'undefined' && moddedAssets.photos && candidate && candidate.name) {
-        return moddedAssets.photos[candidate.name] || '';
+        return moddedAssets.photos[candidate.name] || moddedAssets.photos[candidate.sourceName] || '';
     }
     return '';
 }

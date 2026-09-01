@@ -1,0 +1,371 @@
+#screen-hub .player-editor-tile {
+    background-color: #24506f;
+    border-color: #4d9ac4;
+    color: #fff;
+    font: inherit;
+}
+
+#screen-player-editor.player-editor-screen {
+    max-width: 1080px;
+    padding: 0;
+    overflow: hidden;
+    background: #101b2e;
+    border-color: #285683;
+}
+
+#screen-player-editor .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+#screen-player-editor .player-editor-header {
+    width: auto;
+    padding: 24px 28px;
+    box-sizing: border-box;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 24px;
+    background: linear-gradient(135deg, #102d4d, #0e243e);
+    border: 0;
+    border-bottom: 1px solid #2f638f;
+}
+
+#screen-player-editor .player-editor-header h2,
+#screen-player-editor .player-editor-form-heading h3 {
+    margin: 5px 0 6px;
+    padding: 0;
+    border: 0;
+    color: #fff;
+    text-align: left;
+}
+
+#screen-player-editor .player-editor-header h2 { font-size: 27px; }
+#screen-player-editor .player-editor-header p { margin: 0; color: #b8cee1; line-height: 1.45; }
+#screen-player-editor #player-editor-eyebrow,
+#screen-player-editor #player-editor-form-kicker {
+    display: block;
+    color: #6bc2ee;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: .12em;
+}
+
+#screen-player-editor .player-editor-mode,
+#screen-player-editor .player-editor-origin {
+    flex: 0 0 auto;
+    display: inline-flex;
+    align-items: center;
+    padding: 7px 10px;
+    border-radius: 999px;
+    background: rgba(61, 155, 205, .16);
+    border: 1px solid rgba(91, 190, 238, .45);
+    color: #bde8ff;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+#screen-player-editor .player-editor-layout {
+    display: grid;
+    grid-template-columns: minmax(260px, .72fr) minmax(0, 1.7fr);
+    min-height: 640px;
+}
+
+#screen-player-editor .player-editor-roster {
+    min-width: 0;
+    padding: 20px;
+    background: #0c1728;
+    border-right: 1px solid #29435e;
+}
+
+#screen-player-editor .player-editor-roster-heading,
+#screen-player-editor .player-editor-form-heading,
+#screen-player-editor .player-editor-footer-actions {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+}
+
+#screen-player-editor .player-editor-roster-heading strong { display: block; color: #fff; font-size: 18px; }
+#screen-player-editor .player-editor-roster-heading small { display: block; margin-top: 3px; color: #829bb4; }
+#screen-player-editor #player-editor-new {
+    padding: 9px 12px;
+    border: 1px solid #50d18c;
+    border-radius: 7px;
+    background: #1d7549;
+    color: #fff;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+#screen-player-editor .player-editor-search { display: block; margin: 16px 0 12px; }
+#screen-player-editor .player-editor-search input,
+#screen-player-editor .player-editor-fields input,
+#screen-player-editor .player-editor-fields select {
+    width: 100%;
+    box-sizing: border-box;
+    padding: 10px 11px;
+    border: 1px solid #355577;
+    border-radius: 7px;
+    outline: none;
+    background: #132a45;
+    color: #fff;
+    font: inherit;
+}
+
+#screen-player-editor .player-editor-search input:focus,
+#screen-player-editor .player-editor-fields input:focus,
+#screen-player-editor .player-editor-fields select:focus {
+    border-color: #5bc7f3;
+    box-shadow: 0 0 0 3px rgba(91, 199, 243, .14);
+}
+
+#screen-player-editor .player-editor-roster-list {
+    max-height: 550px;
+    overflow-y: auto;
+    scrollbar-color: #31577a #0c1728;
+}
+
+#screen-player-editor .player-editor-roster-item {
+    width: 100%;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 4px 10px;
+    padding: 11px 10px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    background: transparent;
+    color: #fff;
+    text-align: left;
+    cursor: pointer;
+}
+
+#screen-player-editor .player-editor-roster-item + .player-editor-roster-item { margin-top: 4px; }
+#screen-player-editor .player-editor-roster-item:hover { background: #132943; }
+#screen-player-editor .player-editor-roster-item.is-selected {
+    border-color: #38b878;
+    background: #153a39;
+}
+
+#screen-player-editor .player-editor-roster-item strong {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#screen-player-editor .player-editor-roster-item small { color: #91abc3; }
+#screen-player-editor .player-editor-roster-item b {
+    grid-row: 1 / span 2;
+    grid-column: 2;
+    align-self: center;
+    padding: 5px 7px;
+    border-radius: 6px;
+    background: #263f5c;
+    color: #7fe5ae;
+    font-size: 12px;
+}
+
+#screen-player-editor .player-editor-empty-list {
+    padding: 28px 12px;
+    color: #829bb4;
+    text-align: center;
+    line-height: 1.45;
+}
+
+#screen-player-editor .player-editor-form { min-width: 0; padding: 24px 28px; }
+#screen-player-editor .player-editor-form-heading { align-items: flex-start; padding-bottom: 16px; }
+#screen-player-editor .player-editor-form-heading h3 { font-size: 22px; }
+
+#screen-player-editor .player-editor-profile-row {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 16px;
+    border: 1px solid #2b4b6a;
+    border-radius: 10px;
+    background: #12253c;
+}
+
+#screen-player-editor .player-editor-photo-wrap {
+    position: relative;
+    flex: 0 0 104px;
+    width: 104px;
+    height: 136px;
+    overflow: hidden;
+    border: 2px solid #3b789e;
+    border-radius: 9px;
+    background: #091321;
+}
+
+#screen-player-editor .player-editor-photo-wrap img {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    height: 100%;
+    display: none;
+    object-fit: contain;
+}
+
+#screen-player-editor .player-editor-photo-wrap.has-photo img { display: block; }
+#screen-player-editor .player-editor-photo-wrap.has-photo span { display: none; }
+#screen-player-editor .player-editor-photo-wrap span {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    place-items: center;
+    padding: 10px;
+    color: #63809c;
+    font-size: 10px;
+    font-weight: 800;
+    text-align: center;
+}
+
+#screen-player-editor .player-editor-photo-actions { min-width: 0; }
+#screen-player-editor .player-editor-photo-actions > strong { color: #fff; }
+#screen-player-editor .player-editor-photo-actions p { margin: 6px 0 13px; color: #93abc0; font-size: 13px; }
+#screen-player-editor .player-editor-photo-actions > div { display: flex; flex-wrap: wrap; gap: 8px; }
+#screen-player-editor #player-editor-photo-input { display: none; }
+#screen-player-editor #player-editor-photo-upload-label,
+#screen-player-editor #player-editor-photo-remove,
+#screen-player-editor .player-editor-footer-actions button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    padding: 10px 13px;
+    border: 1px solid #4d799f;
+    border-radius: 7px;
+    background: #1e4567;
+    color: #fff;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+#screen-player-editor #player-editor-photo-remove { background: #492a35; border-color: #8e4a5d; }
+#screen-player-editor .player-editor-walkon-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    margin-top: 14px;
+    padding: 16px;
+    border: 1px solid #2b4b6a;
+    border-radius: 10px;
+    background: #0e2137;
+}
+
+#screen-player-editor .player-editor-walkon-icon {
+    display: grid;
+    flex: 0 0 48px;
+    width: 48px;
+    height: 48px;
+    place-items: center;
+    border: 1px solid #3b789e;
+    border-radius: 50%;
+    background: #173d5d;
+    font-size: 23px;
+}
+
+#screen-player-editor .player-editor-walkon-content { flex: 1; min-width: 0; }
+#screen-player-editor .player-editor-walkon-content > strong { color: #fff; }
+#screen-player-editor .player-editor-walkon-content > p { margin: 5px 0 8px; color: #93abc0; font-size: 13px; }
+#screen-player-editor .player-editor-walkon-source { display: block; margin-bottom: 10px; color: #7cd9aa; font-size: 12px; font-weight: 700; }
+#screen-player-editor #player-editor-walkon-preview { width: 100%; height: 38px; margin: 0 0 10px; }
+#screen-player-editor .player-editor-walkon-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+#screen-player-editor #player-editor-walkon-input { display: none; }
+#screen-player-editor #player-editor-walkon-upload-label,
+#screen-player-editor #player-editor-walkon-remove {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    padding: 10px 13px;
+    border: 1px solid #4d799f;
+    border-radius: 7px;
+    background: #1e4567;
+    color: #fff;
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+#screen-player-editor #player-editor-walkon-remove { background: #492a35; border-color: #8e4a5d; }
+#screen-player-editor #player-editor-walkon-remove:disabled { opacity: .48; cursor: not-allowed; }
+#screen-player-editor .player-editor-section {
+    margin-top: 18px;
+    padding-top: 16px;
+    border-top: 1px solid #29435e;
+}
+
+#screen-player-editor .player-editor-section h4 {
+    margin: 0 0 12px;
+    color: #83cdef;
+    font-size: 14px;
+    letter-spacing: .04em;
+}
+
+#screen-player-editor .player-editor-fields { display: grid; gap: 12px; }
+#screen-player-editor .player-editor-fields-personal { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+#screen-player-editor .player-editor-rating-fields { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+#screen-player-editor .player-editor-fields label { min-width: 0; color: #b9cce0; font-size: 12px; font-weight: 700; }
+#screen-player-editor .player-editor-fields label span { display: block; margin-bottom: 6px; }
+#screen-player-editor .player-editor-fields option { background: #132a45; color: #fff; }
+
+#screen-player-editor .player-editor-status {
+    min-height: 20px;
+    margin: 16px 0 0;
+    color: #6fdfa4;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+#screen-player-editor .player-editor-status.is-error { color: #ff8f87; }
+#screen-player-editor .player-editor-footer-actions { justify-content: flex-end; }
+#screen-player-editor .player-editor-footer-actions button { min-width: 150px; }
+#screen-player-editor #player-editor-back { background: #263a50; border-color: #4a6680; }
+#screen-player-editor #player-editor-save { background: #238b52; border-color: #57d28c; }
+
+#screen-player-editor button:focus-visible,
+#screen-player-editor label[for="player-editor-photo-input"]:focus-visible,
+#screen-player-editor label[for="player-editor-walkon-input"]:focus-visible {
+    outline: 3px solid #f1c40f;
+    outline-offset: 2px;
+}
+
+@media (max-width: 760px) {
+    #screen-player-editor.player-editor-screen { margin-top: 18px; }
+    #screen-player-editor .player-editor-header { display: block; padding: 20px; }
+    #screen-player-editor .player-editor-mode { margin-top: 13px; }
+    #screen-player-editor .player-editor-layout { display: block; }
+    #screen-player-editor .player-editor-roster { border-right: 0; border-bottom: 1px solid #29435e; }
+    #screen-player-editor .player-editor-roster-list { max-height: 250px; }
+    #screen-player-editor .player-editor-form { padding: 20px; }
+}
+
+@media (max-width: 520px) {
+    #screen-player-editor .player-editor-header h2 { font-size: 23px; }
+    #screen-player-editor .player-editor-form-heading { display: block; }
+    #screen-player-editor .player-editor-origin { margin-top: 8px; }
+    #screen-player-editor .player-editor-profile-row { align-items: flex-start; gap: 14px; }
+    #screen-player-editor .player-editor-photo-wrap { flex-basis: 86px; width: 86px; height: 116px; }
+    #screen-player-editor .player-editor-photo-actions > div { display: grid; }
+    #screen-player-editor .player-editor-walkon-row { align-items: flex-start; }
+    #screen-player-editor .player-editor-walkon-actions { display: grid; }
+    #screen-player-editor .player-editor-fields-personal,
+    #screen-player-editor .player-editor-rating-fields { grid-template-columns: minmax(0, 1fr); }
+    #screen-player-editor .player-editor-footer-actions { display: grid; grid-template-columns: 1fr; }
+    #screen-player-editor .player-editor-footer-actions button { width: 100%; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    #screen-player-editor * { scroll-behavior: auto; }
+}

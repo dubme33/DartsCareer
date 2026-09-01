@@ -56,19 +56,23 @@ function startCrowd() {
         function getMatchWalkonAudioSource(candidate) {
             if (!candidate?.name) return '';
             if (typeof candidate.walkon === 'string' && candidate.walkon) return candidate.walkon;
-            const modSource = moddedAssets.music[candidate.name];
-            return typeof modSource === 'string' ? modSource : `music/${candidate.name}.mp3`;
+            const sourceName = candidate.sourceName || candidate.name;
+            const modSource = moddedAssets?.music?.[candidate.name] || moddedAssets?.music?.[sourceName];
+            return typeof modSource === 'string' ? modSource : `music/${encodeURIComponent(sourceName)}.mp3`;
         }
 
         async function acquireMatchWalkonAudio(candidate) {
             if (!candidate?.walkon && candidate?.name && typeof acquireModMusicAsset === 'function') {
-                try {
-                    const music = await acquireModMusicAsset(moddedAssets, candidate.name);
-                    if (music.url) return music;
-                    music.release();
-                } catch (error) {
-                    // Wadliwy utwór nie może zablokować rozpoczęcia meczu.
-                    console.warn('Nie udało się odczytać muzyki wejściowej z moda.', error);
+                const names = [...new Set([candidate.name, candidate.sourceName].filter(Boolean))];
+                for (const name of names) {
+                    try {
+                        const music = await acquireModMusicAsset(moddedAssets, name);
+                        if (music.url) return music;
+                        music.release();
+                    } catch (error) {
+                        // Wadliwy utwór nie może zablokować rozpoczęcia meczu.
+                        console.warn('Nie udało się odczytać muzyki wejściowej z moda.', error);
+                    }
                 }
             }
             return { url: getMatchWalkonAudioSource(candidate), release() {} };

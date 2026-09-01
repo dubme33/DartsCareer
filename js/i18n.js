@@ -1954,6 +1954,9 @@ const translations = {
             if(typeof refreshPlayerTraitsTranslations === 'function') refreshPlayerTraitsTranslations();
             if(typeof refreshCareerInfrastructureTranslations === 'function') refreshCareerInfrastructureTranslations();
             if(typeof refreshCareerLifestyleTranslations === 'function') refreshCareerLifestyleTranslations();
+            if(typeof refreshTutorialTranslations === 'function') refreshTutorialTranslations();
+            if(typeof refreshHubNavigationTranslations === 'function') refreshHubNavigationTranslations();
+            if(typeof refreshPlayerEditorTranslations === 'function') refreshPlayerEditorTranslations();
             if(typeof activeTournament !== 'undefined' && activeTournament && typeof getTournamentDisplayName === 'function') {
                 const tournamentName = document.getElementById('tour-name-display');
                 if (tournamentName) tournamentName.innerText = getTournamentDisplayName(activeTournament);

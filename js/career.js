@@ -8,6 +8,9 @@ function showScreen(screenId) {
             }
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
             document.getElementById(screenId).classList.add('active');
+            if (screenId === 'screen-hub' && typeof initializeHubNavigation === 'function') {
+                initializeHubNavigation();
+            }
         }
 
         let existingPlayerCareerStarting = false;
@@ -127,6 +130,7 @@ function showScreen(screenId) {
                 initCareerChronicle();
                 initRivalries();
                 initPlayerXP();
+                if (typeof initializeTutorialForNewCareer === 'function') initializeTutorialForNewCareer();
                 renderOpponentOptions();
                 renderCareerPlayerOptions();
                 updateMailBadge();
@@ -184,6 +188,8 @@ function showScreen(screenId) {
                 activeRivalIds: [],
                 careerChronicle: []
             };
+            emails = [];
+            unreadMailsCount = 0;
             const startsWithTourCard = document.getElementById('start-with-tour-card')?.value === 'yes';
             if (startsWithTourCard && typeof seedCareerPlayerIntoPdcTop64 === 'function') {
                 seedCareerPlayerIntoPdcTop64(player, [...pdcPlayers, player], currentDate);
@@ -204,6 +210,7 @@ function showScreen(screenId) {
             if (typeof initializeCareerInfrastructure === 'function') initializeCareerInfrastructure(true);
             if (typeof initializeCareerLifestyle === 'function') initializeCareerLifestyle(true);
             if (typeof initializePlayerEquipmentWear === 'function') initializePlayerEquipmentWear(true);
+            if (typeof initializeTutorialForNewCareer === 'function') initializeTutorialForNewCareer();
 
             const photoInput = document.getElementById('photoUpload');
             const audioInput = document.getElementById('walkonUpload');
@@ -290,6 +297,8 @@ function showScreen(screenId) {
             if (typeof renderPlayerTraitsHub === 'function') renderPlayerTraitsHub();
             if (typeof updateCareerInfrastructureHub === 'function') updateCareerInfrastructureHub();
             if (typeof updateCareerLifestyleHub === 'function') updateCareerLifestyleHub();
+            if (typeof updateTutorialTile === 'function') updateTutorialTile();
+            if (typeof updateHubOverview === 'function') updateHubOverview();
         }
 
         // --- 5. SYSTEM CZASU, POCZTY I KALENDARZA ---
@@ -688,7 +697,8 @@ function showScreen(screenId) {
             date: currentDate.toLocaleDateString('pl-PL'),
             createdAt: currentDate.getTime(),
             kind: 'system',
-            read: false
+            read: false,
+            action: options.action === 'tutorial' ? 'tutorial' : undefined
         });
         unreadMailsCount++;
         updateMailBadge();
@@ -710,6 +720,7 @@ function showScreen(screenId) {
             <small style="color:#bdc3c7;">${escapeHtml(e.date)} | ${t('t-from')}: <strong>${escapeHtml(e.sender)}</strong></small>
             <h4 style="margin:5px 0;">${escapeHtml(e.subject)}</h4>
             <p style="margin:0; font-size:13px;">${sanitizeEmailHtml(e.body)}</p>
+            ${typeof getTutorialEmailActionHtml === 'function' ? getTutorialEmailActionHtml(e) : ''}
         </div>`).join('');
     list.innerHTML = mailboxHtml || `<p style='text-align:center;'>${t('t-no-mails')}</p>`;
     emails.forEach(email => { email.read = true; });
