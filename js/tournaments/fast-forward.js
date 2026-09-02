@@ -363,7 +363,7 @@ async function runTournamentSimulation(operation, { onRestored = () => showBrack
 
     try {
         if (match) {
-            for (const id of ['t-btn-sim-leg', 't-btn-sim-match', 'throw-btn']) {
+            for (const id of ['t-btn-sim-visit', 't-btn-sim-leg', 't-btn-sim-match', 'throw-btn']) {
                 const button = document.getElementById(id);
                 if (button) {
                     matchButtons.push({ button, disabled: button.disabled });

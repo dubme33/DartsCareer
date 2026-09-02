@@ -1377,6 +1377,7 @@ function startWorldCupMatch(match) {
     }
     document.getElementById('t-btn-sim-leg').style.display = '';
     document.getElementById('t-btn-sim-match').style.display = '';
+    document.getElementById('t-btn-sim-visit').style.display = '';
     updateScores();
     updateMatchStatsUI();
     setTurnUI();
@@ -1403,6 +1404,7 @@ function finishWorldCupMatch() {
     currentMatch = null;
     document.getElementById('t-btn-sim-leg').style.display = '';
     document.getElementById('t-btn-sim-match').style.display = '';
+    document.getElementById('t-btn-sim-visit').style.display = '';
     advanceWorldCup();
     saveGame(true);
 }

@@ -166,11 +166,13 @@ function setSpectatorPlaybackSpeed(speed) {
 function setSpectatorMatchControls(spectating) {
     const controls = document.getElementById('player-controls');
     const throwButton = document.getElementById('throw-btn');
+    const simulateVisitButton = document.getElementById('t-btn-sim-visit');
     const simulateLegButton = document.getElementById('t-btn-sim-leg');
     const simulateMatchButton = document.getElementById('t-btn-sim-match');
     const backButton = document.getElementById('t-btn-match-back');
     if (controls) controls.style.display = spectating ? 'none' : '';
     if (throwButton) throwButton.style.display = spectating ? 'none' : '';
+    if (simulateVisitButton) simulateVisitButton.style.display = spectating ? 'none' : '';
     if (simulateLegButton) simulateLegButton.style.display = spectating ? 'none' : '';
     if (simulateMatchButton) simulateMatchButton.style.display = spectating ? 'none' : '';
     if (backButton) backButton.style.display = spectating ? 'none' : '';

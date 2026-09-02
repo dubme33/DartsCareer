@@ -210,7 +210,12 @@ function ensurePdcTourCardQualificationState(qualifierTournament, candidates = g
     const year = getPdcTourCardReferenceYear();
     const existing = mainTournament.pdcTourCardQualification;
     if (existing?.year === year && Array.isArray(existing.automaticPlayerIds)
-        && Array.isArray(existing.qualifierPlayerIds)) return existing;
+        && Array.isArray(existing.qualifierPlayerIds)) {
+        if (!Array.isArray(existing.qualifiedPlayerIds)) existing.qualifiedPlayerIds = [];
+        existing.qualifyingPlaces = Math.max(1, Number(existing.qualifyingPlaces)
+            || Number(qualifierTournament.qualifyingPlaces) || 8);
+        return existing;
+    }
 
     const allPlayers = uniquePdcTourCardPlayers(candidates);
     const automaticPlayers = buildPdcTourCardAutomaticField(mainTournament, allPlayers);
@@ -253,9 +258,18 @@ function getPdcTourCardQualifierParticipants(qualifierTournament, candidates = g
         .filter(candidate => eligibleKeys.has(getPdcTourCardPlayerKey(candidate)));
 }
 
-function buildPdcTourCardQualifierDraw(participants, random = Math.random) {
+function getPdcTourCardQualifierOpeningRound(participantCount, qualifyingPlaces = 8) {
+    const minimumSize = Math.max(2, Number(participantCount) || 0, Math.max(1, Number(qualifyingPlaces) || 8) * 2);
+    let bracketSize = 2;
+    while (bracketSize < minimumSize) bracketSize *= 2;
+    return bracketSize;
+}
+
+function buildPdcTourCardQualifierDraw(participants, random = Math.random, qualifyingPlaces = undefined) {
     const entrants = shufflePdcQSchoolPlayers(getPdcTourCardHolders(participants), random);
-    const bracketSize = getPdcQSchoolOpeningRound(entrants.length);
+    const places = Math.max(1, Number(qualifyingPlaces)
+        || Number(typeof activeTournament !== 'undefined' && activeTournament?.qualifyingPlaces) || 8);
+    const bracketSize = getPdcTourCardQualifierOpeningRound(entrants.length, places);
     const byeCount = Math.max(0, bracketSize - entrants.length);
     const draw = [];
     let index = 0;
@@ -283,12 +297,13 @@ function completePdcTourCardQualifier(qualifierTournament, qualifiedPlayers) {
 
 function repairLegacyGrandSlamQualification(mainTournament, qualifierTournament, state, candidates) {
     const blocks = qualifierTournament?.matchHistory?.blocks;
-    // Starsza wersja rozgrywała grupy w kwalifikatorze nazwanym przez mod
-    // „Grand Slam ... Qualifier”, po czym zapisywała zaledwie dwóch zwycięzców.
-    // Zachowujemy ich awans i odtwarzamy brakujące miejsca według osiągniętej
-    // rundy. Nie powtarzamy meczów ani nie zmieniamy nagród i historii.
-    if (!state?.completed || mainTournament?.completed || !Array.isArray(blocks)
-        || !blocks.some(block => block?.type === 'grandSlamGroups')
+    const mainName = `${mainTournament?.name || ''} ${mainTournament?.sourceName || ''}`.toLowerCase();
+    // Starsze wersje mogły uruchomić grupy wewnątrz kwalifikatora albo zbudować
+    // dla małej obsady drabinkę Last 128. W obu przypadkach zapisywały mniej niż
+    // osiem miejsc. Zachowujemy przyznane awanse, a brakujące odtwarzamy według
+    // najdalszej osiągniętej rundy. Nie powtarzamy meczów ani nie zmieniamy ich historii.
+    if (!state?.completed || mainTournament?.completed
+        || (!mainName.includes('grand slam') && !mainName.includes("champion's slam"))
         || state.qualifiedPlayerIds.length >= state.qualifyingPlaces) return false;
     const eligible = new Map(getPdcTourCardQualifierEligiblePlayers(qualifierTournament, candidates)
         .map(candidate => [getPdcTourCardPlayerKey(candidate), candidate]));
@@ -297,14 +312,15 @@ function repairLegacyGrandSlamQualification(mainTournament, qualifierTournament,
         if (selected.size < state.qualifyingPlaces && eligible.has(key)) selected.add(key);
     };
     state.qualifiedPlayerIds.forEach(addKey);
-    const historyPlayers = qualifierTournament.matchHistory.players || [];
+    const historyPlayers = qualifierTournament?.matchHistory?.players || [];
     const addHistoryPlayer = index => {
         const entry = historyPlayers[index];
         if (typeof entry?.[0] !== 'string') return;
         const key = entry[0].startsWith('id:') ? entry[0].slice(3) : entry[0].replace(/^name:/, '');
         addKey(key);
     };
-    const rounds = blocks.filter(block => block?.type === 'round' && Array.isArray(block.matches))
+    const rounds = (Array.isArray(blocks) ? blocks : [])
+        .filter(block => block?.type === 'round' && Array.isArray(block.matches))
         .sort((first, second) => Number(first.round) - Number(second.round));
     for (const round of rounds) {
         round.matches.forEach(match => addHistoryPlayer(Number(match[2]) >= Number(match[3]) ? match[0] : match[1]));

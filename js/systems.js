@@ -789,7 +789,25 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
                 activeTournament = savedTournament
                     ? resolveLoadedTournamentReference(savedTournament)
                     : null;
-                if (activeTournament?.completed) activeTournament = null;
+                const completedActiveTournament = activeTournament?.completed ? activeTournament : null;
+                if (completedActiveTournament) {
+                    // Zapis pobrany pomiędzy oznaczeniem kwalifikatora jako ukończony
+                    // a zamknięciem jego ekranu nadal ma pełną historię w polu aktywnym.
+                    // Przenosimy ją do kalendarza, zanim usuniemy zakończoną aktywność.
+                    if (!completedActiveTournament.matchHistory && isPlainObject(gameState.tournamentMatchHistory)) {
+                        completedActiveTournament.matchHistory = gameState.tournamentMatchHistory;
+                    }
+                    if (!completedActiveTournament.historyLogs && typeof gameState.lastTournamentResults === 'string') {
+                        completedActiveTournament.historyLogs = gameState.lastTournamentResults;
+                    }
+                    if (completedActiveTournament.specialType === 'pdcTourCardQualifier'
+                        && typeof getPdcTourCardQualifierMainTournament === 'function'
+                        && typeof getPdcTourCardQualifiedMainField === 'function') {
+                        const linkedMainTournament = getPdcTourCardQualifierMainTournament(completedActiveTournament);
+                        if (linkedMainTournament) getPdcTourCardQualifiedMainField(linkedMainTournament, [player, ...pdcPlayers]);
+                    }
+                    activeTournament = null;
+                }
                 if (!activeTournament && (!Array.isArray(gameState.tournamentBracket) || gameState.tournamentBracket.length === 0)
                     && typeof recoverPendingTournamentForCurrentDate === 'function') {
                     recoverPendingTournamentForCurrentDate(true);

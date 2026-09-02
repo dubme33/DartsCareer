@@ -138,8 +138,10 @@ function startMatch(vsAI) {
 
         function setTurnUI() {
             clearTimeout(window.aiTimeout); // Usuwamy stare opóźnienia
+            const visitButton = document.getElementById('t-btn-sim-visit');
             if (!currentMatch || currentMatch.isFinishing) {
                 document.getElementById('throw-btn').disabled = true;
+                if (visitButton) visitButton.disabled = true;
                 return;
             }
             
@@ -148,9 +150,11 @@ function startMatch(vsAI) {
             if (currentMatch.turn === 'p1' && playerControlsP1) {
                 document.getElementById('score-col-player').classList.add('active-turn'); document.getElementById('score-col-ai').classList.remove('active-turn');
                 document.getElementById('player-controls').style.opacity = "1"; document.getElementById('throw-btn').disabled = false;
+                if (visitButton) visitButton.disabled = currentMatch.dartsThrown >= 3 || currentMatch.isTurnLocked;
             } else {
                 document.getElementById('score-col-player').classList.toggle('active-turn', currentMatch.turn === 'p1'); document.getElementById('score-col-ai').classList.toggle('active-turn', currentMatch.turn === 'p2');
                 document.getElementById('player-controls').style.opacity = "0.5"; document.getElementById('throw-btn').disabled = true;
+                if (visitButton) visitButton.disabled = true;
                 if (typeof scheduleSpectatorPlaybackAction === 'function') {
                     window.aiTimeout = scheduleSpectatorPlaybackAction(aiTurn, 1200, 900);
                 } else window.aiTimeout = setTimeout(aiTurn, 1200);

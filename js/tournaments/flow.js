@@ -403,7 +403,7 @@ function skipActiveTournament() {
                 // --- 2. LOSOWANIE / ROZSTAWIENIE ---
                 if (isTourCardQualifierEvent) {
                     participants = typeof buildPdcTourCardQualifierDraw === 'function'
-                        ? buildPdcTourCardQualifierDraw(participants)
+                        ? buildPdcTourCardQualifierDraw(participants, Math.random, activeTournament.qualifyingPlaces)
                         : shuffle(participants);
                     tournamentRound = participants.length;
                 } else if (isQSchoolEvent) {
@@ -1108,7 +1108,7 @@ function skipActiveTournament() {
             }
             if (isTourCardQualifierEvent) {
                 const qualifyingPlaces = Math.max(1, Number(activeTournament.qualifyingPlaces) || 8);
-                if (tournamentRound === qualifyingPlaces) {
+                if (tournamentBracket.length <= qualifyingPlaces) {
                     if (typeof completePdcTourCardQualifier === 'function') {
                         completePdcTourCardQualifier(activeTournament, tournamentBracket);
                     }

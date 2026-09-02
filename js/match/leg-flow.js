@@ -239,6 +239,8 @@ function checkAchievements(type, data = null) {
            // 5. Sprawdzanie czy mecz się zakończył
             if (isMatchFinished()) {
                 document.getElementById('throw-btn').disabled = true;
+                const visitButton = document.getElementById('t-btn-sim-visit');
+                if (visitButton) visitButton.disabled = true;
                 announceAudio('win_match', playerName); // Sędzia krzyczy koniec meczu!
                 updateScores(); // Pokazuje ostateczny wynik np. 6:4
                 
@@ -258,6 +260,8 @@ function checkAchievements(type, data = null) {
             }
 
             document.getElementById('throw-btn').disabled = true;
+            const visitButton = document.getElementById('t-btn-sim-visit');
+            if (visitButton) visitButton.disabled = true;
             announceAudio('win_leg', playerName);
             updateScores(); // Od razu aktualizuje wynik na tablicy (np. na 1:0)
 
@@ -399,6 +403,8 @@ function checkAchievements(type, data = null) {
                 currentMatch.isTurnLocked = true;
                 const throwButton = document.getElementById('throw-btn');
                 if (throwButton) throwButton.disabled = true;
+                const visitButton = document.getElementById('t-btn-sim-visit');
+                if (visitButton) visitButton.disabled = true;
             }
 
             if (currentMatch.dartsThrown >= 3 && currentTurnScore === 180) {

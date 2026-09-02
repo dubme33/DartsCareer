@@ -8,6 +8,10 @@ function playerThrow() {
             let tMult = parseInt(document.getElementById('aim-multiplier').value);
             if (tSec === 50) { tSec = 25; tMult = 2; } else if (tSec === 25) { tMult = 1; }
 
+            throwCareerDart(tSec, tMult);
+        }
+
+        function getCareerDartStats(aim, score) {
             let boostedPlayer = { ...player };
             let bStats = typeof getBoostedPlayerStats === 'function' ? getBoostedPlayerStats() : null;
             if(bStats) { boostedPlayer.scoring = bStats.scoring; boostedPlayer.doubles = bStats.doubles; }
@@ -22,11 +26,46 @@ function playerThrow() {
             }
 
             if (typeof applyPlayerTraitsToMatchStats === 'function') boostedPlayer = applyPlayerTraitsToMatchStats(player, boostedPlayer, true);
-            const mentalAim = { sector: tSec, mult: tMult };
-            if (typeof applyMentalPressureToStats === 'function') boostedPlayer = applyMentalPressureToStats(player, boostedPlayer, true, mentalAim, currentMatch.p1Score);
-            let result = calculateVisitThrow(tSec, tMult, boostedPlayer, getMatchThrowGroupingVisit(currentMatch, true));
-            if (typeof recordMentalThrowOutcome === 'function') recordMentalThrowOutcome(true, currentMatch.p1Score, mentalAim, result);
-            processThrow(true, tSec, tMult, result.sector, result.mult);
+            if (typeof applyMentalPressureToStats === 'function') {
+                boostedPlayer = applyMentalPressureToStats(player, boostedPlayer, true, aim, score);
+            }
+            return boostedPlayer;
+        }
+
+        function throwCareerDart(targetSector, targetMultiplier) {
+            if (!currentMatch || currentMatch.isFinishing || currentMatch.turn !== 'p1'
+                || currentMatch.dartsThrown >= 3 || currentMatch.isTurnLocked) return false;
+            const score = currentMatch.p1Score;
+            const aim = { sector: targetSector, mult: targetMultiplier };
+            const throwStats = getCareerDartStats(aim, score);
+            const result = calculateVisitThrow(targetSector, targetMultiplier, throwStats,
+                getMatchThrowGroupingVisit(currentMatch, true));
+            if (typeof recordMentalThrowOutcome === 'function') recordMentalThrowOutcome(true, score, aim, result);
+            processThrow(true, targetSector, targetMultiplier, result.sector, result.mult);
+            return true;
+        }
+
+        function simulateOneVisit() {
+            if (!currentMatch || currentMatch.isFinishing || currentMatch.isSpectator
+                || currentMatch.turn !== 'p1' || currentMatch.dartsThrown >= 3 || currentMatch.isTurnLocked
+                || (currentMatch.isDoubles && !isCareerPlayerThrowing(true))
+                || (typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy())) return false;
+
+            if (typeof skipWalkon === 'function') skipWalkon();
+            clearTimeout(window.aiTimeout);
+            const visitButton = document.getElementById('t-btn-sim-visit');
+            if (visitButton) visitButton.disabled = true;
+            const match = currentMatch;
+            let simulated = false;
+            while (currentMatch === match && !match.isFinishing && match.turn === 'p1'
+                && match.dartsThrown < 3 && !match.isTurnLocked) {
+                const score = match.p1Score;
+                const isDoubleIn = Boolean(activeTournament && activeTournament.format === 'DIDO');
+                const aim = getOptimalAim(score, isDoubleIn, 3 - match.dartsThrown);
+                if (!aim || !throwCareerDart(aim.sector, aim.mult)) break;
+                simulated = true;
+            }
+            return simulated;
         }
 
         function aiTurn() {
