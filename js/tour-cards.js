@@ -352,11 +352,42 @@ function getPdcTourCardQualifiedMainField(mainTournament, candidates = getPdcTou
     }
     const eligibleKeys = new Set(getPdcTourCardQualifierEligiblePlayers(qualifierTournament, candidates)
         .map(getPdcTourCardPlayerKey));
-    return uniquePdcTourCardPlayers([
-        ...resolvePdcTourCardPlayerKeys(state.automaticPlayerIds, candidates),
-        ...resolvePdcTourCardPlayerKeys(state.qualifiedPlayerIds, candidates)
-            .filter(candidate => eligibleKeys.has(getPdcTourCardPlayerKey(candidate)))
-    ]);
+    const automaticPlayers = resolvePdcTourCardPlayerKeys(state.automaticPlayerIds, candidates);
+    const qualifiedPlayers = resolvePdcTourCardPlayerKeys(state.qualifiedPlayerIds, candidates)
+        .filter(candidate => eligibleKeys.has(getPdcTourCardPlayerKey(candidate)));
+    const field = uniquePdcTourCardPlayers([...automaticPlayers, ...qualifiedPlayers]);
+    const mainName = `${mainTournament?.name || ''} ${mainTournament?.sourceName || ''}`.toLowerCase();
+
+    // Zapis może wskazywać na zawodników, których nie ma już w pdcPlayers
+    // (np. po migracji starszej bazy). Grand Slam ma 16 grup po 3 osoby,
+    // dlatego brakujące miejsca uzupełniamy zachowaną, uporządkowaną listą
+    // uczestników kwalifikatora. Nie zmieniamy ośmiu faktycznych awansów.
+    if (!mainName.includes('grand slam') && !mainName.includes("champion's slam")) return field;
+
+    const fieldSize = 48;
+    const fieldKeys = new Set(field.map(getPdcTourCardPlayerKey));
+    const replacementKeys = [];
+    const addReplacement = candidate => {
+        if (!candidate) return;
+        const key = getPdcTourCardPlayerKey(candidate);
+        if (candidate.hasTourCard !== true || fieldKeys.has(key) || replacementKeys.includes(key)) return;
+        replacementKeys.push(key);
+    };
+
+    // Zachowujemy poprzednie zastępstwa, aby wczytanie tego samego zapisu
+    // dawało identyczną obsadę. Dopiero potem dokładamy następnych według
+    // kolejności ustalonej w kwalifikatorze.
+    resolvePdcTourCardPlayerKeys(state.missingAutomaticReplacementPlayerIds, candidates).forEach(addReplacement);
+    resolvePdcTourCardPlayerKeys(state.qualifierPlayerIds, candidates).forEach(addReplacement);
+    getPdcTourCardQualifierEligiblePlayers(qualifierTournament, candidates).forEach(addReplacement);
+
+    const missingPlaces = Math.max(0, fieldSize - field.length);
+    const replacements = resolvePdcTourCardPlayerKeys(replacementKeys.slice(0, missingPlaces), candidates);
+    if (replacements.length > 0) {
+        state.missingAutomaticReplacementPlayerIds = replacements.map(getPdcTourCardPlayerKey);
+        return uniquePdcTourCardPlayers([...field, ...replacements]);
+    }
+    return field;
 }
 
 function isCareerPlayerAutomaticallyQualifiedForPdcCardQualifier(qualifierTournament) {

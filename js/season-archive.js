@@ -46,6 +46,14 @@ function seasonArchiveResults(candidate, year) {
     return candidate.seasonStats.results.filter(result => result && typeof result.tournament === 'string');
 }
 
+function seasonArchiveRankingPrizeMoney(result) {
+    // Older saves do not have the explicit field, so their historical
+    // ranking earnings keep the previous prize-money-based calculation.
+    return Object.prototype.hasOwnProperty.call(result || {}, 'rankingPrizeMoney')
+        ? seasonArchiveNumber(result.rankingPrizeMoney) || 0
+        : seasonArchiveNumber(result?.prizeMoney) || 0;
+}
+
 function createSeasonArchiveBaseline(candidate, current, rank = null, fullSeason = false) {
     const results = seasonArchiveResults(candidate, current.year);
     return { person: seasonArchivePerson(candidate), startOvr: seasonArchiveOvr(candidate), startRank: rank, modOvrAdjustment: 0,
@@ -53,7 +61,7 @@ function createSeasonArchiveBaseline(candidate, current, rank = null, fullSeason
         rookie: candidate.careerDebutSeason === current.year || (candidate.isNewgen === true && candidate.joinedSeason === current.year),
         earnings: results.reduce((sum, result) => sum + (seasonArchiveNumber(result.prizeMoney) || 0), 0),
         rankingEarnings: results.reduce((sum, result) => sum + (typeof isMainOrderOfMeritRankingTournament === 'function'
-            && isMainOrderOfMeritRankingTournament(seasonArchiveResultTournament(result)) ? seasonArchiveNumber(result.prizeMoney) || 0 : 0), 0) };
+            && isMainOrderOfMeritRankingTournament(seasonArchiveResultTournament(result)) ? seasonArchiveRankingPrizeMoney(result) : 0), 0) };
 }
 
 function beginSeasonArchiveYear(fullSeason = false) {
@@ -84,7 +92,7 @@ function findSeasonArchiveBaseline(candidate, current) {
     return current.baselines.find(row => seasonArchivePersonKey(row.person) === seasonArchivePersonKey(candidate));
 }
 
-function recordSeasonArchivePrize(candidate, amount, tournamentOrName) {
+function recordSeasonArchivePrize(candidate, amount, tournamentOrName, { countTowardsRankings = true } = {}) {
     if (!candidate || candidate.isBye || !Number.isFinite(amount) || amount <= 0) return;
     const state = initializeSeasonArchive();
     const current = state.current;
@@ -94,7 +102,8 @@ function recordSeasonArchivePrize(candidate, amount, tournamentOrName) {
         current.baselines.push(row);
     }
     row.earnings += amount;
-    if (typeof isMainOrderOfMeritRankingTournament === 'function' && isMainOrderOfMeritRankingTournament(tournamentOrName)) {
+    if (countTowardsRankings && typeof isMainOrderOfMeritRankingTournament === 'function'
+        && isMainOrderOfMeritRankingTournament(tournamentOrName)) {
         row.rankingEarnings += amount;
     }
 }

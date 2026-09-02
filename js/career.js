@@ -349,6 +349,107 @@ function showScreen(screenId) {
             return pendingTournament ? activateTournamentFromCalendar(pendingTournament) : null;
         }
 
+        // Zwraca true wyłącznie wtedy, gdy zawodnik kariery faktycznie znajduje się
+        // w obsadzie danego wydarzenia. Przy braku wystarczających danych wybieramy
+        // bezpieczną odpowiedź „tak”, aby nie dopuścić do treningu przed własnym meczem.
+        function isCareerPlayerParticipatingInTournament(tournament, careerPlayer = player) {
+            if (!tournament || !careerPlayer) return true;
+            const isCareerPlayer = candidate => {
+                if (!candidate) return false;
+                if (candidate === careerPlayer) return true;
+                if (careerPlayer === player && typeof isCurrentPlayer === 'function') return isCurrentPlayer(candidate);
+                return Boolean(careerPlayer.id && candidate.id && careerPlayer.id === candidate.id)
+                    || (candidate.name === careerPlayer.name && candidate.country === careerPlayer.country);
+            };
+            const hasOpeningDraw = activeTournament === tournament
+                && typeof tournamentRound !== 'undefined' && Number(tournamentRound) > 1
+                && typeof tournamentBracket !== 'undefined' && Array.isArray(tournamentBracket)
+                && tournamentBracket.length > 1;
+            if (hasOpeningDraw) return tournamentBracket.some(isCareerPlayer);
+
+            const name = String(tournament.name || '').toLowerCase();
+            const isLeague = name.includes('premier') || name.includes('global darts league');
+            if (isLeague) {
+                const leagueTable = typeof gdlTable !== 'undefined' && Array.isArray(gdlTable) ? gdlTable : [];
+                if (!leagueTable.length) return true;
+                if (name.includes('play-off')) {
+                    if (leagueTable.length < 4) return true;
+                    const finalists = [...leagueTable]
+                        .sort((first, second) => (second.points - first.points)
+                            || ((second.legsWon - second.legsLost) - (first.legsWon - first.legsLost)))
+                        .slice(0, 4)
+                        .map(row => row.player);
+                    return finalists.some(isCareerPlayer);
+                }
+                return leagueTable.some(row => isCareerPlayer(row.player));
+            }
+
+            if (typeof isWorldCupTournament === 'function' && isWorldCupTournament(tournament)) {
+                const teams = typeof worldCupState !== 'undefined' && Array.isArray(worldCupState?.teams)
+                    ? worldCupState.teams : [];
+                return teams.length ? teams.some(team => Array.isArray(team.players) && team.players.some(isCareerPlayer)) : true;
+            }
+            if (typeof isWorldCupQualifierTournament === 'function' && isWorldCupQualifierTournament(tournament)) return true;
+
+            if (typeof isPdcQSchoolTournament === 'function' && isPdcQSchoolTournament(tournament)) {
+                return careerPlayer.hasTourCard !== true;
+            }
+            if (typeof isPdcTourCardQualifierTournament === 'function' && isPdcTourCardQualifierTournament(tournament)) {
+                if (careerPlayer.hasTourCard !== true) return false;
+                return !(typeof isCareerPlayerAutomaticallyQualifiedForPdcCardQualifier === 'function'
+                    && isCareerPlayerAutomaticallyQualifiedForPdcCardQualifier(tournament));
+            }
+            // Wyznaczenie obsady kwalifikatora Continental Tour zapisuje jej stan.
+            // Nie robimy tego przy samym sprawdzeniu treningu — w razie braku już
+            // utworzonej drabinki zachowujemy blokadę jako bezpieczny wariant.
+            if (typeof isContinentalQualifierTournament === 'function' && isContinentalQualifierTournament(tournament)) return true;
+
+            const candidates = typeof getPdcTourCardPlayers === 'function'
+                ? getPdcTourCardPlayers(true)
+                : [careerPlayer, ...(Array.isArray(pdcPlayers) ? pdcPlayers : [])]
+                    .filter(candidate => candidate && candidate.hasTourCard !== false);
+
+            // Turnieje z podglądem kwalifikacji (m.in. Continental Tour,
+            // Matchplay, Grand Prix, Masters i MŚ) używają dokładnie tych samych
+            // grup, co ich późniejsza drabinka. "pending" nie jest wpisem do
+            // głównego turnieju, więc w takim przypadku trening jest dozwolony.
+            if (typeof buildQualificationPreview === 'function') {
+                try {
+                    const preview = buildQualificationPreview(tournament, candidates, currentDate, careerPlayer);
+                    if (preview?.kind) return preview.status === 'in' || preview.status === 'confirmed';
+                } catch (_error) {
+                    return true;
+                }
+            }
+
+            const isPlayersChampionship = (typeof isPlayersChampionshipTournament === 'function'
+                && isPlayersChampionshipTournament(tournament))
+                || ((name.includes('players championship') || name.includes('pro players cup')) && !name.includes('final'));
+            if (isPlayersChampionship) {
+                const cardHolders = [...candidates].filter(candidate => candidate.hasTourCard === true)
+                    .sort((first, second) => (Number(second.prizeMoney) || 0) - (Number(first.prizeMoney) || 0));
+                const replacements = [...candidates].filter(candidate => candidate.hasTourCard !== true)
+                    .sort((first, second) => (Number(second.prizeMoney) || 0) - (Number(first.prizeMoney) || 0));
+                const field = [...cardHolders.slice(0, 128), ...replacements.slice(0, Math.max(0, 128 - cardHolders.length))];
+                return field.some(isCareerPlayer);
+            }
+
+            // Zwykłe wydarzenia rozgrywane są przez Top 16 OOM oraz kolejne
+            // miejsca z ProTour do pełnej stawki 32 zawodników.
+            if (!tournament.specialType) {
+                const oomRanked = [...candidates].sort((first, second) => (Number(second.prizeMoney) || 0) - (Number(first.prizeMoney) || 0));
+                const proTourRanked = [...candidates].sort((first, second) => (Number(second.proTourPrizeMoney) || 0) - (Number(first.proTourPrizeMoney) || 0));
+                const field = new Set(oomRanked.slice(0, 16));
+                for (const candidate of proTourRanked) {
+                    field.add(candidate);
+                    if (field.size >= 32) break;
+                }
+                return [...field].some(isCareerPlayer);
+            }
+
+            return true;
+        }
+
         function advanceDay({ recoverStamina = true } = {}) {
             if (typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy()) return false;
             // Starszy zapis mógł powstać już w dniu turnieju, zanim autosave

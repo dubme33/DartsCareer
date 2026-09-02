@@ -1569,8 +1569,35 @@ async function updateProfileWalkon(event) {
             // Check calendar restrictions before spending energy, XP or a weekly session.
             const pending = typeof getPendingTournamentForCareerDate === 'function'
                 ? getPendingTournamentForCareerDate(currentDate, true) : null;
-            if ((typeof activeTournament !== 'undefined' && activeTournament && !activeTournament.completed) || pending) {
+            const currentTournament = (typeof activeTournament !== 'undefined' && activeTournament && !activeTournament.completed)
+                ? activeTournament : pending;
+            const playerParticipates = !currentTournament || typeof isCareerPlayerParticipatingInTournament !== 'function'
+                || isCareerPlayerParticipatingInTournament(currentTournament);
+            if (currentTournament && playerParticipates) {
                 if (typeof trPlayerTraits === 'function') alert(trPlayerTraits('tournamentBlocked'));
+                return false;
+            }
+            if (currentTournament) {
+                // Zawodnik nie jest w obsadzie, ale wydarzenie nadal musi zostać
+                // rozstrzygnięte przed zmianą dnia. Symulujemy je w tle, a sam
+                // trening wykonujemy dopiero po jego bezpiecznym zakończeniu.
+                if (typeof activateTournamentFromCalendar !== 'function'
+                    || typeof startTournament !== 'function'
+                    || typeof isSkippingTournament === 'undefined') return false;
+                activateTournamentFromCalendar(currentTournament);
+                isSkippingTournament = true;
+                const simulation = startTournament();
+                const resumeTraining = () => {
+                    const unfinishedTournament = (typeof activeTournament !== 'undefined' && activeTournament && !activeTournament.completed)
+                        || (typeof getPendingTournamentForCareerDate === 'function'
+                            && getPendingTournamentForCareerDate(currentDate, true));
+                    return unfinishedTournament ? false : performTraining(type);
+                };
+                if (simulation && typeof simulation.then === 'function') {
+                    return simulation.then(completed => completed ? resumeTraining() : false);
+                }
+                if (!activeTournament || activeTournament.completed) return resumeTraining();
+                isSkippingTournament = false;
                 return false;
             }
             if (isTrait && getPlayerTrait(player, type) >= 100) return false;

@@ -198,9 +198,10 @@ function appendGrandSlamGroupResultsToHistory() {
         appendGrandSlamGroupsToTournamentHistory(historyGroups);
     }
     const groupsHtml = historyGroups.map(group => {
-        const rows = group.rows.map((row, index) =>
-            `<div>${index + 1}. ${escapeHtml(row.player.name)} — ${row.wins}W, ${row.legsWon}-${row.legsLost}</div>`
-        ).join('');
+        const rows = group.rows.map((row, index) => {
+            const flag = typeof getTournamentResultFlag === 'function' ? getTournamentResultFlag(row.player) : '';
+            return `<div>${index + 1}. ${flag ? `${flag} ` : ''}${escapeHtml(row.player.name)} — ${row.wins}W, ${row.legsWon}-${row.legsLost}</div>`;
+        }).join('');
         return `<div style="margin:6px 0;"><strong>Grupa ${group.label}</strong>${rows}</div>`;
     }).join('');
     lastTournamentResults += `<h4 style="color:var(--accent-green);">Faza grupowa Grand Slam</h4>${groupsHtml}`;
@@ -323,7 +324,9 @@ function renderGrandSlamGroup(group) {
         const p1 = group.members[match.p1Index];
         const p2 = group.members[match.p2Index];
         const score = match.played ? `${match.score1}:${match.score2}` : '—';
-        return `<div style="font-size:11px; color:#bdc3c7;">${escapeHtml(p1.name)} <strong>${score}</strong> ${escapeHtml(p2.name)}</div>`;
+        const p1Flag = typeof getTournamentResultFlag === 'function' ? getTournamentResultFlag(p1) : '';
+        const p2Flag = typeof getTournamentResultFlag === 'function' ? getTournamentResultFlag(p2) : '';
+        return `<div style="font-size:11px; color:#bdc3c7;">${escapeHtml(p1.name)}${p1Flag ? ` ${p1Flag}` : ''} <strong>${score}</strong> ${p2Flag ? `${p2Flag} ` : ''}${escapeHtml(p2.name)}</div>`;
     }).join('');
     return `<section style="background:#16213e; border:1px solid #2c3e50; border-radius:6px; padding:9px; margin:6px 0;">
         <h4 style="margin:0 0 5px; color:var(--accent-yellow);">Grupa ${group.label}</h4>${rows}<div style="border-top:1px solid #2c3e50; margin-top:5px; padding-top:4px;">${matches}</div>

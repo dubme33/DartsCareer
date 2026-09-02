@@ -79,11 +79,13 @@ function getPrizeMoney(tName, round, won) {
     }
 }
 
-        function awardPrizeMoney(p, amount, tName) {
+        function awardPrizeMoney(p, amount, tName, { countTowardsRankings = true } = {}) {
             if (!p || typeof amount !== 'number' || isNaN(amount) || amount <= 0) return;
             tName = String(tName || '');
             if (typeof recordTournamentCash === 'function' && isCurrentPlayer(p)) recordTournamentCash(tName, 'prize', amount);
-            if (typeof recordSeasonArchivePrize === 'function') recordSeasonArchivePrize(p, amount, tName);
+            if (typeof recordSeasonArchivePrize === 'function') {
+                recordSeasonArchivePrize(p, amount, tName, { countTowardsRankings });
+            }
             
             // Zabezpieczenie przed uszkodzonym zapisem (przywraca 0 zamiast błędu)
             if (typeof p.prizeMoney !== 'number' || isNaN(p.prizeMoney)) p.prizeMoney = 0;
@@ -97,6 +99,14 @@ function getPrizeMoney(tName, round, won) {
                 return;
             }
             if (typeof isWorldMastersName === 'function' && isWorldMastersName(tName)) {
+                if (isCurrentPlayer(p)) player.budget += amount;
+                return;
+            }
+
+            // Wypłata może być wyłącznie faktycznym zarobkiem (bez wpływu na
+            // dowolny ranking), np. dla rozstawionych European Tour odpadających
+            // w swoim pierwszym meczu po wolnym losie.
+            if (!countTowardsRankings) {
                 if (isCurrentPlayer(p)) player.budget += amount;
                 return;
             }

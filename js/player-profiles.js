@@ -410,6 +410,7 @@ function recordSeasonTournamentResult(candidate, tournament, details = {}) {
     const round = Math.max(2, Number(details.round) || 2);
     const won = Boolean(details.won);
     const prizeMoney = Math.max(0, Number(details.prizeMoney) || 0);
+    const rankingPrizeMoney = details.countTowardsRankings === false ? 0 : prizeMoney;
     const timestamp = (typeof currentDate !== 'undefined' && currentDate instanceof Date)
         ? currentDate.getTime()
         : Date.now();
@@ -428,6 +429,7 @@ function recordSeasonTournamentResult(candidate, tournament, details = {}) {
         won,
         stage: typeof details.stage === 'string' ? details.stage : '',
         prizeMoney,
+        rankingPrizeMoney,
         timestamp
     };
     stats.results.push(result);

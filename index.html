@@ -22,20 +22,20 @@
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://dartscareer.pl">
     <link rel="icon" type="image/png" href="favicon.png">
-    <link rel="stylesheet" href="css/game.css?v=1.3.8&stats=1&goals=1&titles=2&tiles=1&supporters=3&aim=3&match-log=1&social=1&compact-match=4">
-    <link rel="stylesheet" href="css/world-news.css?v=1.3.8&news=1">
-    <link rel="stylesheet" href="css/season-archive.css?v=1.3.8&archive=1">
-    <link rel="stylesheet" href="css/career-records.css?v=1.3.8&records=1">
-    <link rel="stylesheet" href="css/tournament-finance.css?v=1.3.8&finance=1">
-    <link rel="stylesheet" href="css/player-staff.css?v=1.3.8&staff=1&mental=1">
-    <link rel="stylesheet" href="css/player-traits.css?v=1.3.8&traits=2&mental=1">
-    <link rel="stylesheet" href="css/career-infrastructure.css?v=1.3.8&infrastructure=1">
-    <link rel="stylesheet" href="css/career-lifestyle.css?v=1.3.8&lifestyle=3">
-    <link rel="stylesheet" href="css/equipment-wear.css?v=1.3.8&equipment-wear=1">
-    <link rel="stylesheet" href="css/career-planning.css?v=1.3.8&fix=planning-2&et-reserves=1">
-    <link rel="stylesheet" href="css/tutorial.css?v=1.3.8&tutorial=1">
-    <link rel="stylesheet" href="css/hub-navigation.css?v=1.3.8&hub-nav=5">
-    <link rel="stylesheet" href="css/player-editor.css?v=1.3.8&player-editor=2">
+    <link rel="stylesheet" href="css/game.css?v=1.3.9&stats=1&goals=1&titles=2&tiles=1&supporters=3&aim=3&match-log=1&social=1&compact-match=4">
+    <link rel="stylesheet" href="css/world-news.css?v=1.3.9&news=1">
+    <link rel="stylesheet" href="css/season-archive.css?v=1.3.9&archive=1">
+    <link rel="stylesheet" href="css/career-records.css?v=1.3.9&records=1">
+    <link rel="stylesheet" href="css/tournament-finance.css?v=1.3.9&finance=1">
+    <link rel="stylesheet" href="css/player-staff.css?v=1.3.9&staff=1&mental=1">
+    <link rel="stylesheet" href="css/player-traits.css?v=1.3.9&traits=2&mental=1">
+    <link rel="stylesheet" href="css/career-infrastructure.css?v=1.3.9&infrastructure=1">
+    <link rel="stylesheet" href="css/career-lifestyle.css?v=1.3.9&lifestyle=3">
+    <link rel="stylesheet" href="css/equipment-wear.css?v=1.3.9&equipment-wear=1">
+    <link rel="stylesheet" href="css/career-planning.css?v=1.3.9&fix=planning-2&et-reserves=1">
+    <link rel="stylesheet" href="css/tutorial.css?v=1.3.9&tutorial=1">
+    <link rel="stylesheet" href="css/hub-navigation.css?v=1.3.9&hub-nav=5">
+    <link rel="stylesheet" href="css/player-editor.css?v=1.3.9&player-editor=2">
 </head>
 <body>
     <header>
@@ -74,6 +74,32 @@
         <!-- LEWA STRONA: CHANGELOG (Zawsze po angielsku) -->
         <div class="changelog-box">
             <h3>📢 What's New / Changelog</h3>
+
+            <!-- UPDATE V1.3.9 -->
+            <div class="changelog-version-badge">v1.3.9 · Tournament Reliability, Results &amp; Training</div>
+
+            <div class="changelog-grid">
+                <div class="cl-item">
+                    <span class="cl-tag fix">Grand Slam</span>
+                    <span class="cl-title">🏆 Grand Slam Save Recovery</span>
+                    <p class="cl-desc">Incomplete Grand Slam qualifier and main-event fields in older or modded saves are now repaired safely, so the event can be opened or skipped again instead of trapping the career in a broken tournament state.</p>
+                </div>
+                <div class="cl-item">
+                    <span class="cl-tag tweak">Continental Tour</span>
+                    <span class="cl-title">💷 Correct Seeded Prize-Money Ranking</span>
+                    <p class="cl-desc">Top 16 main Order of Merit seeds and Top 16 ProTour entrants now receive an opening-loss payment only in their career wallet, never in a ranking including the European Tour Order of Merit. If they win their first match, every later prize counts normally; only qualifier entrants receive ranking money for a round-one loss.</p>
+                </div>
+                <div class="cl-item">
+                    <span class="cl-tag feature">Tournament Results</span>
+                    <span class="cl-title">🏳️ National Flags Beside Players</span>
+                    <p class="cl-desc">Live round summaries, completed tournament results and Grand Slam group results now show the flag of each player’s country next to their name.</p>
+                </div>
+                <div class="cl-item">
+                    <span class="cl-tag fix">Training</span>
+                    <span class="cl-title">🏋️ Train on Unused Tournament Days</span>
+                    <p class="cl-desc">Training remains blocked on the day of your own tournament, but is now available when you are not in the field — for example, during a Premier League night. The AI event is resolved in the background first, then the training session uses the day as normal.</p>
+                </div>
+            </div>
 
             <!-- UPDATE V1.3.8 -->
             <div class="changelog-version-badge">v1.3.8 · Career Guidance, Player Editor &amp; Tournament Fixes</div>
@@ -2084,76 +2110,76 @@
     </main>
     <!-- STOPKA AUTORSKA -->
     <footer style="width: 100%; text-align: center; padding: 25px 15px; margin-top: auto; color: #7f8c8d; font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 2px;">
-        <div style="margin-bottom: 5px; color: #bdc3c7;">V. 1.3.8</div>
+        <div style="margin-bottom: 5px; color: #bdc3c7;">V. 1.3.9</div>
         powered by dubme<br>
         <a href="mailto:dartscareer@gmail.com" style="color: #bdc3c7; text-decoration: none; text-transform: lowercase; display: inline-block; margin-top: 5px;">dartscareer@gmail.com</a>
     </footer>
 
     <!-- SKRYPTY -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <script src="data/players.js?v=1.3.8&fix=player-ratings-3"></script>
+    <script src="data/players.js?v=1.3.9&fix=player-ratings-3"></script>
     <script src="data/order-of-merit-history.js"></script>
     <script src="data/order-of-merit-opening-2026.js"></script>
     <script src="data/player-birth-years.js"></script>
-    <script src="data/newgen-names.js?v=1.3.8"></script>
-    <script src="data/tournaments.js?v=1.3.8"></script>
+    <script src="data/newgen-names.js?v=1.3.9"></script>
+    <script src="data/tournaments.js?v=1.3.9"></script>
     <script src="data/achievements.js"></script>
     <script src="data/interviews.js"></script>
-    <script src="js/core.js?v=1.3.8&fix=career-progress-1&ws-local=1&traits=1&ai-growth=2&aim=3"></script>
-    <script src="js/ai-development.js?v=1.3.8&ai-growth=2"></script>
-    <script src="js/player-traits.js?v=1.3.8&traits=1&mental=1&infrastructure=1"></script>
-    <script src="js/match/pressure.js?v=1.3.8&mental=1"></script>
-    <script src="js/european-tour.js?v=1.3.8"></script>
-    <script src="js/order-of-merit.js?v=1.3.8&fix=planning-1"></script>
-    <script src="js/tour-cards.js?v=1.3.8"></script>
-    <script src="js/world-championship-qualification.js?v=1.3.8"></script>
-    <script src="js/stamina.js?v=1.3.8&staff=1&traits=1&infrastructure=1"></script>
-    <script src="js/i18n.js?v=1.3.8&fix=planning-1&news=1&archive=1&staff=1&traits=1&infrastructure=1&lifestyle=1&tiles=1&records=1&finance=1&aim=3&social=1&training-energy=1&tutorial=1&hub-nav=2&player-editor=1&visit-sim=1"></script>
-    <script src="js/player-lifecycle.js?v=1.3.8&fix=no-random-form-1&traits=1&ai-growth=2"></script>
-    <script src="js/career.js?v=1.3.8&fix=no-random-form-1&planning=1&goals=1&news=1&archive=1&staff=1&traits=1&infrastructure=1&lifestyle=1&records=1&finance=1&et-auto=1&ai-growth=2&no-random-content=1&tutorial=1&hub-nav=2"></script>
-    <script src="js/tutorial.js?v=1.3.8&tutorial=1"></script>
-    <script src="js/hub-navigation.js?v=1.3.8&hub-nav=5"></script>
-    <script src="js/player-editor.js?v=1.3.8&player-editor=4"></script>
-    <script src="js/player-profiles.js?v=1.3.8&stats=1&goals=1&news=1&traits=1&mental=1&titles=3&records=1&finance=1"></script>
-    <script src="js/player-match-stats.js?v=1.3.8&stats=2&goals=1&news=1&traits=1&records=1&ai-growth=2&grouping=2"></script>
-    <script src="js/career-records.js?v=1.3.8&records=1"></script>
-    <script src="js/career-records-ui.js?v=1.3.8&records=1"></script>
-    <script src="js/tournament-finance.js?v=1.3.8&finance=1"></script>
-    <script src="js/tournament-finance-ui.js?v=1.3.8&finance=1"></script>
-    <script src="js/tournaments/results.js?v=1.3.8&finance=1"></script>
-    <script src="js/tournaments/rules.js?v=1.3.8&fix=planning-1&matchplay=1"></script>
-    <script src="js/match/ai-strategy.js?v=1.3.8&cover=1"></script>
-    <script src="js/match/intro.js?v=1.3.8&lifestyle=1"></script>
-    <script src="js/tournaments/rewards.js?v=1.3.8&archive=1&finance=1"></script>
-    <script src="js/grand-slam.js?v=1.3.8&finance=1"></script>
-    <script src="js/tournaments/flow.js?v=1.3.8&fix=et-season-1&planning=1&stats=2&ws-local=1&traits=1&mental=1&infrastructure=1&finance=1&et-reserves=1&et-auto=1&presentation=1"></script>
-    <script src="js/tournaments/fast-forward.js?v=1.3.8&finance=1&visit-sim=1"></script>
-    <script src="js/tournaments/spectator.js?v=1.3.8&stats=1&presentation=1&visit-sim=1"></script>
-    <script src="js/world-cup.js?v=1.3.8&news=1&archive=1&mental=1&infrastructure=1&records=1&finance=1&presentation=1&visit-sim=1"></script>
-    <script src="js/continental-qualification-v2.js?v=1.3.8&fix=et-season-1&planning=1&et-reserves=1"></script>
-    <script src="js/world-masters.js?v=1.3.8&fix=planning-1&ws-local=1&prizes=2"></script>
-    <script src="js/match/setup.js?v=1.3.8&stats=1&qualifier-loss=1&finance=1&presentation=1&visit-sim=1"></script>
-    <script src="js/match/leg-flow.js?v=1.3.8&finance=1&matchplay=1&grouping=3&visit-sim=1"></script>
+    <script src="js/core.js?v=1.3.9&fix=career-progress-1&ws-local=1&traits=1&ai-growth=2&aim=3"></script>
+    <script src="js/ai-development.js?v=1.3.9&ai-growth=2"></script>
+    <script src="js/player-traits.js?v=1.3.9&traits=1&mental=1&infrastructure=1"></script>
+    <script src="js/match/pressure.js?v=1.3.9&mental=1"></script>
+    <script src="js/european-tour.js?v=1.3.9"></script>
+    <script src="js/order-of-merit.js?v=1.3.9&fix=planning-1"></script>
+    <script src="js/tour-cards.js?v=1.3.9&fix=grand-slam-field-1"></script>
+    <script src="js/world-championship-qualification.js?v=1.3.9"></script>
+    <script src="js/stamina.js?v=1.3.9&staff=1&traits=1&infrastructure=1"></script>
+    <script src="js/i18n.js?v=1.3.9&fix=planning-1&news=1&archive=1&staff=1&traits=1&infrastructure=1&lifestyle=1&tiles=1&records=1&finance=1&aim=3&social=1&training-energy=1&tutorial=1&hub-nav=2&player-editor=1&visit-sim=1"></script>
+    <script src="js/player-lifecycle.js?v=1.3.9&fix=no-random-form-1&traits=1&ai-growth=2"></script>
+    <script src="js/career.js?v=1.3.9&fix=no-random-form-1&planning=1&goals=1&news=1&archive=1&staff=1&traits=1&infrastructure=1&lifestyle=1&records=1&finance=1&et-auto=1&ai-growth=2&no-random-content=1&tutorial=1&hub-nav=2&training-unattended=1"></script>
+    <script src="js/tutorial.js?v=1.3.9&tutorial=1"></script>
+    <script src="js/hub-navigation.js?v=1.3.9&hub-nav=5"></script>
+    <script src="js/player-editor.js?v=1.3.9&player-editor=4"></script>
+    <script src="js/player-profiles.js?v=1.3.9&stats=1&goals=1&news=1&traits=1&mental=1&titles=3&records=1&finance=1&et-seed-cash=1"></script>
+    <script src="js/player-match-stats.js?v=1.3.9&stats=2&goals=1&news=1&traits=1&records=1&ai-growth=2&grouping=2"></script>
+    <script src="js/career-records.js?v=1.3.9&records=1"></script>
+    <script src="js/career-records-ui.js?v=1.3.9&records=1"></script>
+    <script src="js/tournament-finance.js?v=1.3.9&finance=1"></script>
+    <script src="js/tournament-finance-ui.js?v=1.3.9&finance=1"></script>
+    <script src="js/tournaments/results.js?v=1.3.9&finance=1&flags=1"></script>
+    <script src="js/tournaments/rules.js?v=1.3.9&fix=planning-1&matchplay=1"></script>
+    <script src="js/match/ai-strategy.js?v=1.3.9&cover=1"></script>
+    <script src="js/match/intro.js?v=1.3.9&lifestyle=1"></script>
+    <script src="js/tournaments/rewards.js?v=1.3.9&archive=1&finance=1&et-seed-cash=1"></script>
+    <script src="js/grand-slam.js?v=1.3.9&finance=1&result-flags=1"></script>
+    <script src="js/tournaments/flow.js?v=1.3.9&fix=et-season-1&planning=1&stats=2&ws-local=1&traits=1&mental=1&infrastructure=1&finance=1&et-reserves=1&et-auto=1&presentation=1&et-seed-cash=2&result-flags=1"></script>
+    <script src="js/tournaments/fast-forward.js?v=1.3.9&finance=1&visit-sim=1"></script>
+    <script src="js/tournaments/spectator.js?v=1.3.9&stats=1&presentation=1&visit-sim=1"></script>
+    <script src="js/world-cup.js?v=1.3.9&news=1&archive=1&mental=1&infrastructure=1&records=1&finance=1&presentation=1&visit-sim=1"></script>
+    <script src="js/continental-qualification-v2.js?v=1.3.9&fix=et-season-1&planning=1&et-reserves=1"></script>
+    <script src="js/world-masters.js?v=1.3.9&fix=planning-1&ws-local=1&prizes=2"></script>
+    <script src="js/match/setup.js?v=1.3.9&stats=1&qualifier-loss=1&finance=1&presentation=1&visit-sim=1"></script>
+    <script src="js/match/leg-flow.js?v=1.3.9&finance=1&matchplay=1&grouping=3&visit-sim=1"></script>
     <script src="js/match/audio.js"></script>
-    <script src="js/match/turns.js?v=1.3.8&ws-local=1&traits=1&mental=1&cover=1&grouping=3&visit-sim=1"></script>
-    <script src="js/match/board.js?v=1.3.8"></script>
-    <script src="js/storage.js?v=1.3.8"></script>
-    <script src="js/sponsor-goals.js?v=1.3.8&goals=1"></script>
-    <script src="js/world-news.js?v=1.3.8&news=1"></script>
-    <script src="js/season-archive.js?v=1.3.8&archive=1"></script>
-    <script src="js/season-archive-ui.js?v=1.3.8&archive=1&tiles=1"></script>
-    <script src="js/player-staff.js?v=1.3.8&staff=2&traits=1&mental=1"></script>
-    <script src="js/player-staff-ui.js?v=1.3.8&staff=2&traits=1&mental=1&tiles=1"></script>
-    <script src="js/player-traits-ui.js?v=1.3.8&traits=2&mental=1"></script>
-    <script src="js/career-infrastructure.js?v=1.3.8&infrastructure=5&finance=1"></script>
-    <script src="js/career-infrastructure-ui.js?v=1.3.8&infrastructure=2&tiles=1"></script>
-    <script src="js/career-lifestyle.js?v=1.3.8&lifestyle=1"></script>
-    <script src="js/career-lifestyle-ui.js?v=1.3.8&lifestyle=2"></script>
-    <script src="js/equipment-wear.js?v=1.3.8&equipment-wear=1"></script>
-    <script src="js/systems.js?v=1.3.8&fix=career-progress-1&stats=1&ws-local=1&goals=1&news=1&archive=1&staff=1&traits=1&mental=1&infrastructure=1&lifestyle=1&equipment-wear=1&records=1&finance=1&et-reserves=1&matchplay=1&cover=1&grouping=3&leg-log=1&no-random-content=1&training-energy=1"></script>
-    <script src="js/mod-media.js?v=1.3.8"></script>
-    <script src="js/extras.js?v=1.3.8&fix=no-random-form-1&goals=1&news=1&archive=1&traits=1&lifestyle=1&finance=1&no-random-content=1"></script>
-    <script src="js/career-planning.js?v=1.3.8&fix=planning-2&et-reserves=1"></script>
+    <script src="js/match/turns.js?v=1.3.9&ws-local=1&traits=1&mental=1&cover=1&grouping=3&visit-sim=1"></script>
+    <script src="js/match/board.js?v=1.3.9"></script>
+    <script src="js/storage.js?v=1.3.9"></script>
+    <script src="js/sponsor-goals.js?v=1.3.9&goals=1"></script>
+    <script src="js/world-news.js?v=1.3.9&news=1"></script>
+    <script src="js/season-archive.js?v=1.3.9&archive=1&et-seed-cash=1"></script>
+    <script src="js/season-archive-ui.js?v=1.3.9&archive=1&tiles=1"></script>
+    <script src="js/player-staff.js?v=1.3.9&staff=2&traits=1&mental=1"></script>
+    <script src="js/player-staff-ui.js?v=1.3.9&staff=2&traits=1&mental=1&tiles=1"></script>
+    <script src="js/player-traits-ui.js?v=1.3.9&traits=2&mental=1"></script>
+    <script src="js/career-infrastructure.js?v=1.3.9&infrastructure=5&finance=1"></script>
+    <script src="js/career-infrastructure-ui.js?v=1.3.9&infrastructure=2&tiles=1"></script>
+    <script src="js/career-lifestyle.js?v=1.3.9&lifestyle=1"></script>
+    <script src="js/career-lifestyle-ui.js?v=1.3.9&lifestyle=2"></script>
+    <script src="js/equipment-wear.js?v=1.3.9&equipment-wear=1"></script>
+    <script src="js/systems.js?v=1.3.9&fix=career-progress-1&stats=1&ws-local=1&goals=1&news=1&archive=1&staff=1&traits=1&mental=1&infrastructure=1&lifestyle=1&equipment-wear=1&records=1&finance=1&et-reserves=1&matchplay=1&cover=1&grouping=3&leg-log=1&no-random-content=1&training-energy=1&training-unattended=1"></script>
+    <script src="js/mod-media.js?v=1.3.9"></script>
+    <script src="js/extras.js?v=1.3.9&fix=no-random-form-1&goals=1&news=1&archive=1&traits=1&lifestyle=1&finance=1&no-random-content=1"></script>
+    <script src="js/career-planning.js?v=1.3.9&fix=planning-2&et-reserves=1"></script>
 
 </body>
 </html>

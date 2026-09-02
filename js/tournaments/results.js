@@ -17,7 +17,7 @@ function normalizeTournamentMatchHistory(history) {
 
     const players = (Array.isArray(history.players) ? history.players : [])
         .filter(entry => Array.isArray(entry) && entry.length >= 2)
-        .map(entry => [String(entry[0] || ''), String(entry[1] || '')]);
+        .map(entry => [String(entry[0] || ''), String(entry[1] || ''), String(entry[2] || '')]);
     const blocks = (Array.isArray(history.blocks) ? history.blocks : []).flatMap(block => {
         if (!block || typeof block !== 'object') return [];
         if (block.type === 'round') {
@@ -74,7 +74,7 @@ function getTournamentHistoryPlayerIndex(candidate, history = tournamentMatchHis
     const key = getTournamentHistoryPlayerKey(candidate);
     let index = history.players.findIndex(entry => Array.isArray(entry) && entry[0] === key);
     if (index !== -1) return index;
-    history.players.push([key, String(candidate.name || '')]);
+    history.players.push([key, String(candidate.name || ''), String(candidate.country || '')]);
     return history.players.length - 1;
 }
 
@@ -149,6 +149,30 @@ function getTournamentHistoryPlayerName(history, index) {
     return escapeTournamentHistoryText(history?.players?.[index]?.[1] || '—');
 }
 
+function getTournamentResultFlag(candidate) {
+    return candidate?.country && typeof getFlagImg === 'function' ? getFlagImg(candidate.country) : '';
+}
+
+function getTournamentHistoryPlayerCountry(history, index) {
+    const entry = history?.players?.[index];
+    const savedCountry = String(entry?.[2] || '');
+    if (savedCountry) return savedCountry;
+
+    // Historia ze starszych zapisów przechowywała tylko nazwę. Jeżeli zawodnik
+    // nadal jest w puli kariery, odzyskujemy flagę bez zmieniania zapisu.
+    const key = String(entry?.[0] || '');
+    const roster = [
+        ...(typeof pdcPlayers !== 'undefined' && Array.isArray(pdcPlayers) ? pdcPlayers : []),
+        ...(typeof player !== 'undefined' && player ? [player] : [])
+    ];
+    return roster.find(candidate => getTournamentHistoryPlayerKey(candidate) === key)?.country || '';
+}
+
+function getTournamentHistoryPlayerFlag(history, index) {
+    const country = getTournamentHistoryPlayerCountry(history, index);
+    return country && typeof getFlagImg === 'function' ? getFlagImg(country) : '';
+}
+
 function formatTournamentHistoryAverage(value) {
     const average = Number(value);
     return Number.isFinite(average) ? average.toFixed(2) : '0.00';
@@ -163,11 +187,13 @@ function renderTournamentHistoryRound(history, block) {
         const p1Style = p1Won ? 'color: #ffffff; font-weight: bold;' : 'color: #bdc3c7; font-weight: normal;';
         const p2Style = p1Won ? 'color: #bdc3c7; font-weight: normal;' : 'color: #ffffff; font-weight: bold;';
         const careerBackground = (Number(flags) & 1) === 1 ? ' background: rgba(39, 174, 96, 0.2);' : '';
+        const p1Flag = getTournamentHistoryPlayerFlag(history, p1Index);
+        const p2Flag = getTournamentHistoryPlayerFlag(history, p2Index);
         return `<div style="font-size: 13px; border-bottom: 1px solid #2c3e50; padding: 6px;${careerBackground}">
             <div style="display: flex; justify-content: space-between; align-items: center;">
-                <span style="flex: 1; text-align: right; ${p1Style}">${getTournamentHistoryPlayerName(history, p1Index)}</span>
+                <span style="flex: 1; text-align: right; ${p1Style}">${getTournamentHistoryPlayerName(history, p1Index)}${p1Flag ? ` ${p1Flag}` : ''}</span>
                 <span style="flex: 0 0 50px; text-align: center; color: #f1c40f; font-weight: bold;">${score1}:${score2}</span>
-                <span style="flex: 1; text-align: left; ${p2Style}">${getTournamentHistoryPlayerName(history, p2Index)}</span>
+                <span style="flex: 1; text-align: left; ${p2Style}">${p2Flag ? `${p2Flag} ` : ''}${getTournamentHistoryPlayerName(history, p2Index)}</span>
             </div>
             <div style="color: #7f8c8d; font-size: 11px; text-align: center; margin-top: 3px;">
                 (${escapeTournamentHistoryText(averageLabel)} ${formatTournamentHistoryAverage(average1)} - ${formatTournamentHistoryAverage(average2)})
@@ -179,9 +205,10 @@ function renderTournamentHistoryRound(history, block) {
 
 function renderGrandSlamHistoryBlock(history, block) {
     const groupsHtml = block.groups.map(group => {
-        const rows = group.rows.map((row, index) =>
-            `<div>${index + 1}. ${getTournamentHistoryPlayerName(history, row[0])} — ${row[1]}W, ${row[2]}-${row[3]}</div>`
-        ).join('');
+        const rows = group.rows.map((row, index) => {
+            const flag = getTournamentHistoryPlayerFlag(history, row[0]);
+            return `<div>${index + 1}. ${flag ? `${flag} ` : ''}${getTournamentHistoryPlayerName(history, row[0])} — ${row[1]}W, ${row[2]}-${row[3]}</div>`;
+        }).join('');
         return `<div style="margin:6px 0;"><strong>Grupa ${escapeTournamentHistoryText(group.label)}</strong>${rows}</div>`;
     }).join('');
     return `<h4 style="color:var(--accent-green);">Faza grupowa Grand Slam</h4>${groupsHtml}`;

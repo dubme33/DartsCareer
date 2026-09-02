@@ -898,6 +898,22 @@ function skipActiveTournament() {
                 && isPdcTourCardQualifierTournament(activeTournament);
             const isNonPrizeQualifier = isContinentalQualifier || isWorldMastersFinalsQualifier || isQSchoolEvent || isTourCardQualifierEvent;
             let prize = isNonPrizeQualifier ? 0 : getPrizeMoney(activeTournament.name, tournamentRound, false);
+            const isContinentalAutomaticOpeningLoss = candidate => {
+                if (typeof isContinentalTourTournament !== 'function'
+                    || !isContinentalTourTournament(activeTournament)) return false;
+                const qualification = activeTournament?.continentalQualification;
+                // Top 16 OOM zaczyna od Last 32, a Top 16 ProTour od Last 64.
+                // Tylko porażka w ich pierwszym meczu jest nagrodą wyłącznie
+                // do budżetu; następne rundy zachowują normalne rankingi.
+                const automaticPlayerIds = tournamentRound === 32 ? qualification?.oomPlayerIds
+                    : tournamentRound === 64 ? qualification?.proTourPlayerIds
+                        : null;
+                if (!Array.isArray(automaticPlayerIds)) return false;
+                const candidateKey = typeof getContinentalQualificationPlayerKey === 'function'
+                    ? getContinentalQualificationPlayerKey(candidate)
+                    : (candidate?.id || `${candidate?.name || ''}|${candidate?.country || ''}`);
+                return automaticPlayerIds.includes(candidateKey);
+            };
 
             let roundHeader = `<h4 style='color:var(--accent-green); margin:15px 0 5px 0; border-bottom: 1px solid var(--border-color); padding-bottom: 3px;'>${getRoundName(tournamentRound)}</h4>`;
             lastTournamentResults += roundHeader;
@@ -911,6 +927,7 @@ function skipActiveTournament() {
                 if (!p1 || !p2) { yield; continue; }
                 
                 let winner, loser;
+                let countPrizeTowardsRankings = true;
                 
                 // ZMIANA: Deklaracja wyników na samej górze pętli, aby były widoczne dla tabeli GDL!
                 let matchWScore = 6, matchLScore = 0; 
@@ -927,7 +944,10 @@ function skipActiveTournament() {
                         loser = isCurrentPlayer(p1) ? p1 : p2;
                     }
                     nextRoundBracket.push(winner);
-                    if (!isNonPrizeQualifier) awardPrizeMoney(loser, prize, activeTournament.name); 
+                    countPrizeTowardsRankings = !isContinentalAutomaticOpeningLoss(loser);
+                    if (!isNonPrizeQualifier) {
+                        awardPrizeMoney(loser, prize, activeTournament.name, { countTowardsRankings: countPrizeTowardsRankings });
+                    }
                     applyTournamentRatingChange(winner, loser, tournamentRound);
 
                     let scoreStr = "W:O";
@@ -963,12 +983,14 @@ function skipActiveTournament() {
                     let p1FinalAvg = isP1Winner ? wAvg : lAvg;
                     let p2FinalAvg = !isP1Winner ? wAvg : lAvg;
                     let finalScoreStr = isP1Winner ? `${matchWScore}:${matchLScore}` : `${matchLScore}:${matchWScore}`;
+                    let p1Flag = typeof getTournamentResultFlag === 'function' ? getTournamentResultFlag(p1) : '';
+                    let p2Flag = typeof getTournamentResultFlag === 'function' ? getTournamentResultFlag(p2) : '';
 
                     let matchResultHTML = `<div style="font-size: 13px; border-bottom: 1px solid #2c3e50; padding: 6px; background: rgba(39, 174, 96, 0.2);">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <span style="flex: 1; text-align: right; ${p1Style}">${escapeHtml(p1.name)}</span>
+                            <span style="flex: 1; text-align: right; ${p1Style}">${escapeHtml(p1.name)}${p1Flag ? ` ${p1Flag}` : ''}</span>
                             <span style="flex: 0 0 50px; text-align: center; color: #f1c40f; font-weight: bold;">${finalScoreStr}</span>
-                            <span style="flex: 1; text-align: left; ${p2Style}">${escapeHtml(p2.name)}</span>
+                            <span style="flex: 1; text-align: left; ${p2Style}">${p2Flag ? `${p2Flag} ` : ''}${escapeHtml(p2.name)}</span>
                         </div>
                         <div style="color: #7f8c8d; font-size: 11px; text-align: center; margin-top: 3px;">
                             (${t('t-avg-short')} ${p1FinalAvg} - ${p2FinalAvg})
@@ -1010,7 +1032,10 @@ function skipActiveTournament() {
                     matchLScore = Math.min(matchRes.p1Score, matchRes.p2Score);
 
                     nextRoundBracket.push(winner);
-                    if (!isNonPrizeQualifier) awardPrizeMoney(loser, prize, activeTournament.name);
+                    countPrizeTowardsRankings = !isContinentalAutomaticOpeningLoss(loser);
+                    if (!isNonPrizeQualifier) {
+                        awardPrizeMoney(loser, prize, activeTournament.name, { countTowardsRankings: countPrizeTowardsRankings });
+                    }
                     applyTournamentRatingChange(winner, loser, tournamentRound);
 
                     let wAvg = winner === p1 ? matchRes.p1Avg : matchRes.p2Avg;
@@ -1024,12 +1049,14 @@ function skipActiveTournament() {
                     let p1FinalAvg = isP1Winner ? wAvg : lAvg;
                     let p2FinalAvg = !isP1Winner ? wAvg : lAvg;
                     let finalScoreStr = isP1Winner ? `${matchWScore}:${matchLScore}` : `${matchLScore}:${matchWScore}`;
+                    let p1Flag = typeof getTournamentResultFlag === 'function' ? getTournamentResultFlag(p1) : '';
+                    let p2Flag = typeof getTournamentResultFlag === 'function' ? getTournamentResultFlag(p2) : '';
 
                     let matchResultHTML = `<div style="font-size: 13px; border-bottom: 1px solid #2c3e50; padding: 6px;">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <span style="flex: 1; text-align: right; ${p1Style}">${escapeHtml(p1.name)}</span>
+                            <span style="flex: 1; text-align: right; ${p1Style}">${escapeHtml(p1.name)}${p1Flag ? ` ${p1Flag}` : ''}</span>
                             <span style="flex: 0 0 50px; text-align: center; color: #f1c40f; font-weight: bold;">${finalScoreStr}</span>
-                            <span style="flex: 1; text-align: left; ${p2Style}">${escapeHtml(p2.name)}</span>
+                            <span style="flex: 1; text-align: left; ${p2Style}">${p2Flag ? `${p2Flag} ` : ''}${escapeHtml(p2.name)}</span>
                         </div>
                         <div style="color: #7f8c8d; font-size: 11px; text-align: center; margin-top: 3px;">
                             (${t('t-avg-short')} ${p1FinalAvg} - ${p2FinalAvg})
@@ -1062,7 +1089,11 @@ function skipActiveTournament() {
                     recordContinentalQualifierFinalLoser(activeTournament, loser, tournamentRound);
                 }
                 if (!isNonPrizeQualifier) {
-                    recordSeasonTournamentResult(loser, activeTournament, { round: tournamentRound, prizeMoney: prize });
+                    recordSeasonTournamentResult(loser, activeTournament, {
+                        round: tournamentRound,
+                        prizeMoney: prize,
+                        countTowardsRankings: countPrizeTowardsRankings
+                    });
                 }
 
                 // --- NOWOŚĆ: Punkty i legi do tabeli Ligi ---
