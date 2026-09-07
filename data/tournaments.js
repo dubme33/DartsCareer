@@ -3,6 +3,8 @@ const tournamentDatabase = [
     { name: "Pro Card Trials", month: 0, day: 5, endDay: 11, format: "legs", minOvr: 0, city: "Milton Keynes", country: "Anglia", specialType: "pdcQSchool", cycleStartYear: 2026, cycleEveryYears: 2 },
     { name: "Desert Masters", month: 0, day: 15, endDay: 16, format: "legs", minOvr: 0, city: "Sakhir", country: "Bahrajn", specialType: "worldMasters", worldMastersEvent: "desert" },
     { name: "Arabian Masters", month: 0, day: 19, endDay: 20, format: "legs", minOvr: 0, city: "Rijad", country: "Arabia Saudyjska", specialType: "worldMasters", worldMastersEvent: "arabian" },
+    { name: "Crown Masters Qualifier", month: 0, day: 28, format: "sets", minOvr: 0, city: "Milton Keynes", country: "Anglia", specialType: "classicMastersQualifier", qualifierFor: "Crown Masters", qualifyingPlaces: 8 },
+    { name: "Crown Masters", month: 0, day: 29, endMonth: 1, endDay: 1, format: "sets", minOvr: 0, city: "Milton Keynes", country: "Anglia", specialType: "classicMasters" },
 
     // --- LUTY (Miesiąc 1) ---
     { name: "Global Darts League - Night 1", month: 1, day: 5, city: "Newcastle", country: "Anglia", minOvr: 0, format: "501" },
@@ -20,7 +22,7 @@ const tournamentDatabase = [
 
     // --- MARZEC (Miesiąc 2) ---
     { name: "Global Darts League - Night 5", month: 2, day: 5, city: "Cardiff", country: "Walia", minOvr: 0, format: "501" },
-    { name: "British Open", month: 2, day: 6, endDay: 8, format: "legs", minOvr: 0, city: "Minehead", country: "Anglia" },
+    { name: "British Open", month: 2, day: 6, endDay: 8, format: "legs", minOvr: 0, city: "Minehead", country: "Anglia", specialType: "ukOpen" },
     { name: "Continental Tour 2 - Qualifiers", month: 2, day: 11, format: "legs", minOvr: 0, city: "Göttingen", country: "Niemcy", specialType: "continentalQualifier", qualifierFor: "Continental Tour 2" },
     { name: "Global Darts League - Night 6", month: 2, day: 12, city: "Nottingham", country: "Anglia", minOvr: 0, format: "501" },
     { name: "Continental Tour 2", month: 2, day: 13, endDay: 15, format: "legs", minOvr: 55, city: "Göttingen", country: "Niemcy" },
@@ -123,6 +125,64 @@ const tournamentDatabase = [
     // --- GRUDZIEŃ (Miesiąc 11) ---
     { name: "Global Darts Championship", month: 11, day: 15, endDay: 31, format: "sets", minOvr: 60, city: "Londyn", country: "Anglia" }
 ];
+
+// Fikcyjny odpowiednik PDC Challenge Tour. Daty bazują na pięciu zjazdach
+// sezonu 2026, ale każda impreza otrzymała najbliższy wolny dzień, aby nie
+// kolidować z turniejami i kwalifikacjami istniejącymi już w kalendarzu gry.
+const CHALLENGE_TOUR_2026_SCHEDULE = Object.freeze([
+    [1, 0, 13, 'Milton Keynes'], [2, 0, 14, 'Milton Keynes'], [3, 0, 17, 'Milton Keynes'],
+    [4, 0, 18, 'Milton Keynes'], [5, 0, 21, 'Milton Keynes'],
+    [6, 2, 23, 'Leicester'], [7, 2, 24, 'Leicester'], [8, 2, 25, 'Leicester'],
+    [9, 3, 1, 'Leicester'], [10, 3, 7, 'Leicester'],
+    [11, 3, 22, 'Hildesheim'], [12, 3, 24, 'Hildesheim'], [13, 3, 25, 'Hildesheim'],
+    [14, 3, 26, 'Hildesheim'], [15, 3, 29, 'Hildesheim'],
+    [16, 7, 12, 'Milton Keynes'], [17, 7, 13, 'Milton Keynes'], [18, 7, 16, 'Milton Keynes'],
+    [19, 7, 17, 'Milton Keynes'], [20, 7, 18, 'Milton Keynes'],
+    [21, 8, 24, 'Wigan'], [22, 8, 25, 'Wigan'], [23, 8, 26, 'Wigan'], [24, 8, 27, 'Wigan']
+]);
+
+CHALLENGE_TOUR_2026_SCHEDULE.forEach(([number, month, day, city]) => {
+    tournamentDatabase.push({
+        name: `Rising Stars Circuit ${number}`,
+        month,
+        day,
+        format: 'legs',
+        minOvr: 0,
+        city,
+        country: city === 'Hildesheim' ? 'Niemcy' : 'Anglia',
+        specialType: 'challengeTour',
+        challengeTourEvent: number
+    });
+});
+
+// Fikcyjny odpowiednik PDC Development Tour. Oryginalne pięć zjazdów
+// zachowuje swoje miasta, a 24 imprezy są rozłożone na najbliższe wolne dni
+// z zachowaniem kolejności, bez nakładania ich na istniejący kalendarz gry.
+const DEVELOPMENT_TOUR_2026_SCHEDULE = Object.freeze([
+    [1, 1, 7, 'Leicester'], [2, 1, 8, 'Leicester'], [3, 1, 11, 'Leicester'],
+    [4, 1, 23, 'Leicester'], [5, 2, 4, 'Leicester'],
+    [6, 2, 10, 'Milton Keynes'], [7, 2, 11, 'Milton Keynes'], [8, 3, 8, 'Milton Keynes'],
+    [9, 3, 20, 'Milton Keynes'], [10, 3, 21, 'Milton Keynes'],
+    [11, 5, 1, 'Milton Keynes'], [12, 5, 4, 'Milton Keynes'], [13, 5, 22, 'Milton Keynes'],
+    [14, 5, 23, 'Milton Keynes'], [15, 5, 24, 'Milton Keynes'],
+    [16, 6, 30, 'Hildesheim'], [17, 6, 31, 'Hildesheim'], [18, 7, 1, 'Hildesheim'],
+    [19, 7, 2, 'Hildesheim'], [20, 7, 3, 'Hildesheim'],
+    [21, 8, 16, 'Wigan'], [22, 8, 21, 'Wigan'], [23, 9, 19, 'Wigan'], [24, 9, 20, 'Wigan']
+]);
+
+DEVELOPMENT_TOUR_2026_SCHEDULE.forEach(([number, month, day, city]) => {
+    tournamentDatabase.push({
+        name: `Future Champions Circuit ${number}`,
+        month,
+        day,
+        format: 'legs',
+        minOvr: 0,
+        city,
+        country: city === 'Hildesheim' ? 'Niemcy' : 'Anglia',
+        specialType: 'developmentTour',
+        developmentTourEvent: number
+    });
+});
 
 const CONTINENTAL_TOUR_2026_QUALIFIER_SCHEDULE = Object.freeze([
     ['Continental Tour 1',  [1, 13], [1, 14], [1, 15], [1, 18]],
@@ -232,7 +292,7 @@ syncContinentalTourQualificationCalendar(tournamentDatabase);
 const PDC_2026_CALENDAR_TEMPLATE = tournamentDatabase.map(tournament => ({ ...tournament }));
 const PDC_2026_CALENDAR_FIELDS = [
     'name', 'month', 'day', 'endMonth', 'endDay', 'format', 'minOvr', 'city', 'country',
-    'specialType', 'worldMastersEvent', 'qualifierFor', 'qualifierPath', 'qualifyingPlaces', 'cycleStartYear', 'cycleEveryYears'
+    'specialType', 'worldMastersEvent', 'challengeTourEvent', 'developmentTourEvent', 'qualifierFor', 'qualifierPath', 'qualifyingPlaces', 'cycleStartYear', 'cycleEveryYears'
 ];
 
 function findPdc2026CalendarEntry(calendar, template) {
@@ -245,13 +305,17 @@ function findPdc2026CalendarEntry(calendar, template) {
             ? calendar.find(tournament => tournament.qualifierFor === template.qualifierFor
                 && (!template.qualifierPath || tournament.qualifierPath === template.qualifierPath))
             : null)
-        || (template.specialType && ['worldCup', 'worldCupQualifiers', 'worldMastersFinals', 'worldMastersFinalsQualifier', 'pdcQSchool'].includes(template.specialType)
+        || (template.specialType && ['worldCup', 'worldCupQualifiers', 'worldMastersFinals', 'worldMastersFinalsQualifier', 'pdcQSchool', 'classicMasters', 'classicMastersQualifier'].includes(template.specialType)
             ? calendar.find(tournament => tournament.specialType === template.specialType)
             : null);
 }
 
-function syncPdc2026TournamentCalendar(calendar = tournamentDatabase) {
+function syncPdc2026TournamentCalendar(calendar = tournamentDatabase, referenceDate = null) {
     if (!Array.isArray(calendar)) return calendar;
+    const parsedReferenceDate = referenceDate ? new Date(referenceDate) : null;
+    const referenceTimestamp = parsedReferenceDate && !Number.isNaN(parsedReferenceDate.getTime())
+        ? new Date(parsedReferenceDate.getFullYear(), parsedReferenceDate.getMonth(), parsedReferenceDate.getDate()).getTime()
+        : null;
 
     // Stary kwalifikator z systemu kart został zastąpiony pełną, regionalną
     // kwalifikacją 128-osobową bezpośrednio przy grudniowych MŚ.
@@ -266,7 +330,13 @@ function syncPdc2026TournamentCalendar(calendar = tournamentDatabase) {
     PDC_2026_CALENDAR_TEMPLATE.forEach(template => {
         let tournament = findPdc2026CalendarEntry(calendar, template);
         if (!tournament) {
-            tournament = { ...template, completed: false, historyLogs: '' };
+            const templateTimestamp = referenceTimestamp === null ? null
+                : new Date(parsedReferenceDate.getFullYear(), template.month, template.day).getTime();
+            // Po aktualizacji starej kariery nie cofamy gracza do nowych imprez,
+            // których termin już minął. Przyszłe wydarzenia pozostają normalnie aktywne.
+            const newlyAddedPastSecondaryTour = ['challengeTour', 'developmentTour', 'classicMasters', 'classicMastersQualifier'].includes(template.specialType)
+                && templateTimestamp < referenceTimestamp;
+            tournament = { ...template, completed: newlyAddedPastSecondaryTour, historyLogs: '' };
             if (template.qualifierFor) {
                 const linkedMainTournament = findTournamentBySourceName(calendar, template.qualifierFor);
                 if (linkedMainTournament) tournament.qualifierFor = linkedMainTournament.name;

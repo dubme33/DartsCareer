@@ -27,6 +27,13 @@ const CAREER_PLANNING_TEXT = {
     pc64: ['Top 64 Players Championship OOM', 'Top 64 Players Championship OOM', 'Top 64 Players Championship OOM', 'Top 64 Players Championship OOM'],
     et32: ['Top 32 European Tour OOM', 'Top 32 European Tour OOM', 'Top 32 European Tour OOM', 'Top 32 European Tour OOM'],
     card128: ['Posiadacze karty PDC według OOM', 'PDC Tour Card holders by OOM', 'PDC-Tour-Card-Inhaber nach OOM', 'PDC Tour Card-houders volgens OOM'],
+    ukOpenOom1To32: ['Kartowicze 1–32 OOM — start od Last 64', 'Tour Card holders ranked 1–32 — enter at Last 64', 'Tour-Card-Inhaber 1–32 OOM — Einstieg bei Last 64', 'Tour Card-houders 1–32 OOM — instroom bij Last 64'],
+    ukOpenOom33To64: ['Kartowicze 33–64 OOM — start od Last 96', 'Tour Card holders ranked 33–64 — enter at Last 96', 'Tour-Card-Inhaber 33–64 OOM — Einstieg bei Last 96', 'Tour Card-houders 33–64 OOM — instroom bij Last 96'],
+    ukOpenOom65To96: ['Kartowicze 65–96 OOM — start od Last 128', 'Tour Card holders ranked 65–96 — enter at Last 128', 'Tour-Card-Inhaber 65–96 OOM — Einstieg bei Last 128', 'Tour Card-houders 65–96 OOM — instroom bij Last 128'],
+    ukOpenOom97To128: ['Kartowicze 97–128 OOM — start od Last 160', 'Tour Card holders ranked 97–128 — enter at Last 160', 'Tour-Card-Inhaber 97–128 OOM — Einstieg bei Last 160', 'Tour Card-houders 97–128 OOM — instroom bij Last 160'],
+    ukOpenChallenge16: ['TOP 16 Rising Stars bez karty — start od Last 160', 'Rising Stars Top 16 without Tour Cards — enter at Last 160', 'Top 16 Rising Stars ohne Tour Card — Einstieg bei Last 160', 'Top 16 Rising Stars zonder Tour Card — instroom bij Last 160'],
+    ukOpenDevelopment16: ['TOP 16 Future Champions bez karty — start od Last 160', 'Future Champions Top 16 without Tour Cards — enter at Last 160', 'Top 16 Future Champions ohne Tour Card — Einstieg bei Last 160', 'Top 16 Future Champions zonder Tour Card — instroom bij Last 160'],
+    ukOpenNote: ['UK Open obejmuje 128 posiadaczy kart PDC według ich kolejności w OOM oraz po 16 najwyżej sklasyfikowanych graczy bez karty z Rising Stars i Future Champions. Zawodnik spełniający obie ścieżki zajmuje jedno miejsce, a druga tabela przekazuje miejsce kolejnej uprawnionej osobie.', 'The UK Open field contains 128 Tour Card holders in OOM order plus the highest-ranked 16 non-card players from both Rising Stars and Future Champions. A player qualifying through both routes takes one place and the second ranking passes its place to the next eligible player.', 'Das UK-Open-Feld umfasst 128 Tour-Card-Inhaber nach OOM sowie je 16 bestplatzierte Spieler ohne Karte aus Rising Stars und Future Champions. Wer beide Wege erfüllt, belegt nur einen Platz; die zweite Rangliste rückt nach.', 'Het UK Open-veld bestaat uit 128 Tour Card-houders volgens de OOM plus de beste 16 spelers zonder kaart uit zowel Rising Stars als Future Champions. Wie via beide routes kwalificeert, bezet één plek; de andere ranglijst schuift door.'],
     reserves: ['Uzupełnienie: zawodnicy bez karty według OOM', 'Reserves: non-card players by OOM', 'Nachrücker ohne Tour Card nach OOM', 'Reserves zonder Tour Card volgens OOM'],
     etReserves: ['Lista rezerwowa European Tour', 'European Tour reserve list', 'European-Tour-Nachrückerliste', 'European Tour-reservelijst'],
     reserve: ['Jesteś na liście rezerwowej', 'You are on the reserve list', 'Du stehst auf der Nachrückerliste', 'Je staat op de reservelijst'],
@@ -49,6 +56,9 @@ const CAREER_PLANNING_TEXT = {
     eastEurope: ['Kwalifikator Europy Wschodniej bez karty', 'Eastern Europe non-card qualifier', 'Osteuropa-Qualifikation ohne Tour Card', 'Oost-Europese kwalificatie zonder Tour Card'],
     continentalNote: ['Bezpośredni awans: 16 z OOM i 16 kolejnych z ProTour, wyłącznie z kartą PDC. Pozostałe 16 miejsc pochodzi z czterech kwalifikatorów.', 'Direct places: 16 OOM and the next 16 ProTour players, all with Tour Cards. Four qualifiers award the remaining 16 places.', 'Direktplätze: 16 OOM und die nächsten 16 ProTour-Spieler, alle mit Tour Card. Vier Qualifikationen vergeben die übrigen 16 Plätze.', 'Direct: 16 OOM-spelers en de volgende 16 ProTour-spelers, allemaal met Tour Card. Vier kwalificaties verdelen de overige 16 plaatsen.'],
     automatic: ['Awans bezpośredni: Top 16 OOM + 24 kolejnych z ProTour', 'Direct: Top 16 OOM + next 24 ProTour', 'Direkt: Top 16 OOM + nächste 24 ProTour', 'Direct: Top 16 OOM + volgende 24 ProTour'],
+    crownOom24: ['Top 24 OOM — awans bezpośredni', 'Top 24 OOM — direct qualification', 'Top 24 OOM — direkte Qualifikation', 'Top 24 OOM — directe plaatsing'],
+    crownQualifier: ['Kwalifikacje: 8 miejsc', 'Qualifier: 8 places', 'Qualifikation: 8 Plätze', 'Kwalificatie: 8 plaatsen'],
+    crownMastersNote: ['Top 24 posiadaczy karty według OOM awansuje bezpośrednio. O osiem pozostałych miejsc walczą inni kartowicze oraz TOP 8 Rising Stars i TOP 8 Future Champions z poprzedniego sezonu. Gdy wcześniejsza tabela nie istnieje (pierwsza edycja 2026), kolejność zastępcza wynika z OVR, potem OOM.', 'The Top 24 Tour Card holders by OOM qualify directly. Other card holders plus the previous season’s Rising Stars Top 8 and Future Champions Top 8 compete for eight places. If no prior table exists (the first 2026 edition), OVR and then OOM provide the fallback order.', 'Die Top 24 Tour-Card-Inhaber der OOM sind direkt qualifiziert. Die übrigen Karteninhaber sowie die Top 8 der Rising Stars und Future Champions aus der Vorsaison spielen um acht Plätze. Fehlt eine frühere Rangliste (erste Ausgabe 2026), entscheidet ersatzweise OVR, dann OOM.', 'De Top 24 Tour Card-houders volgens de OOM plaatsen zich direct. De overige kaarthouders plus de Top 8 van Rising Stars en Future Champions van het vorige seizoen spelen om acht plaatsen. Ontbreekt zo’n eerdere stand (de eerste editie van 2026), dan bepaalt eerst OVR en daarna OOM de volgorde.'],
     ws24: ['Top 24 World Series (braki uzupełnia OOM)', 'Top 24 World Series (gaps filled by OOM)', 'Top 24 World Series (freie Plätze nach OOM)', 'Top 24 World Series (aangevuld via OOM)'],
     wsOom4: ['4 kolejnych według OOM', 'Next 4 by OOM', 'Nächste 4 nach OOM', 'Volgende 4 volgens OOM'],
     region: ['Pula regionalna: {region}', 'Regional route: {region}', 'Regionaler Weg: {region}', 'Regionale route: {region}'],
@@ -99,6 +109,7 @@ function getPlanningRouteLabel(key) {
 
 function getPlanningTournamentKind(tournament) {
     if (!tournament || String(tournament.specialType || '').toLowerCase().includes('qualifier')) return '';
+    if (typeof isCrownMastersTournament === 'function' && isCrownMastersTournament(tournament)) return 'crownMasters';
     if (isWorldMastersFinalsTournament(tournament)) return 'worldSeries';
     if (isContinentalTourTournament(tournament)) return 'continental';
     const name = String(tournament.name || '').toLowerCase();
@@ -120,7 +131,20 @@ function buildQualificationPreview(tournament, candidates, referenceDate = curre
         groups.push({ key: route, places, players, confirmed, pending, eligible });
     };
     let note = '', size = 0, reservePlayers = [], withdrawals = [];
-    if (kind === 'worlds') {
+    if (kind === 'crownMasters') {
+        const saved = tournament.crownMastersQualification;
+        const state = typeof previewCrownMastersQualification === 'function'
+            ? previewCrownMastersQualification(tournament, all, referenceDate)
+            : saved;
+        const locked = saved?.year === year && saved?.version === CROWN_MASTERS_QUALIFICATION_VERSION;
+        add('crownOom24', 24, resolve(state?.automaticPlayerIds || []), locked);
+        const qualified = resolve(state?.qualifiedPlayerIds || []).slice(0, 8);
+        const complete = state?.completed === true && qualified.length === 8;
+        add('crownQualifier', 8, qualified, complete, !complete,
+            resolve(state?.qualifierPlayerIds || []));
+        size = 32;
+        note = 'crownMastersNote';
+    } else if (kind === 'worlds') {
         const saved = tournament.worldChampionshipQualification;
         const locked = saved?.year === year && saved.version === WORLD_CHAMPIONSHIP_QUALIFICATION_VERSION
             && resolve(saved.playerIds).length === WORLD_CHAMPIONSHIP_FIELD_SIZE;
@@ -134,10 +158,13 @@ function buildQualificationPreview(tournament, candidates, referenceDate = curre
         size = WORLD_CHAMPIONSHIP_FIELD_SIZE;
         note = 'worldsNote';
     } else if (kind === 'ranking') {
-        (getRankingQualificationGroups(tournament, all) || []).forEach(group => add(group.key, group.places, group.players));
+        const ukOpenLocked = typeof isUKOpenTournament === 'function' && isUKOpenTournament(tournament)
+            && typeof isValidUKOpenQualificationState === 'function'
+            && isValidUKOpenQualificationState(tournament.ukOpenQualification, referenceDate);
+        (getRankingQualificationGroups(tournament, all) || []).forEach(group =>
+            add(group.key, group.places, group.players, ukOpenLocked));
         size = groups.reduce((sum, group) => sum + group.places, 0);
-        // UK Open rezerwy wypełniają miejsca kartowiczów, nie powiększają stawki.
-        if (groups.some(group => group.key === 'card128')) size = 128;
+        if (typeof isUKOpenTournament === 'function' && isUKOpenTournament(tournament)) note = 'ukOpenNote';
     } else if (kind === 'continental') {
         const saved = tournament.continentalQualification;
         const locked = saved?.year === year && saved.version === CONTINENTAL_QUALIFICATION_VERSION
@@ -315,7 +342,7 @@ function renderPlanningQualification(candidates) {
 
 function renderPlanningContinentalReserves(preview) {
     if (preview.kind !== 'continental') return '';
-    const rows = preview.reservePlayers.map((candidate, index) => `<li${isCurrentPlayer(candidate) ? ' class="planning-me"' : ''}><span>${index + 1}. ${escapeHtml(candidate.name)}</span><span>${planningMoney(candidate.prizeMoney)}</span></li>`).join('');
+    const rows = preview.reservePlayers.map((candidate, index) => `<li${isCurrentPlayer(candidate) ? ' class="planning-me"' : ''}><span>${index + 1}. ${getFlagImg(candidate.country)} ${escapeHtml(candidate.name)}</span><span>${planningMoney(candidate.prizeMoney)}</span></li>`).join('');
     const replacements = preview.withdrawals.map(entry => `<li><span>${escapeHtml(trPlanning('etReplacement', {
         replacement: entry.replacement?.name || entry.replacementPlayerName || trPlanning('etVacancy'),
         withdrawn: entry.withdrawn?.name || entry.withdrawnPlayerName || entry.withdrawnPlayerId,

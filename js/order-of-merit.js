@@ -2,6 +2,8 @@
 // zdobyte w kroczącym okresie dwóch lat kalendarzowych.
 const MAIN_ORDER_OF_MERIT_VERSION = 2;
 let mainOrderOfMeritRefreshCache = null;
+const sanitisedMainOomHistories = new WeakSet();
+let mainOomTemplateLookupCache = null;
 
 function getMainOomExpiryTime(earnedAt) {
     const expiryDate = new Date(Number(earnedAt));
@@ -103,6 +105,15 @@ function isMainOrderOfMeritRankingTournament(tournamentOrName) {
     const specialType = typeof tournamentOrName === 'object'
         ? String(tournamentOrName?.specialType || '').toLocaleLowerCase()
         : '';
+
+    // Crown Masters oraz płatna faza kwalifikacyjna są jednym rankingowym
+    // wydarzeniem. Ten wyjątek musi poprzedzać ogólne wykluczenie kwalifikatorów
+    // i historycznego, nierankingowego cyklu Global Masters.
+    if (specialType === 'classicmasters' || specialType === 'classicmastersqualifier'
+        || (typeof isCrownMastersTournament === 'function'
+            && (isCrownMastersTournament(tournamentOrName) || isCrownMastersQualifierTournament(tournamentOrName)))) {
+        return true;
+    }
 
     if (specialType.includes('qualifier') || specialType.includes('worldmasters') || specialType.includes('worldcup')) return false;
     if (searchableName.includes('qualifier') || searchableName.includes('kwalifikacj')) return false;
@@ -269,10 +280,44 @@ function inferMainOomTemplateIndex(candidate, fallbackIndex = null) {
     const normalize = value => String(value || '').trim().replace(/\s+/g, ' ').toLocaleLowerCase('pl');
     const names = new Set([candidate?.sourceName, candidate?.name].map(normalize).filter(Boolean));
     if (typeof defaultPdcPlayerTemplates !== 'undefined' && Array.isArray(defaultPdcPlayerTemplates)) {
-        const index = defaultPdcPlayerTemplates.findIndex(template => names.has(normalize(template?.name)));
+        const realNames = typeof PDC_OOM_REAL_NAMES_BY_TEMPLATE_INDEX !== 'undefined'
+            && Array.isArray(PDC_OOM_REAL_NAMES_BY_TEMPLATE_INDEX)
+            ? PDC_OOM_REAL_NAMES_BY_TEMPLATE_INDEX
+            : null;
+        if (mainOomTemplateLookupCache?.templates !== defaultPdcPlayerTemplates
+            || mainOomTemplateLookupCache.templatesLength !== defaultPdcPlayerTemplates.length
+            || mainOomTemplateLookupCache.realNames !== realNames
+            || mainOomTemplateLookupCache.realNamesLength !== realNames?.length) {
+            const templateByName = new Map();
+            defaultPdcPlayerTemplates.forEach((template, index) => {
+                const name = normalize(template?.name);
+                if (name && !templateByName.has(name)) templateByName.set(name, index);
+            });
+            const realNameByName = new Map();
+            (realNames || []).forEach((name, index) => {
+                const normalizedName = normalize(name);
+                if (normalizedName && !realNameByName.has(normalizedName)) realNameByName.set(normalizedName, index);
+            });
+            mainOomTemplateLookupCache = {
+                templates: defaultPdcPlayerTemplates,
+                templatesLength: defaultPdcPlayerTemplates.length,
+                realNames,
+                realNamesLength: realNames?.length,
+                templateByName,
+                realNameByName
+            };
+        }
+        const indexes = [...names]
+            .map(name => mainOomTemplateLookupCache.templateByName.get(name))
+            .filter(Number.isInteger);
+        const index = indexes.length ? Math.min(...indexes) : -1;
         if (index >= 0 && index < historySize) return index;
-    }
-    if (typeof PDC_OOM_REAL_NAMES_BY_TEMPLATE_INDEX !== 'undefined') {
+        const realNameIndexes = [...names]
+            .map(name => mainOomTemplateLookupCache.realNameByName.get(name))
+            .filter(Number.isInteger);
+        const realNameIndex = realNameIndexes.length ? Math.min(...realNameIndexes) : -1;
+        if (realNameIndex >= 0) return realNameIndex;
+    } else if (typeof PDC_OOM_REAL_NAMES_BY_TEMPLATE_INDEX !== 'undefined') {
         const index = PDC_OOM_REAL_NAMES_BY_TEMPLATE_INDEX.findIndex(name => names.has(normalize(name)));
         if (index >= 0) return index;
     }
@@ -280,7 +325,8 @@ function inferMainOomTemplateIndex(candidate, fallbackIndex = null) {
 }
 
 function sanitiseMainOomHistory(entries) {
-    return (Array.isArray(entries) ? entries : [])
+    if (Array.isArray(entries) && sanitisedMainOomHistories.has(entries)) return entries;
+    const sanitised = (Array.isArray(entries) ? entries : [])
         .map(entry => ({
             tournament: String(entry?.tournament || ''),
             amount: Math.max(0, Number(entry?.amount) || 0),
@@ -289,6 +335,20 @@ function sanitiseMainOomHistory(entries) {
             ...(entry?.eventKey ? { eventKey: String(entry.eventKey) } : {})
         }))
         .filter(entry => entry.tournament && entry.amount > 0 && Number.isFinite(entry.earnedAt));
+    sanitisedMainOomHistories.add(sanitised);
+    return sanitised;
+}
+
+function getActiveMainOomHistory(entries, cutoff, referenceTime) {
+    let filtered = null;
+    entries.forEach((entry, index) => {
+        const isActive = entry.earnedAt > cutoff && entry.earnedAt <= referenceTime;
+        if (!isActive && filtered === null) filtered = entries.slice(0, index);
+        else if (isActive && filtered !== null) filtered.push(entry);
+    });
+    if (filtered === null) return entries;
+    sanitisedMainOomHistories.add(filtered);
+    return filtered;
 }
 
 function getMainOomTournamentDate(tournamentName, referenceTime) {
@@ -370,8 +430,9 @@ function refreshMainOrderOfMerit(candidates, referenceDate) {
 
     list.forEach(candidate => {
         if (!candidate || candidate.isBye) return;
-        const activeEntries = normaliseMainOrderOfMeritHistory(candidate, referenceTime)
-            .filter(entry => entry.earnedAt > cutoff && entry.earnedAt <= referenceTime);
+        const activeEntries = getActiveMainOomHistory(
+            normaliseMainOrderOfMeritHistory(candidate, referenceTime), cutoff, referenceTime
+        );
         candidate.mainPrizeHistory = activeEntries;
         candidate.prizeMoney = activeEntries.reduce((total, entry) => total + entry.amount, 0);
         candidate.mainOomHistoryVersion = MAIN_ORDER_OF_MERIT_VERSION;

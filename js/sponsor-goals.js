@@ -146,7 +146,10 @@ function getSponsorGoalOffer(sponsor) {
     const target = type === 'rank' ? targetRank : type === 'wins' ? Math.max(1, Math.ceil(wins * remaining)) : 1;
     const multiplier = type === 'rank' ? 2 : type === 'quarterfinal' ? 1.5 : 1;
     const bonus = Math.max(10, Math.round(Number(sponsor.monthlyValue) * multiplier * remaining / 10) * 10);
-    return { sponsor: sponsor.name, year, type, target, bonus };
+    const difficultyMultiplier = typeof getCareerDifficultySponsorMultiplier === 'function'
+        ? getCareerDifficultySponsorMultiplier(player) : 1;
+    return { sponsor: sponsor.name, year, type, target, bonus,
+        difficultyBaseBonus: bonus / difficultyMultiplier };
 }
 
 function acceptSponsorGoal(sponsor) {

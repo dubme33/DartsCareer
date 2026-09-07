@@ -349,6 +349,256 @@ const pdcPlayers = [
     { name: "Mal Cumin", country: "Australia", ovr: 55, scoring: 56, doubles: 54, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0, birthYear: 1982 }
 ];
 
+// --- Challenge Tour 2026: TOP 100 rankingu referencyjnego z 7 września 2026 ---
+// Dane osobowe pozostają fikcyjne. Numer pozycji pozwala zachować powiązanie ze
+// źródłową kolejnością bez wpływania na startowy, wyzerowany ranking w karierze.
+// Źródło: https://mastercaller.com/rankings/pdc-challenge-tour-order-of-merit
+const challengeTour2026ExistingReferenceRanks = Object.freeze([
+    [1, "Dirk Coulson"], [2, "Joey Hunt"], [3, "Dan Klose"], [4, "Tom Morris"],
+    [5, "Tom Lishman"], [6, "Dan Ayres"], [7, "Harry Coaty"], [8, "Adam Kirk"],
+    [9, "Elliot Mercer"], [10, "Jake Tweddell"], [11, "Nate Potter"], [12, "Chris Wickenden"],
+    [13, "Henry Ward"], [14, "Steven Lennon"], [15, "Martin Dragt"], [16, "Scot Waites"],
+    [17, "Jake Aldridge"], [18, "Lew Pride"], [23, "Michele Turetti"], [24, "Tom Evetts"],
+    [28, "Ollie Mitchell"], [33, "Pat Williams"], [36, "Cal Goffin"], [39, "Mike Unterbuchner"],
+    [53, "Nicolas Thullier"], [56, "Patrick Tringel"], [57, "Jose Justica"], [73, "Drago Horvat"],
+    [88, "Scot Campbell"], [89, "Greg Hall"], [93, "Pal Szekel"], [95, "Marcel Walper"]
+]);
+
+const challengeTour2026PlayerAdditions = Object.freeze([
+    [19, "Gilean van der Meyden", "Holandia", 1993],
+    [20, "Kelvin Burnell", "Irlandia Północna", 1965],
+    [21, "Davy Dawes", "Walia", 1985],
+    [22, "Floren Preiss", "Niemcy", 2007],
+    [25, "Levi Frauenfeld", "Holandia", 2001],
+    [26, "Dilan Slavin", "Irlandia", 2002],
+    [27, "Jimmy Beaton", "Anglia", 2003],
+    [29, "Stefan Koster", "Holandia", 2001],
+    [30, "Dean Haines", "Anglia", 1999],
+    [31, "Davy Evens", "Anglia", 1989],
+    [32, "Radosz Sagan", "Polska", 1979],
+    [34, "Dan Truman", "Szkocja", 1979],
+    [35, "Benny Towns", "Anglia", 2009],
+    [37, "Jensen Walters", "Anglia", 2006],
+    [38, "Jon Henders", "Szkocja", 1973],
+    [40, "Ashton Colman", "Anglia", 1997],
+    [41, "Patrik Geerts", "Holandia", 1978],
+    [42, "Andrew Courten", "Anglia", 1989],
+    [43, "Robin Marten", "Anglia", 1983],
+    [44, "Paul Rowlan", "Anglia", 1963],
+    [45, "Rick Ulrichs", "Holandia", 1990],
+    [46, "Allan Morris", "Anglia", 1972],
+    [47, "Jake Maine", "Anglia", 1996],
+    [48, "Jamie Howarth", "Anglia", 1985],
+    [49, "Andrew Hamill", "Anglia", 1967],
+    [50, "Graeme Usherton", "Anglia", 1973],
+    [51, "Stevie Benton", "Anglia", 1964],
+    [52, "Jack Jonas", "Anglia", 1993],
+    [54, "Harris Lee", "Anglia", 2005],
+    [55, "Jamie van Herk", "Holandia", 2003],
+    [58, "Aaron Monks", "Anglia", 1990],
+    [59, "Kieran Browne", "Anglia", 1992],
+    [60, "Jack Eikhen", "Anglia", 2000],
+    [61, "Steven Hines", "Anglia", 1969],
+    [62, "Karl Willson", "Anglia", 1989],
+    [63, "Mikael Verbeek", "Holandia", 1999],
+    [64, "Joey Hayward", "Anglia", 1983],
+    [65, "Simeon Stevens", "Anglia", 1972],
+    [66, "James Huwes", "Anglia", 1986],
+    [67, "Dan Godwin", "Anglia", 1999],
+    [68, "Jay Kayson", "Anglia", 1991],
+    [69, "Jensen Remy", "Belgia", 2005],
+    [70, "Samuel Jaxon", "Anglia", 2007],
+    [71, "Calvin Francis", "Anglia", 1993],
+    [72, "Jamie Parkes", "Anglia", 1997],
+    [74, "Matt Denham", "Anglia", 1991],
+    [75, "Dan Nichols", "Anglia", 1986],
+    [76, "Garry Jaxon", "Anglia", 1985],
+    [77, "Ronnie Meulen", "Holandia", 1988],
+    [78, "Nuno De Waal", "Belgia", 2003],
+    [79, "Charlie Barston", "Anglia", 1979],
+    [80, "Mick Flinn", "Irlandia", 1992],
+    [81, "Sammy Spires", "Anglia", 1995],
+    [82, "Johnny Browne", "Anglia", 1999],
+    [83, "Geoff Murry", "Anglia", 1990],
+    [84, "Rian O'Conner", "Anglia", 1996],
+    [85, "Leigh Coxon", "Anglia", 1983],
+    [86, "Kayden Smyth", "Anglia", 2007],
+    [87, "Bryan Ramon", "Belgia", 1996],
+    [90, "Daniel Laubry II", "USA", 1992],
+    [91, "Jake Gwynn", "Anglia", 1999],
+    [92, "Lew Bevin", "Walia", 2000],
+    [94, "Will Lennard", "Anglia", 1972],
+    [96, "Johan Brower", "Holandia", 1991],
+    [97, "Evan Roelof", "Holandia", 2002],
+    [98, "Kelvin Troppman", "Niemcy", 1999],
+    [99, "Bruno Stocker", "Szwajcaria", 1971],
+    [100, "Rian Bramley", "Anglia", 2008]
+]);
+
+challengeTour2026ExistingReferenceRanks.forEach(([rank, name]) => {
+    const candidate = pdcPlayers.find(player => player.name === name);
+    if (candidate) candidate.challengeTourReferenceRank = rank;
+});
+
+const challengeTour2026NewPlayers = challengeTour2026PlayerAdditions.map(([rank, name, country, birthYear]) => {
+    const ovr = rank <= 25 ? 60 : rank <= 40 ? 59 : rank <= 60 ? 58 : rank <= 80 ? 57 : 56;
+    return {
+        name,
+        country,
+        birthYear,
+        ovr,
+        scoring: ovr + 1,
+        doubles: ovr - 1,
+        prizeMoney: 0,
+        proTourPrizeMoney: 0,
+        pcPrizeMoney: 0,
+        challengeTourPrizeMoney: 0,
+        developmentTourPrizeMoney: 0,
+        hasTourCard: false,
+        challengeTourReferenceRank: rank
+    };
+});
+
+// --- Development Tour 2026: TOP 96 rankingu referencyjnego z 7 września 2026 ---
+// Podobnie jak w Challenge Tourze nazwiska są fikcyjne, a pozycja referencyjna
+// nie przyznaje startowych nagród. Wspólni zawodnicy obu cyklów korzystają z
+// jednego profilu, dzięki czemu nie powstają duplikaty.
+// Źródło: https://mastercaller.com/rankings/pdc-development-tour-ranking
+const developmentTour2026ExistingReferenceRanks = Object.freeze([
+    [1, "Sebastian Bialecki", "Polska", 2003], [3, "Cam Crab", "Anglia", 2003],
+    [4, "Leo Weber", "Niemcy", 2002], [5, "Jurjen van de Velde", "Holandia", 2002],
+    [6, "Jimmy Beaton", "Anglia", 2003], [7, "Jamie van Herk", "Holandia", 2003],
+    [8, "Dominic Gruell", "Niemcy", 2002], [9, "Ollie Bates", "Anglia", 2002],
+    [10, "Charles Manby", "Anglia", 2005], [11, "Adam Gawel", "Czechy", 2002],
+    [13, "Nate Potter", "Anglia", 2003], [14, "Yorik Hofens", "Niemcy", 2007],
+    [15, "Dilan Slavin", "Irlandia", 2002], [16, "Elliot Mercer", "Anglia", 2009],
+    [18, "Harry Coaty", "Anglia", 2006], [20, "Samuel Jaxon", "Anglia", 2007],
+    [21, "Floren Preiss", "Niemcy", 2007], [22, "Jensen Walters", "Anglia", 2006],
+    [23, "Finn Behren", "Niemcy", 2006], [24, "Benny Towns", "Anglia", 2009],
+    [25, "Ty Thorp", "Anglia", 2002], [26, "Mylo Michers", "Belgia", 2006],
+    [31, "Bo Graves", "Anglia", 2004], [33, "Pete Kelemen", "Węgry", 2005],
+    [35, "Jens Schmidt", "Niemcy", 2004], [38, "Jensen Remy", "Belgia", 2005],
+    [42, "Nuno De Waal", "Belgia", 2003], [43, "Harris Lee", "Anglia", 2005],
+    [44, "Evan Roelof", "Holandia", 2002], [47, "Rian Bramley", "Anglia", 2008],
+    [55, "Liam Lawrence", "Niemcy", 2004], [56, "Milan Biron", "Węgry", 2006],
+    [71, "Kayden Smyth", "Anglia", 2007], [72, "Ansh Suden", "Szwajcaria", 2003],
+    [86, "Craig Galiano", "Gibraltar", 2002]
+]);
+
+const developmentTour2026PlayerAdditions = Object.freeze([
+    [2, "Callum Dreyton", "Anglia", 2006],
+    [12, "Arjen Bosman", "Holandia", 2003],
+    [17, "Lennard Schulte", "Niemcy", 2008],
+    [19, "Dalibor Fiala", "Czechy", 2004],
+    [27, "Kian Baynes", "Anglia", 2010],
+    [28, "Lewis Croft", "Anglia", 2009],
+    [29, "Iwan Henshall", "Walia", 2005],
+    [30, "Toby Banes", "Anglia", 2006],
+    [32, "Kieran Toms", "Walia", 2002],
+    [34, "Charlie Stockham", "Anglia", 2005],
+    [36, "Jamie Buckton", "Anglia", 2004],
+    [37, "Conor Hopwood", "Walia", 2005],
+    [39, "Seamus McKeir", "Irlandia", 2006],
+    [40, "Jannik Beckert", "Niemcy", 2003],
+    [41, "Jake Pollan", "Anglia", 2003],
+    [45, "Kieran Fordham", "Anglia", 2004],
+    [46, "Coby Davies", "Walia", 2004],
+    [48, "Kim Seifert", "Niemcy", 2006],
+    [49, "Rhys Clancy", "Walia", 2004],
+    [50, "Sjaak de Jonge", "Holandia", 2006],
+    [51, "J.J. Wray", "Anglia", 2003],
+    [52, "Lew Wynne", "Walia", 2002],
+    [53, "Martin Holubik", "Słowacja", 2005],
+    [54, "Declan Quinlan", "Irlandia", 2003],
+    [57, "Mathias Moeren", "Belgia", 2005],
+    [58, "Dean Finlay", "Szkocja", 2002],
+    [59, "Xander van den Broeck", "Belgia", 2004],
+    [60, "Bram van Dijlen", "Holandia", 2004],
+    [61, "Oliver Burgan", "Anglia", 2002],
+    [62, "Nathan Carrick", "Anglia", 2004],
+    [63, "Niall Girven", "Szkocja", 2002],
+    [64, "Kilian Hoffner", "Niemcy", 2006],
+    [65, "Joe Bradshaw", "Anglia", 2006],
+    [66, "Louis Mason", "Anglia", 2006],
+    [67, "Sebastian Carlsen", "Szwecja", 2003],
+    [68, "Cody Cranford", "Anglia", 2008],
+    [69, "Mark Taalman", "Holandia", 2002],
+    [70, "Daan Beekman", "Holandia", 2005],
+    [73, "Leyton Morley", "Anglia", 2002],
+    [74, "Lukas Wolter", "Niemcy", 2009],
+    [75, "Barry Watkin", "Szkocja", 2007],
+    [76, "Wessel Tempelman", "Holandia", 2003],
+    [77, "Matyas Rejsek", "Czechy", 2006],
+    [78, "Bjorn van Pelt", "Belgia", 2007],
+    [79, "Niels Couper", "Belgia", 2008],
+    [80, "Joseph Simons", "Anglia", 2003],
+    [81, "Kyle Gilmore", "Anglia", 2009],
+    [82, "Marvin Nikolaus", "Niemcy", 2007],
+    [83, "Mason Whiteley", "Australia", 2003],
+    [84, "Luuk van Waalen", "Holandia", 2010],
+    [85, "Jack Gillam", "Anglia", 2005],
+    [87, "Mika Donner", "Niemcy", 2008],
+    [88, "Kieran Tindall", "Anglia", 2006],
+    [89, "Damien Mooney", "Irlandia", 2003],
+    [90, "Damien Verjans", "Holandia", 2002],
+    [91, "Cillian Hegarty", "Irlandia", 2002],
+    [92, "Daniel Outram", "Anglia", 2003],
+    [93, "Justin Altenhuis", "Holandia", 2005],
+    [94, "Zach Pryce", "Anglia", 2004],
+    [95, "Mason Teal", "Anglia", 2008],
+    // Profil źródłowy nie podaje daty urodzenia. Rok 2003 zachowuje realną
+    // kwalifikowalność zawodnika do cyklu w sezonie 2026.
+    [96, "Ashton Browne", "Anglia", 2003]
+]);
+
+const developmentTour2026ReferencePool = [...pdcPlayers, ...challengeTour2026NewPlayers];
+developmentTour2026ExistingReferenceRanks.forEach(([rank, name, country, birthYear]) => {
+    const candidate = developmentTour2026ReferencePool.find(player => player.name === name);
+    if (!candidate) return;
+    candidate.developmentTourReferenceRank = rank;
+    candidate.country = country;
+    candidate.birthYear = birthYear;
+});
+
+const developmentTour2026NewPlayers = developmentTour2026PlayerAdditions.map(([rank, name, country, birthYear]) => {
+    const ovr = rank <= 8 ? 66 : rank <= 16 ? 64 : rank <= 24 ? 62
+        : rank <= 32 ? 61 : rank <= 48 ? 60 : rank <= 64 ? 59
+            : rank <= 80 ? 58 : 57;
+    return {
+        name,
+        country,
+        birthYear,
+        ovr,
+        scoring: ovr + 1,
+        doubles: ovr - 1,
+        prizeMoney: 0,
+        proTourPrizeMoney: 0,
+        pcPrizeMoney: 0,
+        challengeTourPrizeMoney: 0,
+        developmentTourPrizeMoney: 0,
+        hasTourCard: false,
+        developmentTourReferenceRank: rank
+    };
+});
+
+// Dodatkowi polscy zawodnicy spoza głównych rankingów referencyjnych.
+// Nazwiska w grze pozostają fikcyjne; kolejność odpowiada trzem profilom
+// źródłowym przekazanym przy rozszerzeniu bazy we wrześniu 2026.
+const additionalPolishPlayers2026 = Object.freeze([
+    { name: "Piotr Macieszak", country: "Polska", birthYear: 1998, ovr: 58, scoring: 59, doubles: 57 },
+    { name: "Sebastian Stajer", country: "Polska", birthYear: 1980, ovr: 56, scoring: 56, doubles: 56 },
+    { name: "Jakub Janaszewski", country: "Polska", birthYear: 2000, ovr: 57, scoring: 58, doubles: 56 },
+    { name: "Łukasz Wacławik", country: "Polska", birthYear: 1980, ovr: 59, scoring: 60, doubles: 58 }
+].map(candidate => ({
+    ...candidate,
+    prizeMoney: 0,
+    proTourPrizeMoney: 0,
+    pcPrizeMoney: 0,
+    challengeTourPrizeMoney: 0,
+    developmentTourPrizeMoney: 0,
+    hasTourCard: false
+})));
+
 // Zawodnicy dopisani wyłącznie po to, aby utworzyć pełną pulę reprezentacji
 // Pucharu Narodów, nie mają karty PDC. Nie biorą więc udziału w indywidualnym
 // rankingu ani w turniejach rankingowych; pozostają dostępni dla reprezentacji.
@@ -447,6 +697,14 @@ function applyPlayerRatingUpdate(candidate, { preserveProgress = false, careerPl
     const update = playerRatingUpdatesByName.get(normalizePlayerRatingName(candidate.name || candidate.sourceName));
     if (!update) return;
 
+    // Oceny ustawione w edytorze są świadomą zmianą w danym zapisie. Zachowujemy
+    // jedynie informację o wersji korekty, ale nie dodajemy do nich różnicy z
+    // późniejszej migracji bazy zawodników.
+    if (candidate.playerEditorRatingOverride === true) {
+        candidate.ratingUpdate = { key: update.key, ovr: update.ovr };
+        return;
+    }
+
     const previousUpdate = candidate.ratingUpdate;
     const previousOvr = previousUpdate?.key === update.key && Number.isFinite(previousUpdate.ovr)
         ? previousUpdate.ovr : update.previousOvr;
@@ -502,7 +760,8 @@ function applyKnownPlayerCorrections(players, options = {}) {
                 // Oceny startowe nie mogą zastępować treningu ani wyników
                 // zapisanej kariery. Korekty nazw i krajów nadal obowiązują;
                 // jednorazowe zmiany OVR obsługuje applyPlayerRatingUpdate.
-                if (options.preserveProgress && ['ovr', 'scoring', 'doubles'].includes(field)) return;
+                if ((options.preserveProgress || candidate.playerEditorRatingOverride === true)
+                    && ['ovr', 'scoring', 'doubles'].includes(field)) return;
                 candidate[field] = value;
             });
         }
@@ -535,5 +794,10 @@ function applyWorldCupNonRankingStatus(players) {
 }
 
 applyWorldCupNonRankingStatus(pdcPlayers);
+
+// Dopisujemy nowych zawodników dopiero po oznaczeniu historycznej puli Pucharu
+// Narodów. Dzięki temu zachowujemy indeksy starszej bazy używane przez mody i
+// nie klasyfikujemy graczy cyklów pobocznych jako gości turniejów reprezentacyjnych.
+pdcPlayers.push(...challengeTour2026NewPlayers, ...developmentTour2026NewPlayers, ...additionalPolishPlayers2026);
 
 // --- BAZA TURNIEJÓW ---

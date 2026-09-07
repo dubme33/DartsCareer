@@ -311,6 +311,72 @@ function getPlayerCareerTitles(candidate) {
         || String(first.name || '').localeCompare(String(second.name || ''), getPlayerProfileLocale()));
 }
 
+function playerMatchesHistoricalChampion(candidate, historicalId) {
+    if (!candidate || candidate.isBye || !historicalId
+        || typeof historicalChampionProfiles === 'undefined') return false;
+    const profile = historicalChampionProfiles?.[historicalId];
+    if (!profile) return false;
+    const normalize = typeof normalizeHistoricalChampionName === 'function'
+        ? normalizeHistoricalChampionName
+        : normalizePlayerCareerTitle;
+    const candidateNames = new Set([candidate.name, candidate.sourceName].filter(Boolean).map(normalize));
+    return [profile.name, ...(profile.aliases || [])].filter(Boolean)
+        .some(name => candidateNames.has(normalize(name)));
+}
+
+function getHistoricalPlayerCareerTitles(candidate) {
+    if (!candidate || candidate.isBye || typeof historicalTournamentChampions === 'undefined'
+        || !Array.isArray(historicalTournamentChampions)) return [];
+    const titles = [];
+    const lastHistoricalSeason = typeof CAREER_HISTORY_LAST_REAL_SEASON === 'number'
+        ? CAREER_HISTORY_LAST_REAL_SEASON
+        : 2025;
+
+    historicalTournamentChampions.forEach(history => {
+        const tournament = typeof findHistoricalCareerTournament === 'function'
+            ? findHistoricalCareerTournament(history)
+            : null;
+        const titleData = getPlayerCareerTitleData(tournament || {
+            name: history.tournament,
+            sourceName: history.tournament,
+            specialType: history.specialType || ''
+        });
+        (history.editions || []).forEach(rawEdition => {
+            const edition = Array.isArray(rawEdition)
+                ? { year: Number(rawEdition[0]), champion: rawEdition[1] }
+                : rawEdition;
+            const year = Number(edition?.year);
+            if (!Number.isInteger(year) || year < 1900 || year > lastHistoricalSeason) return;
+            const championIds = history.team ? edition.members || [] : [edition.champion];
+            if (!championIds.some(historicalId => playerMatchesHistoricalChampion(candidate, historicalId))) return;
+            const timestamp = new Date(year, 6, 1).getTime();
+            const title = upsertPlayerCareerTitle(titles, titleData, 1, timestamp);
+            if (title) title.historical = true;
+        });
+    });
+    return titles;
+}
+
+function getPlayerProfileCareerTitles(candidate) {
+    const combined = getPlayerCareerTitles(candidate).map(title => ({
+        ...title,
+        winsByYear: { ...(title.winsByYear || {}) }
+    }));
+    getHistoricalPlayerCareerTitles(candidate).forEach(historicalTitle => {
+        upsertPlayerCareerTitle(
+            combined,
+            getPlayerCareerTitleData(historicalTitle),
+            historicalTitle.count,
+            historicalTitle.lastWonAt,
+            historicalTitle
+        );
+    });
+    return combined.sort((first, second) =>
+        (Number(second.count) || 0) - (Number(first.count) || 0)
+        || (Number(second.lastWonAt) || 0) - (Number(first.lastWonAt) || 0)
+        || String(first.name || '').localeCompare(String(second.name || ''), getPlayerProfileLocale()));
+}
+
 function getPlayerCareerTitleTournament(title) {
     const currentTournament = typeof tournamentDatabase !== 'undefined' && Array.isArray(tournamentDatabase)
         ? tournamentDatabase.find(tournament => getPlayerCareerTitleData(tournament).key === title.key)
@@ -384,7 +450,7 @@ function getPlayerCareerTitleRows(titles) {
 }
 
 function renderPlayerCareerTitles(candidate) {
-    const titles = getPlayerCareerTitles(candidate);
+    const titles = getPlayerProfileCareerTitles(candidate);
     const totalTitles = titles.reduce((sum, title) => sum + Math.max(0, Number(title.count) || 0), 0);
     const listMarkup = titles.length
         ? getPlayerCareerTitleRows(titles).map(title => {
@@ -410,7 +476,13 @@ function recordSeasonTournamentResult(candidate, tournament, details = {}) {
     const round = Math.max(2, Number(details.round) || 2);
     const won = Boolean(details.won);
     const prizeMoney = Math.max(0, Number(details.prizeMoney) || 0);
-    const rankingPrizeMoney = details.countTowardsRankings === false ? 0 : prizeMoney;
+    const isChallengeTourEvent = typeof isChallengeTourTournament === 'function'
+        && isChallengeTourTournament(tournament);
+    const isDevelopmentTourEvent = typeof isDevelopmentTourTournament === 'function'
+        && isDevelopmentTourTournament(tournament);
+    const rankingPrizeMoney = details.countTowardsRankings === false || isChallengeTourEvent || isDevelopmentTourEvent
+        ? 0
+        : prizeMoney;
     const timestamp = (typeof currentDate !== 'undefined' && currentDate instanceof Date)
         ? currentDate.getTime()
         : Date.now();
@@ -448,6 +520,16 @@ function recordSeasonTournamentResult(candidate, tournament, details = {}) {
 }
 
 function getRankingPosition(candidate, type) {
+    if (type === 'developmentTour' && typeof getDevelopmentTourOrderOfMerit === 'function') {
+        const index = getDevelopmentTourOrderOfMerit(getCareerProfilePlayers())
+            .findIndex(row => samePlayer(row, candidate));
+        return index === -1 ? null : index + 1;
+    }
+    if (type === 'challengeTour' && typeof getChallengeTourOrderOfMerit === 'function') {
+        const index = getChallengeTourOrderOfMerit(getCareerProfilePlayers())
+            .findIndex(row => samePlayer(row, candidate));
+        return index === -1 ? null : index + 1;
+    }
     if (typeof getCachedRankedPlayers === 'function') {
         const index = getCachedRankedPlayers(type).findIndex(row => samePlayer(row, candidate));
         return index === -1 ? null : index + 1;
@@ -536,6 +618,8 @@ function openPlayerProfile(playerId, rankingType = 'main') {
         [trPlayerProfile('proSeries'), getRankingPosition(selectedPlayer, 'protour')],
         [trPlayerProfile('playersCup'), getRankingPosition(selectedPlayer, 'pc')],
         ['European Tour OOM', getRankingPosition(selectedPlayer, 'europeanTour')],
+        [typeof trChallengeTour === 'function' ? trChallengeTour('tableName') : 'Tabela Rising Stars', getRankingPosition(selectedPlayer, 'challengeTour')],
+        [typeof trDevelopmentTour === 'function' ? trDevelopmentTour('tableName') : 'Tabela Future Champions', getRankingPosition(selectedPlayer, 'developmentTour')],
         [trPlayerProfile('gdl'), getGdlRankingPosition(selectedPlayer)]
     ];
 

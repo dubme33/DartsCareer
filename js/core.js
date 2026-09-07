@@ -164,9 +164,12 @@
             const declineMultiplier = isCareerPlayer && Number.isFinite(profile.careerDeclineMultiplier)
                 ? profile.careerDeclineMultiplier
                 : profile.declineMultiplier;
+            const difficultyMultiplier = isCareerPlayer && typeof getCareerDifficultyDevelopmentMultiplier === 'function'
+                ? getCareerDifficultyDevelopmentMultiplier(candidate, numericChange)
+                : 1;
             return numericChange > 0
-                ? numericChange * growthMultiplier
-                : numericChange * declineMultiplier;
+                ? numericChange * growthMultiplier * difficultyMultiplier
+                : numericChange * declineMultiplier * difficultyMultiplier;
         }
 
         function samePlayer(first, second) {
@@ -623,7 +626,14 @@
             };
 
             // Krótsze turnieje są bardziej podatne na „dzień konia” zawodnika.
-            if ((name.includes('players championship') || name.includes('pro players cup')) && !name.includes('final')) {
+            const isChallengeTourEvent = (typeof isChallengeTourTournament === 'function'
+                && isChallengeTourTournament(tournament))
+                || name.includes('rising stars circuit') || name.includes('challenge tour');
+            const isDevelopmentTourEvent = (typeof isDevelopmentTourTournament === 'function'
+                && isDevelopmentTourTournament(tournament))
+                || name.includes('future champions circuit') || name.includes('development tour');
+            if (isChallengeTourEvent || isDevelopmentTourEvent
+                || ((name.includes('players championship') || name.includes('pro players cup')) && !name.includes('final'))) {
                 return { ...profile, key: 'floor', ratingScale: 36, formSpread: 6.5, matchNoise: 4.2, underdogHotChance: 0.18, hotRunMin: 5, hotRunRange: 6, underdogRank: 16, favoriteColdChance: 0.13, coldRunMin: 3, coldRunRange: 4, favoriteRank: 16, maxForm: 14 };
             }
             if (name.includes('european tour') || name.includes('continental tour')) {
@@ -737,10 +747,10 @@
         function getTournamentRatingTransferFactor(candidate) {
             const rating = Number(isCurrentPlayer(candidate) ? player.overall
                 : candidate?.baseOvr ?? candidate?.ovr ?? candidate?.overall);
-            if (!Number.isFinite(rating) || rating <= 85) return 1;
-            // Wynik wciąż może przesunąć elitę, lecz jeden dobry sezon nie powinien
-            // zamieniać kilkunastu graczy 85–89 OVR w kolejną grupę 90+.
-            return Math.max(0.08, (97 - rating) / 12);
+            if (!Number.isFinite(rating) || rating <= 86) return 1;
+            // Elita nadal reaguje wolniej, ale hamulec zaczyna działać łagodniej
+            // i nie zamraża zawodników 87–90 OVR po kilku sezonach kariery.
+            return Math.max(0.12, (99 - rating) / 13);
         }
 
         function applyTournamentRatingChange(winner, loser, round) {

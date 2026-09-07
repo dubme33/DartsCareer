@@ -34,6 +34,27 @@
         }
         .screen.active { display: block; }
 
+        .panel-top-back {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: auto;
+            min-height: 38px;
+            margin: 0 0 14px;
+            padding: 8px 14px;
+            border: 1px solid #55708c;
+            border-radius: 7px;
+            background: #263a50;
+            color: #ecf0f1;
+            font: inherit;
+            font-size: 14px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: background-color .2s, border-color .2s, transform .2s;
+        }
+        .panel-top-back:hover { background: #344f6b; border-color: #7fa1c4; transform: translateX(-2px); }
+        .panel-top-back:focus-visible { outline: 3px solid #f1c40f; outline-offset: 3px; }
+
         h2, h3 { text-align: center; color: var(--accent-green); border-bottom: 2px solid var(--accent-red); padding-bottom: 10px; }
 
         .form-group { margin-bottom: 20px; display: flex; flex-direction: column; }
@@ -73,6 +94,33 @@
         .menu-tile:hover { transform: translateY(-5px); border-color: var(--accent-green); background-color: #34495e; }
         .menu-tile h3 { border: none; margin: 0 0 10px 0; color: white; font-size: 18px;}
         .menu-tile p { margin: 0; color: #bdc3c7; font-size: 13px; }
+        .career-difficulty-field small {
+            margin-top: 7px;
+            color: #bdc3c7;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+        .career-difficulty-tile { cursor: default; border-color: #8e67c7; background-color: #3b2c63; }
+        .career-difficulty-tile select {
+            width: 100%;
+            box-sizing: border-box;
+            margin: 13px 0 9px;
+            padding: 10px;
+            border: 1px solid #a98bd3;
+            border-radius: 6px;
+            background: #17142b;
+            color: #fff;
+            font: inherit;
+            font-weight: 700;
+        }
+        .career-difficulty-tile small {
+            display: block;
+            min-height: 34px;
+            color: #dfd3ef;
+            font-size: 12px;
+            line-height: 1.4;
+        }
+        .career-difficulty-tile select:focus-visible { outline: 3px solid #f1c40f; outline-offset: 2px; }
         .tiktok-tile { display: block; min-width: 0; background-color: #101010; border-color: #25f4ee; color: white; text-decoration: none; }
         .tiktok-tile p { color: #ecf0f1; overflow-wrap: anywhere; }
         .tiktok-tile:hover { background-color: #161616; border-color: #fe2c55; }
@@ -304,6 +352,24 @@
         }
         .bracket-match.player-match { border: 2px solid var(--accent-green); background: #1a1a2e; box-shadow: 0 0 10px var(--accent-green); }
         .bracket-vs { color: var(--accent-red); font-weight: bold; font-size: 12px; margin: 0 15px; }
+        .bracket-seed {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 22px;
+            height: 22px;
+            box-sizing: border-box;
+            margin-right: 4px;
+            padding: 0 5px;
+            border: 1px solid #f1c40f;
+            border-radius: 5px;
+            background: #19243b;
+            color: #f1c40f;
+            font-size: 11px;
+            font-weight: 900;
+            line-height: 1;
+            vertical-align: middle;
+        }
         /* Statystyki pod sterowaniem na mniejszych ekranach. */
 @media (max-width: 1100px) {
     .match-layout { grid-template-columns: minmax(0, 1fr); }
@@ -675,6 +741,61 @@
         @keyframes pulse {
             0% { transform: scale(1); }
             100% { transform: scale(1.1); }
+        }
+
+        .ranking-points-guide {
+            margin: 0 0 10px;
+            padding: 10px 12px;
+            border: 1px solid rgba(241, 196, 15, 0.45);
+            border-radius: 7px;
+            background: rgba(241, 196, 15, 0.09);
+            color: #ecf0f1;
+            font-size: 12px;
+            line-height: 1.5;
+            text-align: center;
+            overflow-wrap: anywhere;
+        }
+
+        .ranking-navigation-groups {
+            display: grid;
+            gap: 12px;
+            margin-bottom: 15px;
+        }
+        .ranking-navigation-group {
+            padding: 10px;
+            border: 1px solid rgba(149, 165, 166, .28);
+            border-radius: 9px;
+            background: rgba(15, 52, 96, .24);
+        }
+        .ranking-navigation-group h3 {
+            margin: 0 0 8px;
+            color: #bdc3c7;
+            font-size: 11px;
+            line-height: 1.3;
+            letter-spacing: .08em;
+            text-align: left;
+            text-transform: uppercase;
+        }
+        .ranking-navigation-group-secondary {
+            border-color: rgba(230, 126, 34, .55);
+            background: rgba(211, 84, 0, .08);
+        }
+        .ranking-navigation-group-secondary h3 { color: #f0b27a; }
+        .ranking-navigation-buttons {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 8px;
+        }
+        @media (min-width: 760px) {
+            .ranking-navigation-groups {
+                grid-template-columns: minmax(0, 3fr) minmax(230px, 1fr);
+                align-items: stretch;
+            }
+            .ranking-navigation-group-secondary .ranking-navigation-buttons {
+                display: grid;
+                grid-template-columns: 1fr;
+            }
         }
 
         .ranking-player-row {

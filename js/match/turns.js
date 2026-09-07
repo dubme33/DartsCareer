@@ -61,7 +61,7 @@ function playerThrow() {
                 && match.dartsThrown < 3 && !match.isTurnLocked) {
                 const score = match.p1Score;
                 const isDoubleIn = Boolean(activeTournament && activeTournament.format === 'DIDO');
-                const aim = getOptimalAim(score, isDoubleIn, 3 - match.dartsThrown);
+                const aim = getOptimalAim(score, isDoubleIn, 3 - match.dartsThrown, match.p2Score);
                 if (!aim || !throwCareerDart(aim.sector, aim.mult)) break;
                 simulated = true;
             }
@@ -81,8 +81,9 @@ function playerThrow() {
             let dartsLeft = 3 - currentMatch.dartsThrown;
             
             const scoringVisit = typeof getAiScoringVisit === 'function' ? getAiScoringVisit(currentMatch, isP1) : null;
-            let aim = scoringVisit ? getAiScoringAim(score, isDIDO, dartsLeft, scoringVisit)
-                : getOptimalAim(score, isDIDO, dartsLeft);
+            const opponentScore = isP1 ? currentMatch.p2Score : currentMatch.p1Score;
+            let aim = scoringVisit ? getAiScoringAim(score, isDIDO, dartsLeft, scoringVisit, opponentScore)
+                : getOptimalAim(score, isDIDO, dartsLeft, opponentScore);
             
             const aiPlayer = currentMatch.isDoubles
                 ? getDoublesCurrentThrower(isP1)
@@ -192,7 +193,10 @@ function playerThrow() {
                     // Celowanie w 50 (Inner Bull)
                     const baseBullHitChance = clamp(stat * 0.35, 10, 45);
                     const bullHitChance = Math.min(45, baseBullHitChance + getThrowGroupingBonus(groupingVisit, targetSector, targetMult));
-                    const outerHitChance = baseBullHitChance + 35; // Pudło ląduje w Outer Bull (25)
+                    // Celność czerwonego środka pozostaje bez zmian. Większa
+                    // część jego pudeł trafia jednak w bezpośrednio otaczający
+                    // Outer Bull, zamiast przeskakiwać od razu do dużego singla.
+                    const outerHitChance = Math.min(97, bullHitChance + 40);
 
                     if (roll <= bullHitChance) {
                         return { sector: 25, mult: 2 }; // Trafienie 50 (D-Bull)
@@ -204,10 +208,11 @@ function playerThrow() {
                     }
                 } else {
                     // Celowanie w 25 (Outer Bull)
-                    let outerHitChance = clamp(stat * 0.55, 20, 65);
+                    const outerHitChance = clamp(stat * 0.55, 20, 65);
+                    const incidentalBullChance = 12;
                     if (roll <= outerHitChance) {
                         return { sector: 25, mult: 1 };
-                    } else if (roll <= outerHitChance + 10) {
+                    } else if (roll <= outerHitChance + incidentalBullChance) {
                         return { sector: 25, mult: 2 }; // Przypadkowe trafienie w 50
                     } else {
                         return { sector: dartboardOrder[Math.floor(Math.random() * 20)], mult: 1 };

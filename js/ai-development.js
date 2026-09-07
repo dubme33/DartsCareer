@@ -2,6 +2,7 @@
 // tej samej zmiany, a nie drugą premią. Nie zmieniamy treningu gracza kariery.
 const AI_SEASON_DEVELOPMENT_VERSION = 1;
 const AI_SEASON_DEVELOPMENT_MAX_CHANGE = 10;
+const AI_SEASON_DEVELOPMENT_GROWTH_MULTIPLIER = 1.05;
 
 function getAiDevelopmentRating(candidate, year) {
     const career = typeof isCurrentPlayer === 'function' && isCurrentPlayer(candidate);
@@ -86,14 +87,23 @@ function limitAiDevelopmentGrowth(rating, change) {
     if (change <= 0) return change;
     let remaining = change, increase = 0;
     // Hamujemy wyłącznie wzrost, nie porażki zawodnika z wysokim OVR.
+    // Łagodniejsze przedziały pozwalają najlepszym sezonowo wejść na 90–94,
+    // ale dalszy rozwój do absolutnego maksimum nadal pozostaje coraz trudniejszy.
     // Nie ma przydziału punktów według miejsca w OOM ani automatycznych awansów.
-    for (const [ceiling, multiplier] of [[85, 1], [90, 0.6], [94, 0.3], [99, 0.15]]) {
+    for (const [ceiling, multiplier] of [[85, 1], [90, 0.75], [94, 0.45], [99, 0.2]]) {
         const room = Math.max(0, ceiling - rating - increase);
         const used = Math.min(remaining, room / multiplier);
         increase += used * multiplier;
         remaining -= used;
     }
     return increase;
+}
+
+function increaseAiSeasonDevelopmentGrowth(change, limit = AI_SEASON_DEVELOPMENT_MAX_CHANGE) {
+    if (!Number.isFinite(change) || change <= 0) return change;
+    // Niewielkie +5% dotyczy wyłącznie dodatniej oceny całego sezonu.
+    // Limit sezonowy i hamowanie rozwoju elity nadal obowiązują bez zmian.
+    return Math.min(limit, change * AI_SEASON_DEVELOPMENT_GROWTH_MULTIPLIER);
 }
 
 function settleAiSeasonDevelopment(completedYear) {
@@ -114,7 +124,9 @@ function settleAiSeasonDevelopment(completedYear) {
             ? Math.max(-limit, Math.min(limit, (state.wins - state.expectedWins) / (state.sensitivity + 0.6)))
             : state.inSeasonDelta;
         const seasonStart = before - state.inSeasonDelta;
-        const totalChange = state.matches >= 12 ? limitAiDevelopmentGrowth(seasonStart, performanceChange) : state.inSeasonDelta;
+        const totalChange = state.matches >= 12
+            ? limitAiDevelopmentGrowth(seasonStart, increaseAiSeasonDevelopmentGrowth(performanceChange, limit))
+            : state.inSeasonDelta;
         const after = Math.max(45, Math.min(99, seasonStart + totalChange));
         const adjustment = after - before;
         ensureBaseRatings(candidate);

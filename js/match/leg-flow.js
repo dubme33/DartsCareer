@@ -54,7 +54,7 @@ function checkAchievements(type, data = null) {
             }
         }
 
-        function startSuddenDeath() {
+        function startSuddenDeath(completedLegWinnerIsP1 = null) {
             resetMatchThrowGrouping(currentMatch);
             const st = currentMatch.stats;
             st.p1AccumulatedScore += (501 - currentMatch.p1Score);
@@ -66,8 +66,18 @@ function checkAchievements(type, data = null) {
             currentMatch.p2Score = 501;
             currentMatch.p1TurnStartScore = 501;
             currentMatch.p2TurnStartScore = 501;
-            currentMatch.suddenDeath = { p1Score: 0, p2Score: 0, p1Darts: 0, p2Darts: 0 };
-            currentMatch.turn = 'p1';
+            // Sudden death jest wyłącznie znacznikiem decydującego lega. Punktacja,
+            // kolejność podejść, busty i double-out korzystają ze zwykłego silnika 501.
+            currentMatch.suddenDeath = { decidingLeg: true };
+            currentMatch.p1Momentum = 0;
+            currentMatch.p2Momentum = 0;
+            if (currentMatch.isDoubles && completedLegWinnerIsP1 !== null) {
+                const side = completedLegWinnerIsP1 ? 'p1' : 'p2';
+                currentMatch.doublesThrower[side] = currentMatch.doublesThrower[side] === 0 ? 1 : 0;
+            }
+            currentMatch.turn = (currentMatch.totalLegsPlayed % 2 === 0)
+                ? currentMatch.startingPlayer
+                : (currentMatch.startingPlayer === 'p1' ? 'p2' : 'p1');
             currentMatch.dartsThrown = 0;
             currentMatch.isTurnLocked = false;
             currentTurnScore = 0;
@@ -82,106 +92,14 @@ function checkAchievements(type, data = null) {
             setTurnUI();
         }
 
-        function resolveSuddenDeath() {
-            if (!currentMatch?.suddenDeath || currentMatch.isFinishing) return false;
-            resetMatchThrowGrouping(currentMatch);
-            const suddenDeath = currentMatch.suddenDeath;
-            const isP1 = suddenDeath.p1Score > suddenDeath.p2Score;
-            if (suddenDeath.p1Score === suddenDeath.p2Score) {
-                logThrow(`⚡ ${t('t-log-sd-tie')}`, 'miss');
-                setTimeout(() => {
-                    if (!currentMatch || !currentMatch.suddenDeath) return;
-                    currentMatch.suddenDeath = { p1Score: 0, p2Score: 0, p1Darts: 0, p2Darts: 0 };
-                    currentMatch.turn = 'p1';
-                    currentMatch.dartsThrown = 0;
-                    currentMatch.isTurnLocked = false;
-                    currentTurnScore = 0;
-                    drawnDarts = [];
-                    updateScores();
-                    updateDartDots();
-                    drawDartboard();
-                    setTurnUI();
-                }, 1500);
-                return;
-            }
-
-            const winnerName = currentMatch.isDoubles
-                ? getDoublesTeamName(isP1)
-                : (typeof getCurrentSinglesMatchPlayerName === 'function'
-                    ? getCurrentSinglesMatchPlayerName(isP1)
-                    : (isP1 ? player.name : currentMatch.opponent.name));
-            logThrow(`⚡ ${winnerName} ${t('t-log-sd-win')}`, isP1 ? 'hit' : 'ai');
-
-            // Record the decider before the shared completion reads the score.
-            if (isP1) currentMatch.p1Legs++;
-            else currentMatch.p2Legs++;
-            currentMatch.totalLegsPlayed++;
-
-            // W mistrzostwach świata zwycięzca decidera dostaje również ostatni set.
-            if (currentMatch.suddenDeathDecidesSet) {
-                if (isP1) currentMatch.p1Sets++;
-                else currentMatch.p2Sets++;
-                currentMatch.suddenDeathDecidesSet = false;
-                logThrow(`🏆 ${winnerName} ${t('t-log-wins-set')}`, isP1 ? 'hit' : 'ai');
-            }
-
-            currentMatch.suddenDeath = null;
-            if (isP1 && !currentMatch.isSpectator) checkAchievements('sudden_death'); // <--- DODANE TUTAJ
-            updateScores();
-            return finishMatch();
-        }
-
-        function processSuddenDeathThrow(isP1, targetSec, targetMult, hitSec, hitMult) {
-            const suddenDeath = currentMatch.suddenDeath;
-            const points = hitSec * hitMult;
-            const playerName = currentMatch.isDoubles
-                ? getCurrentMatchThrowerName(isP1)
-                : (typeof getCurrentSinglesMatchPlayerName === 'function'
-                    ? getCurrentSinglesMatchPlayerName(isP1)
-                    : (isP1 ? player.name : currentMatch.opponent.name));
-            const logType = isP1 ? 'hit' : 'ai';
-
-            addDartToCanvas(hitSec, hitMult, isP1 ? '#f1c40f' : '#ecf0f1', targetSec, targetMult);
-            if (isP1) {
-                suddenDeath.p1Score += points;
-                suddenDeath.p1Darts++;
-                currentMatch.dartsThrown = suddenDeath.p1Darts;
-            } else {
-                suddenDeath.p2Score += points;
-                suddenDeath.p2Darts++;
-                currentMatch.dartsThrown = suddenDeath.p2Darts;
-            }
-
-            logThrow(`⚡ ${playerName} ${t('t-log-throws')}: ${getPrefix(hitMult)}${hitSec} (${points})`, logType);
-            updateScores();
-            updateDartDots();
-
-            if (isP1 && suddenDeath.p1Darts === 3) {
-                resetMatchThrowGrouping(currentMatch);
-                currentMatch.turn = 'p2';
-                currentMatch.dartsThrown = 0;
-                setTurnUI();
-                return;
-            }
-
-            if (!isP1 && suddenDeath.p2Darts === 3) {
-                resolveSuddenDeath();
-                return;
-            }
-
-            if (!isP1) {
-                clearTimeout(window.aiTimeout);
-                if (typeof scheduleSpectatorPlaybackAction === 'function') {
-                    window.aiTimeout = scheduleSpectatorPlaybackAction(aiTurn, 1200, 650);
-                } else window.aiTimeout = setTimeout(aiTurn, 1200);
-            }
-        }
-
        function handleCompletedLeg(isP1, playerName) {
             resetMatchThrowGrouping(currentMatch);
             const st = currentMatch.stats;
+            const wasSuddenDeath = Boolean(currentMatch.suddenDeath);
             // --- SPRAWDZANIE 9-DARTERA ---
             if (isP1 && !currentMatch.isSpectator && st.p1LegDarts === 9 && (!currentMatch.isDoubles || isCareerPlayerThrowing(true))) {
+                if (!currentMatch.interviewFacts) currentMatch.interviewFacts = {};
+                currentMatch.interviewFacts.nineDarter = true;
                 setTimeout(() => triggerNineDarterAlert(), 1500);
                 checkAchievements('9darter');
             }
@@ -198,6 +116,13 @@ function checkAchievements(type, data = null) {
             } else {
                 currentMatch.p2Legs++;
             }
+            if (!Array.isArray(currentMatch.interviewLegScores)) currentMatch.interviewLegScores = [];
+            currentMatch.interviewLegScores.push({
+                p1: currentMatch.p1Legs,
+                p2: currentMatch.p2Legs,
+                p1Sets: currentMatch.p1Sets,
+                p2Sets: currentMatch.p2Sets
+            });
 
             const format = currentMatch.matchFormat || {};
             const isDecidingSet = isSetMatch && format.decidingSetWinByTwo &&
@@ -205,7 +130,7 @@ function checkAchievements(type, data = null) {
                 currentMatch.p2Sets === format.setsToWin - 1;
             const legDifference = Math.abs(currentMatch.p1Legs - currentMatch.p2Legs);
             const setHasLegWinner = currentMatch.p1Legs >= format.legsPerSet || currentMatch.p2Legs >= format.legsPerSet;
-            const setWonByRequiredMargin = !isDecidingSet || legDifference >= 2;
+            const setWonByRequiredMargin = !isDecidingSet || legDifference >= 2 || wasSuddenDeath;
 
             // 3. Sprawdzanie wygranej w formacie setowym. W decydującym secie MŚ
             // wymagane są dwa legi przewagi, więc wynik 3:2 nie kończy jeszcze seta.
@@ -221,6 +146,18 @@ function checkAchievements(type, data = null) {
                 logThrow(`🏆 ${setWinnerName} ${t('t-log-wins-set')}`, isP1 ? 'hit' : 'ai');
             }
 
+            if (wasSuddenDeath) {
+                const winnerName = currentMatch.isDoubles
+                    ? getDoublesTeamName(isP1)
+                    : (typeof getCurrentSinglesMatchPlayerName === 'function'
+                        ? getCurrentSinglesMatchPlayerName(isP1)
+                        : (isP1 ? player.name : currentMatch.opponent.name));
+                logThrow(`⚡ ${winnerName} ${t('t-log-sd-win')}`, isP1 ? 'hit' : 'ai');
+                currentMatch.suddenDeath = null;
+                currentMatch.suddenDeathDecidesSet = false;
+                if (isP1 && !currentMatch.isSpectator) checkAchievements('sudden_death');
+            }
+
             const decidingSetReachedSuddenDeath = isDecidingSet && format.decidingSetSuddenDeathAt &&
                 currentMatch.p1Legs === format.decidingSetSuddenDeathAt &&
                 currentMatch.p2Legs === format.decidingSetSuddenDeathAt;
@@ -232,7 +169,7 @@ function checkAchievements(type, data = null) {
             if (decidingSetReachedSuddenDeath || legMatchReachedSuddenDeath) {
                 currentMatch.suddenDeathDecidesSet = decidingSetReachedSuddenDeath;
                 updateScores(); // Odświeżamy wynik przed nagłą śmiercią
-                startSuddenDeath();
+                startSuddenDeath(isP1);
                 return true;
             }
 
@@ -319,11 +256,6 @@ function checkAchievements(type, data = null) {
             // dopisać czwartej lotki do bieżącego podejścia.
             const throwingSide = isP1 ? 'p1' : 'p2';
             if (currentMatch.turn !== throwingSide || currentMatch.dartsThrown >= 3 || currentMatch.isTurnLocked) return;
-
-            if (currentMatch.suddenDeath) {
-                if (typeof processSuddenDeathThrow === 'function') processSuddenDeathThrow(isP1, targetSec, targetMult, hitSec, hitMult);
-                return;
-            }
 
             if (currentMatch.p1Momentum === undefined) { currentMatch.p1Momentum = 0; currentMatch.p2Momentum = 0; }
 

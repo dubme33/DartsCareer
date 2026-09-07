@@ -106,8 +106,9 @@
     cursor: pointer;
 }
 
-#screen-player-editor .player-editor-search { display: block; margin: 16px 0 12px; }
+#screen-player-editor .player-editor-search { display: block; margin: 16px 0 10px; }
 #screen-player-editor .player-editor-search input,
+#screen-player-editor .player-editor-roster-controls select,
 #screen-player-editor .player-editor-fields input,
 #screen-player-editor .player-editor-fields select {
     width: 100%;
@@ -122,11 +123,73 @@
 }
 
 #screen-player-editor .player-editor-search input:focus,
+#screen-player-editor .player-editor-roster-controls select:focus,
 #screen-player-editor .player-editor-fields input:focus,
 #screen-player-editor .player-editor-fields select:focus {
     border-color: #5bc7f3;
     box-shadow: 0 0 0 3px rgba(91, 199, 243, .14);
 }
+
+#screen-player-editor .player-editor-roster-controls {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    margin-bottom: 12px;
+}
+
+#screen-player-editor .player-editor-roster-controls label { min-width: 0; }
+#screen-player-editor .player-editor-roster-controls span {
+    display: block;
+    margin: 0 0 5px 2px;
+    color: #91abc3;
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: .04em;
+    text-transform: uppercase;
+}
+
+#screen-player-editor .player-editor-roster-controls select {
+    min-width: 0;
+    padding: 8px 7px;
+    font-size: 12px;
+}
+
+#screen-player-editor .player-editor-country-delete {
+    margin-bottom: 12px;
+    padding: 11px;
+    border: 1px solid #683744;
+    border-radius: 8px;
+    background: #211823;
+}
+
+#screen-player-editor .player-editor-country-delete strong {
+    display: block;
+    color: #ffaaa3;
+    font-size: 12px;
+}
+
+#screen-player-editor .player-editor-country-delete p {
+    margin: 5px 0 9px;
+    color: #a996a2;
+    font-size: 11px;
+    line-height: 1.4;
+}
+
+#screen-player-editor #player-editor-delete-country {
+    width: 100%;
+    padding: 9px 10px;
+    border: 1px solid #d65b67;
+    border-radius: 7px;
+    background: #7a2732;
+    color: #fff;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+#screen-player-editor #player-editor-delete-country:hover:not(:disabled) { background: #97323f; }
+#screen-player-editor #player-editor-delete-country:disabled { opacity: .45; cursor: not-allowed; }
 
 #screen-player-editor .player-editor-roster-list {
     max-height: 550px;
@@ -252,6 +315,13 @@
 }
 
 #screen-player-editor #player-editor-photo-remove { background: #492a35; border-color: #8e4a5d; }
+#screen-player-editor #player-editor-delete {
+    margin-left: auto;
+    background: #7a2732;
+    border-color: #d65b67;
+}
+#screen-player-editor #player-editor-delete:hover { background: #97323f; }
+#screen-player-editor #player-editor-delete[hidden] { display: none; }
 #screen-player-editor .player-editor-walkon-row {
     display: flex;
     align-items: center;

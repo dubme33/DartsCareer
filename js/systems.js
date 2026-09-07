@@ -149,7 +149,13 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
             const shouldSaveLegacyActiveHtml = Boolean(activeTournament && !hasActiveCompactHistory);
             return {
                 version: 4,
-                player, pdcPlayers, tournamentDatabase: getTournamentDatabaseForSave(),
+                player: {
+                    ...player,
+                    careerRecords: typeof getCareerRecordsForSave === 'function'
+                        ? getCareerRecordsForSave(player?.careerRecords)
+                        : player?.careerRecords
+                },
+                pdcPlayers, tournamentDatabase: getTournamentDatabaseForSave(),
                 currentDate: currentDate.getTime(), emails, unreadMailsCount,
                 gdlTable: Array.isArray(gdlTable)
                     ? gdlTable.map(row => isPlainObject(row) ? { ...row, player: getPlayerSaveReference(row.player) } : row)
@@ -227,6 +233,24 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
             if (tournament.specialType === 'pdcQSchool') {
                 return rankBy('prizeMoney').filter(candidate => candidate.hasTourCard !== true);
             }
+            if (tournament.specialType === 'challengeTour') {
+                return rankBy('challengeTourPrizeMoney').filter(candidate => candidate.hasTourCard !== true);
+            }
+            if (tournament.specialType === 'developmentTour') {
+                return typeof getDevelopmentTourEligiblePlayers === 'function'
+                    ? getDevelopmentTourEligiblePlayers(candidates, currentDate)
+                    : [];
+            }
+            if (tournament.specialType === 'classicMastersQualifier') {
+                return typeof getCrownMastersQualifierParticipants === 'function'
+                    ? getCrownMastersQualifierParticipants(tournament, candidates)
+                    : [];
+            }
+            if (tournament.specialType === 'classicMasters') {
+                return typeof getCrownMastersMainParticipants === 'function'
+                    ? getCrownMastersMainParticipants(tournament, candidates)
+                    : [];
+            }
             if (tournament.specialType === 'pdcTourCardQualifier') {
                 return typeof getPdcTourCardQualifierEligiblePlayers === 'function'
                     ? getPdcTourCardQualifierEligiblePlayers(tournament, candidates)
@@ -266,8 +290,14 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
                 return typeof getEuropeanTourOrderOfMerit === 'function'
                     ? getEuropeanTourOrderOfMerit(candidates) : rankBy('europeanTourPrizeMoney');
             }
+            if (typeof isUKOpenTournament === 'function' && isUKOpenTournament(tournament)) {
+                return typeof getUKOpenFullField === 'function'
+                    ? getUKOpenFullField(tournament, candidates, currentDate, true)
+                    : [];
+            }
             if (name.includes('players championship') || name.includes('pro players cup')
-                || name.includes('uk open') || name.includes('british open')) {
+                || name.includes('uk open') || name.includes('british open')
+            ) {
                 const withdrawnKeys = new Set(tournament.playersChampionshipWithdrawals || []);
                 return rankBy('prizeMoney').filter(candidate => candidate.hasTourCard !== true
                     && !withdrawnKeys.has(candidate.id || candidate.name));
@@ -313,7 +343,8 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
             const usedIdentities = new Set(bracket.map(getIdentity).filter(Boolean));
             const isRetired = candidate => !candidate
                 || (typeof isRetiredPlayer === 'function' && isRetiredPlayer(candidate));
-            const restrictedQualifier = ['pdcQSchool', 'pdcTourCardQualifier', 'continentalQualifier', 'worldMastersFinalsQualifier']
+            const restrictedQualifier = ['pdcQSchool', 'challengeTour', 'developmentTour', 'pdcTourCardQualifier', 'continentalQualifier',
+                'worldMastersFinalsQualifier', 'classicMastersQualifier']
                 .includes(tournament.specialType);
             if (!restrictedQualifier && !bracket.some(isRetired)) return bracket;
             const availablePlayers = [...(Array.isArray(pdcPlayers) ? pdcPlayers : []), ...(player?.name ? [player] : [])]
@@ -476,6 +507,13 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
                 });
                 if (activePlayers.length !== pdcPlayers.length) pdcPlayers.splice(0, pdcPlayers.length, ...activePlayers);
             }
+            // Stan emerytur może być kosztowny do odtworzenia po wczytaniu starego
+            // zapisu. Podczas dopisywania nowych szablonów skład rośnie przy każdej
+            // iteracji, dlatego używamy jednego, spójnego obrazu stanu dla całej
+            // operacji zamiast przeliczać go setki razy.
+            const lifecycleState = typeof ensurePlayerLifecycleState === 'function'
+                ? ensurePlayerLifecycleState()
+                : null;
 
             const getIdentityKey = candidate => typeof getCanonicalPlayerIdentityKey === 'function'
                 ? getCanonicalPlayerIdentityKey(candidate)
@@ -497,12 +535,15 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
                 .filter(Boolean));
             defaultPdcPlayerTemplates.forEach((template, templateIndex) => {
                 const key = getIdentityKey(template);
+                const wasRemovedInEditor = typeof isPlayerEditorDeleted === 'function'
+                    && isPlayerEditorDeleted(template, templateIndex);
                 const isRetiredTemplate = typeof isRetiredPlayer === 'function'
-                    ? isRetiredPlayer(template, templateIndex)
+                    ? isRetiredPlayer(template, templateIndex, lifecycleState || undefined)
                     : (retiredPlayerKeys.has(key) || retiredPlayerNames.has(getRetiredNameKey(template)));
-                if (existingPlayers.has(key) || isRetiredTemplate || isCareerPlayerTemplate(template, templateIndex) || isModReplacementForDefaultPlayer(template, templateIndex)) return;
+                if (existingPlayers.has(key) || wasRemovedInEditor || isRetiredTemplate || isCareerPlayerTemplate(template, templateIndex) || isModReplacementForDefaultPlayer(template, templateIndex)) return;
                 pdcPlayers.push({
                     ...template,
+                    defaultTemplateIndex: templateIndex,
                     historyPT: {},
                     historyMain: {},
                     europeanTourPrizeMoney: 0,
@@ -513,6 +554,7 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
                 });
                 existingPlayers.add(key);
             });
+            if (typeof invalidatePlayerLifecycleCache === 'function') invalidatePlayerLifecycleCache();
             return deduplicatePdcPlayers();
         }
 
@@ -561,6 +603,7 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
         let pendingCareerAutosaveTimer = null;
         let pendingCareerAutosaveResolvers = [];
         let careerSaveWriteQueue = Promise.resolve();
+        let pendingCareerSaveWriteCount = 0;
 
         function waitForCareerSaveWrites() {
             return careerSaveWriteQueue;
@@ -641,7 +684,11 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
             const queuedWrite = careerSaveWriteQueue
                 .catch(() => undefined)
                 .then(() => persistCareerGameState(gameState));
-            careerSaveWriteQueue = queuedWrite.then(() => undefined, () => undefined);
+            pendingCareerSaveWriteCount++;
+            careerSaveWriteQueue = queuedWrite.then(
+                () => { pendingCareerSaveWriteCount--; },
+                () => { pendingCareerSaveWriteCount--; }
+            );
             let result;
             try {
                 result = await queuedWrite;
@@ -676,11 +723,17 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
             return operation;
         }
 
-        function saveGame(isAutoSave = false) {
+        function saveGame(isAutoSave = false, options = {}) {
             if (!isAutoSave) {
                 return pendingCareerAutosaveResolvers.length
                     ? flushScheduledCareerAutosave(false)
                     : performCareerSave(false);
+            }
+
+            if (options.immediate === true) {
+                return pendingCareerAutosaveResolvers.length
+                    ? flushScheduledCareerAutosave(true)
+                    : performCareerSave(true);
             }
 
             return new Promise(resolve => {
@@ -701,6 +754,25 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
             });
         }
 
+        function hasActiveCareerForNavigationWarning() {
+            return typeof player !== 'undefined'
+                && player && typeof player === 'object'
+                && typeof player.name === 'string'
+                && player.name.trim().length > 0;
+        }
+
+        function warnBeforeLeavingActiveCareer(event) {
+            if (!hasActiveCareerForNavigationWarning()) return;
+            event.preventDefault();
+            // Współczesne przeglądarki pokazują własny, niemodyfikowalny tekst.
+            // Przypisanie returnValue zachowuje zgodność ze starszymi wersjami.
+            event.returnValue = true;
+        }
+
+        if (typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
+            window.addEventListener('beforeunload', warnBeforeLeavingActiveCareer);
+        }
+
         // Restores an already parsed save. Keeping this separate lets a downloaded
         // .JSON save be loaded even when the browser's local storage is full.
         function restoreGameState(gameState, showFeedback = true, options = {}) {
@@ -711,6 +783,7 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
                 if (typeof clearCareerProfileMediaRuntime === 'function') clearCareerProfileMediaRuntime();
 
                 player = gameState.player;
+                if (typeof initializeCareerDifficulty === 'function') initializeCareerDifficulty(player);
                 if (!player.activeSponsors) player.activeSponsors = [];
                 if (typeof player.technicalPartner === 'undefined') player.technicalPartner = null;
                 if (!player.historyPT) player.historyPT = {};
@@ -719,6 +792,7 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
                 pdcPlayerIdAliases = new Map();
                 pdcPlayers.length = 0;
                 gameState.pdcPlayers.forEach(candidate => {
+                    if (typeof isPlayerEditorDeleted === 'function' && isPlayerEditorDeleted(candidate)) return;
                     if (!candidate.historyPT) candidate.historyPT = {};
                     if (!candidate.historyMain) candidate.historyMain = {};
                     pdcPlayers.push(candidate);
@@ -750,7 +824,9 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
                 migrateWorldCupCalendar();
                 if (typeof migrateContinentalTourQualifiersCalendar === 'function') migrateContinentalTourQualifiersCalendar();
                 if (typeof migrateWorldMastersCalendar === 'function') migrateWorldMastersCalendar();
-                if (typeof syncPdc2026TournamentCalendar === 'function') syncPdc2026TournamentCalendar();
+                if (typeof syncPdc2026TournamentCalendar === 'function') {
+                    syncPdc2026TournamentCalendar(tournamentDatabase, gameState.currentDate);
+                }
                 currentDate = new Date(gameState.currentDate);
                 if (typeof normalizeSponsorGoals === 'function') normalizeSponsorGoals();
                 if (typeof resetSponsorOffers === 'function') resetSponsorOffers();
@@ -886,6 +962,13 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
 
         async function loadGame(showFeedback = true) {
             if (typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy()) return false;
+            // Wczytanie uruchomione tuż po zmianie w edytorze nie może wyprzedzić
+            // ostatniego zapisu i odtworzyć starszej wersji zawodników.
+            if (typeof pendingCareerAutosaveResolvers !== 'undefined' && pendingCareerAutosaveResolvers.length) {
+                await flushScheduledCareerAutosave(true);
+            } else if (typeof pendingCareerSaveWriteCount !== 'undefined' && pendingCareerSaveWriteCount > 0) {
+                await waitForCareerSaveWrites();
+            }
             if (typeof waitForPersistedModRestore === 'function') {
                 await waitForPersistedModRestore();
             }
@@ -1016,12 +1099,15 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
         }
 
     // --- SYSTEM SPONSORÓW ---
-        const regularSponsorsDB = [
+        const MOD_PROTECTED_REGULAR_SPONSORS_DB = Object.freeze(["M1KEYbet"]);
+        const DEFAULT_REGULAR_SPONSORS_DB = Object.freeze([
             "Dartify", "Bullseye Brews", "AeroFlights", "Precision Logistics", "Oche Energy",
             "DoubleTop Betting", "Trevs Tyres", "MaxScore Analytics", "DartKing Apparel", "Perfect9 Solutions",
             // 7 Nowych sponsorów:
-            "DartsPlanet", "OcheKings", "FlightClub", "180 Sports", "Tungsten Tech", "MegaBet", "DartsConnect"
-        ];
+            "DartsPlanet", "OcheKings", "FlightClub", "180 Sports", "Tungsten Tech", "MegaBet", "DartsConnect",
+            ...MOD_PROTECTED_REGULAR_SPONSORS_DB
+        ]);
+        const regularSponsorsDB = [...DEFAULT_REGULAR_SPONSORS_DB];
         const techSponsorsDB = [
             "AimX", "BladeDart", "Crimson Drake", "Quest Darts", "ArrowsTech", "Strike",
             "Taurus", "Pegasus", "Locks", "ELITE", "CueSpirit", "Galaxy Darts"
@@ -1029,6 +1115,12 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
 
         let availableSponsorOffers = [];
         let availableTechOffers = [];
+        const TECH_SPONSOR_CONTRACT_MONTHS = Object.freeze({ min: 18, max: 36 });
+
+        function getTechnicalSponsorContractMonths() {
+            const { min, max } = TECH_SPONSOR_CONTRACT_MONTHS;
+            return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
 
         function resetSponsorOffers() {
             availableSponsorOffers = [];
@@ -1049,6 +1141,8 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
             resetSponsorOffers();
             
             let baseValue = calculateBaseSponsorValue();
+            const difficultySponsorMultiplier = typeof getCareerDifficultySponsorMultiplier === 'function'
+                ? getCareerDifficultySponsorMultiplier(player) : 1;
             const goalBonusPercent = typeof getSponsorOfferBonusPercent === 'function' ? getSponsorOfferBonusPercent() : 0;
 
             // Losowanie aż 8 zwykłych sponsorów z puli, by gracz miał w czym przebierać
@@ -1056,7 +1150,8 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
             shuffledRegular.forEach(name => {
                 // Skrajne rozbieżności: od 50% do aż 250% bazowej wartości!
                 let valueMultiplier = Math.random() * 2.0 + 0.5; 
-                let monthlyVal = Math.round(baseValue * valueMultiplier * (1 + goalBonusPercent / 100));
+                const difficultyBaseMonthlyValue = Math.round(baseValue * valueMultiplier * (1 + goalBonusPercent / 100));
+                let monthlyVal = Math.round(difficultyBaseMonthlyValue * difficultySponsorMultiplier);
                 
                 // Zwykle najwyższe stawki są na krótszy okres czasu (dylemat ryzyka)
                 let months = 6;
@@ -1067,6 +1162,7 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
                 availableSponsorOffers.push({
                     id: Math.random().toString(36).substr(2, 9), name: name, type: 'regular',
                     monthlyValue: monthlyVal,
+                    difficultyBaseMonthlyValue,
                     goalBonusPercent,
                     months: months
                 });
@@ -1087,12 +1183,14 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
                 else if (tier === 'D') techMultiplier = 2.5 + (Math.random() * 0.8); // FORTUNA (2.5x - 3.3x)
 
                 // Techniczny bazowo ma też x1.5 wyższe stawki ogólne
-                let finalTechValue = Math.round(baseValue * 1.5 * techMultiplier);
+                const difficultyBaseMonthlyValue = Math.round(baseValue * 1.5 * techMultiplier);
+                let finalTechValue = Math.round(difficultyBaseMonthlyValue * difficultySponsorMultiplier);
 
                 availableTechOffers.push({
                     id: Math.random().toString(36).substr(2, 9), name: name, type: 'tech',
                     monthlyValue: finalTechValue,
-                    months: Math.floor(Math.random() * 10) + 8 // 8 do 17 miesięcy
+                    difficultyBaseMonthlyValue,
+                    months: getTechnicalSponsorContractMonths()
                 });
             });
         }
@@ -1668,14 +1766,15 @@ async function updateProfileWalkon(event) {
             let turnScore = 0;
             let dartsThrown = 0;
             let isDIDO = activeTournament && activeTournament.format === 'DIDO';
+            const opponentScore = isP1 ? currentMatch.p2Score : currentMatch.p1Score;
             const scoringVisit = !isCareerThrower && typeof createAiScoringVisit === 'function'
                 ? createAiScoringVisit() : null;
             resetMatchThrowGrouping(currentMatch);
             const groupingVisit = createThrowGroupingVisit();
 
             for (let i = 0; i < 3; i++) {
-                let aim = scoringVisit ? getAiScoringAim(currentScore, isDIDO, 3 - i, scoringVisit)
-                    : getOptimalAim(currentScore, isDIDO, 3 - i);
+                let aim = scoringVisit ? getAiScoringAim(currentScore, isDIDO, 3 - i, scoringVisit, opponentScore)
+                    : getOptimalAim(currentScore, isDIDO, 3 - i, opponentScore);
                 const throwStats = typeof applyMentalPressureToStats === 'function'
                     ? applyMentalPressureToStats(pObj, statsObj, isP1, aim, currentScore) : statsObj;
                 let result = calculateVisitThrow(aim.sector, aim.mult, throwStats, groupingVisit);
@@ -1766,16 +1865,26 @@ async function updateProfileWalkon(event) {
             resetMatchThrowGrouping(currentMatch);
             const st = currentMatch.stats;
             const isSetMatch = currentMatch.matchFormat && currentMatch.matchFormat.type === 'sets';
+            const wasSuddenDeath = Boolean(currentMatch.suddenDeath);
             let setWasWon = false;
 
             // Szybka symulacja musi zapisać idealny leg tak samo jak zwykłe rzucanie.
             if (isP1 && !currentMatch.isDoubles && st.p1LegDarts === 9) {
+                if (!currentMatch.interviewFacts) currentMatch.interviewFacts = {};
+                currentMatch.interviewFacts.nineDarter = true;
                 triggerNineDarterAlert();
                 checkAchievements('9darter');
             }
             
             currentMatch.totalLegsPlayed++;
             if (isP1) currentMatch.p1Legs++; else currentMatch.p2Legs++;
+            if (!Array.isArray(currentMatch.interviewLegScores)) currentMatch.interviewLegScores = [];
+            currentMatch.interviewLegScores.push({
+                p1: currentMatch.p1Legs,
+                p2: currentMatch.p2Legs,
+                p1Sets: currentMatch.p1Sets,
+                p2Sets: currentMatch.p2Sets
+            });
 
             const winnerName = currentMatch.isDoubles
                 ? getDoublesTeamName(isP1)
@@ -1784,14 +1893,36 @@ async function updateProfileWalkon(event) {
                     : (isP1 ? player.name : currentMatch.opponent.name));
             logThrow(`⏩ ${winnerName} ${t('t-log-wins-leg')}`, 'system');
 
-            if (isSetMatch && (currentMatch.p1Legs >= currentMatch.matchFormat.legsPerSet || currentMatch.p2Legs >= currentMatch.matchFormat.legsPerSet)) {
+            const format = currentMatch.matchFormat || {};
+            const isDecidingSet = isSetMatch && format.decidingSetWinByTwo
+                && currentMatch.p1Sets === format.setsToWin - 1
+                && currentMatch.p2Sets === format.setsToWin - 1;
+            const legDifference = Math.abs(currentMatch.p1Legs - currentMatch.p2Legs);
+            const setHasLegWinner = currentMatch.p1Legs >= format.legsPerSet || currentMatch.p2Legs >= format.legsPerSet;
+            const setWonByRequiredMargin = !isDecidingSet || legDifference >= 2 || wasSuddenDeath;
+
+            if (isSetMatch && setHasLegWinner && setWonByRequiredMargin) {
                 setWasWon = true;
                 if (isP1) currentMatch.p1Sets++; else currentMatch.p2Sets++;
                 logThrow(`🏆 ${winnerName} ${t('t-log-wins-set')}`, 'system');
             }
 
-            if (currentMatch.matchFormat && currentMatch.matchFormat.suddenDeathAt && currentMatch.p1Legs === currentMatch.matchFormat.suddenDeathAt && currentMatch.p2Legs === currentMatch.matchFormat.suddenDeathAt) {
-                startSuddenDeath();
+            if (wasSuddenDeath) {
+                logThrow(`⚡ ${winnerName} ${t('t-log-sd-win')}`, 'system');
+                currentMatch.suddenDeath = null;
+                currentMatch.suddenDeathDecidesSet = false;
+                if (isP1 && !currentMatch.isSpectator) checkAchievements('sudden_death');
+            }
+
+            const decidingSetReachedSuddenDeath = isDecidingSet && format.decidingSetSuddenDeathAt
+                && currentMatch.p1Legs === format.decidingSetSuddenDeathAt
+                && currentMatch.p2Legs === format.decidingSetSuddenDeathAt;
+            const legMatchReachedSuddenDeath = format.suddenDeathAt
+                && currentMatch.p1Legs === format.suddenDeathAt
+                && currentMatch.p2Legs === format.suddenDeathAt;
+            if (decidingSetReachedSuddenDeath || legMatchReachedSuddenDeath) {
+                currentMatch.suddenDeathDecidesSet = decidingSetReachedSuddenDeath;
+                startSuddenDeath(isP1);
                 return;
             }
 
@@ -1816,37 +1947,6 @@ async function updateProfileWalkon(event) {
 
         function processFastLeg() {
             resetMatchThrowGrouping(currentMatch);
-            if (currentMatch.suddenDeath) {
-                // Szybkie rozwiązanie nagłej śmierci (Sudden Death)
-                while(currentMatch.suddenDeath) {
-                    currentMatch.suddenDeath.p1Score = 0; currentMatch.suddenDeath.p2Score = 0;
-                    currentMatch.suddenDeath.p1Darts = 0; currentMatch.suddenDeath.p2Darts = 0;
-                    let statsObjP1 = typeof getBoostedPlayerStats === 'function' ? getBoostedPlayerStats() : player;
-                    let statsObjP2 = currentMatch.opponent;
-                    if (currentMatch.isTournament && !currentMatch.isDoubles && typeof getWorldMastersMatchRatings === 'function') {
-                        statsObjP1 = getWorldMastersMatchRatings(player, statsObjP1);
-                        statsObjP2 = getWorldMastersMatchRatings(currentMatch.opponent, statsObjP2);
-                    }
-                    statsObjP1 = applyRivalryMatchModifier(statsObjP1, true);
-                    const scoringVisitP2 = typeof createAiScoringVisit === 'function' ? createAiScoringVisit() : null;
-                    const groupingVisitP1 = createThrowGroupingVisit();
-                    const groupingVisitP2 = createThrowGroupingVisit();
-                    
-                    for(let i=0; i<3; i++) {
-                        let resP1 = calculateVisitThrow(20, 3, statsObjP1, groupingVisitP1);
-                        currentMatch.suddenDeath.p1Score += resP1.sector * resP1.mult;
-                        const aimP2 = scoringVisitP2 ? getAiScoringAim(501, false, 3 - i, scoringVisitP2) : { sector: 20, mult: 3 };
-                        let resP2 = calculateVisitThrow(aimP2.sector, aimP2.mult, statsObjP2, groupingVisitP2);
-                        if (scoringVisitP2) recordAiScoringObstruction(scoringVisitP2, aimP2, resP2, 3 - i);
-                        currentMatch.suddenDeath.p2Score += resP2.sector * resP2.mult;
-                    }
-                    if (currentMatch.suddenDeath.p1Score !== currentMatch.suddenDeath.p2Score) {
-                        return resolveSuddenDeath();
-                    }
-                }
-                return;
-            }
-
             let safetyCounter = 0; let legWon = false;
             while (!legWon && safetyCounter < 500) {
                 safetyCounter++;
@@ -1871,8 +1971,6 @@ async function updateProfileWalkon(event) {
             if (isMatchFinished()) return finishMatch();
             skipWalkon(); // Wycisza muzykę, żeby uniknąć nakładania dźwięków
             clearTimeout(window.aiTimeout); // ZABEZPIECZENIE: Przerywa zaplanowane ruchy AI
-            if (currentMatch.suddenDeath) return processFastLeg();
-            
             processFastLeg();
             
             updateScores(); updateMatchStatsUI(); drawnDarts = [];
@@ -1886,8 +1984,7 @@ async function updateProfileWalkon(event) {
                 || (typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy())) return false;
             // Ręczny checkout ma jeszcze zaplanowane naliczenie lega / zmianę
             // seta. Nie anulujemy tego timera ani nie symulujemy od wyniku zero.
-            return isMatchFinished() || currentMatch.suddenDeath
-                || (currentMatch.p1Score > 0 && currentMatch.p2Score > 0);
+            return isMatchFinished() || (currentMatch.p1Score > 0 && currentMatch.p2Score > 0);
         }
 
         function simulateMatchFast() {
@@ -1897,10 +1994,9 @@ async function updateProfileWalkon(event) {
             skipWalkon(); 
             clearTimeout(window.aiTimeout);
             let safety = 0;
-            while (!isMatchFinished() && !currentMatch.suddenDeath && safety < 100) {
+            while (!isMatchFinished() && safety < 100) {
                 processFastLeg(); safety++;
             }
-            if (currentMatch.suddenDeath) return processFastLeg();
             if (isMatchFinished()) {
                 updateScores(); updateMatchStatsUI(); return finishMatch();
             }

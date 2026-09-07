@@ -21,21 +21,29 @@
     <meta property="og:description" content="Play the ultimate free Darts Career simulator in your browser. Create your player and climb the rankings!">
     <meta property="og:type" content="website">
     <meta property="og:url" content="https://dartscareer.pl">
-    <link rel="icon" type="image/png" href="favicon.png">
-    <link rel="stylesheet" href="css/game.css?v=1.3.9&stats=1&goals=1&titles=2&tiles=1&supporters=3&aim=3&match-log=1&social=1&compact-match=4">
-    <link rel="stylesheet" href="css/world-news.css?v=1.3.9&news=1">
-    <link rel="stylesheet" href="css/season-archive.css?v=1.3.9&archive=1">
-    <link rel="stylesheet" href="css/career-records.css?v=1.3.9&records=1">
-    <link rel="stylesheet" href="css/tournament-finance.css?v=1.3.9&finance=1">
-    <link rel="stylesheet" href="css/player-staff.css?v=1.3.9&staff=1&mental=1">
-    <link rel="stylesheet" href="css/player-traits.css?v=1.3.9&traits=2&mental=1">
-    <link rel="stylesheet" href="css/career-infrastructure.css?v=1.3.9&infrastructure=1">
-    <link rel="stylesheet" href="css/career-lifestyle.css?v=1.3.9&lifestyle=3">
-    <link rel="stylesheet" href="css/equipment-wear.css?v=1.3.9&equipment-wear=1">
-    <link rel="stylesheet" href="css/career-planning.css?v=1.3.9&fix=planning-2&et-reserves=1">
-    <link rel="stylesheet" href="css/tutorial.css?v=1.3.9&tutorial=1">
-    <link rel="stylesheet" href="css/hub-navigation.css?v=1.3.9&hub-nav=5">
-    <link rel="stylesheet" href="css/player-editor.css?v=1.3.9&player-editor=2">
+    <link rel="icon" href="favicon.ico?v=2" sizes="any">
+    <link rel="icon" type="image/png" sizes="16x16" href="favicon-16x16.png?v=2">
+    <link rel="icon" type="image/png" sizes="32x32" href="favicon-32x32.png?v=2">
+    <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png?v=2">
+    <link rel="icon" type="image/png" sizes="192x192" href="android-chrome-192x192.png?v=2">
+    <link rel="icon" type="image/png" sizes="512x512" href="android-chrome-512x512.png?v=2">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#16213e">
+    <link rel="stylesheet" href="css/game.css?v=1.4.0&stats=1&goals=1&titles=2&tiles=1&supporters=3&aim=3&match-log=1&social=1&compact-match=4&ranking-points-guide=1&ranking-groups=1&seed-display=1&panel-top-back=1&difficulty=1">
+    <link rel="stylesheet" href="css/world-news.css?v=1.4.0&news=1">
+    <link rel="stylesheet" href="css/season-archive.css?v=1.4.0&archive=1">
+    <link rel="stylesheet" href="css/career-records.css?v=1.4.0&records=1">
+    <link rel="stylesheet" href="css/tournament-finance.css?v=1.4.0&finance=1">
+    <link rel="stylesheet" href="css/player-staff.css?v=1.4.0&staff=1&mental=1">
+    <link rel="stylesheet" href="css/player-traits.css?v=1.4.0&traits=2&mental=1">
+    <link rel="stylesheet" href="css/career-infrastructure.css?v=1.4.0&infrastructure=1">
+    <link rel="stylesheet" href="css/career-lifestyle.css?v=1.4.0&lifestyle=4">
+    <link rel="stylesheet" href="css/equipment-wear.css?v=1.4.0&equipment-wear=1">
+    <link rel="stylesheet" href="css/career-planning.css?v=1.4.0&fix=planning-2&et-reserves=1">
+    <link rel="stylesheet" href="css/tutorial.css?v=1.4.0&tutorial=1">
+    <link rel="stylesheet" href="css/hub-navigation.css?v=1.4.0&hub-nav=5">
+    <link rel="stylesheet" href="css/player-editor.css?v=1.4.0&player-editor=4">
+    <link rel="stylesheet" href="css/calendar-filters.css?v=1.4.0&calendar-filters=1">
 </head>
 <body>
     <header>
@@ -68,12 +76,117 @@
                 <select id="existing-player-select" onchange="updateExistingPlayerPreview()"></select>
             </div>
             <p id="existing-player-preview"></p>
+            <div class="form-group career-difficulty-field">
+                <label for="existing-career-difficulty" id="existing-career-difficulty-label">Poziom trudności:</label>
+                <select id="existing-career-difficulty" onchange="syncCareerDifficultyInputs(this.value)">
+                    <option value="easy" data-career-difficulty-option>Łatwy</option>
+                    <option value="normal" data-career-difficulty-option selected>Normalny</option>
+                    <option value="hard" data-career-difficulty-option>Trudny</option>
+                </select>
+                <small id="existing-career-difficulty-hint">Dotychczasowy balans rozwoju, spadków i sponsorów</small>
+            </div>
             <button type="button" class="action-btn green" id="career-start-existing-button" onclick="startCareerAsExistingPlayer()">Rozpocznij karierę tym zawodnikiem</button>
         </section>
 
         <!-- LEWA STRONA: CHANGELOG (Zawsze po angielsku) -->
         <div class="changelog-box">
             <h3>📢 What's New / Changelog</h3>
+
+            <!-- UPDATE V1.4.0 -->
+            <div class="changelog-version-badge">v1.4.0 · New Tours, Smarter Matches &amp; Long-Career Performance</div>
+
+            <div class="changelog-grid">
+                <div class="cl-item">
+                    <span class="cl-tag feature">Rising Stars</span>
+                    <span class="cl-title">🌟 New Rising Stars Circuit</span>
+                    <p class="cl-desc">The new fictional Challenge Tour equivalent is open to players without a Tour Card, follows its own event calendar and prize-money table, and does not affect the main or ProTour Order of Merit. Its ranking also supplies reserve and qualification places where required, with dates moved to the nearest free slot when events clash.</p>
+                </div>
+                <div class="cl-item">
+                    <span class="cl-tag feature">Future Champions</span>
+                    <span class="cl-title">🚀 New Future Champions Circuit</span>
+                    <p class="cl-desc">A dedicated Development Tour equivalent now gives eligible 16–23-year-olds their own non-ranking circuit and table. Players who reach the main OOM Top 64 become ineligible, while previous-season standings feed later qualification routes and conflicting dates are rescheduled safely.</p>
+                </div>
+                <div class="cl-item">
+                    <span class="cl-tag feature">Crown Masters</span>
+                    <span class="cl-title">👑 Crown Masters &amp; Eight-Place Qualifier</span>
+                    <p class="cl-desc">The new fictional World Masters equivalent is a main-OOM ranking event for Tour Card holders and leading Rising Stars and Future Champions players. A separate qualifier awards eight main-event places, including deterministic preseason fallbacks for 2026, while both stages reproduce one complete £500,000 ranking prize structure and use protected calendar dates.</p>
+                </div>
+                <div class="cl-item">
+                    <span class="cl-tag tweak">UK Open</span>
+                    <span class="cl-title">🏟️ Authentic 160-Player UK Open</span>
+                    <p class="cl-desc">The field now contains 128 Tour Card holders plus the Top 16 eligible players from each secondary circuit. Card holders are selected independently of non-card OOM positions, while OOM groups enter progressively at Last 160, Last 128, Last 96 and Last 64 exactly as configured.</p>
+                </div>
+                <div class="cl-item">
+                    <span class="cl-tag feature">Player Database</span>
+                    <span class="cl-title">🧑‍🤝‍🧑 200 New Prospects &amp; Polish Players</span>
+                    <p class="cl-desc">The database gains the Top 100 Challenge Tour and Top 96 Development Tour prospects with fictional base-game identities, correct nationalities and birth years, duplicate protection and Q-School eligibility. Piotr Maciejczak, Sebastian Steyer, Jakub Janaszkiewicz and Łukasz Wacławski are also represented under fictional base identities for mod replacement.</p>
+                </div>
+                <div class="cl-item">
+                    <span class="cl-tag tweak">Match AI</span>
+                    <span class="cl-title">🧠 Smarter Setups, Bull Decisions &amp; Centre Aim</span>
+                    <p class="cl-desc">AI players now choose sensible scoring and checkout routes across the full range of remaining scores instead of leaving awkward numbers such as 11 from 107. Bull finishes are normally avoided when the opponent is not threatening, while player throws aimed at Bull or Outer Bull cluster more naturally near the centre and can cross between the two rings without becoming more accurate overall.</p>
+                </div>
+                <div class="cl-item">
+                    <span class="cl-tag fix">Sudden Death</span>
+                    <span class="cl-title">🎯 Sudden Death Is a Deciding Leg</span>
+                    <p class="cl-desc">Sudden Death is now played as a complete normal leg under the regular checkout rules. The old three-dart highest-score shortcut has been removed, so the deciding leg behaves like every other leg in the match.</p>
+                </div>
+                <div class="cl-item">
+                    <span class="cl-tag feature">Presentation</span>
+                    <span class="cl-title">🎬 Seeds, Walk-ons, Reserves &amp; Withdrawals</span>
+                    <p class="cl-desc">Tournament brackets identify OOM seeds 1–16, except in Players Championship events, and never attach seed numbers to lower-ranked players or BYEs. The lower-ranked player walks on first, floor events run without walk-ons, European Tour reserve lists show national flags, and withdrawal reports include every absent player’s name, country, OVR and ranking position.</p>
+                </div>
+                <div class="cl-item">
+                    <span class="cl-tag tweak">Tournament Balance</span>
+                    <span class="cl-title">📅 Improved Availability &amp; World Series Balance</span>
+                    <p class="cl-desc">Every OOM Top 20 player can now skip a Players Championship event with up to a 30% chance, while European Tour withdrawals remain limited to the Top 16 with a 20% chance. World Series host-player bonuses can no longer raise OVR above 85, and careers may train normally during a World Series event when the player is not participating.</p>
+                </div>
+                <div class="cl-item">
+                    <span class="cl-tag feature">Difficulty</span>
+                    <span class="cl-title">⚙️ Easy, Normal &amp; Hard Careers</span>
+                    <p class="cl-desc">Difficulty can be selected when creating a player and changed later from More. Normal preserves the previous balance, Easy improves training and match growth while softening decline and sponsor pressure, and Hard reduces gains, increases losses and lowers sponsor offers. AI development has also received a small global increase, with a softer elite brake that lets outstanding 85+ OVR players keep progressing without inflating the whole field.</p>
+                </div>
+                <div class="cl-item">
+                    <span class="cl-tag feature">Player Editor</span>
+                    <span class="cl-title">🛠️ Delete, Filter &amp; Persist Edited Players</span>
+                    <p class="cl-desc">The in-game editor can now remove individual players or bulk-remove every AI player from a selected country, while protecting the career player and active competition fields. The database can be sorted or filtered by OVR, nationality, alphabet and age. Edited AI ratings and removals are stored permanently inside the career save and restored correctly after loading instead of reverting to database values.</p>
+                </div>
+                <div class="cl-item">
+                    <span class="cl-tag feature">Navigation</span>
+                    <span class="cl-title">🧭 Calendar Filters, Top Back Buttons &amp; Exit Warning</span>
+                    <p class="cl-desc">Calendar filters let players hide individual events or entire circuits. Long panels now include a second Back to Menu control at the top while retaining the existing bottom button, and an accidental browser Back, refresh or tab close displays a warning before an unsaved career can be lost.</p>
+                </div>
+                <div class="cl-item">
+                    <span class="cl-tag feature">Rankings</span>
+                    <span class="cl-title">📊 Points Guides &amp; Reliable Modded Tables</span>
+                    <p class="cl-desc">Premier League and Global Masters tables explain how many points each finishing stage awards. Global Masters standings now resolve player identities through the active mod after it is loaded mid-career, while secondary-tour table names also follow the active mod. Rising Stars and Future Champions tables are visually separated from the main rankings and tournament tables.</p>
+                </div>
+                <div class="cl-item">
+                    <span class="cl-tag feature">Career History</span>
+                    <span class="cl-title">🏆 Historical Champions, Flags &amp; Improved Honours</span>
+                    <p class="cl-desc">Major tournaments now list their historical champions through 2025, using fictional identities for retired players not present in the base database and national flags beside every winner. Those historical singles and World Cup trophies also appear in each active winner’s player profile and combine safely with titles earned from 2026 onward. Trophy Hall labels no longer collapse into narrow columns, unlocked achievements show their earned cash reward, and the Rivals panel has expanded from five players to ten.</p>
+                </div>
+                <div class="cl-item">
+                    <span class="cl-tag fix">Interviews</span>
+                    <span class="cl-title">🎙️ Interviews Based on Verified Match Facts</span>
+                    <p class="cl-desc">Reporter questions now use the actual opponent, scoreline, comeback, ranking status and match events. Interviews no longer invent world champions, 5–0 deficits or dramatic reversals that did not happen.</p>
+                </div>
+                <div class="cl-item">
+                    <span class="cl-tag feature">Sponsors &amp; Mods</span>
+                    <span class="cl-title">🤝 Longer Equipment Deals &amp; Regular Sponsor Mods</span>
+                    <p class="cl-desc">Technical equipment contracts now last 18–36 months. Mods can also replace all 17 regular fictional sponsors and load their logos from the existing sponsors folder; active contracts, pending offers and sponsor goals migrate to the new names when a mod is applied during a career. M1KEYbet joins as an additional permanent sponsor that keeps the same name with or without a mod.</p>
+                </div>
+                <div class="cl-item">
+                    <span class="cl-tag tweak">Performance</span>
+                    <span class="cl-title">⚡ Smoother Saves, Days &amp; Multi-Season Careers</span>
+                    <p class="cl-desc">Save loading, day advancement and tournament simulation now avoid repeated full-database work and unnecessary historical processing. The same gameplay, fields, results, finances and career history are preserved while large saves and long-running careers remain substantially more responsive.</p>
+                </div>
+                <div class="cl-item">
+                    <span class="cl-tag tweak">Branding</span>
+                    <span class="cl-title">🎯 New Browser &amp; App Icons</span>
+                    <p class="cl-desc">The game now ships with a complete favicon package for browser tabs, bookmarks, Apple touch icons and Android homescreen shortcuts, together with an updated theme colour and web-app manifest.</p>
+                </div>
+            </div>
 
             <!-- UPDATE V1.3.9 -->
             <div class="changelog-version-badge">v1.3.9 · Tournament Reliability, Results &amp; Training</div>
@@ -1095,6 +1208,15 @@
                     </select>
                     <small id="t-tour-card-hint" style="color:#bdc3c7;">Karta obowiązuje przez dwa lata i daje dostęp do pełnego Pro Touru.</small>
                 </div>
+                <div class="form-group career-difficulty-field">
+                    <label for="career-difficulty" id="career-difficulty-label">Poziom trudności:</label>
+                    <select id="career-difficulty" required onchange="syncCareerDifficultyInputs(this.value)">
+                        <option value="easy" data-career-difficulty-option>Łatwy</option>
+                        <option value="normal" data-career-difficulty-option selected>Normalny</option>
+                        <option value="hard" data-career-difficulty-option>Trudny</option>
+                    </select>
+                    <small id="career-difficulty-hint">Dotychczasowy balans rozwoju, spadków i sponsorów</small>
+                </div>
                 <div class="form-group">
                     <label id="t-photo-upload">Zdjęcie z dysku (opcjonalnie):</label> 
                     <input type="file" id="photoUpload" accept="image/*">
@@ -1368,6 +1490,18 @@
                 <p id="player-editor-tile-desc">Edytuj bazę, statystyki i zdjęcia lub dodaj nową postać.</p>
             </button>
 
+            <div class="menu-tile career-difficulty-tile" data-hub-category="more">
+                <h3 id="career-difficulty-title">🎚️ Poziom trudności</h3>
+                <p id="career-difficulty-intro">Możesz go zmienić w dowolnym momencie kariery.</p>
+                <label for="hub-career-difficulty" class="sr-only" id="career-difficulty-hub-label">Poziom trudności</label>
+                <select id="hub-career-difficulty" onchange="changeCareerDifficulty(this.value)">
+                    <option value="easy" data-career-difficulty-option>Łatwy</option>
+                    <option value="normal" data-career-difficulty-option>Normalny</option>
+                    <option value="hard" data-career-difficulty-option>Trudny</option>
+                </select>
+                <small id="career-difficulty-current">Dotychczasowy balans rozwoju, spadków i sponsorów</small>
+            </div>
+
             <!-- Ostrzeżenie na pełną szerokość -->
             <div data-hub-category="more" style="grid-column: 1 / -1; text-align: center; margin: 10px 0; background: rgba(241, 196, 15, 0.1); border: 1px dashed #f1c40f; padding: 10px; border-radius: 5px;">
                 <p id="t-save-warn" style="color: #f1c40f; font-size: 14px; font-weight: bold; margin: 0;">
@@ -1433,6 +1567,25 @@
                     <span class="sr-only" id="player-editor-search-label">Szukaj zawodnika</span>
                     <input id="player-editor-search" type="search" autocomplete="off" placeholder="Szukaj po nazwisku lub kraju…" oninput="renderPlayerEditorRoster()">
                 </label>
+                <div class="player-editor-roster-controls">
+                    <label>
+                        <span id="player-editor-sort-label">Sortowanie</span>
+                        <select id="player-editor-sort" onchange="renderPlayerEditorRoster()">
+                            <option value="name-asc">Alfabetycznie A–Z</option>
+                        </select>
+                    </label>
+                    <label>
+                        <span id="player-editor-country-filter-label">Narodowość</span>
+                        <select id="player-editor-country-filter" onchange="renderPlayerEditorRoster()">
+                            <option value="">Wszystkie</option>
+                        </select>
+                    </label>
+                </div>
+                <div class="player-editor-country-delete">
+                    <strong id="player-editor-bulk-delete-title">Zbiorcze usuwanie</strong>
+                    <p id="player-editor-bulk-delete-hint">Wybierz konkretną narodowość w filtrze powyżej, aby usunąć wszystkich jej zawodników AI.</p>
+                    <button type="button" id="player-editor-delete-country" onclick="deletePlayerEditorCountry()" disabled>Usuń wszystkich z wybranego kraju</button>
+                </div>
                 <div id="player-editor-roster-list" class="player-editor-roster-list"></div>
             </aside>
 
@@ -1509,6 +1662,7 @@
                 <p id="player-editor-status" class="player-editor-status" role="status" aria-live="polite"></p>
                 <div class="player-editor-footer-actions">
                     <button type="button" id="player-editor-back" onclick="closePlayerEditor()">Wróć do menu</button>
+                    <button type="button" id="player-editor-delete" onclick="deletePlayerEditorCandidate()" hidden>Usuń zawodnika</button>
                     <button type="submit" id="player-editor-save">Zapisz zmiany</button>
                 </div>
             </form>
@@ -1697,13 +1851,25 @@
         <h2 id="t-pdc-header">Oficjalne Rankingi</h2>
         <button id="comparison-ranking-link" class="action-btn records-shortcut" onclick="showPlayerComparison()">Porównaj zawodników</button>
         <button id="planning-ranking-link" class="action-btn planning-shortcut" onclick="showCareerPlanning('defence')">Pieniądze do obrony</button>
-        <div style="display: flex; gap: 8px; margin-bottom: 15px; justify-content: center; flex-wrap: wrap;">
-            <button id="btn-rank-main" class="action-btn green" style="flex: 1; min-width: 130px; font-size: 12px; padding: 10px; margin-top: 0;" onclick="showPdcRankings('main')">Główny Ranking</button>
-            <button id="btn-rank-pt" class="action-btn" style="flex: 1; min-width: 130px; font-size: 12px; padding: 10px; background: #34495e; margin-top: 0;" onclick="showPdcRankings('protour')">Ranking Pro Series</button>
-            <button id="btn-rank-pc" class="action-btn" style="flex: 1; min-width: 130px; font-size: 12px; padding: 10px; background: #34495e; margin-top: 0;" onclick="showPdcRankings('pc')">Ranking Players Cup</button>
-            <button id="btn-rank-et" class="action-btn" style="flex: 1; min-width: 150px; font-size: 12px; padding: 10px; background: #34495e; margin-top: 0;" onclick="showPdcRankings('europeanTour')">European Tour OOM</button>
-            <button id="btn-rank-gdl" class="action-btn" style="flex: 1; min-width: 130px; font-size: 12px; padding: 10px; background: #8e44ad; margin-top: 0;" onclick="showPdcRankings('gdl')">Tabela GDL</button>
-            <button id="btn-rank-world-masters" class="action-btn" style="flex: 1; min-width: 150px; font-size: 12px; padding: 10px; background: #8e44ad; margin-top: 0;" onclick="showPdcRankings('worldMasters')">Tabela Global Masters</button>
+        <div class="ranking-navigation-groups">
+            <section class="ranking-navigation-group ranking-navigation-group-main" aria-labelledby="ranking-main-group-label">
+                <h3 id="ranking-main-group-label">Główne rankingi i tabele</h3>
+                <div class="ranking-navigation-buttons">
+                    <button id="btn-rank-main" class="action-btn green" style="flex: 1; min-width: 130px; font-size: 12px; padding: 10px; margin-top: 0;" onclick="showPdcRankings('main')">Główny Ranking</button>
+                    <button id="btn-rank-pt" class="action-btn" style="flex: 1; min-width: 130px; font-size: 12px; padding: 10px; background: #34495e; margin-top: 0;" onclick="showPdcRankings('protour')">Ranking Pro Series</button>
+                    <button id="btn-rank-pc" class="action-btn" style="flex: 1; min-width: 130px; font-size: 12px; padding: 10px; background: #34495e; margin-top: 0;" onclick="showPdcRankings('pc')">Ranking Players Cup</button>
+                    <button id="btn-rank-et" class="action-btn" style="flex: 1; min-width: 150px; font-size: 12px; padding: 10px; background: #34495e; margin-top: 0;" onclick="showPdcRankings('europeanTour')">European Tour OOM</button>
+                    <button id="btn-rank-gdl" class="action-btn" style="flex: 1; min-width: 130px; font-size: 12px; padding: 10px; background: #8e44ad; margin-top: 0;" onclick="showPdcRankings('gdl')">Tabela GDL</button>
+                    <button id="btn-rank-world-masters" class="action-btn" style="flex: 1; min-width: 150px; font-size: 12px; padding: 10px; background: #8e44ad; margin-top: 0;" onclick="showPdcRankings('worldMasters')">Tabela Global Masters</button>
+                </div>
+            </section>
+            <section class="ranking-navigation-group ranking-navigation-group-secondary" aria-labelledby="ranking-secondary-group-label">
+                <h3 id="ranking-secondary-group-label">Cykle poboczne</h3>
+                <div class="ranking-navigation-buttons">
+                    <button id="btn-rank-challenge-tour" class="action-btn" style="flex: 1; min-width: 150px; font-size: 12px; padding: 10px; background: #d35400; margin-top: 0;" onclick="showPdcRankings('challengeTour')">Tabela Rising Stars</button>
+                    <button id="btn-rank-development-tour" class="action-btn" style="flex: 1; min-width: 150px; font-size: 12px; padding: 10px; background: #2980b9; margin-top: 0;" onclick="showPdcRankings('developmentTour')">Tabela Future Champions</button>
+                </div>
+            </section>
         </div>
         <div class="log-box" id="pdc-list" style="height: 350px; font-size: 16px;"></div>
         <button class="action-btn" id="t-back-pdc" onclick="showScreen('screen-hub')">Wróć</button>
@@ -1735,6 +1901,7 @@
 
     <div id="results-modal" class="modal-overlay">
         <div class="modal-content" style="max-height: 80vh; overflow-y: auto;">
+            <button type="button" class="panel-top-back dyn-t" data-key="t-panel-top-back" onclick="document.getElementById('results-modal').style.display='none'; showScreen('screen-hub');">← Wróć</button>
             <h3 id="t-tour-end-title" style="color: var(--accent-green); border-bottom: 2px solid var(--accent-green); padding-bottom: 10px;">Koniec Turnieju!</h3>
             <div id="results-content" style="text-align: left; margin-bottom: 15px;"></div>
             <div id="tournament-finance-results" hidden></div>
@@ -1808,6 +1975,7 @@
         <button id="champions-calendar-link" class="action-btn records-shortcut" onclick="showTournamentChampions()">Historia mistrzów</button>
         <button id="finance-calendar-link" class="action-btn records-shortcut" onclick="showTournamentFinance()">Nagrody / finanse</button>
         <button id="planning-calendar-link" class="action-btn planning-shortcut" onclick="showCareerPlanning()">Podgląd kwalifikacji</button>
+        <section id="calendar-filter-panel" class="calendar-filter-panel" aria-label="Filtry kalendarza"></section>
         <div class="log-box" id="calendar-list" style="height: 350px;"></div>
         <button class="action-btn" id="t-back-cal" onclick="showScreen('screen-hub')">Wróć do Menu</button>
     </main>
@@ -1849,6 +2017,7 @@
     <!-- OKNO DRABINKI TURNIEJOWEJ -->
     <div id="bracket-modal" class="bracket-modal">
         <div class="bracket-content">
+            <button type="button" class="panel-top-back dyn-t" data-key="t-panel-top-back" onclick="document.getElementById('bracket-modal').style.display='none'; showScreen('screen-hub');">← Wróć</button>
             <h2 id="bracket-title" style="margin-top:0;">Drabinka Turniejowa</h2>
             <div id="bracket-list" style="margin-bottom: 20px;"></div>
             
@@ -2110,76 +2279,84 @@
     </main>
     <!-- STOPKA AUTORSKA -->
     <footer style="width: 100%; text-align: center; padding: 25px 15px; margin-top: auto; color: #7f8c8d; font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 2px;">
-        <div style="margin-bottom: 5px; color: #bdc3c7;">V. 1.3.9</div>
+        <div style="margin-bottom: 5px; color: #bdc3c7;">V. 1.4.0</div>
         powered by dubme<br>
         <a href="mailto:dartscareer@gmail.com" style="color: #bdc3c7; text-decoration: none; text-transform: lowercase; display: inline-block; margin-top: 5px;">dartscareer@gmail.com</a>
     </footer>
 
     <!-- SKRYPTY -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
-    <script src="data/players.js?v=1.3.9&fix=player-ratings-3"></script>
+    <script src="data/players.js?v=1.4.0&fix=player-ratings-4&challenge-top100=1&development-top96=1&polish-players=2"></script>
     <script src="data/order-of-merit-history.js"></script>
     <script src="data/order-of-merit-opening-2026.js"></script>
-    <script src="data/player-birth-years.js"></script>
-    <script src="data/newgen-names.js?v=1.3.9"></script>
-    <script src="data/tournaments.js?v=1.3.9"></script>
+    <script src="data/player-birth-years.js?v=1.4.0&challenge-top100=1"></script>
+    <script src="data/newgen-names.js?v=1.4.0"></script>
+    <script src="data/tournaments.js?v=1.4.0&challenge-tour=1&development-tour=1&crown-masters=1&uk-open=1"></script>
+    <script src="data/historical-champions.js?v=1.4.0&history=2"></script>
     <script src="data/achievements.js"></script>
-    <script src="data/interviews.js"></script>
-    <script src="js/core.js?v=1.3.9&fix=career-progress-1&ws-local=1&traits=1&ai-growth=2&aim=3"></script>
-    <script src="js/ai-development.js?v=1.3.9&ai-growth=2"></script>
-    <script src="js/player-traits.js?v=1.3.9&traits=1&mental=1&infrastructure=1"></script>
-    <script src="js/match/pressure.js?v=1.3.9&mental=1"></script>
-    <script src="js/european-tour.js?v=1.3.9"></script>
-    <script src="js/order-of-merit.js?v=1.3.9&fix=planning-1"></script>
-    <script src="js/tour-cards.js?v=1.3.9&fix=grand-slam-field-1"></script>
-    <script src="js/world-championship-qualification.js?v=1.3.9"></script>
-    <script src="js/stamina.js?v=1.3.9&staff=1&traits=1&infrastructure=1"></script>
-    <script src="js/i18n.js?v=1.3.9&fix=planning-1&news=1&archive=1&staff=1&traits=1&infrastructure=1&lifestyle=1&tiles=1&records=1&finance=1&aim=3&social=1&training-energy=1&tutorial=1&hub-nav=2&player-editor=1&visit-sim=1"></script>
-    <script src="js/player-lifecycle.js?v=1.3.9&fix=no-random-form-1&traits=1&ai-growth=2"></script>
-    <script src="js/career.js?v=1.3.9&fix=no-random-form-1&planning=1&goals=1&news=1&archive=1&staff=1&traits=1&infrastructure=1&lifestyle=1&records=1&finance=1&et-auto=1&ai-growth=2&no-random-content=1&tutorial=1&hub-nav=2&training-unattended=1"></script>
-    <script src="js/tutorial.js?v=1.3.9&tutorial=1"></script>
-    <script src="js/hub-navigation.js?v=1.3.9&hub-nav=5"></script>
-    <script src="js/player-editor.js?v=1.3.9&player-editor=4"></script>
-    <script src="js/player-profiles.js?v=1.3.9&stats=1&goals=1&news=1&traits=1&mental=1&titles=3&records=1&finance=1&et-seed-cash=1"></script>
-    <script src="js/player-match-stats.js?v=1.3.9&stats=2&goals=1&news=1&traits=1&records=1&ai-growth=2&grouping=2"></script>
-    <script src="js/career-records.js?v=1.3.9&records=1"></script>
-    <script src="js/career-records-ui.js?v=1.3.9&records=1"></script>
-    <script src="js/tournament-finance.js?v=1.3.9&finance=1"></script>
-    <script src="js/tournament-finance-ui.js?v=1.3.9&finance=1"></script>
-    <script src="js/tournaments/results.js?v=1.3.9&finance=1&flags=1"></script>
-    <script src="js/tournaments/rules.js?v=1.3.9&fix=planning-1&matchplay=1"></script>
-    <script src="js/match/ai-strategy.js?v=1.3.9&cover=1"></script>
-    <script src="js/match/intro.js?v=1.3.9&lifestyle=1"></script>
-    <script src="js/tournaments/rewards.js?v=1.3.9&archive=1&finance=1&et-seed-cash=1"></script>
-    <script src="js/grand-slam.js?v=1.3.9&finance=1&result-flags=1"></script>
-    <script src="js/tournaments/flow.js?v=1.3.9&fix=et-season-1&planning=1&stats=2&ws-local=1&traits=1&mental=1&infrastructure=1&finance=1&et-reserves=1&et-auto=1&presentation=1&et-seed-cash=2&result-flags=1"></script>
-    <script src="js/tournaments/fast-forward.js?v=1.3.9&finance=1&visit-sim=1"></script>
-    <script src="js/tournaments/spectator.js?v=1.3.9&stats=1&presentation=1&visit-sim=1"></script>
-    <script src="js/world-cup.js?v=1.3.9&news=1&archive=1&mental=1&infrastructure=1&records=1&finance=1&presentation=1&visit-sim=1"></script>
-    <script src="js/continental-qualification-v2.js?v=1.3.9&fix=et-season-1&planning=1&et-reserves=1"></script>
-    <script src="js/world-masters.js?v=1.3.9&fix=planning-1&ws-local=1&prizes=2"></script>
-    <script src="js/match/setup.js?v=1.3.9&stats=1&qualifier-loss=1&finance=1&presentation=1&visit-sim=1"></script>
-    <script src="js/match/leg-flow.js?v=1.3.9&finance=1&matchplay=1&grouping=3&visit-sim=1"></script>
+    <script src="data/interviews.js?v=1.4.0&verified-match-facts=1"></script>
+    <script src="js/interview-system.js?v=1.4.0&verified-match-facts=1"></script>
+    <script src="js/core.js?v=1.4.0&fix=career-progress-1&ws-local=1&traits=1&ai-growth=3&aim=3&difficulty=1&challenge-tour=1&development-tour=1"></script>
+    <script src="js/ai-development.js?v=1.4.0&ai-growth=4"></script>
+    <script src="js/player-traits.js?v=1.4.0&traits=1&mental=1&infrastructure=1"></script>
+    <script src="js/match/pressure.js?v=1.4.0&mental=1"></script>
+    <script src="js/european-tour.js?v=1.4.0&performance=1"></script>
+    <script src="js/order-of-merit.js?v=1.4.0&fix=planning-1&crown-masters=1&performance=1"></script>
+    <script src="js/tour-cards.js?v=1.4.0&fix=grand-slam-field-1"></script>
+    <script src="js/challenge-tour.js?v=1.4.0&challenge-tour=2&crown-masters=1"></script>
+    <script src="js/development-tour.js?v=1.4.0&development-tour=2&crown-masters=1"></script>
+    <script src="js/uk-open.js?v=1.4.0&uk-open=1"></script>
+    <script src="js/crown-masters.js?v=1.4.0&crown-masters=1"></script>
+    <script src="js/world-championship-qualification.js?v=1.4.0"></script>
+    <script src="js/stamina.js?v=1.4.0&staff=1&traits=1&infrastructure=1"></script>
+    <script src="js/i18n.js?v=1.4.0&fix=planning-1&news=1&archive=1&staff=1&traits=1&infrastructure=1&lifestyle=1&tiles=1&records=1&finance=1&aim=3&social=1&training-energy=1&tutorial=1&hub-nav=2&player-editor=1&visit-sim=1&sudden-death-leg=1&ranking-points-guide=1&ranking-groups=1&panel-top-back=1&challenge-tour=2&development-tour=2"></script>
+    <script src="js/calendar-filters.js?v=1.4.0&calendar-filters=1"></script>
+    <script src="js/difficulty.js?v=1.4.0&difficulty=1"></script>
+    <script src="js/player-lifecycle.js?v=1.4.0&fix=no-random-form-1&traits=1&ai-growth=2&difficulty=1&performance=1"></script>
+    <script src="js/career.js?v=1.4.0&fix=no-random-form-1&planning=1&goals=1&news=1&archive=1&staff=1&traits=1&infrastructure=1&lifestyle=1&records=1&finance=1&et-auto=1&ai-growth=2&no-random-content=1&tutorial=1&hub-nav=2&training-unattended=1&world-series-training=1&ranking-points-guide=1&panel-top-back=1&verified-interviews=1&difficulty=1&challenge-tour=1&development-tour=1&crown-masters=1&uk-open=1&calendar-filters=1&withdrawal-report=1"></script>
+    <script src="js/tutorial.js?v=1.4.0&tutorial=1"></script>
+    <script src="js/hub-navigation.js?v=1.4.0&hub-nav=5"></script>
+    <script src="js/player-editor.js?v=1.4.0&player-editor=7"></script>
+    <script src="js/player-profiles.js?v=1.4.0&stats=1&goals=1&news=1&traits=1&mental=1&titles=4&records=1&finance=1&et-seed-cash=1&challenge-tour=1&development-tour=1"></script>
+    <script src="js/player-match-stats.js?v=1.4.0&stats=2&goals=1&news=1&traits=1&records=1&ai-growth=2&grouping=2"></script>
+    <script src="js/career-records.js?v=1.4.0&records=2&history=2&performance=1"></script>
+    <script src="js/career-records-ui.js?v=1.4.0&records=3&history=2&flags=1"></script>
+    <script src="js/tournament-finance.js?v=1.4.0&finance=1&challenge-tour=1&development-tour=1&crown-masters=1&uk-open=1"></script>
+    <script src="js/tournament-finance-ui.js?v=1.4.0&finance=1"></script>
+    <script src="js/tournaments/results.js?v=1.4.0&finance=1&flags=1"></script>
+    <script src="js/tournaments/rules.js?v=1.4.0&fix=planning-1&matchplay=1&challenge-tour=1&development-tour=1&crown-masters=1&uk-open=1"></script>
+    <script src="js/match/ai-strategy.js?v=1.4.0&cover=1&checkout-tactics=2"></script>
+    <script src="js/match/intro.js?v=1.4.0&lifestyle=1&oom-order=1&floor-events=1&challenge-tour=1&development-tour=1"></script>
+    <script src="js/tournaments/rewards.js?v=1.4.0&archive=1&finance=1&et-seed-cash=1&challenge-tour=1&development-tour=1&crown-masters=1&uk-open=1"></script>
+    <script src="js/grand-slam.js?v=1.4.0&finance=1&result-flags=1"></script>
+    <script src="js/tournaments/flow.js?v=1.4.0&fix=et-season-1&planning=1&stats=2&ws-local=1&traits=1&mental=1&infrastructure=1&finance=1&et-reserves=1&et-auto=1&presentation=1&et-seed-cash=2&result-flags=1&withdrawals=3&seed-display=2&challenge-tour=1&development-tour=1&crown-masters=1&uk-open=1"></script>
+    <script src="js/tournaments/fast-forward.js?v=1.4.0&finance=1&visit-sim=1&crown-masters=1"></script>
+    <script src="js/tournaments/spectator.js?v=1.4.0&stats=1&presentation=1&visit-sim=1"></script>
+    <script src="js/world-cup.js?v=1.4.0&news=1&archive=1&mental=1&infrastructure=1&records=1&finance=1&presentation=1&visit-sim=1"></script>
+    <script src="js/continental-qualification-v2.js?v=1.4.0&fix=et-season-1&planning=1&et-reserves=1&withdrawals=3"></script>
+    <script src="js/world-masters.js?v=1.4.0&fix=planning-1&ws-local=1&prizes=2&ranking-points-guide=1&mod-names=1&local-rating-cap=1"></script>
+    <script src="js/match/setup.js?v=1.4.0&stats=1&qualifier-loss=1&finance=1&presentation=1&visit-sim=1&sudden-death-leg=1&verified-interviews=1&challenge-tour=1&development-tour=1&crown-masters=1"></script>
+    <script src="js/match/leg-flow.js?v=1.4.0&finance=1&matchplay=1&grouping=3&visit-sim=1&sudden-death-leg=1&verified-interviews=1"></script>
     <script src="js/match/audio.js"></script>
-    <script src="js/match/turns.js?v=1.3.9&ws-local=1&traits=1&mental=1&cover=1&grouping=3&visit-sim=1"></script>
-    <script src="js/match/board.js?v=1.3.9"></script>
-    <script src="js/storage.js?v=1.3.9"></script>
-    <script src="js/sponsor-goals.js?v=1.3.9&goals=1"></script>
-    <script src="js/world-news.js?v=1.3.9&news=1"></script>
-    <script src="js/season-archive.js?v=1.3.9&archive=1&et-seed-cash=1"></script>
-    <script src="js/season-archive-ui.js?v=1.3.9&archive=1&tiles=1"></script>
-    <script src="js/player-staff.js?v=1.3.9&staff=2&traits=1&mental=1"></script>
-    <script src="js/player-staff-ui.js?v=1.3.9&staff=2&traits=1&mental=1&tiles=1"></script>
-    <script src="js/player-traits-ui.js?v=1.3.9&traits=2&mental=1"></script>
-    <script src="js/career-infrastructure.js?v=1.3.9&infrastructure=5&finance=1"></script>
-    <script src="js/career-infrastructure-ui.js?v=1.3.9&infrastructure=2&tiles=1"></script>
-    <script src="js/career-lifestyle.js?v=1.3.9&lifestyle=1"></script>
-    <script src="js/career-lifestyle-ui.js?v=1.3.9&lifestyle=2"></script>
-    <script src="js/equipment-wear.js?v=1.3.9&equipment-wear=1"></script>
-    <script src="js/systems.js?v=1.3.9&fix=career-progress-1&stats=1&ws-local=1&goals=1&news=1&archive=1&staff=1&traits=1&mental=1&infrastructure=1&lifestyle=1&equipment-wear=1&records=1&finance=1&et-reserves=1&matchplay=1&cover=1&grouping=3&leg-log=1&no-random-content=1&training-energy=1&training-unattended=1"></script>
-    <script src="js/mod-media.js?v=1.3.9"></script>
-    <script src="js/extras.js?v=1.3.9&fix=no-random-form-1&goals=1&news=1&archive=1&traits=1&lifestyle=1&finance=1&no-random-content=1"></script>
-    <script src="js/career-planning.js?v=1.3.9&fix=planning-2&et-reserves=1"></script>
+    <script src="js/match/turns.js?v=1.4.0&ws-local=1&traits=1&mental=1&cover=1&grouping=3&visit-sim=1&checkout-tactics=2&bull-aim=1"></script>
+    <script src="js/match/board.js?v=1.4.0&bull-aim=1"></script>
+    <script src="js/storage.js?v=1.4.0"></script>
+    <script src="js/sponsor-goals.js?v=1.4.0&goals=1&difficulty=1"></script>
+    <script src="js/world-news.js?v=1.4.0&news=1"></script>
+    <script src="js/season-archive.js?v=1.4.0&archive=1&et-seed-cash=1"></script>
+    <script src="js/season-archive-ui.js?v=1.4.0&archive=1&tiles=1"></script>
+    <script src="js/player-staff.js?v=1.4.0&staff=2&traits=1&mental=1"></script>
+    <script src="js/player-staff-ui.js?v=1.4.0&staff=2&traits=1&mental=1&tiles=1"></script>
+    <script src="js/player-traits-ui.js?v=1.4.0&traits=2&mental=1"></script>
+    <script src="js/career-infrastructure.js?v=1.4.0&infrastructure=5&finance=1"></script>
+    <script src="js/career-infrastructure-ui.js?v=1.4.0&infrastructure=2&tiles=1"></script>
+    <script src="js/career-lifestyle.js?v=1.4.0&lifestyle=1"></script>
+    <script src="js/career-lifestyle-ui.js?v=1.4.0&lifestyle=2"></script>
+    <script src="js/equipment-wear.js?v=1.4.0&equipment-wear=1"></script>
+    <script src="js/systems.js?v=1.4.0&fix=career-progress-1&stats=1&ws-local=1&goals=1&news=1&archive=1&staff=1&traits=1&mental=1&infrastructure=1&lifestyle=1&equipment-wear=1&records=1&finance=1&et-reserves=1&matchplay=1&cover=1&grouping=3&leg-log=1&no-random-content=1&training-energy=1&training-unattended=1&sudden-death-leg=1&player-delete=1&navigation-warning=1&checkout-tactics=2&verified-interviews=1&difficulty=1&challenge-tour=1&development-tour=1&crown-masters=1&uk-open=1&technical-contracts=1&editor-save=1&performance=1"></script>
+    <script src="js/mod-media.js?v=1.4.0"></script>
+    <script src="js/extras.js?v=1.4.0&fix=no-random-form-1&goals=1&news=1&archive=1&traits=1&lifestyle=1&finance=1&no-random-content=1&achievement-reward=1&player-delete=1&challenge-tour=1&development-tour=1&historical-champions=1&regular-sponsors=1&mod-tour-names=1"></script>
+    <script src="js/career-planning.js?v=1.4.0&fix=planning-2&et-reserves=2&crown-masters=1&uk-open=1"></script>
 
 </body>
 </html>

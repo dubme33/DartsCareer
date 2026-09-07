@@ -1,4 +1,54 @@
-function showScreen(screenId) {
+const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
+            'screen-create-player',
+            'screen-hub',
+            'screen-match'
+        ]);
+
+        function getPanelTopBackLabel() {
+            if (typeof t === 'function') {
+                const translated = t('t-panel-top-back');
+                if (translated && translated !== 't-panel-top-back') return translated;
+            }
+            const labels = { pl: '← Wróć', en: '← Back', de: '← Zurück', nl: '← Terug' };
+            return labels[typeof currentLang === 'string' ? currentLang : 'pl'] || labels.pl;
+        }
+
+        function refreshPanelTopBackTranslations() {
+            if (typeof document === 'undefined' || typeof document.querySelectorAll !== 'function') return;
+            document.querySelectorAll('.panel-top-back').forEach(button => {
+                button.textContent = getPanelTopBackLabel();
+            });
+        }
+
+        function returnToCareerHubFromPanel(screenId) {
+            if (screenId === 'screen-player-editor' && typeof stopPlayerEditorWalkonPreview === 'function') {
+                stopPlayerEditorWalkonPreview();
+            }
+            ['bracket-modal', 'results-modal', 'event-modal'].forEach(id => {
+                const overlay = typeof document !== 'undefined' ? document.getElementById(id) : null;
+                if (overlay) overlay.style.display = 'none';
+            });
+            showScreen('screen-hub');
+        }
+
+        function ensurePanelTopBackButton(screen) {
+            if (!screen || PANEL_TOP_BACK_EXCLUDED_SCREENS.has(screen.id)
+                || typeof document === 'undefined' || typeof document.createElement !== 'function'
+                || typeof screen.querySelector !== 'function' || typeof screen.prepend !== 'function') return null;
+            let button = screen.querySelector(':scope > .panel-top-back');
+            if (!button) {
+                button = document.createElement('button');
+                button.type = 'button';
+                button.className = 'panel-top-back';
+                button.dataset.panelScreen = screen.id;
+                button.onclick = () => returnToCareerHubFromPanel(screen.id);
+                screen.prepend(button);
+            }
+            button.textContent = getPanelTopBackLabel();
+            return button;
+        }
+
+        function showScreen(screenId) {
             // Wyciszamy wszystkie dźwięki meczowe przy wychodzeniu z meczu
             if(screenId !== 'screen-match') { 
                 cancelMatchIntro();
@@ -7,7 +57,9 @@ function showScreen(screenId) {
                 if(postMatchAudio) { postMatchAudio.pause(); postMatchAudio.currentTime = 0; }
             }
             document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-            document.getElementById(screenId).classList.add('active');
+            const nextScreen = document.getElementById(screenId);
+            ensurePanelTopBackButton(nextScreen);
+            nextScreen.classList.add('active');
             if (screenId === 'screen-hub' && typeof initializeHubNavigation === 'function') {
                 initializeHubNavigation();
             }
@@ -56,6 +108,8 @@ function showScreen(screenId) {
                     // Zachowujemy powiązanie z wpisem bazowym/moda. Dzięki temu po
                     // ponownym wczytaniu baza nie odtworzy tego samego zawodnika jako AI.
                     sourceName: selectedPlayer.sourceName || selectedPlayer.name,
+                    difficulty: typeof getSelectedCareerDifficulty === 'function'
+                        ? getSelectedCareerDifficulty('existing') : 'normal',
                     defaultTemplateIndex: Number.isInteger(selectedPlayer.defaultTemplateIndex)
                         ? selectedPlayer.defaultTemplateIndex
                         : selectedIndex,
@@ -86,8 +140,10 @@ function showScreen(screenId) {
                     trainingWeekKey: null, trainingSessionsThisWeek: 0,
                     achievements: [],
                     careerStats: { highestAvg: 0, highestCheckout: 0, total180s: 0, nineDarters: 0, tonPlusCheckouts: 0, trophies: [] },
-                    rivalries: {}, activeRivalIds: [], careerChronicle: []
+                    rivalries: {}, activeRivalIds: [], careerChronicle: [],
+                    calendarFilters: { version: 1, hiddenTournamentKeys: [] }
                 };
+                if (typeof initializeCareerDifficulty === 'function') initializeCareerDifficulty(player);
                 for (const kind of ['photo', 'walkon']) {
                     if (modMedia[kind] instanceof Blob) setPlayerProfileMediaFromFile(kind, modMedia[kind]);
                 }
@@ -168,12 +224,16 @@ function showScreen(screenId) {
                 country: document.getElementById('nationality').value,
                 birthYear: (currentDate instanceof Date ? currentDate.getFullYear() : 2026) - parseInt(document.getElementById('age').value, 10),
                 careerDebutSeason: currentDate.getFullYear(),
+                difficulty: typeof getSelectedCareerDifficulty === 'function'
+                    ? getSelectedCareerDifficulty('custom') : 'normal',
                 overall: ovr, ovr: ovr, scoring: ovr + 2, doubles: ovr - 2,
                 favoriteDouble: parseInt(document.getElementById('favorite-double').value),
                 budget: 150, prof: 50, pop: 20, stamina: 100,
                 prizeMoney: 0,
                 proTourPrizeMoney: 0,
                 pcPrizeMoney: 0,
+                challengeTourPrizeMoney: 0,
+                developmentTourPrizeMoney: 0,
                 europeanTourPrizeMoney: 0,
                 scoringXP: 0, doublesXP: 0,
                 trainingWeekKey: null, trainingSessionsThisWeek: 0,
@@ -186,8 +246,10 @@ function showScreen(screenId) {
                     : 1,
                 rivalries: {},
                 activeRivalIds: [],
-                careerChronicle: []
+                careerChronicle: [],
+                calendarFilters: { version: 1, hiddenTournamentKeys: [] }
             };
+            if (typeof initializeCareerDifficulty === 'function') initializeCareerDifficulty(player);
             emails = [];
             unreadMailsCount = 0;
             const startsWithTourCard = document.getElementById('start-with-tour-card')?.value === 'yes';
@@ -245,6 +307,7 @@ function showScreen(screenId) {
 
         function updateHub() {
             if (typeof player.stamina === 'undefined') player.stamina = 100; // Inicjalizacja dla starych zapisów
+            if (typeof refreshCareerDifficultyUI === 'function') refreshCareerDifficultyUI();
 
             document.getElementById('hub-name').innerText = player.name;
             document.getElementById('hub-flag').innerHTML = getFlagImg(player.country);
@@ -365,7 +428,16 @@ function showScreen(screenId) {
                 && typeof tournamentRound !== 'undefined' && Number(tournamentRound) > 1
                 && typeof tournamentBracket !== 'undefined' && Array.isArray(tournamentBracket)
                 && tournamentBracket.length > 1;
-            if (hasOpeningDraw) return tournamentBracket.some(isCareerPlayer);
+            if (hasOpeningDraw) {
+                if (typeof isUKOpenTournament === 'function' && isUKOpenTournament(tournament)
+                    && typeof getUKOpenFullField === 'function') {
+                    const candidates = typeof getPdcTourCardPlayers === 'function'
+                        ? getPdcTourCardPlayers(true)
+                        : [careerPlayer, ...(Array.isArray(pdcPlayers) ? pdcPlayers : [])];
+                    return getUKOpenFullField(tournament, candidates, currentDate, true).some(isCareerPlayer);
+                }
+                return tournamentBracket.some(isCareerPlayer);
+            }
 
             const name = String(tournament.name || '').toLowerCase();
             const isLeague = name.includes('premier') || name.includes('global darts league');
@@ -391,13 +463,44 @@ function showScreen(screenId) {
             }
             if (typeof isWorldCupQualifierTournament === 'function' && isWorldCupQualifierTournament(tournament)) return true;
 
+            const isWorldMastersEvent = (typeof isWorldMastersTournament === 'function' && isWorldMastersTournament(tournament))
+                || (typeof isWorldMastersFinalsTournament === 'function' && isWorldMastersFinalsTournament(tournament))
+                || (typeof isWorldMastersFinalsQualifierTournament === 'function' && isWorldMastersFinalsQualifierTournament(tournament));
+            if (isWorldMastersEvent) {
+                if (typeof getWorldMastersTournamentParticipants !== 'function') return true;
+                try {
+                    const participants = getWorldMastersTournamentParticipants(tournament);
+                    return Array.isArray(participants) && participants.length
+                        ? participants.some(isCareerPlayer)
+                        : true;
+                } catch (_error) {
+                    return true;
+                }
+            }
+
             if (typeof isPdcQSchoolTournament === 'function' && isPdcQSchoolTournament(tournament)) {
                 return careerPlayer.hasTourCard !== true;
+            }
+            if (typeof isChallengeTourTournament === 'function' && isChallengeTourTournament(tournament)) {
+                return careerPlayer.hasTourCard !== true;
+            }
+            if (typeof isDevelopmentTourTournament === 'function' && isDevelopmentTourTournament(tournament)) {
+                const developmentCandidates = typeof getPdcTourCardPlayers === 'function'
+                    ? getPdcTourCardPlayers(true)
+                    : [careerPlayer, ...(Array.isArray(pdcPlayers) ? pdcPlayers : [])];
+                return typeof isDevelopmentTourEligiblePlayer === 'function'
+                    ? isDevelopmentTourEligiblePlayer(careerPlayer, developmentCandidates, currentDate)
+                    : false;
             }
             if (typeof isPdcTourCardQualifierTournament === 'function' && isPdcTourCardQualifierTournament(tournament)) {
                 if (careerPlayer.hasTourCard !== true) return false;
                 return !(typeof isCareerPlayerAutomaticallyQualifiedForPdcCardQualifier === 'function'
                     && isCareerPlayerAutomaticallyQualifiedForPdcCardQualifier(tournament));
+            }
+            if (typeof isCrownMastersQualifierTournament === 'function' && isCrownMastersQualifierTournament(tournament)) {
+                return typeof isCareerPlayerEligibleForCrownMastersQualifier === 'function'
+                    ? isCareerPlayerEligibleForCrownMastersQualifier(tournament, careerPlayer)
+                    : true;
             }
             // Wyznaczenie obsady kwalifikatora Continental Tour zapisuje jej stan.
             // Nie robimy tego przy samym sprawdzeniu treningu — w razie braku już
@@ -429,7 +532,10 @@ function showScreen(screenId) {
                 const cardHolders = [...candidates].filter(candidate => candidate.hasTourCard === true)
                     .sort((first, second) => (Number(second.prizeMoney) || 0) - (Number(first.prizeMoney) || 0));
                 const replacements = [...candidates].filter(candidate => candidate.hasTourCard !== true)
-                    .sort((first, second) => (Number(second.prizeMoney) || 0) - (Number(first.prizeMoney) || 0));
+                    .sort((first, second) => typeof comparePlayersChampionshipReserveOrder === 'function'
+                        ? comparePlayersChampionshipReserveOrder(first, second)
+                        : (Number(second.challengeTourPrizeMoney) || 0) - (Number(first.challengeTourPrizeMoney) || 0)
+                            || (Number(second.prizeMoney) || 0) - (Number(first.prizeMoney) || 0));
                 const field = [...cardHolders.slice(0, 128), ...replacements.slice(0, Math.max(0, 128 - cardHolders.length))];
                 return field.some(isCareerPlayer);
             }
@@ -563,17 +669,29 @@ function showScreen(screenId) {
                     if (typeof resetEuropeanTourOrderOfMerit === 'function') {
                         resetEuropeanTourOrderOfMerit([...pdcPlayers, player]);
                     }
+                    if (typeof resetChallengeTourOrderOfMerit === 'function') {
+                        resetChallengeTourOrderOfMerit([...pdcPlayers, player]);
+                    }
+                    if (typeof resetDevelopmentTourOrderOfMerit === 'function') {
+                        resetDevelopmentTourOrderOfMerit([...pdcPlayers, player]);
+                    }
                     if (typeof tournamentDatabase !== 'undefined') {
                         tournamentDatabase.forEach(tournament => {
                             tournament.completed = false;
                             tournament.historyLogs = '';
                             delete tournament.matchHistory;
+                            delete tournament.bracketSeedPlayerKeys;
                             delete tournament.staminaChargedYear;
                             delete tournament.travelChargedYear;
                             delete tournament.travelRequestedStandard;
                             delete tournament.travelStandardUsed;
                             delete tournament.travelCostPaid;
                             delete tournament.travelPreparationLoss;
+                            delete tournament.playersChampionshipWithdrawals;
+                            delete tournament.playersChampionshipReplacements;
+                            delete tournament.withdrawalReportEntries;
+                            delete tournament.withdrawalReportSent;
+                            delete tournament.withdrawalReportSentYear;
                         });
                     }
                     gdlTable = [];
@@ -646,12 +764,25 @@ function showScreen(screenId) {
                     const cardHolderSkipsQSchool = typeof isPdcQSchoolTournament === 'function'
                         && isPdcQSchoolTournament(todayTournament)
                         && player?.hasTourCard === true;
+                    const cardHolderSkipsChallengeTour = typeof isChallengeTourTournament === 'function'
+                        && isChallengeTourTournament(todayTournament)
+                        && player?.hasTourCard === true;
+                    const playerSkipsDevelopmentTour = typeof isDevelopmentTourTournament === 'function'
+                        && isDevelopmentTourTournament(todayTournament)
+                        && typeof isDevelopmentTourEligiblePlayer === 'function'
+                        && !isDevelopmentTourEligiblePlayer(player, getPdcTourCardPlayers(true), currentDate);
                     const playerSkipsTourCardQualifier = typeof isPdcTourCardQualifierTournament === 'function'
                         && isPdcTourCardQualifierTournament(todayTournament)
                         && (player?.hasTourCard !== true
                             || (typeof isCareerPlayerAutomaticallyQualifiedForPdcCardQualifier === 'function'
-                                && isCareerPlayerAutomaticallyQualifiedForPdcCardQualifier(todayTournament)));
-                    if (playerSkipsContinentalQualifier || cardHolderSkipsQSchool || playerSkipsTourCardQualifier) {
+                                 && isCareerPlayerAutomaticallyQualifiedForPdcCardQualifier(todayTournament)));
+                    const playerSkipsCrownMastersQualifier = typeof isCrownMastersQualifierTournament === 'function'
+                        && isCrownMastersQualifierTournament(todayTournament)
+                        && typeof isCareerPlayerEligibleForCrownMastersQualifier === 'function'
+                        && !isCareerPlayerEligibleForCrownMastersQualifier(todayTournament, player);
+                    if (playerSkipsContinentalQualifier || cardHolderSkipsQSchool
+                        || cardHolderSkipsChallengeTour || playerSkipsDevelopmentTour || playerSkipsTourCardQualifier
+                        || playerSkipsCrownMastersQualifier) {
                         // Gracz nie bierze udziału w tej ścieżce kwalifikacji.
                         // Rozstrzygamy ją w tle, bez otwierania drabinki i bez
                         // konieczności wybierania opcji „Odpuść”.
@@ -835,16 +966,25 @@ function showScreen(screenId) {
             const list = document.getElementById('calendar-list');
             if(typeof tournamentDatabase === 'undefined') {
                 list.innerHTML = "";
+                if (typeof renderCalendarTournamentFilters === 'function') renderCalendarTournamentFilters([]);
                 return;
             }
             // Budujemy całą listę przed zmianą DOM, aby każdy kolejny turniej
             // nie powodował ponownego parsowania wszystkich poprzednich wierszy.
             let calendarHtml = "";
 
-            tournamentDatabase
+            const scheduledEntries = tournamentDatabase
                 .map((tour, idx) => ({ tour, idx }))
                 .filter(({ tour }) => typeof isTournamentScheduledForCareerYear !== 'function'
-                    || isTournamentScheduledForCareerYear(tour, currentDate.getFullYear()))
+                    || isTournamentScheduledForCareerYear(tour, currentDate.getFullYear()));
+            const visibleEntries = typeof getVisibleCalendarTournamentEntries === 'function'
+                ? getVisibleCalendarTournamentEntries(scheduledEntries)
+                : scheduledEntries;
+            if (typeof renderCalendarTournamentFilters === 'function') {
+                renderCalendarTournamentFilters(scheduledEntries);
+            }
+
+            visibleEntries
                 .sort((first, second) => first.tour.month - second.tour.month || first.tour.day - second.tour.day || first.idx - second.idx)
                 .forEach(({ tour, idx }) => {
                 let statusBadge = tour.completed 
@@ -876,7 +1016,9 @@ function showScreen(screenId) {
                     <div${championsButton || financeButton ? ' class="calendar-event-actions"' : ''}>${statusBadge}${planningButton}${championsButton}${financeButton}</div>
                 </div>`;
             });
-            list.innerHTML = calendarHtml;
+            list.innerHTML = calendarHtml || (scheduledEntries.length > 0 && typeof trCalendarFilter === 'function'
+                ? `<p class="calendar-filter-empty">${escapeHtml(trCalendarFilter('empty'))}</p>`
+                : '');
             showScreen('screen-calendar');
         }
 
@@ -913,65 +1055,61 @@ function showScreen(screenId) {
             }
         }
 
-        function triggerInterview() {
-    if (typeof interviewsDB === 'undefined' || interviewsDB.length === 0) return;
+        function triggerInterview(interviewContext = null) {
+            if (typeof interviewsDB === 'undefined' || interviewsDB.length === 0) return false;
 
-    const s = currentMatch ? currentMatch.stats : null;
-    const finalScore = currentMatch ? currentMatch.p1Score : 0;
-    const p1TotalPts = s ? s.p1AccumulatedScore + (501 - finalScore) : 0;
-    const matchAvg = s && s.p1TotalDarts > 0 ? (p1TotalPts / s.p1TotalDarts) * 3 : 0;
-    
-    // 1. Zbieramy warunki z rozegranego meczu
-    const matchFlags = {
-        nine_darter: s && s.p1LegDarts === 9,
-        high_avg: matchAvg >= 100,
-        "180s": s && s.p1OneEighties >= 5,
-        bad_doubles: s && (s.p1DoubleAttempts - s.p1DoubleHits) >= 8,
-        whitewash: currentMatch && currentMatch.p2Legs === 0,
-        comeback: currentMatch && Math.abs(currentMatch.p1Legs - currentMatch.p2Legs) === 1,
-        final_win: tournamentRound === 2
-    };
+            const context = interviewContext || (typeof buildPostMatchInterviewContext === 'function'
+                ? buildPostMatchInterviewContext(currentMatch, activeTournament, tournamentRound)
+                : null);
+            if (!context) return false;
 
-    // 2. Filtrujemy bazę pytań
-    let validInterviews = interviewsDB.filter(iv => {
-        if (!iv.trigger || iv.trigger === "generic") return true;
-        return matchFlags[iv.trigger] === true;
-    });
+            const validInterviews = typeof getVerifiedPostMatchInterviews === 'function'
+                ? getVerifiedPostMatchInterviews(interviewsDB, context)
+                : interviewsDB.filter(interview => interview?.trigger
+                    && interview.trigger !== 'unverified'
+                    && context.flags?.[interview.trigger] === true);
+            if (validInterviews.length === 0) return false;
 
-    // 3. Jeśli spełniono specjalne warunki, losujemy z pytań kontekstowych; w innym razie z ogólnych
-    const priorityInterviews = validInterviews.filter(iv => iv.trigger && iv.trigger !== "generic");
-    const chosenPool = priorityInterviews.length > 0 && Math.random() < 0.75 ? priorityInterviews : validInterviews;
-    
-    const iv = chosenPool[Math.floor(Math.random() * chosenPool.length)];
-    const langSuffix = `_${currentLang}`;
+            const priorityInterviews = validInterviews.filter(interview => interview.trigger !== 'verified_summary');
+            const fallbackInterviews = validInterviews.filter(interview => interview.trigger === 'verified_summary');
+            const chosenPool = priorityInterviews.length > 0 && Math.random() < 0.75
+                ? priorityInterviews
+                : (fallbackInterviews.length > 0 ? fallbackInterviews : validInterviews);
+            const interview = chosenPool[Math.floor(Math.random() * chosenPool.length)];
+            const langSuffix = `_${currentLang}`;
+            const renderText = template => typeof formatPostMatchInterviewText === 'function'
+                ? formatPostMatchInterviewText(template, context)
+                : String(template || '');
 
-    document.getElementById('event-title').innerText = iv[`title${langSuffix}`] || iv.title_pl;
-    document.getElementById('event-desc').innerText = iv[`desc${langSuffix}`] || iv.desc_pl;
-    
-    const choicesDiv = document.getElementById('event-choices');
-    choicesDiv.innerHTML = "";
-    
-    iv.choices.forEach((choice) => {
-        const btn = document.createElement('button');
-        btn.className = "choice-btn";
-        btn.textContent = choice[`text${langSuffix}`] || choice.text_pl;
-        
-        btn.onclick = function() {
-            player.prof = clamp((player.prof || 50) + choice.effect.prof, 0, 100);
-            player.pop = clamp((player.pop || 20) + choice.effect.pop, 0, 100);
-            
-            const outcomeText = choice[`outcome${langSuffix}`] || choice.outcome_pl;
-            alert(outcomeText);
-            
-            updateHub();
-            document.getElementById('event-modal').style.display = "none";
-        };
-        choicesDiv.appendChild(btn);
-    });
-    document.getElementById('event-modal').style.display = "flex";
-}
+            document.getElementById('event-title').innerText = renderText(interview[`title${langSuffix}`] || interview.title_pl);
+            document.getElementById('event-desc').innerText = renderText(interview[`desc${langSuffix}`] || interview.desc_pl);
+
+            const choicesDiv = document.getElementById('event-choices');
+            choicesDiv.innerHTML = '';
+
+            interview.choices.forEach(choice => {
+                const button = document.createElement('button');
+                button.className = 'choice-btn';
+                button.textContent = renderText(choice[`text${langSuffix}`] || choice.text_pl);
+
+                button.onclick = function() {
+                    player.prof = clamp((player.prof || 50) + choice.effect.prof, 0, 100);
+                    player.pop = clamp((player.pop || 20) + choice.effect.pop, 0, 100);
+
+                    alert(renderText(choice[`outcome${langSuffix}`] || choice.outcome_pl));
+
+                    updateHub();
+                    document.getElementById('event-modal').style.display = 'none';
+                };
+                choicesDiv.appendChild(button);
+            });
+            document.getElementById('event-modal').style.display = 'flex';
+            return true;
+        }
 
         // --- SYSTEM RYWALI I HISTORII H2H ---
+        const ACTIVE_RIVALS_LIMIT = 10;
+
         function initRivalries() {
             if (!isPlainObject(player.rivalries)) player.rivalries = {};
             if (!Array.isArray(player.activeRivalIds)) player.activeRivalIds = [];
@@ -992,7 +1130,7 @@ function showScreen(screenId) {
                 .filter(record => getOpponentById(record.opponentId))
                 .filter(record => record.matches >= 2 || record.importantMatches >= 1)
                 .sort((first, second) => getRivalryScore(second) - getRivalryScore(first) || second.lastDate - first.lastDate)
-                .slice(0, 4);
+                .slice(0, ACTIVE_RIVALS_LIMIT);
 
             player.activeRivalIds = activeRivals.map(record => record.opponentId);
             return activeRivals;
@@ -1121,6 +1259,16 @@ function showScreen(screenId) {
             document.getElementById('btn-rank-pc').style.background = type === 'pc' ? 'var(--accent-green)' : '#34495e';
             const btnEuropeanTour = document.getElementById('btn-rank-et');
             if (btnEuropeanTour) btnEuropeanTour.style.background = type === 'europeanTour' ? 'var(--accent-green)' : '#34495e';
+            const btnChallengeTour = document.getElementById('btn-rank-challenge-tour');
+            if (btnChallengeTour) {
+                btnChallengeTour.style.background = type === 'challengeTour' ? 'var(--accent-green)' : '#d35400';
+                if (typeof trChallengeTour === 'function') btnChallengeTour.innerText = trChallengeTour('tableName');
+            }
+            const btnDevelopmentTour = document.getElementById('btn-rank-development-tour');
+            if (btnDevelopmentTour) {
+                btnDevelopmentTour.style.background = type === 'developmentTour' ? 'var(--accent-green)' : '#2980b9';
+                if (typeof trDevelopmentTour === 'function') btnDevelopmentTour.innerText = trDevelopmentTour('tableName');
+            }
             
             // INTELIGENTNE WYKRYWANIE MODA (Sprawdza czy Littler jest w grze)
             let isModded = pdcPlayers.some(p => p.name === "Luke Littler");
@@ -1141,6 +1289,22 @@ function showScreen(screenId) {
             const list = document.getElementById('pdc-list');
             let rankingHtml = '';
 
+            if (type === 'challengeTour') {
+                if (typeof renderChallengeTourRanking === 'function') renderChallengeTourRanking(list);
+                else list.innerHTML = '<div style="text-align:center; margin-top:40px; color:#bdc3c7;">Tabela Rising Stars jest niedostępna.</div>';
+                attachRankingProfileLinks(list, type);
+                showScreen('screen-pdc');
+                return;
+            }
+
+            if (type === 'developmentTour') {
+                if (typeof renderDevelopmentTourRanking === 'function') renderDevelopmentTourRanking(list);
+                else list.innerHTML = '<div style="text-align:center; margin-top:40px; color:#bdc3c7;">Tabela Future Champions jest niedostępna.</div>';
+                attachRankingProfileLinks(list, type);
+                showScreen('screen-pdc');
+                return;
+            }
+
             if (type === 'worldMasters') {
                 if (typeof renderWorldMastersRanking === 'function') renderWorldMastersRanking(list);
                 else list.innerHTML = '<div style="text-align:center; margin-top:40px; color:#bdc3c7;">Tabela Global Masters jest niedostępna.</div>';
@@ -1151,8 +1315,9 @@ function showScreen(screenId) {
             
             // --- Wyświetlanie tabeli Ligi ---
             if (type === 'gdl') {
+                const pointsGuide = `<div class="ranking-points-guide" role="note">ℹ️ ${escapeHtml(t('t-gdl-points-guide'))}</div>`;
                 if (typeof gdlTable === 'undefined' || gdlTable.length === 0) {
-                    list.innerHTML = `<div style="text-align:center; margin-top:40px; color:#bdc3c7;">Sezon ${leagueName} jeszcze się nie rozpoczął (start 1 lutego).</div>`;
+                    list.innerHTML = `${pointsGuide}<div style="text-align:center; margin-top:40px; color:#bdc3c7;">Sezon ${leagueName} jeszcze się nie rozpoczął (start 1 lutego).</div>`;
                     showScreen('screen-pdc');
                     return;
                 }
@@ -1166,7 +1331,7 @@ function showScreen(screenId) {
                     return b.legsWon - a.legsWon;
                 });
                 
-                rankingHtml += `<div style="border-bottom: 2px solid var(--accent-green); padding: 5px 10px; display: flex; font-size: 12px; color: #bdc3c7; font-weight: bold; background: #0f3460;">
+                rankingHtml += `${pointsGuide}<div style="border-bottom: 2px solid var(--accent-green); padding: 5px 10px; display: flex; font-size: 12px; color: #bdc3c7; font-weight: bold; background: #0f3460;">
                     <div style="flex: 3;">${t('t-gdl-player')}</div>
                     <div style="flex: 1; text-align: center;">${t('t-gdl-pts')}</div>
                     <div style="flex: 1; text-align: center;">${t('t-gdl-nights')}</div>
@@ -1263,6 +1428,18 @@ function showScreen(screenId) {
         function getPlayerRankingCacheValue(candidate, type) {
             if (type === 'protour') return Number(candidate?.proTourPrizeMoney) || 0;
             if (type === 'pc') return Number(candidate?.pcPrizeMoney) || 0;
+            if (type === 'challengeTour') return [
+                Number(candidate?.challengeTourPrizeMoney) || 0,
+                Number(candidate?.prizeMoney) || 0,
+                Number(candidate?.ovr ?? candidate?.overall) || 0,
+                String(candidate?.name || '')
+            ].join('|');
+            if (type === 'developmentTour') return [
+                Number(candidate?.developmentTourPrizeMoney) || 0,
+                Number(candidate?.prizeMoney) || 0,
+                Number(candidate?.ovr ?? candidate?.overall) || 0,
+                String(candidate?.name || '')
+            ].join('|');
             if (type === 'europeanTour') {
                 return [
                     Number(candidate?.europeanTourPrizeMoney) || 0,
@@ -1275,7 +1452,7 @@ function showScreen(screenId) {
         }
 
         function getCachedRankedPlayers(type = 'main') {
-            const rankingType = ['main', 'protour', 'pc', 'europeanTour'].includes(type) ? type : 'main';
+            const rankingType = ['main', 'protour', 'pc', 'europeanTour', 'challengeTour', 'developmentTour'].includes(type) ? type : 'main';
             const combinedPlayers = [...pdcPlayers, player].filter(candidate => candidate && !candidate.isBye);
             if (rankingType === 'protour' && typeof refreshProTourOrderOfMerit === 'function') {
                 refreshProTourOrderOfMerit(combinedPlayers, currentDate);
@@ -1292,6 +1469,12 @@ function showScreen(screenId) {
             const rankedPlayers = [...combinedPlayers].sort((first, second) => {
                 if (rankingType === 'protour') return (second.proTourPrizeMoney || 0) - (first.proTourPrizeMoney || 0);
                 if (rankingType === 'pc') return (second.pcPrizeMoney || 0) - (first.pcPrizeMoney || 0);
+                if (rankingType === 'challengeTour') return typeof compareChallengeTourOrderOfMerit === 'function'
+                    ? compareChallengeTourOrderOfMerit(first, second)
+                    : (second.challengeTourPrizeMoney || 0) - (first.challengeTourPrizeMoney || 0);
+                if (rankingType === 'developmentTour') return typeof compareDevelopmentTourOrderOfMerit === 'function'
+                    ? compareDevelopmentTourOrderOfMerit(first, second)
+                    : (second.developmentTourPrizeMoney || 0) - (first.developmentTourPrizeMoney || 0);
                 if (rankingType === 'europeanTour') return typeof compareEuropeanTourOrderOfMerit === 'function'
                     ? compareEuropeanTourOrderOfMerit(first, second)
                     : (second.europeanTourPrizeMoney || 0) - (first.europeanTourPrizeMoney || 0);

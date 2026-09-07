@@ -257,6 +257,11 @@ function finishFastForwardedSpecialTournament(outcome) {
         showTournamentEnd();
         return true;
     }
+    if (outcome === 'crownMastersQualifier') {
+        concludeCrownMastersQualifierEvent(true);
+        showTournamentEnd();
+        return true;
+    }
     return false;
 }
 
@@ -288,6 +293,10 @@ function finishHeadlessTournament(specialTournamentOutcome) {
     }
     if (specialTournamentOutcome === 'pdcTourCardQualifier') {
         concludePdcTourCardQualifierEvent(false);
+        return;
+    }
+    if (specialTournamentOutcome === 'crownMastersQualifier') {
+        concludeCrownMastersQualifierEvent(false);
         return;
     }
     

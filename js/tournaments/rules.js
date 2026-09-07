@@ -9,11 +9,13 @@ function getRankingQualificationGroups(tournament, candidates) {
     if (isEuropeanChampionshipTournament(tournament)) {
         return [group('et32', 32, getEuropeanTourOrderOfMerit(candidates).slice(0, 32))];
     }
-    if (name.includes('uk open') || name.includes('british open')) {
-        const ranked = rank('prizeMoney');
-        const holders = ranked.filter(p => p.hasTourCard === true).slice(0, 128);
-        return [group('card128', 128, holders),
-            group('reserves', 128 - holders.length, ranked.filter(p => p.hasTourCard !== true).slice(0, 128 - holders.length))];
+    if ((typeof isUKOpenTournament === 'function' && isUKOpenTournament(tournament))
+        || name.includes('uk open') || name.includes('british open')) {
+        if (typeof getUKOpenQualificationGroups === 'function') {
+            return getUKOpenQualificationGroups(tournament, candidates);
+        }
+        const holders = rank('prizeMoney').filter(candidate => candidate.hasTourCard === true).slice(0, 128);
+        return [group('card128', 128, holders)];
     }
     if (name.includes('matchplay') || name.includes('grand prix')) {
         const seeds = rank('prizeMoney').slice(0, 16);
@@ -75,6 +77,11 @@ const checkoutGuide = {
         }
 
         function getRoundName(r) {
+            if (typeof isUKOpenTournament === 'function'
+                && isUKOpenTournament(typeof activeTournament !== 'undefined' ? activeTournament : null)) {
+                const ukOpenName = typeof getUKOpenRoundName === 'function' ? getUKOpenRoundName(r) : '';
+                if (ukOpenName) return ukOpenName;
+            }
             if (typeof isContinentalQualifierTournament === 'function'
                 && isContinentalQualifierTournament(typeof activeTournament !== 'undefined' ? activeTournament : null)
                 && typeof getContinentalQualifierPath === 'function'
@@ -94,6 +101,16 @@ const checkoutGuide = {
         function getTournamentMatchFormat(tournament, round) {
             const name = tournament ? tournament.name : "";
 
+            if (typeof isCrownMastersTournament === 'function'
+                && (isCrownMastersTournament(tournament) || isCrownMastersQualifierTournament(tournament))) {
+                return getCrownMastersMatchFormat(tournament, round);
+            }
+            if (typeof isDevelopmentTourTournament === 'function' && isDevelopmentTourTournament(tournament)) {
+                return { type: 'legs', legsToWin: Number(round) >= 16 ? 4 : 5 };
+            }
+            if (typeof isChallengeTourTournament === 'function' && isChallengeTourTournament(tournament)) {
+                return { type: 'legs', legsToWin: 5 };
+            }
             if (typeof isPdcQSchoolTournament === 'function' && isPdcQSchoolTournament(tournament)) {
                 return { type: 'legs', legsToWin: 11 };
             }
@@ -152,10 +169,10 @@ const checkoutGuide = {
                 if (round === 4) return { type: 'legs', legsToWin: 7 };
                 return { type: 'legs', legsToWin: 8 };
             }
-            if (name.includes("UK Open") || name.includes("British Open")) {
-                if (round >= 32) return { type: 'legs', legsToWin: 6 };
-                if (round >= 8) return { type: 'legs', legsToWin: 10 };
-                return { type: 'legs', legsToWin: 11 };
+            if (typeof isUKOpenTournament === 'function' && isUKOpenTournament(tournament)) {
+                return typeof getUKOpenMatchFormat === 'function'
+                    ? getUKOpenMatchFormat(round)
+                    : { type: 'legs', legsToWin: [160, 128, 96].includes(Number(round)) ? 6 : [4, 2].includes(Number(round)) ? 11 : 10 };
             }
             if (typeof isEuropeanChampionshipTournament === 'function' && isEuropeanChampionshipTournament(tournament)) {
                 if (round === 32) return { type: 'legs', legsToWin: 6 };

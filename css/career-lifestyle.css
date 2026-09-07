@@ -111,12 +111,18 @@
 .career-trophy-room-head .action-btn { align-self: stretch; width: auto; margin: 0; }
 #lifestyle-trophy-showcase { margin-bottom: 25px; }
 #lifestyle-trophy-showcase > h3 { color: #f4d37d; }
-.career-trophy-collection { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }
+.career-trophy-collection {
+    display: grid;
+    /* The Trophy Room shares a 900px screen with the records panel. Do not
+       squeeze two icon/text/button cards into the resulting narrow column. */
+    grid-template-columns: repeat(auto-fit,minmax(min(100%,320px),1fr));
+    gap: 10px;
+}
 .career-trophy-card { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; min-width: 0; padding: 12px; border: 1px solid #485a72; border-radius: 8px; background: rgba(18,35,58,.88); }
 .career-trophy-card.featured { border-color: #d3ae3e; background: rgba(75,59,16,.35); }
 .career-trophy-icon { font-size: 29px; }
 .career-trophy-card div { min-width: 0; }
-.career-trophy-card strong { display: block; color: #f3e2aa; overflow-wrap: anywhere; }
+.career-trophy-card strong { display: block; color: #f3e2aa; overflow-wrap: break-word; word-break: normal; }
 .career-trophy-card small { display: block; margin-top: 4px; color: #9facc0; }
 .career-trophy-card .action-btn { width: auto; margin: 0; padding: 7px 9px; font-size: 11px; white-space: normal; }
 

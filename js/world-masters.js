@@ -5,6 +5,7 @@ const WORLD_MASTERS_FINALS_NAME = 'Global Masters Finals';
 const WORLD_MASTERS_FINALS_QUALIFIER_NAME = 'Global Masters Finals Qualifier';
 const WORLD_MASTERS_INVITATION_RULE = 'top-14-oom-balanced-8';
 const WORLD_MASTERS_LOCAL_RATING_BONUS = 7;
+const WORLD_MASTERS_LOCAL_RATING_CAP = 85;
 const WORLD_MASTERS_FINALS_QUALIFIER_VERSION = 2;
 const WORLD_MASTERS_FINALS_QUALIFIER_PLACES = 4;
 const WORLD_MASTERS_FINALS_DRAW_VERSION = 2;
@@ -22,6 +23,7 @@ const WORLD_MASTERS_TRANSLATIONS = {
         finalsRoleIn: '<strong>Zakwalifikowałeś się do finałów Global Masters.</strong>', finalsRoleOut: 'Nie uzyskałeś kwalifikacji do tegorocznych finałów.',
         qualifierMailSubject: 'Awans do finałów: {finals}', qualifierMailBody: 'Po kwalifikatorze dla posiadaczy kart do <strong>{finals}</strong> awans uzyskali:<br><br>{players}',
         tableName: 'Tabela Global Masters', tableEmpty: 'Tabela cyklu zapełni się po pierwszym turnieju.', player: 'Zawodnik', points: 'Pkt', legs: 'Legi', average: 'Śr.', qualified: 'TOP 24',
+        pointsGuide: 'Punkty za każdy turniej: 1/8 finału 1 · ćwierćfinalista 3 · półfinalista 5 · finalista 8 · zwycięzca 12',
         qualifierComplete: 'Czterech kwalifikantów do Global Masters Finals zostało wyłonionych.', finalsComplete: 'Global Masters Finals zakończone.'
     },
     en: {
@@ -33,6 +35,7 @@ const WORLD_MASTERS_TRANSLATIONS = {
         finalsRoleIn: '<strong>You have qualified for the Global Masters Finals.</strong>', finalsRoleOut: 'You did not qualify for this year’s finals.',
         qualifierMailSubject: 'Finals qualification: {finals}', qualifierMailBody: 'The Tour Card Holder Qualifier has produced these four qualifiers for <strong>{finals}</strong>:<br><br>{players}',
         tableName: 'Global Masters Standings', tableEmpty: 'The standings will populate after the first event.', player: 'Player', points: 'Pts', legs: 'Legs', average: 'Avg.', qualified: 'TOP 24',
+        pointsGuide: 'Points per event: last 16 1 · quarter-finalist 3 · semi-finalist 5 · runner-up 8 · winner 12',
         qualifierComplete: 'The four Global Masters Finals qualifiers have been determined.', finalsComplete: 'The Global Masters Finals are complete.'
     },
     de: {
@@ -44,6 +47,7 @@ const WORLD_MASTERS_TRANSLATIONS = {
         finalsRoleIn: '<strong>Du hast dich für die Global Masters Finals qualifiziert.</strong>', finalsRoleOut: 'Du hast dich nicht für die Finals in diesem Jahr qualifiziert.',
         qualifierMailSubject: 'Finalqualifikation: {finals}', qualifierMailBody: 'Der Qualifikator für Tour-Card-Inhaber hat diese vier Spieler für <strong>{finals}</strong> hervorgebracht:<br><br>{players}',
         tableName: 'Global-Masters-Tabelle', tableEmpty: 'Die Tabelle füllt sich nach dem ersten Turnier.', player: 'Spieler', points: 'Pkt.', legs: 'Legs', average: 'Schnitt', qualified: 'TOP 24',
+        pointsGuide: 'Punkte pro Turnier: Achtelfinalist 1 · Viertelfinalist 3 · Halbfinalist 5 · Finalist 8 · Sieger 12',
         qualifierComplete: 'Die vier Qualifikanten für die Global Masters Finals stehen fest.', finalsComplete: 'Die Global Masters Finals sind beendet.'
     },
     nl: {
@@ -55,6 +59,7 @@ const WORLD_MASTERS_TRANSLATIONS = {
         finalsRoleIn: '<strong>Je hebt je geplaatst voor de Global Masters Finals.</strong>', finalsRoleOut: 'Je hebt je niet geplaatst voor de finales van dit jaar.',
         qualifierMailSubject: 'Kwalificatie voor de finales: {finals}', qualifierMailBody: 'De Tour Card Holder Qualifier leverde deze vier kwalificanten op voor <strong>{finals}</strong>:<br><br>{players}',
         tableName: 'Global Masters-stand', tableEmpty: 'De stand wordt na het eerste evenement gevuld.', player: 'Speler', points: 'Ptn', legs: 'Legs', average: 'Gem.', qualified: 'TOP 24',
+        pointsGuide: 'Punten per toernooi: laatste 16 1 · kwartfinalist 3 · halvefinalist 5 · finalist 8 · winnaar 12',
         qualifierComplete: 'De vier kwalificanten voor de Global Masters Finals zijn bekend.', finalsComplete: 'De Global Masters Finals zijn afgelopen.'
     }
 };
@@ -135,8 +140,17 @@ function getWorldMastersLocalRatingBonus(candidate, tournament = activeTournamen
     // Rola z zapisanej obsady, nie aktualna strona drabinki ani sama narodowość.
     // Odczyt podczas meczu nie tworzy obsady i nie zużywa losowań.
     const key = getWorldMastersPlayerKey(candidate);
-    return field.localKeys.includes(key) && !(Array.isArray(field.invitedKeys) && field.invitedKeys.includes(key))
-        ? WORLD_MASTERS_LOCAL_RATING_BONUS : 0;
+    const isLocal = field.localKeys.includes(key)
+        && !(Array.isArray(field.invitedKeys) && field.invitedKeys.includes(key));
+    if (!isLocal) return 0;
+
+    // Bonus regionalny może mieć maksymalnie +7, ale nie podnosi efektywnego
+    // OVR powyżej 85. Gracz z bazowym OVR ponad limitem nie jest osłabiany —
+    // po prostu nie otrzymuje dodatkowego wzmocnienia gospodarza.
+    const baseOverall = Number(candidate.overall ?? candidate.ovr);
+    return Number.isFinite(baseOverall)
+        ? Math.max(0, Math.min(WORLD_MASTERS_LOCAL_RATING_BONUS, WORLD_MASTERS_LOCAL_RATING_CAP - baseOverall))
+        : WORLD_MASTERS_LOCAL_RATING_BONUS;
 }
 
 function getWorldMastersMatchRatings(candidate, stats = candidate, tournament = activeTournament) {
@@ -144,7 +158,8 @@ function getWorldMastersMatchRatings(candidate, stats = candidate, tournament = 
     if (!stats || !bonus) return stats;
     const boosted = { ...stats };
     // Wyłącznie kopia na potrzeby obliczeń meczu; baza, trening i widoczny OVR
-    // pozostają nietknięte. Obowiązuje ten sam limit 100 co dla bonusu sprzętu.
+    // pozostają nietknięte. Ten sam ograniczony bonus trafia do wszystkich
+    // ocen meczowych, a pojedyncza statystyka nadal nie może przekroczyć 100.
     for (const field of ['ovr', 'overall', 'scoring', 'doubles']) {
         if (stats[field] != null && Number.isFinite(Number(stats[field]))) {
             boosted[field] = Math.min(100, Number(stats[field]) + bonus);
@@ -220,6 +235,11 @@ function getWorldMastersRankingRows(state = ensureWorldMastersState(), candidate
         const candidate = byKey.get(row.key) || null;
         return {
             ...row,
+            // Nazwa i flaga zapisane w wierszu są tylko awaryjną kopią. Mod może
+            // zmienić dane zawodnika już po zdobyciu przez niego punktów, dlatego
+            // tabela zawsze powinna pokazywać aktualny profil z bazy kariery.
+            name: candidate?.name || row.name,
+            country: candidate?.country || row.country,
             player: candidate,
             pdcMoney: Number(candidate?.prizeMoney) || 0,
             average: row.averageMatches ? row.averageTotal / row.averageMatches : 0
@@ -762,11 +782,12 @@ function migrateWorldMastersCalendar() {
 
 function renderWorldMastersRanking(list) {
     const rows = getWorldMastersRankingRows();
+    const pointsGuide = `<div class="ranking-points-guide" role="note">ℹ️ ${escapeHtml(trWorldMasters('pointsGuide'))}</div>`;
     if (!rows.length) {
-        list.innerHTML = `<div style="text-align:center; margin-top:40px; color:#bdc3c7;">${trWorldMasters('tableEmpty')}</div>`;
+        list.innerHTML = `${pointsGuide}<div style="text-align:center; margin-top:40px; color:#bdc3c7;">${trWorldMasters('tableEmpty')}</div>`;
         return;
     }
-    let rankingHtml = `<div style="border-bottom:2px solid var(--accent-green); padding:5px 10px; display:flex; font-size:12px; color:#bdc3c7; font-weight:bold; background:#0f3460;"><div style="flex:3;">${trWorldMasters('player')}</div><div style="flex:1; text-align:center;">${trWorldMasters('points')}</div><div style="flex:2; text-align:center;">${trWorldMasters('legs')}</div><div style="flex:1; text-align:right;">${trWorldMasters('average')}</div></div>`;
+    let rankingHtml = `${pointsGuide}<div style="border-bottom:2px solid var(--accent-green); padding:5px 10px; display:flex; font-size:12px; color:#bdc3c7; font-weight:bold; background:#0f3460;"><div style="flex:3;">${trWorldMasters('player')}</div><div style="flex:1; text-align:center;">${trWorldMasters('points')}</div><div style="flex:2; text-align:center;">${trWorldMasters('legs')}</div><div style="flex:1; text-align:right;">${trWorldMasters('average')}</div></div>`;
     rows.forEach((row, index) => {
         const candidate = row.player || row;
         const isMe = candidate && typeof isCurrentPlayer === 'function' && isCurrentPlayer(candidate);

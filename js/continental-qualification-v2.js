@@ -1,7 +1,7 @@
 const CONTINENTAL_QUALIFIER_TYPE = 'continentalQualifier';
 const CONTINENTAL_QUALIFICATION_VERSION = 2;
 const CONTINENTAL_TOUR_FIELD_SIZE = 48;
-const CONTINENTAL_TOP_16_WITHDRAWAL_CHANCE = 0.15;
+const CONTINENTAL_TOP_16_WITHDRAWAL_CHANCE = 0.20;
 
 const CONTINENTAL_QUALIFIER_PATHS = Object.freeze({
     card: { places: 10, label: 'Pro Card Qualifier' },
@@ -486,6 +486,9 @@ function prepareContinentalTourWithdrawals(main, { skipCareerPlayer = false, ran
         state.withdrawals.push({ withdrawnPlayerId: getContinentalQualificationPlayerKey(candidate),
             replacementPlayerId: replacement ? getContinentalQualificationPlayerKey(replacement) : null,
             withdrawnPlayerName: candidate.name, replacementPlayerName: replacement?.name || '',
+            withdrawnPlayerCountry: candidate.country || '',
+            withdrawnPlayerOverall: Math.round(Number(candidate.ovr ?? candidate.overall) || 0),
+            withdrawnPlayerPrizeMoney: Number(candidate.prizeMoney) || 0,
             entryRound });
     };
     // A deliberate career-player withdrawal uses the same queue, never a random outsider.

@@ -7,10 +7,13 @@ let playerLifecycleState = {
 };
 
 let playerLifecycleValidationCache = null;
+let playerLifecycleTemplateLookupCache = null;
+let playerLifecycleRetiredLookupCache = null;
 const PLAYER_LIFECYCLE_IDENTITY_FIELDS = ['retiredPlayerKeys', 'retiredPlayerNames', 'retiredPlayerIds', 'retiredTemplateIndexes'];
 
 function invalidatePlayerLifecycleCache() {
     playerLifecycleValidationCache = null;
+    playerLifecycleRetiredLookupCache = null;
 }
 
 function getPlayerLifecycleCacheStamp(state) {
@@ -120,6 +123,27 @@ function getLifecyclePlayerNameKey(candidate) {
     return String(name || '').trim().replace(/\s+/g, ' ').toLocaleLowerCase('pl');
 }
 
+function getPlayerLifecycleTemplateLookup() {
+    const templates = typeof defaultPdcPlayerTemplates !== 'undefined' && Array.isArray(defaultPdcPlayerTemplates)
+        ? defaultPdcPlayerTemplates
+        : null;
+    if (!templates) return null;
+    if (playerLifecycleTemplateLookupCache?.templates === templates
+        && playerLifecycleTemplateLookupCache.templatesLength === templates.length) {
+        return playerLifecycleTemplateLookupCache.byName;
+    }
+
+    const byName = new Map();
+    templates.forEach((template, index) => {
+        const name = getLifecyclePlayerNameKey(template);
+        if (!name) return;
+        if (!byName.has(name)) byName.set(name, []);
+        byName.get(name).push(index);
+    });
+    playerLifecycleTemplateLookupCache = { templates, templatesLength: templates.length, byName };
+    return byName;
+}
+
 function getLifecycleTemplateIndex(candidate) {
     if (!candidate || candidate.isBye) return null;
     if (Number.isInteger(candidate.defaultTemplateIndex) && candidate.defaultTemplateIndex >= 0) {
@@ -132,12 +156,15 @@ function getLifecycleTemplateIndex(candidate) {
         .filter(Boolean);
     if (!candidateNames.length) return null;
     const candidateCountry = String(candidate.country || '').trim().toLocaleLowerCase('pl');
-    const matchingIndex = defaultPdcPlayerTemplates.findIndex(template => {
-        const sameName = candidateNames.includes(getLifecyclePlayerNameKey(template));
+    const templateLookup = getPlayerLifecycleTemplateLookup();
+    const candidateIndexes = [...new Set(candidateNames.flatMap(name => templateLookup?.get(name) || []))]
+        .sort((first, second) => first - second);
+    const matchingIndex = candidateIndexes.find(index => {
+        const template = defaultPdcPlayerTemplates[index];
         const templateCountry = String(template?.country || '').trim().toLocaleLowerCase('pl');
-        return sameName && (!candidateCountry || !templateCountry || candidateCountry === templateCountry);
+        return !candidateCountry || !templateCountry || candidateCountry === templateCountry;
     });
-    return matchingIndex >= 0 ? matchingIndex : null;
+    return Number.isInteger(matchingIndex) ? matchingIndex : null;
 }
 
 function hydrateRetiredTemplateIndexes(state = playerLifecycleState) {
@@ -177,12 +204,34 @@ function hydrateRetiredTemplateIndexes(state = playerLifecycleState) {
     return state.retiredTemplateIndexes;
 }
 
+function getPlayerLifecycleRetiredLookup(state) {
+    if (playerLifecycleRetiredLookupCache?.state === state
+        && playerLifecycleRetiredLookupCache.retiredPlayerKeys === state.retiredPlayerKeys
+        && playerLifecycleRetiredLookupCache.retiredPlayerNames === state.retiredPlayerNames
+        && playerLifecycleRetiredLookupCache.retiredPlayerIds === state.retiredPlayerIds
+        && playerLifecycleRetiredLookupCache.retiredTemplateIndexes === state.retiredTemplateIndexes) {
+        return playerLifecycleRetiredLookupCache.lookup;
+    }
+    const lookup = {
+        retiredKeys: new Set(state.retiredPlayerKeys),
+        retiredNames: new Set(state.retiredPlayerNames),
+        retiredIds: new Set(state.retiredPlayerIds),
+        retiredTemplateIndexes: new Set(state.retiredTemplateIndexes)
+    };
+    playerLifecycleRetiredLookupCache = {
+        state,
+        retiredPlayerKeys: state.retiredPlayerKeys,
+        retiredPlayerNames: state.retiredPlayerNames,
+        retiredPlayerIds: state.retiredPlayerIds,
+        retiredTemplateIndexes: state.retiredTemplateIndexes,
+        lookup
+    };
+    return lookup;
+}
+
 function isRetiredPlayer(candidate, templateIndex = getLifecycleTemplateIndex(candidate), state = ensurePlayerLifecycleState()) {
     if (!candidate || candidate.isBye) return false;
-    const retiredKeys = new Set(state.retiredPlayerKeys);
-    const retiredNames = new Set(state.retiredPlayerNames);
-    const retiredIds = new Set(state.retiredPlayerIds);
-    const retiredTemplateIndexes = new Set(state.retiredTemplateIndexes);
+    const { retiredKeys, retiredNames, retiredIds, retiredTemplateIndexes } = getPlayerLifecycleRetiredLookup(state);
     const keys = [candidate.name, candidate.sourceName]
         .filter(Boolean)
         .map(name => `${name}|${candidate.country || ''}`);

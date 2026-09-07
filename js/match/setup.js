@@ -64,17 +64,6 @@ function startMatch(vsAI) {
                 document.getElementById('val-sets-p2').innerText = currentMatch.p2Sets;
             }
 
-            if (currentMatch.suddenDeath) {
-                const suddenDeath = currentMatch.suddenDeath;
-                document.getElementById('match-score-p1').innerText = suddenDeath.p1Score;
-                document.getElementById('match-score-p2').innerText = suddenDeath.p2Score;
-                document.getElementById('checkout-p1').innerText = `Nagła śmierć · lotki: ${suddenDeath.p1Darts}/3`;
-                document.getElementById('checkout-p2').innerText = `Nagła śmierć · lotki: ${suddenDeath.p2Darts}/3`;
-                document.getElementById('val-legs-p1').innerText = currentMatch.p1Legs;
-                document.getElementById('val-legs-p2').innerText = currentMatch.p2Legs;
-                return;
-            }
-
             document.getElementById('match-score-p1').innerText = currentMatch.p1Score;
             document.getElementById('checkout-p1').innerText = getCheckoutPath(currentMatch.p1Score);
             document.getElementById('val-legs-p1').innerText = currentMatch.p1Legs;
@@ -275,6 +264,14 @@ function startMatch(vsAI) {
 
             checkAchievements('stats'); // <--- DODANE TUTAJ (skanuje po każdym meczu)
 
+            // Wywiad musi dostać niezmienny zapis faktycznego meczu. Późniejsza
+            // symulacja rundy zmienia drabinkę i numer rundy, a currentMatch jest
+            // czyszczony przed pokazaniem wyników.
+            const postMatchInterviewContext = isP1Winner && currentMatch.isTournament
+                && typeof buildPostMatchInterviewContext === 'function'
+                ? buildPostMatchInterviewContext(currentMatch, activeTournament, tournamentRound)
+                : null;
+
             // Przechodzimy do rozstrzygnięcia
             if (currentMatch.isTournament && activeTournament) {
                 if (typeof isGrandSlamCareerGroupMatch === 'function' && isGrandSlamCareerGroupMatch(currentMatch)) {
@@ -330,6 +327,16 @@ function startMatch(vsAI) {
                     currentMatch = null;
                     document.getElementById('bracket-modal').style.display = 'none';
                     concludePdcTourCardQualifierEvent(true);
+                    showTournamentEnd();
+                    if (typeof updateHub === 'function') updateHub();
+                    showScreen('screen-hub');
+                    saveGame(true);
+                    return;
+                }
+                if (specialTournamentOutcome === 'crownMastersQualifier') {
+                    currentMatch = null;
+                    document.getElementById('bracket-modal').style.display = 'none';
+                    concludeCrownMastersQualifierEvent(true);
                     showTournamentEnd();
                     if (typeof updateHub === 'function') updateHub();
                     showScreen('screen-hub');
@@ -409,12 +416,15 @@ function startMatch(vsAI) {
                     if (typeof updateHub === 'function') updateHub();
                     
                     // Sprawdzamy, czy to zwykły turniej podłogowy bez kamer
-                    let isFloorTournament = activeTournament.name.includes("Players Championship") || activeTournament.name.includes("Pro Players Cup");
+                    let isFloorTournament = activeTournament.name.includes("Players Championship")
+                        || activeTournament.name.includes("Pro Players Cup")
+                        || (typeof isChallengeTourTournament === 'function' && isChallengeTourTournament(activeTournament))
+                        || (typeof isDevelopmentTourTournament === 'function' && isDevelopmentTourTournament(activeTournament));
                     let isFinals = activeTournament.name.includes("Finals"); // Finały PC to już turniej TV!
 
                     // Wywiad: Szansa 40%, od ćwierćfinału w górę, TYLKO w turniejach TV/Scenicznych
                     if (tournamentRound <= 8 && (!isFloorTournament || isFinals) && Math.random() < 0.40) {
-                        triggerInterview();
+                        triggerInterview(postMatchInterviewContext);
                     }
 
                     showRoundResults(); 

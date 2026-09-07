@@ -1,7 +1,7 @@
 const CAREER_RECORDS_TRANSLATIONS = {
     pl: {
         champions: 'Historia mistrzów', comparison: 'Porównaj zawodników', back: 'Wróć', tournament: 'Turniej',
-        historyNote: 'Historia tej kariery. Starsze zapisy mogą być niepełne — pokazujemy tylko zwycięstwa z potwierdzonym rokiem.',
+        historyNote: 'Archiwum historycznych zwycięzców jest uzupełniane wynikami rozgrywanymi w tej karierze.',
         defender: 'Obrońca tytułu', lastKnown: 'Ostatni zapisany mistrz', record: 'Najwięcej tytułów w zapisanej historii',
         editions: 'Zwycięzcy poszczególnych edycji', year: 'Rok', champion: 'Mistrz', empty: 'Brak potwierdzonych zwycięzców. Kolejne edycje będą zapisywane automatycznie.',
         first: 'Pierwszy zawodnik', second: 'Drugi zawodnik', swap: 'Zamień strony', chooseDifferent: 'Wybierz dwóch różnych zawodników.',
@@ -15,7 +15,7 @@ const CAREER_RECORDS_TRANSLATIONS = {
     },
     en: {
         champions: 'Tournament champions', comparison: 'Compare players', back: 'Back', tournament: 'Tournament',
-        historyNote: 'History of this career. Older saves may be incomplete — only wins with a confirmed year are shown.',
+        historyNote: 'The historical winners archive is extended with results played in this career.',
         defender: 'Defending champion', lastKnown: 'Last recorded champion', record: 'Most titles in recorded history',
         editions: 'Winners by edition', year: 'Year', champion: 'Champion', empty: 'No confirmed champions yet. Future editions will be saved automatically.',
         first: 'First player', second: 'Second player', swap: 'Swap sides', chooseDifferent: 'Choose two different players.',
@@ -29,7 +29,7 @@ const CAREER_RECORDS_TRANSLATIONS = {
     },
     de: {
         champions: 'Turniersieger', comparison: 'Spieler vergleichen', back: 'Zurück', tournament: 'Turnier',
-        historyNote: 'Historie dieser Karriere. Ältere Spielstände können unvollständig sein. Nur Siege mit bestätigtem Jahr werden angezeigt.',
+        historyNote: 'Das Archiv historischer Sieger wird um die Ergebnisse dieser Karriere ergänzt.',
         defender: 'Titelverteidiger', lastKnown: 'Letzter erfasster Sieger', record: 'Meiste Titel in der erfassten Historie',
         editions: 'Sieger nach Jahr', year: 'Jahr', champion: 'Sieger', empty: 'Noch keine bestätigten Sieger. Künftige Ausgaben werden automatisch gespeichert.',
         first: 'Erster Spieler', second: 'Zweiter Spieler', swap: 'Seiten tauschen', chooseDifferent: 'Wähle zwei verschiedene Spieler.',
@@ -43,7 +43,7 @@ const CAREER_RECORDS_TRANSLATIONS = {
     },
     nl: {
         champions: 'Toernooiwinnaars', comparison: 'Spelers vergelijken', back: 'Terug', tournament: 'Toernooi',
-        historyNote: 'Geschiedenis van deze carrière. Oudere saves kunnen onvolledig zijn. Alleen zeges met een bevestigd jaar worden getoond.',
+        historyNote: 'Het archief met historische winnaars wordt aangevuld met resultaten uit deze carrière.',
         defender: 'Titelverdediger', lastKnown: 'Laatst geregistreerde kampioen', record: 'Meeste titels in de opgeslagen geschiedenis',
         editions: 'Winnaars per editie', year: 'Jaar', champion: 'Kampioen', empty: 'Nog geen bevestigde kampioenen. Volgende edities worden automatisch opgeslagen.',
         first: 'Eerste speler', second: 'Tweede speler', swap: 'Wissel kanten', chooseDifferent: 'Kies twee verschillende spelers.',
@@ -99,19 +99,34 @@ function renderTournamentChampions() {
     const container = document.getElementById('champions-result');
     const { editions, leaders } = getCareerChampions(event || {});
     if (!editions.length) { container.innerHTML = `<p class="records-empty">${h(tr('empty'))}</p>`; return; }
+    const livePlayersByKey = new Map(getCareerProfilePlayers()
+        .map(candidate => [getCareerRecordPlayerKey(candidate), candidate]));
+    const championLivePlayer = champion => !champion.team ? livePlayersByKey.get(champion.key) : null;
+    const championHistoricalProfile = champion => champion.historicalId && typeof getHistoricalChampionProfile === 'function'
+        ? getHistoricalChampionProfile(champion.historicalId) : null;
     const championName = champion => {
-        const live = !champion.team && getCareerProfilePlayers().find(candidate => getCareerRecordPlayerKey(candidate) === champion.key);
-        return live?.name || (champion.team && typeof getWorldCupCountryName === 'function' ? getWorldCupCountryName(champion.name) : champion.name);
+        return championLivePlayer(champion)?.name || championHistoricalProfile(champion)?.name
+            || (champion.team && typeof getWorldCupCountryName === 'function' ? getWorldCupCountryName(champion.name) : champion.name);
     };
+    const championCountry = champion => champion.team
+        ? champion.country || champion.name
+        : championLivePlayer(champion)?.country || championHistoricalProfile(champion)?.country || champion.country;
+    const championFlag = champion => typeof getFlagImg === 'function' ? getFlagImg(championCountry(champion)) : '';
+    const championMembers = champion => (champion.members || []).map((member, index) => {
+        const live = champion.memberKeys?.[index] && livePlayersByKey.get(champion.memberKeys[index]);
+        const historical = champion.historicalMemberIds?.[index] && typeof getHistoricalChampionProfile === 'function'
+            ? getHistoricalChampionProfile(champion.historicalMemberIds[index]) : null;
+        return live?.name || historical?.name || member;
+    });
     const latest = editions[0];
     container.innerHTML = `<div class="records-summary">
         <article class="records-champion"><span>${h(tr(latest.year >= getCurrentSeasonYear() - 1 ? 'defender' : 'lastKnown'))}</span>
-            <strong>${h(championName(latest))}</strong><small>${latest.year}</small></article>
-        <article><span>${h(tr('record'))}</span><strong>${leaders.map(champion => `${h(championName(champion))} <em>×${champion.count}</em>`).join('<br>')}</strong></article>
+            <strong>${championFlag(latest)}${h(championName(latest))}</strong><small>${h(latest.editionLabel || latest.year)}</small></article>
+        <article><span>${h(tr('record'))}</span><strong>${leaders.map(champion => `${championFlag(champion)}${h(championName(champion))} <em>×${champion.count}</em>`).join('<br>')}</strong></article>
         </div><h3>${h(tr('editions'))}</h3><div class="records-table-wrap"><table class="records-table">
             <thead><tr><th scope="col">${h(tr('year'))}</th><th scope="col">${h(tr('champion'))}</th></tr></thead>
-            <tbody>${editions.map(champion => `<tr><th scope="row"><time datetime="${champion.year}">${champion.year}</time></th>
-                <td>${h(championName(champion))}${champion.members?.length ? `<small>${h(champion.members.join(' · '))}</small>` : ''}</td></tr>`).join('')}</tbody>
+            <tbody>${editions.map(champion => `<tr><th scope="row"><time datetime="${champion.year}">${h(champion.editionLabel || champion.year)}</time></th>
+                <td>${championFlag(champion)}${h(championName(champion))}${champion.members?.length ? `<small>${h(championMembers(champion).join(' · '))}</small>` : ''}</td></tr>`).join('')}</tbody>
         </table></div>`;
 }
 

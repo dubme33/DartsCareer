@@ -90,8 +90,9 @@ function getPrefix(m) { return m === 1 ? "" : (m === 2 ? "D" : "T"); }
                 if (hitMult === 3) radius = 71 + Math.random() * 8; 
                 else if (hitMult === 2) radius = 121 + Math.random() * 7; 
                 else if (hitMult === 0) radius = 133 + Math.random() * 9;
-                // --- NOWOŚĆ: Rzut w bulla, który wylądował w innym sektorze (singlu) ---
-                else if (targetSec === 25) radius = 18 + Math.random() * 25; 
+                // Single po próbie środka nadal leży poza zielonym pierścieniem,
+                // ale wizualnie pozostaje blisko celu (promień 17-32 zamiast 18-43).
+                else if (targetSec === 25) radius = 17 + Math.pow(Math.random(), 1.6) * 15;
                 else if (targetMult === 3) radius = Math.random() < 0.55 ? 59 + Math.random() * 9 : 81 + Math.random() * 11;
                 else if (targetMult === 2) radius = 106 + Math.random() * 12;
                 else radius = 92 + Math.random() * 24;

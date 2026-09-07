@@ -761,7 +761,7 @@ function startMatch(vsAI) {
             let dartsLeft = 3 - currentMatch.dartsThrown;
             
             // AI używa teraz jednej, wspólnej logiki ze wszystkimi wyjątkami!
-            let aim = getOptimalAim(score, isDIDO, dartsLeft);
+            let aim = getOptimalAim(score, isDIDO, dartsLeft, currentMatch.p1Score);
             
             let aiStats = { ...currentMatch.opponent };
             if (currentMatch && currentMatch.p2Momentum !== undefined) {
@@ -792,7 +792,7 @@ function startMatch(vsAI) {
                 if (targetMult === 2) {
                     // Celowanie w 50 (Inner Bull)
                     let bullHitChance = clamp(stat * 0.35, 10, 45);
-                    let outerHitChance = bullHitChance + 35; // Pudło ląduje w Outer Bull (25)
+                    let outerHitChance = Math.min(97, bullHitChance + 40);
 
                     if (roll <= bullHitChance) {
                         return { sector: 25, mult: 2 }; // Trafienie 50 (D-Bull)
@@ -807,7 +807,7 @@ function startMatch(vsAI) {
                     let outerHitChance = clamp(stat * 0.55, 20, 65);
                     if (roll <= outerHitChance) {
                         return { sector: 25, mult: 1 };
-                    } else if (roll <= outerHitChance + 10) {
+                    } else if (roll <= outerHitChance + 12) {
                         return { sector: 25, mult: 2 }; // Przypadkowe trafienie w 50
                     } else {
                         return { sector: dartboardOrder[Math.floor(Math.random() * 20)], mult: 1 };
@@ -951,8 +951,7 @@ function startMatch(vsAI) {
                 if (hitMult === 3) radius = 71 + Math.random() * 8; 
                 else if (hitMult === 2) radius = 121 + Math.random() * 7; 
                 else if (hitMult === 0) radius = 133 + Math.random() * 9;
-                // --- NOWOŚĆ: Rzut w bulla, który wylądował w innym sektorze (singlu) ---
-                else if (targetSec === 25) radius = 18 + Math.random() * 25; 
+                else if (targetSec === 25) radius = 17 + Math.pow(Math.random(), 1.6) * 15;
                 else if (targetMult === 3) radius = Math.random() < 0.55 ? 59 + Math.random() * 9 : 81 + Math.random() * 11;
                 else if (targetMult === 2) radius = 106 + Math.random() * 12;
                 else radius = 92 + Math.random() * 24;

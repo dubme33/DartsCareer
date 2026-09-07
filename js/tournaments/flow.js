@@ -1,5 +1,166 @@
 const PLAYERS_CHAMPIONSHIP_FIELD_SIZE = 128;
-const PLAYERS_CHAMPIONSHIP_TOP_16_WITHDRAWAL_CHANCE = 0.15;
+const PLAYERS_CHAMPIONSHIP_TOP_20_WITHDRAWAL_CHANCE = 0.30;
+
+const TOURNAMENT_WITHDRAWAL_REPORT_TEXT = {
+    pl: {
+        sender: 'Biuro turniejowe',
+        subject: 'Wycofania z turnieju: {tournament}',
+        intro: 'Po zamknięciu listy startowej z turnieju {tournament} wycofali się:',
+        nationality: 'Narodowość',
+        rank: 'Ranking OOM'
+    },
+    en: {
+        sender: 'Tournament Office',
+        subject: 'Tournament withdrawals: {tournament}',
+        intro: 'After entries closed, the following players withdrew from {tournament}:',
+        nationality: 'Nationality',
+        rank: 'OOM ranking'
+    },
+    de: {
+        sender: 'Turnierbüro',
+        subject: 'Absagen für das Turnier: {tournament}',
+        intro: 'Nach Meldeschluss haben folgende Spieler für {tournament} abgesagt:',
+        nationality: 'Nationalität',
+        rank: 'OOM-Rangliste'
+    },
+    nl: {
+        sender: 'Toernooibureau',
+        subject: 'Afgemeld voor het toernooi: {tournament}',
+        intro: 'Na het sluiten van de inschrijving hebben de volgende spelers zich afgemeld voor {tournament}:',
+        nationality: 'Nationaliteit',
+        rank: 'OOM-ranking'
+    }
+};
+
+function trTournamentWithdrawalReport(key, values = {}) {
+    const language = typeof currentLang === 'string' && TOURNAMENT_WITHDRAWAL_REPORT_TEXT[currentLang]
+        ? currentLang
+        : 'pl';
+    let text = TOURNAMENT_WITHDRAWAL_REPORT_TEXT[language][key]
+        || TOURNAMENT_WITHDRAWAL_REPORT_TEXT.pl[key]
+        || key;
+    Object.entries(values).forEach(([name, value]) => {
+        text = text.replaceAll(`{${name}}`, String(value ?? ''));
+    });
+    return text;
+}
+
+function getTournamentWithdrawalPlayerKey(candidate) {
+    if (!candidate || candidate.isBye) return '';
+    return candidate.id || `${String(candidate.name || '').trim()}|${String(candidate.country || '').trim()}`;
+}
+
+function getTournamentWithdrawalCandidates(candidates) {
+    const source = Array.isArray(candidates)
+        ? candidates
+        : [
+            ...(typeof pdcPlayers !== 'undefined' && Array.isArray(pdcPlayers) ? pdcPlayers : []),
+            ...(typeof player !== 'undefined' && player?.name ? [player] : [])
+        ];
+    const unique = new Map();
+    source.forEach(candidate => {
+        const key = getTournamentWithdrawalPlayerKey(candidate);
+        if (key && !unique.has(key)) unique.set(key, candidate);
+    });
+    return [...unique.values()];
+}
+
+function createTournamentWithdrawalReportEntries(withdrawnPlayers = [], candidates) {
+    const ranking = getTournamentWithdrawalCandidates(candidates).sort((first, second) =>
+        (Number(second?.prizeMoney) || 0) - (Number(first?.prizeMoney) || 0)
+        || (Number(second?.ovr ?? second?.overall) || 0) - (Number(first?.ovr ?? first?.overall) || 0)
+        || String(first?.name || '').localeCompare(String(second?.name || ''), 'pl'));
+    const rankByKey = new Map(ranking.map((candidate, index) => [getTournamentWithdrawalPlayerKey(candidate), index + 1]));
+    const unique = new Map();
+    (Array.isArray(withdrawnPlayers) ? withdrawnPlayers : []).forEach(candidate => {
+        const key = getTournamentWithdrawalPlayerKey(candidate);
+        if (!key || unique.has(key) || (typeof isCurrentPlayer === 'function' && isCurrentPlayer(candidate))) return;
+        unique.set(key, {
+            playerId: candidate.id || '',
+            playerKey: key,
+            name: String(candidate.name || ''),
+            country: String(candidate.country || ''),
+            overall: Math.round(Number(candidate.ovr ?? candidate.overall) || 0),
+            oomRank: rankByKey.get(key) || 0
+        });
+    });
+    return [...unique.values()];
+}
+
+function resolveTournamentWithdrawalReportEntries(tournament, candidates) {
+    if (!tournament) return [];
+    if (Array.isArray(tournament.withdrawalReportEntries)) return tournament.withdrawalReportEntries;
+
+    const allCandidates = getTournamentWithdrawalCandidates(candidates);
+    const candidateByKey = new Map();
+    allCandidates.forEach(candidate => {
+        const key = getTournamentWithdrawalPlayerKey(candidate);
+        candidateByKey.set(key, candidate);
+        if (candidate.id) candidateByKey.set(candidate.id, candidate);
+        if (candidate.name) candidateByKey.set(candidate.name, candidate);
+    });
+    const withdrawn = [];
+    if (Array.isArray(tournament.playersChampionshipWithdrawals)) {
+        withdrawn.push(...tournament.playersChampionshipWithdrawals
+            .map(key => candidateByKey.get(key))
+            .filter(Boolean));
+    }
+    if (Array.isArray(tournament.continentalQualification?.withdrawals)) {
+        withdrawn.push(...tournament.continentalQualification.withdrawals.map(entry =>
+            candidateByKey.get(entry?.withdrawnPlayerId)
+            || allCandidates.find(candidate => candidate?.name === entry?.withdrawnPlayerName)
+            || (entry?.withdrawnPlayerName ? {
+                id: entry.withdrawnPlayerId,
+                name: entry.withdrawnPlayerName,
+                country: entry.withdrawnPlayerCountry,
+                ovr: entry.withdrawnPlayerOverall,
+                prizeMoney: entry.withdrawnPlayerPrizeMoney
+            } : null)).filter(Boolean));
+    }
+    return createTournamentWithdrawalReportEntries(withdrawn, allCandidates);
+}
+
+function sendTournamentWithdrawalReport(tournament, candidates) {
+    if (!tournament || typeof addEmail !== 'function') return false;
+    const reportYear = Number(tournament.continentalQualification?.year)
+        || (typeof currentDate !== 'undefined' && typeof currentDate?.getFullYear === 'function'
+            ? currentDate.getFullYear()
+            : 0);
+    if (Number(tournament.withdrawalReportSentYear) === reportYear) return false;
+    const entries = resolveTournamentWithdrawalReportEntries(tournament, candidates);
+    if (!entries.length) return false;
+    const displayName = typeof getTournamentDisplayName === 'function'
+        ? getTournamentDisplayName(tournament)
+        : String(tournament.name || '');
+    const safe = typeof escapeHtml === 'function'
+        ? escapeHtml
+        : value => String(value ?? '').replace(/[&<>"']/g, character => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        }[character]));
+    const rows = entries.map((entry, index) => {
+        const country = typeof t === 'function' ? t(entry.country) : entry.country;
+        const rank = Number(entry.oomRank) > 0 ? `#${entry.oomRank}` : '—';
+        return `<strong>${index + 1}. ${safe(entry.name)}</strong><br>`
+            + `${safe(trTournamentWithdrawalReport('nationality'))}: ${safe(country || '—')} · `
+            + `OVR: ${Number(entry.overall) || 0} · ${safe(trTournamentWithdrawalReport('rank'))}: ${rank}`;
+    }).join('<br><br>');
+    addEmail(
+        trTournamentWithdrawalReport('sender'),
+        trTournamentWithdrawalReport('subject', { tournament: displayName }),
+        `${safe(trTournamentWithdrawalReport('intro', { tournament: displayName }))}<br><br>${rows}`
+    );
+    tournament.withdrawalReportSentYear = reportYear;
+    return true;
+}
+
+function comparePlayersChampionshipReserveOrder(first, second) {
+    if (typeof compareChallengeTourOrderOfMerit === 'function') {
+        return compareChallengeTourOrderOfMerit(first, second);
+    }
+    return (Number(second?.challengeTourPrizeMoney) || 0) - (Number(first?.challengeTourPrizeMoney) || 0)
+        || (Number(second?.prizeMoney) || 0) - (Number(first?.prizeMoney) || 0)
+        || String(first?.name || '').localeCompare(String(second?.name || ''), 'pl');
+}
 
 function buildPlayersChampionshipField(cardHolders, replacementPoolOrRandom = [], random = Math.random) {
     const legacyCall = typeof replacementPoolOrRandom === 'function';
@@ -10,16 +171,16 @@ function buildPlayersChampionshipField(cardHolders, replacementPoolOrRandom = []
         ? rankedCardHolders.slice(PLAYERS_CHAMPIONSHIP_FIELD_SIZE)
         : [...(Array.isArray(replacementPoolOrRandom) ? replacementPoolOrRandom : [])]
             .filter(candidate => !rankedCardHolders.includes(candidate))
-            .sort((a, b) => (Number(b?.prizeMoney) || 0) - (Number(a?.prizeMoney) || 0));
+            .sort(comparePlayersChampionshipReserveOrder);
     const guaranteedCardField = rankedCardHolders.slice(0, PLAYERS_CHAMPIONSHIP_FIELD_SIZE);
     const vacantPlaceCount = Math.max(0, PLAYERS_CHAMPIONSHIP_FIELD_SIZE - guaranteedCardField.length);
     const vacancyReplacements = replacementPool.slice(0, vacantPlaceCount);
     const baseField = [...guaranteedCardField, ...vacancyReplacements];
     const remainingReplacementPool = replacementPool.slice(vacancyReplacements.length);
     const requestedWithdrawals = baseField
-        .slice(0, 16)
+        .slice(0, 20)
         .filter(candidate => candidate?.hasTourCard === true && !isCurrentPlayer(candidate)
-            && randomFn() < PLAYERS_CHAMPIONSHIP_TOP_16_WITHDRAWAL_CHANCE);
+            && randomFn() < PLAYERS_CHAMPIONSHIP_TOP_20_WITHDRAWAL_CHANCE);
 
     // Nie skracamy drabinki, gdy w bazie byłoby zbyt mało zastępców.
     const withdrawnPlayers = requestedWithdrawals.slice(0, remainingReplacementPool.length);
@@ -31,6 +192,155 @@ function buildPlayersChampionshipField(cardHolders, replacementPoolOrRandom = []
         withdrawnPlayers,
         replacements: [...vacancyReplacements, ...replacements]
     };
+}
+
+function getTournamentSeedPlayerKey(candidate) {
+    if (!candidate || candidate.isBye) return '';
+    return candidate.id
+        ? `id:${candidate.id}`
+        : `name:${String(candidate.name || '').trim()}|${String(candidate.country || '').trim()}`;
+}
+
+function getUniqueTournamentSeedCandidates(candidates = []) {
+    const unique = [];
+    const keys = new Set();
+    (Array.isArray(candidates) ? candidates : []).forEach(candidate => {
+        const key = getTournamentSeedPlayerKey(candidate);
+        if (!key || keys.has(key)) return;
+        keys.add(key);
+        unique.push(candidate);
+    });
+    return unique;
+}
+
+function getDefaultTournamentSeedCandidates() {
+    return getUniqueTournamentSeedCandidates([
+        ...(typeof pdcPlayers !== 'undefined' && Array.isArray(pdcPlayers) ? pdcPlayers : []),
+        ...(typeof player !== 'undefined' && player ? [player] : [])
+    ]);
+}
+
+function tournamentHidesSeedNumbers(tournament) {
+    if (!tournament) return true;
+    const name = `${tournament.name || ''} ${tournament.sourceName || ''}`.toLocaleLowerCase('pl');
+    const specialType = String(tournament.specialType || '').toLocaleLowerCase('pl');
+    return name.includes('players championship') || name.includes('pro players cup') || name.includes('pro players finals')
+        || name.includes('qualifier') || name.includes('kwalifikacj') || specialType.includes('qualifier')
+        || specialType === 'pdcqschool' || specialType === 'challengetour' || specialType === 'developmenttour' || specialType.includes('worldcup')
+        || name.includes('rising stars circuit') || name.includes('challenge tour')
+        || name.includes('future champions circuit') || name.includes('development tour')
+        || name.includes('uk open') || name.includes('british open')
+        || name.includes('premier league') || name.includes('global darts league')
+        || name.includes('world cup') || name.includes('puchar narodów');
+}
+
+function getTournamentSeedRanking(tournament, candidates = getDefaultTournamentSeedCandidates()) {
+    const unique = getUniqueTournamentSeedCandidates(candidates);
+    if (tournamentHidesSeedNumbers(tournament)) return [];
+    const name = `${tournament?.name || ''} ${tournament?.sourceName || ''}`.toLocaleLowerCase('pl');
+    const specialType = String(tournament?.specialType || '').toLocaleLowerCase('pl');
+    if (specialType === 'classicmasters' && Array.isArray(tournament?.crownMastersQualification?.automaticPlayerIds)) {
+        const byKey = new Map(unique.map(candidate => [
+            typeof getCrownMastersPlayerKey === 'function'
+                ? getCrownMastersPlayerKey(candidate)
+                : getTournamentSeedPlayerKey(candidate),
+            candidate
+        ]));
+        return tournament.crownMastersQualification.automaticPlayerIds
+            .map(key => byKey.get(key)).filter(Boolean).slice(0, 16);
+    }
+    const isContinentalMain = (typeof isContinentalTourTournament === 'function'
+        && isContinentalTourTournament(tournament))
+        || /(?:european|continental) tour/.test(name);
+
+    if (isContinentalMain) {
+        const seedIds = tournament?.continentalQualification?.oomPlayerIds;
+        if (Array.isArray(seedIds)) {
+            const byQualificationKey = new Map(unique.map(candidate => [
+                typeof getContinentalQualificationPlayerKey === 'function'
+                    ? getContinentalQualificationPlayerKey(candidate)
+                    : (candidate.id || `${candidate.name || ''}|${candidate.country || ''}`),
+                candidate
+            ]));
+            return seedIds.map(key => byQualificationKey.get(key)).filter(Boolean).slice(0, 16);
+        }
+        return unique.filter(candidate => candidate.hasTourCard === true)
+            .sort((first, second) => (Number(second.prizeMoney) || 0) - (Number(first.prizeMoney) || 0))
+            .slice(0, 16);
+    }
+
+    const isEuropeanChampionship = (typeof isEuropeanChampionshipTournament === 'function'
+        && isEuropeanChampionshipTournament(tournament))
+        || name.includes('european championship') || name.includes('continental championship');
+    if (isEuropeanChampionship) {
+        return typeof getEuropeanTourOrderOfMerit === 'function'
+            ? getEuropeanTourOrderOfMerit(unique).slice(0, 16)
+            : unique.sort((first, second) => (Number(second.europeanTourPrizeMoney) || 0)
+                - (Number(first.europeanTourPrizeMoney) || 0)).slice(0, 16);
+    }
+
+    const isWorldMastersFinals = specialType === 'worldmastersfinals'
+        || (name.includes('masters finals') && !name.includes('qualifier'));
+    if (isWorldMastersFinals && typeof getWorldMastersFinalsField === 'function'
+        && typeof resolveWorldMastersPlayers === 'function') {
+        const finals = getWorldMastersFinalsField();
+        return resolveWorldMastersPlayers((finals?.worldSeriesKeys || []).slice(0, 8));
+    }
+
+    return unique.sort((first, second) => (Number(second.prizeMoney) || 0) - (Number(first.prizeMoney) || 0));
+}
+
+function setTournamentSeedPlayerKeys(tournament, keys) {
+    Object.defineProperty(tournament, 'bracketSeedPlayerKeys', {
+        value: Array.isArray(keys) ? keys : [],
+        configurable: true,
+        enumerable: false,
+        writable: true
+    });
+    return tournament.bracketSeedPlayerKeys;
+}
+
+function prepareTournamentSeedNumbers(tournament, candidates, participants) {
+    if (!tournament) return [];
+    if (tournamentHidesSeedNumbers(tournament)) {
+        delete tournament.bracketSeedPlayerKeys;
+        return [];
+    }
+    const participantKeys = new Set((Array.isArray(participants) ? participants : [])
+        .map(getTournamentSeedPlayerKey).filter(Boolean));
+    const seedPlayerKeys = getTournamentSeedRanking(tournament, candidates)
+        .slice(0, 16)
+        .map(candidate => {
+            const key = getTournamentSeedPlayerKey(candidate);
+            return participantKeys.has(key) ? key : '';
+        });
+    return setTournamentSeedPlayerKeys(tournament, seedPlayerKeys);
+}
+
+function getTournamentSeedNumber(candidate, tournament = (typeof activeTournament !== 'undefined' ? activeTournament : null)) {
+    if (!candidate || candidate.isBye || tournamentHidesSeedNumbers(tournament)) return null;
+    if (!Array.isArray(tournament.bracketSeedPlayerKeys)) {
+        const bracket = typeof tournamentBracket !== 'undefined' && Array.isArray(tournamentBracket)
+            ? tournamentBracket
+            : [];
+        prepareTournamentSeedNumbers(tournament, getDefaultTournamentSeedCandidates(), bracket);
+    }
+    const candidateKey = getTournamentSeedPlayerKey(candidate);
+    if (!candidateKey) return null;
+    const index = tournament.bracketSeedPlayerKeys.indexOf(candidateKey);
+    return index >= 0 && index < 16 ? index + 1 : null;
+}
+
+function getTournamentSeedBadgeHtml(candidate, tournament = (typeof activeTournament !== 'undefined' ? activeTournament : null)) {
+    const seedNumber = getTournamentSeedNumber(candidate, tournament);
+    if (!seedNumber) return '';
+    const label = typeof t === 'function' ? `${t('t-seed')} ${seedNumber}` : `Seed ${seedNumber}`;
+    const safeLabel = typeof escapeHtml === 'function'
+        ? escapeHtml(label)
+        : String(label).replace(/[&<>"']/g, character => ({
+            '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+        }[character]));
+    return `<span class="bracket-seed" title="${safeLabel}" aria-label="${safeLabel}">${seedNumber}</span> `;
 }
 
 function getNonPrizeQualifierEliminationMessage(tournament = activeTournament, candidate = player) {
@@ -165,13 +475,23 @@ function skipActiveTournament() {
                     && activeTournament.qSchoolDrawVersion !== (
                         typeof PDC_QSCHOOL_DRAW_VERSION === 'number' ? PDC_QSCHOOL_DRAW_VERSION : 2
                     );
+                const isUKOpenActiveTournament = typeof isUKOpenTournament === 'function'
+                    && isUKOpenTournament(activeTournament);
+                const staleUKOpenOpeningDraw = isUKOpenActiveTournament
+                    && !hasRecordedTournamentHistory
+                    && tournamentRound === 128
+                    && activeTournament.ukOpenQualification?.version !== (
+                        typeof UK_OPEN_QUALIFICATION_VERSION === 'number' ? UK_OPEN_QUALIFICATION_VERSION : 1
+                    );
 
                 // Starsze zapisy mogły zachować niepełną drabinkę po emeryturze
                 // lokalnego uczestnika albo nierozpoczętą obsadę sprzed zmiany
                 // zasad zaproszeń. Nie wznawiamy takiej drabinki — tworzymy ją
                 // ponownie z dostępnymi zastępcami i aktualną regułą OOM.
                 if (!malformedOpeningWorldMastersDraw && !staleWorldMastersFinalsQualifierDraw && !staleEuropeanChampionshipOpeningDraw
-                    && !staleWorldChampionshipOpeningDraw && !staleContinentalQualificationDraw && !staleQSchoolOpeningDraw) {
+                    && !staleWorldChampionshipOpeningDraw && !staleContinentalQualificationDraw && !staleQSchoolOpeningDraw
+                    && !staleUKOpenOpeningDraw) {
+                    sendTournamentWithdrawalReport(activeTournament);
                     if (isSkippingTournament && typeof simulateRemainingTournament === 'function') {
                         isSkippingTournament = false;
                         return simulateRemainingTournament({ withdrawCareerPlayer: true });
@@ -221,13 +541,53 @@ function skipActiveTournament() {
             const isQSchoolEvent = typeof isPdcQSchoolTournament === 'function' && isPdcQSchoolTournament(activeTournament);
             const isTourCardQualifierEvent = typeof isPdcTourCardQualifierTournament === 'function'
                 && isPdcTourCardQualifierTournament(activeTournament);
+            const isChallengeTourEvent = typeof isChallengeTourTournament === 'function'
+                && isChallengeTourTournament(activeTournament);
+            const isDevelopmentTourEvent = typeof isDevelopmentTourTournament === 'function'
+                && isDevelopmentTourTournament(activeTournament);
+            const isCrownMastersEvent = typeof isCrownMastersTournament === 'function'
+                && isCrownMastersTournament(activeTournament);
+            const isCrownMastersQualifier = typeof isCrownMastersQualifierTournament === 'function'
+                && isCrownMastersQualifierTournament(activeTournament);
+            const isUKOpenEvent = typeof isUKOpenTournament === 'function'
+                && isUKOpenTournament(activeTournament);
 
             let participants = [];
 
             // --- 1. WYBÓR UCZESTNIKÓW I ROZMIAR DRABINKI ---
             
             // Finały Play-offs
-            if (isTourCardQualifierEvent) {
+            if (isCrownMastersQualifier) {
+                participants = typeof getCrownMastersQualifierParticipants === 'function'
+                    ? getCrownMastersQualifierParticipants(activeTournament, allPlayers)
+                    : [];
+                tournamentRound = typeof getCrownMastersQualifierOpeningRound === 'function'
+                    ? getCrownMastersQualifierOpeningRound(participants.length)
+                    : 128;
+
+            } else if (isCrownMastersEvent) {
+                participants = typeof getCrownMastersMainParticipants === 'function'
+                    ? getCrownMastersMainParticipants(activeTournament, allPlayers)
+                    : [];
+                tournamentRound = 32;
+
+            } else if (isDevelopmentTourEvent) {
+                participants = typeof getDevelopmentTourEligiblePlayers === 'function'
+                    ? getDevelopmentTourEligiblePlayers(allPlayers, currentDate)
+                    : [];
+                tournamentRound = typeof getPdcQSchoolOpeningRound === 'function'
+                    ? getPdcQSchoolOpeningRound(participants.length)
+                    : 16;
+
+            } else if (isChallengeTourEvent) {
+                participants = typeof getChallengeTourEligiblePlayers === 'function'
+                    ? getChallengeTourEligiblePlayers(allPlayers)
+                    : nonCardPlayers;
+                tournamentRound = typeof getPdcQSchoolOpeningRound === 'function'
+                    ? getPdcQSchoolOpeningRound(participants.length)
+                    : 128;
+
+            } else if (isTourCardQualifierEvent) {
                 participants = typeof getPdcTourCardQualifierParticipants === 'function'
                     ? getPdcTourCardQualifierParticipants(activeTournament, allPlayers)
                     : tourCardPlayers;
@@ -289,9 +649,11 @@ function skipActiveTournament() {
                     ? getWorldChampionshipQualificationField(activeTournament, worldChampionshipCandidates, currentDate)
                     : oomRanked.slice(0, 128);
                 tournamentRound = 128;
-            } else if (tNameLow.includes("uk open") || tNameLow.includes("british open")) {
-                participants = getRankingQualificationGroups(activeTournament, allPlayers).flatMap(group => group.players);
-                tournamentRound = 128;
+            } else if (isUKOpenEvent) {
+                participants = typeof getUKOpenOpeningParticipants === 'function'
+                    ? getUKOpenOpeningParticipants(activeTournament, allPlayers, currentDate)
+                    : getRankingQualificationGroups(activeTournament, allPlayers).flatMap(group => group.players);
+                tournamentRound = 160;
             } else if (isContinentalQualifier) {
                 participants = getContinentalTourQualifierParticipants(activeTournament);
                 tournamentRound = typeof getContinentalQualifierOpeningRound === 'function'
@@ -333,10 +695,18 @@ function skipActiveTournament() {
                 participants = Array.from(qualified); tournamentRound = 32;
             }
 
-            let playerInTournament = participants.some(isCurrentPlayer);
+            let playerInTournament = isUKOpenEvent && typeof getUKOpenFullField === 'function'
+                ? getUKOpenFullField(activeTournament, allPlayers, currentDate, true).some(isCurrentPlayer)
+                : participants.some(isCurrentPlayer);
             
             if (isSkippingTournament && playerInTournament) {
-                const replacementRanking = (isQSchoolEvent || isTourCardQualifierEvent || isContinentalQualifier || isWorldMastersFinalsQualifier)
+                if (isUKOpenEvent && typeof removeUKOpenParticipant === 'function') {
+                    removeUKOpenParticipant(activeTournament, player, allPlayers);
+                    participants = getUKOpenOpeningParticipants(activeTournament, allPlayers, currentDate);
+                    playerInTournament = false;
+                } else {
+                const replacementRanking = (isQSchoolEvent || isTourCardQualifierEvent || isContinentalQualifier
+                    || isWorldMastersFinalsQualifier || isCrownMastersQualifier)
                     ? []
                     : [...nonCardPlayers, ...(isEuropeanChampionship ? etRanked : ptRanked)];
                 const replacement = replacementRanking.find(p => !participants.includes(p) && !isCurrentPlayer(p));
@@ -344,7 +714,10 @@ function skipActiveTournament() {
                     ? participants.map(p => isCurrentPlayer(p) ? replacement : p)
                     : participants.filter(p => !isCurrentPlayer(p));
                 playerInTournament = false;
+                }
             }
+
+            sendTournamentWithdrawalReport(activeTournament, allPlayers);
 
             let isHeadlessSim = false;
 
@@ -360,9 +733,17 @@ function skipActiveTournament() {
                 // Brak karty albo bezpośrednia kwalifikacja wyłącza gracza z tego
                 // turnieju; wyniki pozostałych posiadaczy kart liczymy w tle.
                 isHeadlessSim = true;
+            } else if (isCrownMastersQualifier && !playerInTournament) {
+                // Top 24 OOM oraz gracze spoza zaproszonej puli nie zatrzymują
+                // jednodniowych kwalifikacji wyłaniających osiem miejsc.
+                isHeadlessSim = true;
             } else if (isContinentalQualifier && !playerInTournament) {
                 // Dotyczy zarówno kwalifikacji dla posiadaczy kart, jak i ścieżek
                 // regionalnych. Pełna symulacja zachowuje wyniki i rezerwowych.
+                isHeadlessSim = true;
+            } else if ((isChallengeTourEvent || isDevelopmentTourEvent) && !playerInTournament) {
+                // Gracz niespełniający zasad cyklu nie zatrzymuje kalendarza.
+                // Całe wydarzenie uprawnionych zawodników rozgrywamy w tle.
                 isHeadlessSim = true;
             } else if (!playerInTournament) {
                 // Jeśli gracz się nie zakwalifikował, tylko o tym informujemy, 
@@ -384,7 +765,10 @@ function skipActiveTournament() {
                 if (typeof resetTournamentMatchHistory === 'function') resetTournamentMatchHistory();
                 else tournamentMatchHistory = [];
                 preTournamentRanks = { main: getPlayerRank('main'), pt: getPlayerRank('protour'), pc: getPlayerRank('pc'), et: getPlayerRank('europeanTour') };
-                prepareTournamentSimulationForm(participants);
+                prepareTournamentSimulationForm(isUKOpenEvent && typeof getUKOpenFullField === 'function'
+                    ? getUKOpenFullField(activeTournament, allPlayers, currentDate, true)
+                    : participants);
+                prepareTournamentSeedNumbers(activeTournament, [...allPlayers, ...participants], participants);
 
                 if (isGrandSlamEvent && typeof initializeGrandSlamTournament === 'function') {
                     const grandSlamStage = isHeadlessSim
@@ -401,7 +785,29 @@ function skipActiveTournament() {
                 }
 
                 // --- 2. LOSOWANIE / ROZSTAWIENIE ---
-                if (isTourCardQualifierEvent) {
+                if (isUKOpenEvent) {
+                    participants = typeof buildUKOpenStageDraw === 'function'
+                        ? buildUKOpenStageDraw(participants)
+                        : shuffle(participants);
+                    tournamentRound = 160;
+                } else if (isCrownMastersQualifier) {
+                    participants = typeof buildCrownMastersQualifierDraw === 'function'
+                        ? buildCrownMastersQualifierDraw(participants)
+                        : shuffle(participants);
+                    tournamentRound = participants.length;
+                } else if (isCrownMastersEvent) {
+                    participants = typeof buildCrownMastersDraw === 'function'
+                        ? buildCrownMastersDraw(participants, activeTournament)
+                        : shuffle(participants);
+                    tournamentRound = 32;
+                } else if (isChallengeTourEvent || isDevelopmentTourEvent) {
+                    // Oba cykle poboczne nie mają rozstawień. Wolne losy służą
+                    // wyłącznie do domknięcia drabinki do potęgi dwójki.
+                    participants = typeof buildPdcQSchoolDraw === 'function'
+                        ? buildPdcQSchoolDraw(participants)
+                        : shuffle(participants);
+                    tournamentRound = participants.length;
+                } else if (isTourCardQualifierEvent) {
                     participants = typeof buildPdcTourCardQualifierDraw === 'function'
                         ? buildPdcTourCardQualifierDraw(participants, Math.random, activeTournament.qualifyingPlaces)
                         : shuffle(participants);
@@ -599,6 +1005,26 @@ function skipActiveTournament() {
             if (message) alert(message);
             return { tournament: qualifierTournament };
         }
+
+        function concludeCrownMastersQualifierEvent(showOutcome = true) {
+            if (typeof isCrownMastersQualifierTournament !== 'function'
+                || !isCrownMastersQualifierTournament(activeTournament)) return null;
+            const qualifierTournament = activeTournament;
+            const message = showOutcome && typeof getCrownMastersQualifierOutcomeMessage === 'function'
+                ? getCrownMastersQualifierOutcomeMessage(qualifierTournament, player)
+                : '';
+            qualifierTournament.completed = true;
+            if (typeof finalizeTournamentMatchHistory === 'function') finalizeTournamentMatchHistory(qualifierTournament);
+            else qualifierTournament.historyLogs = lastTournamentResults;
+            activeTournament = null;
+            tournamentBracket = [];
+            const tile = document.getElementById('tile-tournament');
+            if (tile) tile.style.display = 'none';
+            if (typeof updateHub === 'function') updateHub();
+            if (typeof saveGame === 'function') saveGame(true);
+            if (message) alert(message);
+            return { tournament: qualifierTournament };
+        }
         
 
        function showBracket() {
@@ -633,9 +1059,9 @@ function skipActiveTournament() {
                 if (isPlayerMatch) isPlayerInRound = true;
 
                 list.innerHTML += `<div class="bracket-match ${isPlayerMatch ? 'player-match' : ''}">
-                    <div style="flex: 1; text-align: left;">${isCurrentPlayer(p1) ? getFlagImg(player.country) : getFlagImg(p1.country)} ${escapeHtml(p1.name)} <span style="color:#bdc3c7; font-size:12px;">(OVR ${getDisplayedOvr(p1)})</span></div>
+                    <div style="flex: 1; text-align: left;">${isCurrentPlayer(p1) ? getFlagImg(player.country) : getFlagImg(p1.country)} ${getTournamentSeedBadgeHtml(p1)}${escapeHtml(p1.name)} <span style="color:#bdc3c7; font-size:12px;">(OVR ${getDisplayedOvr(p1)})</span></div>
                     <div class="bracket-vs" style="flex: 0 0 40px; text-align: center;">VS</div>
-                    <div style="flex: 1; text-align: right;">${isCurrentPlayer(p2) ? getFlagImg(player.country) : getFlagImg(p2.country)} ${escapeHtml(p2.name)} <span style="color:#bdc3c7; font-size:12px;">(OVR ${getDisplayedOvr(p2)})</span></div>
+                    <div style="flex: 1; text-align: right;">${isCurrentPlayer(p2) ? getFlagImg(player.country) : getFlagImg(p2.country)} ${getTournamentSeedBadgeHtml(p2)}${escapeHtml(p2.name)} <span style="color:#bdc3c7; font-size:12px;">(OVR ${getDisplayedOvr(p2)})</span></div>
                     ${watchControl}
                 </div>`;
             }
@@ -679,6 +1105,12 @@ function skipActiveTournament() {
             if (specialTournamentOutcome === 'pdcTourCardQualifier') {
                 document.getElementById('bracket-modal').style.display = 'none';
                 concludePdcTourCardQualifierEvent(true);
+                showTournamentEnd();
+                return;
+            }
+            if (specialTournamentOutcome === 'crownMastersQualifier') {
+                document.getElementById('bracket-modal').style.display = 'none';
+                concludeCrownMastersQualifierEvent(true);
                 showTournamentEnd();
                 return;
             }
@@ -896,6 +1328,15 @@ function skipActiveTournament() {
             const isQSchoolEvent = typeof isPdcQSchoolTournament === 'function' && isPdcQSchoolTournament(activeTournament);
             const isTourCardQualifierEvent = typeof isPdcTourCardQualifierTournament === 'function'
                 && isPdcTourCardQualifierTournament(activeTournament);
+            const isChallengeTourEvent = typeof isChallengeTourTournament === 'function'
+                && isChallengeTourTournament(activeTournament);
+            const isDevelopmentTourEvent = typeof isDevelopmentTourTournament === 'function'
+                && isDevelopmentTourTournament(activeTournament);
+            const isCrownMastersQualifier = typeof isCrownMastersQualifierTournament === 'function'
+                && isCrownMastersQualifierTournament(activeTournament);
+            const isUKOpenEvent = typeof isUKOpenTournament === 'function'
+                && isUKOpenTournament(activeTournament);
+            const isSecondaryTourEvent = isChallengeTourEvent || isDevelopmentTourEvent;
             const isNonPrizeQualifier = isContinentalQualifier || isWorldMastersFinalsQualifier || isQSchoolEvent || isTourCardQualifierEvent;
             let prize = isNonPrizeQualifier ? 0 : getPrizeMoney(activeTournament.name, tournamentRound, false);
             const isContinentalAutomaticOpeningLoss = candidate => {
@@ -927,7 +1368,7 @@ function skipActiveTournament() {
                 if (!p1 || !p2) { yield; continue; }
                 
                 let winner, loser;
-                let countPrizeTowardsRankings = true;
+                let countPrizeTowardsRankings = !isSecondaryTourEvent;
                 
                 // ZMIANA: Deklaracja wyników na samej górze pętli, aby były widoczne dla tabeli GDL!
                 let matchWScore = 6, matchLScore = 0; 
@@ -944,7 +1385,7 @@ function skipActiveTournament() {
                         loser = isCurrentPlayer(p1) ? p1 : p2;
                     }
                     nextRoundBracket.push(winner);
-                    countPrizeTowardsRankings = !isContinentalAutomaticOpeningLoss(loser);
+                    countPrizeTowardsRankings = !isSecondaryTourEvent && !isContinentalAutomaticOpeningLoss(loser);
                     if (!isNonPrizeQualifier) {
                         awardPrizeMoney(loser, prize, activeTournament.name, { countTowardsRankings: countPrizeTowardsRankings });
                     }
@@ -1032,7 +1473,7 @@ function skipActiveTournament() {
                     matchLScore = Math.min(matchRes.p1Score, matchRes.p2Score);
 
                     nextRoundBracket.push(winner);
-                    countPrizeTowardsRankings = !isContinentalAutomaticOpeningLoss(loser);
+                    countPrizeTowardsRankings = !isSecondaryTourEvent && !isContinentalAutomaticOpeningLoss(loser);
                     if (!isNonPrizeQualifier) {
                         awardPrizeMoney(loser, prize, activeTournament.name, { countTowardsRankings: countPrizeTowardsRankings });
                     }
@@ -1116,7 +1557,18 @@ function skipActiveTournament() {
                 }
                 yield;
             } // Koniec pętli for
-            tournamentBracket = nextRoundBracket; tournamentRound /= 2;
+            const completedRound = tournamentRound;
+            if (isUKOpenEvent && typeof getUKOpenNextStage === 'function') {
+                const candidates = typeof getPdcTourCardPlayers === 'function'
+                    ? getPdcTourCardPlayers(true)
+                    : [...(Array.isArray(pdcPlayers) ? pdcPlayers : []), ...(player?.name ? [player] : [])];
+                const nextStage = getUKOpenNextStage(activeTournament, nextRoundBracket, completedRound, candidates);
+                tournamentBracket = nextStage.bracket;
+                tournamentRound = nextStage.round;
+            } else {
+                tournamentBracket = nextRoundBracket;
+                tournamentRound /= 2;
+            }
             if (isContinentalQualifier && tournamentBracket.length <= (
                 typeof getContinentalQualifierPlaces === 'function'
                     ? getContinentalQualifierPlaces(activeTournament)
@@ -1145,6 +1597,12 @@ function skipActiveTournament() {
                     }
                     return 'pdcTourCardQualifier';
                 }
+            }
+            if (isCrownMastersQualifier && tournamentBracket.length <= CROWN_MASTERS_QUALIFYING_PLACES) {
+                if (typeof completeCrownMastersQualifier === 'function') {
+                    completeCrownMastersQualifier(activeTournament, tournamentBracket);
+                }
+                return 'crownMastersQualifier';
             }
             return false;
         }

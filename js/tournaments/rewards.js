@@ -12,7 +12,20 @@ const PLAYERS_CHAMPIONSHIP_PRIZE_MONEY = Object.freeze({
 const GLOBAL_LEAGUE_PLACEMENT_PRIZES = Object.freeze({ 5: 95000, 6: 90000, 7: 85000, 8: 80000 });
 
 function getPrizeMoney(tName, round, won) {
-    if (typeof isWorldMastersName === 'function' && isWorldMastersName(tName)) {
+    if (typeof isUKOpenTournament === 'function' && isUKOpenTournament(tName)) {
+        return getUKOpenPrizeMoney(round, won);
+    } else if (typeof isCrownMastersTournament === 'function'
+        && (isCrownMastersTournament(tName) || isCrownMastersQualifierTournament(tName))) {
+        return getCrownMastersPrizeMoney(tName, round, won);
+    } else if (typeof isDevelopmentTourTournament === 'function' && isDevelopmentTourTournament(tName)) {
+        return typeof getDevelopmentTourEventPrize === 'function'
+            ? getDevelopmentTourEventPrize(round, won)
+            : 0;
+    } else if (typeof isChallengeTourTournament === 'function' && isChallengeTourTournament(tName)) {
+        return typeof getChallengeTourEventPrize === 'function'
+            ? getChallengeTourEventPrize(round, won)
+            : 0;
+    } else if (typeof isWorldMastersName === 'function' && isWorldMastersName(tName)) {
         return getWorldMastersPrizeMoney(tName, round, won);
     } else if (tName.includes("World Darts Championship") || tName.includes("Global Darts Championship")) {
         if(won && round === 2) return 1000000; if(!won && round === 2) return 400000;
@@ -35,7 +48,8 @@ function getPrizeMoney(tName, round, won) {
         if(won && round === 2) return 120000; if(!won && round === 2) return 60000;
         if(!won && round === 4) return 35000; if(!won && round === 8) return 20000;
         if(!won && round === 16) return 12500; if(!won && round === 32) return 7500;
-        if(!won && round === 64) return 3000; if(!won && round === 128) return 1250;
+        if(!won && round === 64) return 3000; if(!won && round === 96) return 2000;
+        if(!won && round === 128) return 1250; if(!won && round === 160) return 0;
     } else if (tName.includes("Players Championship Finals") || tName.includes("Pro Players Finals")) {
         if(won && round === 2) return 120000; if(!won && round === 2) return 60000;
         if(!won && round === 4) return 30000; if(!won && round === 8) return 20000;
@@ -82,9 +96,16 @@ function getPrizeMoney(tName, round, won) {
         function awardPrizeMoney(p, amount, tName, { countTowardsRankings = true } = {}) {
             if (!p || typeof amount !== 'number' || isNaN(amount) || amount <= 0) return;
             tName = String(tName || '');
+            const isChallengeTourEvent = typeof isChallengeTourTournament === 'function'
+                && isChallengeTourTournament(tName);
+            const isDevelopmentTourEvent = typeof isDevelopmentTourTournament === 'function'
+                && isDevelopmentTourTournament(tName);
+            const isSecondaryTourEvent = isChallengeTourEvent || isDevelopmentTourEvent;
             if (typeof recordTournamentCash === 'function' && isCurrentPlayer(p)) recordTournamentCash(tName, 'prize', amount);
             if (typeof recordSeasonArchivePrize === 'function') {
-                recordSeasonArchivePrize(p, amount, tName, { countTowardsRankings });
+                recordSeasonArchivePrize(p, amount, tName, {
+                    countTowardsRankings: countTowardsRankings && !isSecondaryTourEvent
+                });
             }
             
             // Zabezpieczenie przed uszkodzonym zapisem (przywraca 0 zamiast błędu)
@@ -93,12 +114,38 @@ function getPrizeMoney(tName, round, won) {
             if (typeof p.pcPrizeMoney !== 'number' || isNaN(p.pcPrizeMoney)) p.pcPrizeMoney = 0;
             if (typeof p.europeanTourPrizeMoney !== 'number' || isNaN(p.europeanTourPrizeMoney)) p.europeanTourPrizeMoney = 0;
 
+            // Rising Stars Circuit posiada własną klasyfikację finansową. Nagrody
+            // nie zasilają głównego OOM, ProTour OOM, PC OOM ani European Tour OOM.
+            if (isChallengeTourEvent) {
+                if (typeof awardChallengeTourPrizeMoney === 'function') {
+                    awardChallengeTourPrizeMoney(p, amount);
+                } else {
+                    p.challengeTourPrizeMoney = (Number(p.challengeTourPrizeMoney) || 0) + amount;
+                }
+                if (isCurrentPlayer(p)) player.budget += amount;
+                return;
+            }
+
+            // Future Champions Circuit prowadzi odrębny ranking zarobkowy.
+            // Wypłaty nie zmieniają żadnego standardowego Order of Merit.
+            if (isDevelopmentTourEvent) {
+                if (typeof awardDevelopmentTourPrizeMoney === 'function') {
+                    awardDevelopmentTourPrizeMoney(p, amount);
+                } else {
+                    p.developmentTourPrizeMoney = (Number(p.developmentTourPrizeMoney) || 0) + amount;
+                }
+                if (isCurrentPlayer(p)) player.budget += amount;
+                return;
+            }
+
             // Turnieje nierankingowe: nagroda trafia wyłącznie do budżetu gracza.
             if (tName.includes("Global Darts League") || tName.includes("Premier")) {
                 if (isCurrentPlayer(p)) player.budget += amount;
                 return;
             }
-            if (typeof isWorldMastersName === 'function' && isWorldMastersName(tName)) {
+            if (typeof isWorldMastersName === 'function' && isWorldMastersName(tName)
+                && !(typeof isCrownMastersTournament === 'function'
+                    && (isCrownMastersTournament(tName) || isCrownMastersQualifierTournament(tName)))) {
                 if (isCurrentPlayer(p)) player.budget += amount;
                 return;
             }

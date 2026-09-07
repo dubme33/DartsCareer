@@ -1,14 +1,19 @@
 const PLAYER_EDITOR_MAX_PHOTO_BYTES = 2 * 1024 * 1024;
 const PLAYER_EDITOR_MAX_WALKON_BYTES = 4 * 1024 * 1024;
 const PLAYER_EDITOR_FALLBACK_YEAR = 2026;
+const PLAYER_EDITOR_SORT_OPTIONS = ['name-asc', 'name-desc', 'overall-desc', 'overall-asc', 'country-asc', 'age-asc', 'age-desc'];
 
 const PLAYER_EDITOR_TRANSLATIONS = {
     pl: {
-        tileTitle: '🪪 Edytor zawodników', tileDesc: 'Edytuj bazę, statystyki, zdjęcia i walk-ony lub dodaj nową postać.',
+        tileTitle: '🪪 Edytor zawodników', tileDesc: 'Edytuj, dodawaj, usuwaj, filtruj i sortuj zawodników w bieżącej karierze.',
         eyebrow: 'BAZA ZAWODNIKÓW', title: '🪪 Edytor zawodników',
         intro: 'Zmiany dotyczą bieżącej kariery i zostaną zapisane razem z nią.', baseMode: 'Gra podstawowa', modMode: 'Aktywny mod',
         roster: 'Zawodnicy', count: '{shown} z {total} zawodników', add: '＋ Dodaj', searchLabel: 'Szukaj zawodnika',
         search: 'Szukaj po nazwisku lub kraju…', empty: 'Nie znaleziono zawodników pasujących do wyszukiwania.',
+        sortLabel: 'Sortowanie', countryFilterLabel: 'Narodowość', allCountries: 'Wszystkie',
+        sortNameAsc: 'Alfabetycznie A–Z', sortNameDesc: 'Alfabetycznie Z–A',
+        sortOverallDesc: 'Overall: najwyższy', sortOverallAsc: 'Overall: najniższy', sortCountryAsc: 'Narodowość A–Z',
+        sortAgeAsc: 'Wiek: najmłodsi', sortAgeDesc: 'Wiek: najstarsi',
         editKicker: 'EDYCJA WPISU', addKicker: 'NOWY WPIS', choose: 'Wybierz zawodnika', create: 'Nowy zawodnik',
         baseOrigin: 'Baza gry', modOrigin: 'Wpis moda', customOrigin: 'Dodany w edytorze', careerOrigin: 'Twoja postać',
         photo: 'Zdjęcie zawodnika', noPhoto: 'BRAK ZDJĘCIA', photoHint: 'PNG, JPG lub WebP, maksymalnie 2 MB.',
@@ -17,8 +22,17 @@ const PLAYER_EDITOR_TRANSLATIONS = {
         gender: 'Płeć', male: 'Mężczyzna', female: 'Kobieta', favoriteDouble: 'Ulubiony double',
         ratings: 'Oceny meczowe', overall: 'Overall', scoring: 'Punktowanie', doubles: 'Podwójne',
         traits: 'Cechy dodatkowe', endurance: 'Wytrzymałość', consistency: 'Regularność', mental: 'Mental',
-        back: 'Wróć do menu', save: 'Zapisz zmiany', createButton: 'Dodaj zawodnika',
+        back: 'Wróć do menu', save: 'Zapisz zmiany', createButton: 'Dodaj zawodnika', delete: 'Usuń zawodnika',
+        bulkDeleteTitle: 'Zbiorcze usuwanie', bulkDeleteHint: 'Wybierz konkretną narodowość w filtrze powyżej, aby usunąć wszystkich jej zawodników AI.',
+        deleteCountry: 'Usuń wszystkich z wybranego kraju', deleteCountryCount: 'Usuń: {country} ({count})',
+        deleteCountryChoose: 'Najpierw wybierz konkretną narodowość.', deleteCountryEmpty: 'Brak zawodników AI z kraju {country} do usunięcia.',
+        deleteCountryInUse: 'Nie można usunąć tej grupy: {count} zawodników z kraju {country} uczestniczy w trwającym turnieju, meczu lub bieżącym sezonie ligi.',
+        deleteCountryConfirm: 'Czy na pewno usunąć wszystkich zawodników AI z kraju {country}?\n\nLiczba: {count}. Zmiana zostanie zapisana w tej karierze.',
+        deleteCountryConfirmCareer: 'Czy na pewno usunąć wszystkich zawodników AI z kraju {country}?\n\nLiczba: {count}. Twoja postać kariery pozostanie w grze. Zmiana zostanie zapisana w tej karierze.',
+        deletedCountry: 'Usunięto zawodników AI z kraju {country}. Liczba usuniętych: {count}.',
         saved: 'Zapisano zmiany zawodnika {name}.', added: 'Dodano zawodnika {name}.',
+        deleteConfirm: 'Czy na pewno usunąć zawodnika {name}?\n\nZmiana zostanie zapisana w tej karierze.', deleted: 'Usunięto zawodnika {name}.',
+        deleteCareer: 'Nie można usunąć własnej postaci kariery.', deleteInUse: 'Nie można usunąć zawodnika uczestniczącego w trwającym turnieju lub bieżącym sezonie ligi.',
         invalidName: 'Podaj imię i nazwisko zawodnika.', invalidCountry: 'Wybierz kraj.',
         invalidBirthYear: 'Rok urodzenia musi mieścić się między {min} a {max}.', invalidRating: 'Sprawdź zakresy wszystkich ocen.',
         duplicate: 'Zawodnik o tej nazwie i kraju już istnieje.', invalidPhoto: 'Wybierz plik PNG, JPG lub WebP.',
@@ -32,18 +46,31 @@ const PLAYER_EDITOR_TRANSLATIONS = {
         walkonReady: 'Walk-on jest gotowy. Zapisz zmiany, aby go przypisać.', walkonRemoved: 'Po zapisaniu zostanie przywrócona muzyka domyślna lub utwór z moda.'
     },
     en: {
-        tileTitle: '🪪 Player editor', tileDesc: 'Edit the roster, ratings, photos and walk-ons or add a new player.',
+        tileTitle: '🪪 Player editor', tileDesc: 'Edit, add, remove, filter and sort players in the current career.',
         eyebrow: 'PLAYER DATABASE', title: '🪪 Player editor', intro: 'Changes apply to this career and are saved together with it.',
         baseMode: 'Base game', modMode: 'Active mod', roster: 'Players', count: '{shown} of {total} players', add: '＋ Add',
         searchLabel: 'Search players', search: 'Search by name or country…', empty: 'No players match your search.',
+        sortLabel: 'Sort by', countryFilterLabel: 'Nationality', allCountries: 'All',
+        sortNameAsc: 'Alphabetical A–Z', sortNameDesc: 'Alphabetical Z–A',
+        sortOverallDesc: 'Overall: highest', sortOverallAsc: 'Overall: lowest', sortCountryAsc: 'Nationality A–Z',
+        sortAgeAsc: 'Age: youngest', sortAgeDesc: 'Age: oldest',
         editKicker: 'EDIT ENTRY', addKicker: 'NEW ENTRY', choose: 'Select a player', create: 'New player',
         baseOrigin: 'Game database', modOrigin: 'Mod entry', customOrigin: 'Added in editor', careerOrigin: 'Your player', photo: 'Player photo', noPhoto: 'NO PHOTO',
         photoHint: 'PNG, JPG or WebP, up to 2 MB.', uploadPhoto: 'Choose photo', removePhoto: 'Remove photo', photoAlt: 'Player photo',
         personal: 'Player details', firstName: 'First name', lastName: 'Last name', country: 'Country', birthYear: 'Year of birth',
         gender: 'Gender', male: 'Male', female: 'Female', favoriteDouble: 'Favourite double', ratings: 'Match ratings',
         overall: 'Overall', scoring: 'Scoring', doubles: 'Doubles', traits: 'Additional traits', endurance: 'Endurance',
-        consistency: 'Consistency', mental: 'Mental', back: 'Back to menu', save: 'Save changes', createButton: 'Add player',
+        consistency: 'Consistency', mental: 'Mental', back: 'Back to menu', save: 'Save changes', createButton: 'Add player', delete: 'Remove player',
+        bulkDeleteTitle: 'Bulk removal', bulkDeleteHint: 'Select a specific nationality in the filter above to remove all of its AI players.',
+        deleteCountry: 'Remove everyone from selected country', deleteCountryCount: 'Remove: {country} ({count})',
+        deleteCountryChoose: 'Select a specific nationality first.', deleteCountryEmpty: 'There are no AI players from {country} to remove.',
+        deleteCountryInUse: 'This group cannot be removed: {count} players from {country} are in an active tournament, match or current league season.',
+        deleteCountryConfirm: 'Remove all AI players from {country}?\n\nCount: {count}. This change will be saved in the current career.',
+        deleteCountryConfirmCareer: 'Remove all AI players from {country}?\n\nCount: {count}. Your career player will remain in the game. This change will be saved in the current career.',
+        deletedCountry: 'Removed AI players from {country}. Removed count: {count}.',
         saved: 'Saved changes to {name}.', added: 'Added player {name}.', invalidName: 'Enter the player’s first and last name.',
+        deleteConfirm: 'Remove {name}?\n\nThis change will be saved in the current career.', deleted: 'Removed player {name}.',
+        deleteCareer: 'Your career player cannot be removed.', deleteInUse: 'A player in an active tournament or the current league season cannot be removed.',
         invalidCountry: 'Select a country.', invalidBirthYear: 'Year of birth must be between {min} and {max}.',
         invalidRating: 'Check the allowed ranges for all ratings.', duplicate: 'A player with this name and country already exists.',
         invalidPhoto: 'Choose a PNG, JPG or WebP file.', photoTooLarge: 'The photo is too large. Maximum size is 2 MB.',
@@ -57,18 +84,31 @@ const PLAYER_EDITOR_TRANSLATIONS = {
         walkonReady: 'The walk-on is ready. Save changes to assign it.', walkonRemoved: 'Saving will restore the default or mod track.'
     },
     de: {
-        tileTitle: '🪪 Spielereditor', tileDesc: 'Kader, Werte, Fotos und Walk-ons bearbeiten oder einen neuen Spieler hinzufügen.',
+        tileTitle: '🪪 Spielereditor', tileDesc: 'Spieler in der aktuellen Karriere bearbeiten, hinzufügen, entfernen, filtern und sortieren.',
         eyebrow: 'SPIELERDATENBANK', title: '🪪 Spielereditor', intro: 'Änderungen gelten für diese Karriere und werden mit ihr gespeichert.',
         baseMode: 'Grundspiel', modMode: 'Aktiver Mod', roster: 'Spieler', count: '{shown} von {total} Spielern', add: '＋ Hinzufügen',
         searchLabel: 'Spieler suchen', search: 'Nach Name oder Land suchen…', empty: 'Keine passenden Spieler gefunden.',
+        sortLabel: 'Sortierung', countryFilterLabel: 'Nationalität', allCountries: 'Alle',
+        sortNameAsc: 'Alphabetisch A–Z', sortNameDesc: 'Alphabetisch Z–A',
+        sortOverallDesc: 'Overall: höchste', sortOverallAsc: 'Overall: niedrigste', sortCountryAsc: 'Nationalität A–Z',
+        sortAgeAsc: 'Alter: jüngste', sortAgeDesc: 'Alter: älteste',
         editKicker: 'EINTRAG BEARBEITEN', addKicker: 'NEUER EINTRAG', choose: 'Spieler auswählen', create: 'Neuer Spieler',
         baseOrigin: 'Spieldatenbank', modOrigin: 'Mod-Eintrag', customOrigin: 'Im Editor erstellt', careerOrigin: 'Dein Spieler', photo: 'Spielerfoto', noPhoto: 'KEIN FOTO',
         photoHint: 'PNG, JPG oder WebP, maximal 2 MB.', uploadPhoto: 'Foto wählen', removePhoto: 'Foto entfernen', photoAlt: 'Spielerfoto',
         personal: 'Spielerdaten', firstName: 'Vorname', lastName: 'Nachname', country: 'Land', birthYear: 'Geburtsjahr',
         gender: 'Geschlecht', male: 'Männlich', female: 'Weiblich', favoriteDouble: 'Lieblingsdoppel', ratings: 'Matchwerte',
         overall: 'Overall', scoring: 'Scoring', doubles: 'Doppel', traits: 'Zusätzliche Eigenschaften', endurance: 'Ausdauer',
-        consistency: 'Konstanz', mental: 'Mental', back: 'Zurück zum Menü', save: 'Änderungen speichern', createButton: 'Spieler hinzufügen',
+        consistency: 'Konstanz', mental: 'Mental', back: 'Zurück zum Menü', save: 'Änderungen speichern', createButton: 'Spieler hinzufügen', delete: 'Spieler entfernen',
+        bulkDeleteTitle: 'Mehrere Spieler entfernen', bulkDeleteHint: 'Wähle oben im Filter eine bestimmte Nationalität, um alle zugehörigen KI-Spieler zu entfernen.',
+        deleteCountry: 'Alle aus dem gewählten Land entfernen', deleteCountryCount: 'Entfernen: {country} ({count})',
+        deleteCountryChoose: 'Wähle zuerst eine bestimmte Nationalität.', deleteCountryEmpty: 'Es gibt keine entfernbaren KI-Spieler aus {country}.',
+        deleteCountryInUse: 'Diese Gruppe kann nicht entfernt werden: {count} Spieler aus {country} nehmen an einem laufenden Turnier, Match oder an der aktuellen Ligasaison teil.',
+        deleteCountryConfirm: 'Alle KI-Spieler aus {country} entfernen?\n\nAnzahl: {count}. Die Änderung wird in dieser Karriere gespeichert.',
+        deleteCountryConfirmCareer: 'Alle KI-Spieler aus {country} entfernen?\n\nAnzahl: {count}. Dein Karrierespieler bleibt im Spiel. Die Änderung wird in dieser Karriere gespeichert.',
+        deletedCountry: 'KI-Spieler aus {country} entfernt. Anzahl: {count}.',
         saved: 'Änderungen für {name} gespeichert.', added: 'Spieler {name} hinzugefügt.', invalidName: 'Vor- und Nachname eingeben.',
+        deleteConfirm: '{name} wirklich entfernen?\n\nDie Änderung wird in dieser Karriere gespeichert.', deleted: 'Spieler {name} wurde entfernt.',
+        deleteCareer: 'Der eigene Karrierespieler kann nicht entfernt werden.', deleteInUse: 'Ein Spieler in einem laufenden Turnier oder in der aktuellen Liga-Saison kann nicht entfernt werden.',
         invalidCountry: 'Land auswählen.', invalidBirthYear: 'Das Geburtsjahr muss zwischen {min} und {max} liegen.',
         invalidRating: 'Bitte alle Wertebereiche prüfen.', duplicate: 'Ein Spieler mit diesem Namen und Land existiert bereits.',
         invalidPhoto: 'Bitte PNG, JPG oder WebP auswählen.', photoTooLarge: 'Das Foto ist zu groß. Maximal 2 MB.',
@@ -82,18 +122,31 @@ const PLAYER_EDITOR_TRANSLATIONS = {
         walkonReady: 'Der Walk-on ist bereit. Änderungen speichern, um ihn zuzuweisen.', walkonRemoved: 'Beim Speichern wird der Standard- oder Mod-Titel wiederhergestellt.'
     },
     nl: {
-        tileTitle: '🪪 Spelerseditor', tileDesc: 'Bewerk spelers, ratings, foto’s en walk-ons of voeg een nieuwe speler toe.',
+        tileTitle: '🪪 Spelerseditor', tileDesc: 'Bewerk, voeg toe, verwijder, filter en sorteer spelers in de huidige carrière.',
         eyebrow: 'SPELERSDATABASE', title: '🪪 Spelerseditor', intro: 'Wijzigingen gelden voor deze carrière en worden ermee opgeslagen.',
         baseMode: 'Basisspel', modMode: 'Actieve mod', roster: 'Spelers', count: '{shown} van {total} spelers', add: '＋ Toevoegen',
         searchLabel: 'Spelers zoeken', search: 'Zoek op naam of land…', empty: 'Geen spelers gevonden voor deze zoekopdracht.',
+        sortLabel: 'Sorteren', countryFilterLabel: 'Nationaliteit', allCountries: 'Alle',
+        sortNameAsc: 'Alfabetisch A–Z', sortNameDesc: 'Alfabetisch Z–A',
+        sortOverallDesc: 'Overall: hoogste', sortOverallAsc: 'Overall: laagste', sortCountryAsc: 'Nationaliteit A–Z',
+        sortAgeAsc: 'Leeftijd: jongste', sortAgeDesc: 'Leeftijd: oudste',
         editKicker: 'ITEM BEWERKEN', addKicker: 'NIEUW ITEM', choose: 'Kies een speler', create: 'Nieuwe speler',
         baseOrigin: 'Speldatabase', modOrigin: 'Mod-item', customOrigin: 'Toegevoegd in editor', careerOrigin: 'Jouw speler', photo: 'Spelersfoto', noPhoto: 'GEEN FOTO',
         photoHint: 'PNG, JPG of WebP, maximaal 2 MB.', uploadPhoto: 'Kies foto', removePhoto: 'Foto verwijderen', photoAlt: 'Spelersfoto',
         personal: 'Spelersgegevens', firstName: 'Voornaam', lastName: 'Achternaam', country: 'Land', birthYear: 'Geboortejaar',
         gender: 'Geslacht', male: 'Man', female: 'Vrouw', favoriteDouble: 'Favoriete dubbel', ratings: 'Wedstrijdratings',
         overall: 'Overall', scoring: 'Scoring', doubles: 'Dubbels', traits: 'Extra eigenschappen', endurance: 'Uithoudingsvermogen',
-        consistency: 'Regelmaat', mental: 'Mentaal', back: 'Terug naar menu', save: 'Wijzigingen opslaan', createButton: 'Speler toevoegen',
+        consistency: 'Regelmaat', mental: 'Mentaal', back: 'Terug naar menu', save: 'Wijzigingen opslaan', createButton: 'Speler toevoegen', delete: 'Speler verwijderen',
+        bulkDeleteTitle: 'Meerdere spelers verwijderen', bulkDeleteHint: 'Kies hierboven een specifieke nationaliteit om alle bijbehorende AI-spelers te verwijderen.',
+        deleteCountry: 'Iedereen uit het gekozen land verwijderen', deleteCountryCount: 'Verwijderen: {country} ({count})',
+        deleteCountryChoose: 'Kies eerst een specifieke nationaliteit.', deleteCountryEmpty: 'Er zijn geen AI-spelers uit {country} om te verwijderen.',
+        deleteCountryInUse: 'Deze groep kan niet worden verwijderd: {count} spelers uit {country} nemen deel aan een actief toernooi, duel of het huidige competitieseizoen.',
+        deleteCountryConfirm: 'Alle AI-spelers uit {country} verwijderen?\n\nAantal: {count}. Deze wijziging wordt in de huidige carrière opgeslagen.',
+        deleteCountryConfirmCareer: 'Alle AI-spelers uit {country} verwijderen?\n\nAantal: {count}. Je eigen carrièrespeler blijft in het spel. Deze wijziging wordt in de huidige carrière opgeslagen.',
+        deletedCountry: 'AI-spelers uit {country} verwijderd. Aantal verwijderd: {count}.',
         saved: 'Wijzigingen voor {name} opgeslagen.', added: 'Speler {name} toegevoegd.', invalidName: 'Vul voor- en achternaam in.',
+        deleteConfirm: '{name} verwijderen?\n\nDeze wijziging wordt in de huidige carrière opgeslagen.', deleted: 'Speler {name} is verwijderd.',
+        deleteCareer: 'Je eigen carrièrespeler kan niet worden verwijderd.', deleteInUse: 'Een speler in een actief toernooi of het huidige competitieseizoen kan niet worden verwijderd.',
         invalidCountry: 'Kies een land.', invalidBirthYear: 'Het geboortejaar moet tussen {min} en {max} liggen.',
         invalidRating: 'Controleer het bereik van alle ratings.', duplicate: 'Een speler met deze naam en dit land bestaat al.',
         invalidPhoto: 'Kies een PNG-, JPG- of WebP-bestand.', photoTooLarge: 'De foto is te groot. Maximaal 2 MB.',
@@ -141,9 +194,100 @@ function normalizePlayerEditorIdentity(value) {
     return String(value || '').trim().replace(/\s+/g, ' ').toLocaleLowerCase('pl');
 }
 
+function getPlayerEditorDeletionIdentity(candidate) {
+    const name = normalizePlayerEditorIdentity(candidate?.sourceName || candidate?.name);
+    const country = normalizePlayerEditorIdentity(candidate?.country);
+    return name && country ? `${name}|${country}` : '';
+}
+
+function getPlayerEditorTemplateIndex(candidate) {
+    if (Number.isInteger(candidate?.defaultTemplateIndex) && candidate.defaultTemplateIndex >= 0) {
+        return candidate.defaultTemplateIndex;
+    }
+    if (candidate?.editorCreated || candidate?.isNewgen
+        || typeof defaultPdcPlayerTemplates === 'undefined' || !Array.isArray(defaultPdcPlayerTemplates)) return null;
+    const identity = getPlayerEditorDeletionIdentity(candidate);
+    const index = defaultPdcPlayerTemplates.findIndex(template => getPlayerEditorDeletionIdentity(template) === identity);
+    return index >= 0 ? index : null;
+}
+
+function getPlayerEditorDeletedPlayers() {
+    return typeof player !== 'undefined' && Array.isArray(player?.editorDeletedPlayers)
+        ? player.editorDeletedPlayers
+        : [];
+}
+
+function isPlayerEditorDeleted(candidate, templateIndex = null) {
+    if (!candidate) return false;
+    const id = typeof candidate.id === 'string' ? candidate.id : '';
+    const resolvedTemplateIndex = Number.isInteger(templateIndex) ? templateIndex : getPlayerEditorTemplateIndex(candidate);
+    const identity = getPlayerEditorDeletionIdentity(candidate);
+    const canMatchDatabaseIdentity = !candidate.editorCreated && !candidate.isNewgen;
+    return getPlayerEditorDeletedPlayers().some(record => record && (
+        (id && record.id === id)
+        || (Number.isInteger(resolvedTemplateIndex) && record.defaultTemplateIndex === resolvedTemplateIndex)
+        || (canMatchDatabaseIdentity && record.identity && identity && record.identity === identity)
+    ));
+}
+
+function rememberPlayerEditorDeletion(candidate) {
+    if (typeof player === 'undefined' || !player || !candidate) return false;
+    if (!Array.isArray(player.editorDeletedPlayers)) player.editorDeletedPlayers = [];
+    const templateIndex = getPlayerEditorTemplateIndex(candidate);
+    const record = {
+        id: typeof candidate.id === 'string' ? candidate.id : '',
+        defaultTemplateIndex: Number.isInteger(templateIndex) ? templateIndex : null,
+        identity: Number.isInteger(templateIndex) ? getPlayerEditorDeletionIdentity(candidate) : ''
+    };
+    if (!isPlayerEditorDeleted(candidate, templateIndex)) player.editorDeletedPlayers.push(record);
+    return true;
+}
+
+function removePlayerEditorDeletedPlayersFromPool() {
+    if (typeof pdcPlayers === 'undefined' || !Array.isArray(pdcPlayers)) return 0;
+    const remaining = pdcPlayers.filter(candidate => !isPlayerEditorDeleted(candidate));
+    const removed = pdcPlayers.length - remaining.length;
+    if (removed) pdcPlayers.splice(0, pdcPlayers.length, ...remaining);
+    return removed;
+}
+
+function getPlayerEditorOverall(candidate) {
+    return Number(candidate?.baseOvr ?? candidate?.ovr ?? candidate?.overall) || 0;
+}
+
+function getPlayerEditorAge(candidate) {
+    const birthYear = Number(candidate?.birthYear);
+    return Number.isInteger(birthYear) ? Math.max(0, getPlayerEditorReferenceYear() - birthYear) : null;
+}
+
+function getPlayerEditorCountryLabel(candidate) {
+    return String(typeof t === 'function' ? t(candidate?.country) : candidate?.country || '');
+}
+
+function sortPlayerEditorRosterPlayers(players, sort = 'name-asc', locale = 'pl') {
+    const normalizedSort = PLAYER_EDITOR_SORT_OPTIONS.includes(sort) ? sort : 'name-asc';
+    const compareName = (first, second) => String(first?.name || '').localeCompare(String(second?.name || ''), locale);
+    const compareNumber = (first, second, direction = 1) => {
+        if (first === null) return second === null ? 0 : 1;
+        if (second === null) return -1;
+        return (first - second) * direction;
+    };
+    return players.slice().sort((first, second) => {
+        let result = 0;
+        if (normalizedSort === 'name-desc') result = -compareName(first, second);
+        else if (normalizedSort === 'overall-desc') result = compareNumber(getPlayerEditorOverall(first), getPlayerEditorOverall(second), -1);
+        else if (normalizedSort === 'overall-asc') result = compareNumber(getPlayerEditorOverall(first), getPlayerEditorOverall(second));
+        else if (normalizedSort === 'country-asc') result = getPlayerEditorCountryLabel(first).localeCompare(getPlayerEditorCountryLabel(second), locale);
+        else if (normalizedSort === 'age-asc') result = compareNumber(getPlayerEditorAge(first), getPlayerEditorAge(second));
+        else if (normalizedSort === 'age-desc') result = compareNumber(getPlayerEditorAge(first), getPlayerEditorAge(second), -1);
+        else result = compareName(first, second);
+        return result || compareName(first, second);
+    });
+}
+
 function getPlayerEditorRosterPlayers() {
     const roster = typeof pdcPlayers !== 'undefined' && Array.isArray(pdcPlayers)
-        ? pdcPlayers.filter(candidate => candidate && !candidate.isBye)
+        ? pdcPlayers.filter(candidate => candidate && !candidate.isBye && !isPlayerEditorDeleted(candidate))
         : [];
     if (typeof player !== 'undefined' && player?.name && !roster.some(candidate => candidate === player || (candidate.id && candidate.id === player.id))) {
         roster.push(player);
@@ -255,16 +399,82 @@ function renderPlayerEditorDoubleOptions(selectedDouble = 16) {
     select.value = String(Number.isInteger(Number(selectedDouble)) ? selectedDouble : 16);
 }
 
+function renderPlayerEditorSortOptions() {
+    const select = document.getElementById('player-editor-sort');
+    if (!select) return;
+    const selected = PLAYER_EDITOR_SORT_OPTIONS.includes(select.value) ? select.value : 'name-asc';
+    const options = [
+        ['name-asc', 'sortNameAsc'], ['name-desc', 'sortNameDesc'],
+        ['overall-desc', 'sortOverallDesc'], ['overall-asc', 'sortOverallAsc'],
+        ['country-asc', 'sortCountryAsc'], ['age-asc', 'sortAgeAsc'], ['age-desc', 'sortAgeDesc']
+    ];
+    select.replaceChildren();
+    options.forEach(([value, key]) => {
+        const option = document.createElement('option');
+        option.value = value;
+        option.textContent = trPlayerEditor(key);
+        select.appendChild(option);
+    });
+    select.value = selected;
+}
+
+function renderPlayerEditorCountryFilterOptions() {
+    const select = document.getElementById('player-editor-country-filter');
+    if (!select) return;
+    const selected = select.value || '';
+    const locale = typeof currentLang === 'string' ? currentLang : 'pl';
+    const rosterCountries = [...new Set(getPlayerEditorRosterPlayers().map(candidate => candidate.country).filter(Boolean))]
+        .sort((first, second) => {
+            const firstLabel = typeof t === 'function' ? t(first) : first;
+            const secondLabel = typeof t === 'function' ? t(second) : second;
+            return String(firstLabel).localeCompare(String(secondLabel), locale);
+        });
+    select.replaceChildren();
+    const all = document.createElement('option');
+    all.value = '';
+    all.textContent = trPlayerEditor('allCountries');
+    select.appendChild(all);
+    rosterCountries.forEach(country => {
+        const option = document.createElement('option');
+        option.value = country;
+        option.textContent = typeof t === 'function' ? t(country) : country;
+        select.appendChild(option);
+    });
+    select.value = rosterCountries.includes(selected) ? selected : '';
+    updatePlayerEditorCountryDeleteAction();
+}
+
+function getPlayerEditorCountryDeletionCandidates(country) {
+    if (!country || typeof pdcPlayers === 'undefined' || !Array.isArray(pdcPlayers)) return [];
+    return pdcPlayers.filter(candidate => candidate && !candidate.isBye
+        && candidate.country === country
+        && !isPlayerEditorDeleted(candidate)
+        && (typeof player === 'undefined' || !playerEditorCandidatesMatch(candidate, player)));
+}
+
+function updatePlayerEditorCountryDeleteAction() {
+    const button = document.getElementById('player-editor-delete-country');
+    if (!button) return;
+    const country = document.getElementById('player-editor-country-filter')?.value || '';
+    const candidates = getPlayerEditorCountryDeletionCandidates(country);
+    const countryLabel = country ? (typeof t === 'function' ? t(country) : country) : '';
+    button.disabled = !country || !candidates.length;
+    button.textContent = country
+        ? trPlayerEditor('deleteCountryCount', { country: countryLabel, count: candidates.length })
+        : trPlayerEditor('deleteCountry');
+}
+
 function renderPlayerEditorRoster() {
     const list = document.getElementById('player-editor-roster-list');
     if (!list || typeof pdcPlayers === 'undefined' || !Array.isArray(pdcPlayers)) return;
     const search = normalizePlayerEditorIdentity(document.getElementById('player-editor-search')?.value);
+    const countryFilter = document.getElementById('player-editor-country-filter')?.value || '';
+    const sort = document.getElementById('player-editor-sort')?.value || 'name-asc';
     const locale = typeof currentLang === 'string' ? currentLang : 'pl';
-    const players = getPlayerEditorRosterPlayers().slice()
-        .sort((first, second) => String(first.name || '').localeCompare(String(second.name || ''), locale));
-    const filtered = players.filter(candidate => !search || [candidate.name, candidate.country,
-        typeof t === 'function' ? t(candidate.country) : candidate.country]
-        .some(value => normalizePlayerEditorIdentity(value).includes(search)));
+    const players = sortPlayerEditorRosterPlayers(getPlayerEditorRosterPlayers(), sort, locale);
+    const filtered = players.filter(candidate => (!countryFilter || candidate.country === countryFilter)
+        && (!search || [candidate.name, candidate.country, typeof t === 'function' ? t(candidate.country) : candidate.country]
+            .some(value => normalizePlayerEditorIdentity(value).includes(search))));
 
     list.replaceChildren();
     filtered.forEach(candidate => {
@@ -279,7 +489,7 @@ function renderPlayerEditorRoster() {
         const country = document.createElement('small');
         country.textContent = typeof t === 'function' ? t(candidate.country) : candidate.country;
         const overall = document.createElement('b');
-        overall.textContent = `OVR ${Math.round(Number(candidate.baseOvr ?? candidate.ovr ?? candidate.overall) || 0)}`;
+        overall.textContent = `OVR ${Math.round(getPlayerEditorOverall(candidate))}`;
         button.append(name, country, overall);
         list.appendChild(button);
     });
@@ -290,12 +500,22 @@ function renderPlayerEditorRoster() {
         list.appendChild(empty);
     }
     setPlayerEditorText('player-editor-roster-count', trPlayerEditor('count', { shown: filtered.length, total: players.length }));
+    updatePlayerEditorCountryDeleteAction();
 }
 
 function getPlayerEditorOrigin(candidate) {
     if (typeof player !== 'undefined' && candidate === player) return trPlayerEditor('careerOrigin');
     if (candidate?.editorCreated) return trPlayerEditor('customOrigin');
     return typeof activeModData !== 'undefined' && activeModData ? trPlayerEditor('modOrigin') : trPlayerEditor('baseOrigin');
+}
+
+function updatePlayerEditorDeleteButton(candidate = null) {
+    const button = document.getElementById('player-editor-delete');
+    if (!button) return;
+    const isCareerPlayer = typeof player !== 'undefined' && candidate === player;
+    const visible = Boolean(candidate && !isCareerPlayer);
+    button.hidden = !visible;
+    button.disabled = !visible;
 }
 
 function populatePlayerEditorForm(candidate = null) {
@@ -311,6 +531,7 @@ function populatePlayerEditorForm(candidate = null) {
     setPlayerEditorText('player-editor-form-title', creating ? trPlayerEditor('create') : candidate.name);
     setPlayerEditorText('player-editor-origin', creating ? trPlayerEditor('customOrigin') : getPlayerEditorOrigin(candidate));
     setPlayerEditorText('player-editor-save', trPlayerEditor(creating ? 'createButton' : 'save'));
+    updatePlayerEditorDeleteButton(candidate);
 
     setValue('player-editor-first-name', parts.firstName);
     setValue('player-editor-last-name', parts.lastName);
@@ -363,6 +584,15 @@ function startAddingPlayer() {
 function getPlayerEditorNumber(id, min, max) {
     const value = Number(document.getElementById(id)?.value);
     return Number.isFinite(value) && value >= min && value <= max ? value : null;
+}
+
+function getPlayerEditorDisplayedRatings(candidate) {
+    const overall = Math.round(Number(candidate?.baseOvr ?? candidate?.ovr ?? candidate?.overall) || 60);
+    return {
+        overall,
+        scoring: Math.round(Number(candidate?.baseScoring ?? candidate?.scoring) || overall),
+        doubles: Math.round(Number(candidate?.baseDoubles ?? candidate?.doubles) || overall)
+    };
 }
 
 function createPlayerEditorPlayer(data) {
@@ -476,22 +706,34 @@ function savePlayerEditor(event) {
     const values = collected.values;
     const candidate = existing || createPlayerEditorPlayer(values);
     const wasCreated = !existing;
+    const displayedRatings = existing ? getPlayerEditorDisplayedRatings(existing) : null;
+    const ratingsChanged = !displayedRatings
+        || values.overall !== displayedRatings.overall
+        || values.scoring !== displayedRatings.scoring
+        || values.doubles !== displayedRatings.doubles;
     if (existing && !candidate.sourceName) candidate.sourceName = candidate.name;
     Object.assign(candidate, {
         name: values.name,
         country: values.country,
         birthYear: values.birthYear,
         gender: values.gender,
-        favoriteDouble: values.favoriteDouble,
-        overall: values.overall,
-        ovr: values.overall,
-        scoring: values.scoring,
-        doubles: values.doubles,
-        baseOvr: values.overall,
-        baseScoring: values.scoring,
-        baseDoubles: values.doubles,
-        form: 0
+        favoriteDouble: values.favoriteDouble
     });
+    if (ratingsChanged) {
+        Object.assign(candidate, {
+            overall: values.overall,
+            ovr: values.overall,
+            scoring: values.scoring,
+            doubles: values.doubles,
+            baseOvr: values.overall,
+            baseScoring: values.scoring,
+            baseDoubles: values.doubles,
+            form: 0,
+            // Ręczna ocena należy do konkretnego zapisu kariery. Migracje bazy
+            // oraz ponowne nałożenie moda nie mogą jej później zastąpić.
+            playerEditorRatingOverride: true
+        });
+    }
     applyPlayerEditorTraits(candidate, values);
     if (playerEditorPhotoChanged) candidate.photo = playerEditorPendingPhoto || '';
     if (playerEditorWalkonChanged) candidate.walkon = playerEditorPendingWalkon || null;
@@ -507,11 +749,133 @@ function savePlayerEditor(event) {
 
     playerEditorSelectedId = candidate.id;
     playerEditorCreating = false;
+    renderPlayerEditorCountryFilterOptions();
     renderPlayerEditorRoster();
     populatePlayerEditorForm(candidate);
     setPlayerEditorStatus(trPlayerEditor(wasCreated ? 'added' : 'saved', { name: candidate.name }));
-    if (typeof saveGame === 'function') saveGame(true);
+    // Edytor komunikuje zapisanie dopiero po zatwierdzeniu formularza, dlatego
+    // nie zostawiamy tej zmiany wyłącznie w opóźnionym autosave. Gracz może od
+    // razu wczytać karierę lub zamknąć kartę.
+    if (typeof saveGame === 'function') saveGame(true, { immediate: true });
     return candidate;
+}
+
+function playerEditorCandidatesMatch(first, second) {
+    if (!first || !second) return false;
+    if (typeof samePlayer === 'function' && samePlayer(first, second)) return true;
+    return first === second || Boolean(first.id && second.id && first.id === second.id);
+}
+
+function isPlayerEditorCandidateInUse(candidate) {
+    if (!candidate) return false;
+    if (typeof gdlTable !== 'undefined' && Array.isArray(gdlTable)
+        && gdlTable.some(row => playerEditorCandidatesMatch(row?.player, candidate))) return true;
+    if (typeof currentMatch !== 'undefined' && currentMatch && Object.values(currentMatch).some(value => {
+        if (Array.isArray(value)) return value.some(entry => playerEditorCandidatesMatch(entry, candidate));
+        return playerEditorCandidatesMatch(value, candidate);
+    })) return true;
+    const hasActiveTournament = typeof activeTournament !== 'undefined' && activeTournament && !activeTournament.completed;
+    if (!hasActiveTournament || typeof tournamentBracket === 'undefined' || !Array.isArray(tournamentBracket)) return false;
+    return tournamentBracket.some(entry => {
+        if (playerEditorCandidatesMatch(entry, candidate)) return true;
+        return Array.isArray(entry?.players) && entry.players.some(member => playerEditorCandidatesMatch(member, candidate));
+    });
+}
+
+function deletePlayerEditorCandidate() {
+    const candidate = playerEditorCreating ? null : getPlayerEditorCandidate();
+    if (!candidate) {
+        setPlayerEditorStatus(trPlayerEditor('choose'), true);
+        return false;
+    }
+    if (typeof player !== 'undefined' && candidate === player) {
+        setPlayerEditorStatus(trPlayerEditor('deleteCareer'), true);
+        return false;
+    }
+    if (isPlayerEditorCandidateInUse(candidate)) {
+        setPlayerEditorStatus(trPlayerEditor('deleteInUse'), true);
+        return false;
+    }
+    const confirmed = typeof confirm !== 'function' || confirm(trPlayerEditor('deleteConfirm', { name: candidate.name }));
+    if (!confirmed) return false;
+
+    rememberPlayerEditorDeletion(candidate);
+    const index = pdcPlayers.indexOf(candidate);
+    if (index >= 0) pdcPlayers.splice(index, 1);
+    if (typeof player !== 'undefined' && Array.isArray(player?.activeRivalIds) && candidate.id) {
+        player.activeRivalIds = player.activeRivalIds.filter(id => id !== candidate.id);
+    }
+    if (typeof invalidatePlayerLifecycleCache === 'function') invalidatePlayerLifecycleCache();
+    if (typeof invalidatePlayerRankingCache === 'function') invalidatePlayerRankingCache();
+    if (typeof renderOpponentOptions === 'function') renderOpponentOptions();
+    if (typeof renderCareerPlayerOptions === 'function') renderCareerPlayerOptions();
+
+    const deletedName = candidate.name;
+    const next = getPlayerEditorRosterPlayers()[0] || null;
+    playerEditorSelectedId = next?.id || '';
+    playerEditorCreating = !next;
+    renderPlayerEditorCountryFilterOptions();
+    renderPlayerEditorRoster();
+    populatePlayerEditorForm(next);
+    setPlayerEditorStatus(trPlayerEditor('deleted', { name: deletedName }));
+    if (typeof saveGame === 'function') saveGame(true);
+    return true;
+}
+
+function deletePlayerEditorCountry() {
+    const country = document.getElementById('player-editor-country-filter')?.value || '';
+    if (!country) {
+        setPlayerEditorStatus(trPlayerEditor('deleteCountryChoose'), true);
+        return false;
+    }
+    const countryLabel = typeof t === 'function' ? t(country) : country;
+    const candidates = getPlayerEditorCountryDeletionCandidates(country);
+    if (!candidates.length) {
+        setPlayerEditorStatus(trPlayerEditor('deleteCountryEmpty', { country: countryLabel }), true);
+        updatePlayerEditorCountryDeleteAction();
+        return false;
+    }
+    const inUse = candidates.filter(isPlayerEditorCandidateInUse);
+    if (inUse.length) {
+        setPlayerEditorStatus(trPlayerEditor('deleteCountryInUse', {
+            country: countryLabel,
+            count: inUse.length
+        }), true);
+        return false;
+    }
+    const protectsCareerPlayer = typeof player !== 'undefined' && player?.country === country;
+    const confirmationKey = protectsCareerPlayer ? 'deleteCountryConfirmCareer' : 'deleteCountryConfirm';
+    const confirmed = typeof confirm !== 'function' || confirm(trPlayerEditor(confirmationKey, {
+        country: countryLabel,
+        count: candidates.length
+    }));
+    if (!confirmed) return false;
+
+    candidates.forEach(rememberPlayerEditorDeletion);
+    const removedIds = new Set(candidates.map(candidate => candidate.id).filter(Boolean));
+    const removedCandidates = new Set(candidates);
+    pdcPlayers.splice(0, pdcPlayers.length, ...pdcPlayers.filter(candidate => !removedCandidates.has(candidate)));
+    if (typeof player !== 'undefined' && Array.isArray(player?.activeRivalIds) && removedIds.size) {
+        player.activeRivalIds = player.activeRivalIds.filter(id => !removedIds.has(id));
+    }
+    if (typeof invalidatePlayerLifecycleCache === 'function') invalidatePlayerLifecycleCache();
+    if (typeof invalidatePlayerRankingCache === 'function') invalidatePlayerRankingCache();
+    if (typeof renderOpponentOptions === 'function') renderOpponentOptions();
+    if (typeof renderCareerPlayerOptions === 'function') renderCareerPlayerOptions();
+
+    const selected = playerEditorCreating ? null : getPlayerEditorCandidate();
+    const next = selected || getPlayerEditorRosterPlayers()[0] || null;
+    playerEditorSelectedId = next?.id || '';
+    playerEditorCreating = !next;
+    renderPlayerEditorCountryFilterOptions();
+    renderPlayerEditorRoster();
+    populatePlayerEditorForm(next);
+    setPlayerEditorStatus(trPlayerEditor('deletedCountry', {
+        country: countryLabel,
+        count: candidates.length
+    }));
+    if (typeof saveGame === 'function') saveGame(true, { immediate: true });
+    return candidates.length;
 }
 
 function loadPlayerEditorPhoto(event) {
@@ -599,7 +963,10 @@ function refreshPlayerEditorTranslations() {
     const textMap = {
         'player-editor-tile-title': 'tileTitle', 'player-editor-tile-desc': 'tileDesc', 'player-editor-eyebrow': 'eyebrow',
         'player-editor-title': 'title', 'player-editor-intro': 'intro', 'player-editor-roster-title': 'roster',
-        'player-editor-new': 'add', 'player-editor-search-label': 'searchLabel', 'player-editor-photo-title': 'photo',
+        'player-editor-new': 'add', 'player-editor-search-label': 'searchLabel',
+        'player-editor-sort-label': 'sortLabel', 'player-editor-country-filter-label': 'countryFilterLabel',
+        'player-editor-bulk-delete-title': 'bulkDeleteTitle', 'player-editor-bulk-delete-hint': 'bulkDeleteHint',
+        'player-editor-photo-title': 'photo',
         'player-editor-photo-empty': 'noPhoto', 'player-editor-photo-hint': 'photoHint',
         'player-editor-photo-upload-label': 'uploadPhoto', 'player-editor-photo-remove': 'removePhoto',
         'player-editor-walkon-title': 'walkon', 'player-editor-walkon-hint': 'walkonHint',
@@ -611,11 +978,14 @@ function refreshPlayerEditorTranslations() {
         'player-editor-overall-label': 'overall', 'player-editor-scoring-label': 'scoring',
         'player-editor-doubles-label': 'doubles', 'player-editor-traits-title': 'traits',
         'player-editor-endurance-label': 'endurance', 'player-editor-consistency-label': 'consistency',
-        'player-editor-mental-label': 'mental', 'player-editor-back': 'back'
+        'player-editor-mental-label': 'mental', 'player-editor-back': 'back', 'player-editor-delete': 'delete'
     };
     Object.entries(textMap).forEach(([id, key]) => setPlayerEditorText(id, trPlayerEditor(key)));
     const search = document.getElementById('player-editor-search');
     if (search) search.placeholder = trPlayerEditor('search');
+    renderPlayerEditorSortOptions();
+    renderPlayerEditorCountryFilterOptions();
+    updatePlayerEditorCountryDeleteAction();
     const preview = document.getElementById('player-editor-photo-preview');
     if (preview) preview.alt = trPlayerEditor('photoAlt');
     const walkonPreview = document.getElementById('player-editor-walkon-preview');
@@ -634,6 +1004,7 @@ function refreshPlayerEditorTranslations() {
         setPlayerEditorText('player-editor-origin', playerEditorCreating ? trPlayerEditor('customOrigin') : getPlayerEditorOrigin(getPlayerEditorCandidate()));
         setPlayerEditorText('player-editor-save', trPlayerEditor(playerEditorCreating ? 'createButton' : 'save'));
         const candidate = playerEditorCreating ? null : getPlayerEditorCandidate();
+        updatePlayerEditorDeleteButton(candidate);
         const walkonSource = playerEditorWalkonChanged
             ? playerEditorPendingWalkon
             : (typeof candidate?.walkon === 'string' ? candidate.walkon : '');
@@ -648,6 +1019,7 @@ function closePlayerEditor() {
 
 function showPlayerEditor() {
     if (typeof pdcPlayers === 'undefined' || !Array.isArray(pdcPlayers)) return false;
+    removePlayerEditorDeletedPlayersFromPool();
     if (typeof normalizePlayerIds === 'function') normalizePlayerIds(pdcPlayers, typeof player !== 'undefined' ? player : null);
     refreshPlayerEditorTranslations();
     const selected = getPlayerEditorCandidate()

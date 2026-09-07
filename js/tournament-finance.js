@@ -114,20 +114,28 @@ function getTournamentPrizePreview(tournament) {
     if (!event) return null;
     const name = event.name, text = `${name} ${event.sourceName || ''}`.toLowerCase();
     const qualifier = isFinanceQualifier(event);
+    const crownMastersQualifier = typeof isCrownMastersQualifierTournament === 'function'
+        && isCrownMastersQualifierTournament(event);
+    const crownMasters = typeof isCrownMastersTournament === 'function'
+        && isCrownMastersTournament(event);
     const team = !qualifier && (event.specialType === 'worldCup' || /world cup|puchar narodów/.test(text));
     const league = /global darts league|premier/.test(name.toLowerCase());
     const playoffs = league && name.includes('Play-offs');
     const slam = !qualifier && /grand slam|champion's slam/.test(text);
+    const challengeTour = typeof isChallengeTourTournament === 'function' && isChallengeTourTournament(event);
+    const developmentTour = typeof isDevelopmentTourTournament === 'function' && isDevelopmentTourTournament(event);
     const rows = [];
-    if (qualifier) return { event, rows, rankings: [], qualifier: true, team: false };
+    if (qualifier && !crownMastersQualifier) return { event, rows, rankings: [], qualifier: true, team: false };
     if (team) {
         Object.entries(WORLD_CUP_PRIZES).forEach(([stage, amount]) => rows.push({ stage, amount: amount / 2, teamAmount: amount }));
     } else {
         let openingRound = 32;
         if (league) openingRound = playoffs ? 4 : 8;
+        else if (challengeTour || developmentTour) openingRound = 256;
         else if (typeof isWorldMastersFinalsTournament === 'function' && isWorldMastersFinalsTournament(event)) openingRound = 32;
         else if (typeof isWorldMastersTournament === 'function' && isWorldMastersTournament(event)) openingRound = 16;
-        else if (/world darts championship|global darts championship|uk open|british open/.test(text)) openingRound = 128;
+        else if (typeof isUKOpenTournament === 'function' && isUKOpenTournament(event)) openingRound = 160;
+        else if (/world darts championship|global darts championship/.test(text)) openingRound = 128;
         else if (typeof isPlayersChampionshipTournament === 'function' && isPlayersChampionshipTournament(event)) openingRound = 128;
         else if (/players championship finals|pro players finals/.test(text)
             || (typeof isEuropeanTourTournament === 'function' && isEuropeanTourTournament(event))) openingRound = 64;
@@ -136,19 +144,32 @@ function getTournamentPrizePreview(tournament) {
             const amount = getPrizeMoney(name, round, won);
             rows.push({ round, won, amount: Number.isFinite(amount) ? amount : null });
         };
-        add(2, true);
-        for (let round = 2; round <= openingRound; round *= 2) add(round);
+        if (crownMastersQualifier) {
+            [16, 32, 64].forEach(round => add(round));
+        } else if (typeof isUKOpenTournament === 'function' && isUKOpenTournament(event)) {
+            add(2, true);
+            [2, 4, 8, 16, 32, 64, 96, 128, 160].forEach(round => add(round));
+        } else {
+            add(2, true);
+            for (let round = 2; round <= openingRound; round *= 2) add(round);
+        }
         if (slam) rows.push({ stage: 'groupExit', amount: 0 });
         if (playoffs) Object.entries(GLOBAL_LEAGUE_PLACEMENT_PRIZES).forEach(([position, amount]) => rows.push({ position: Number(position), amount }));
     }
     const rankings = [];
     // Match awardPrizeMoney's non-ranking branches before checking OOM helpers.
-    const series = typeof isWorldMastersName === 'function' && isWorldMastersName(name);
-    if (!team && !league && !series) {
+    const series = typeof isWorldMastersName === 'function' && isWorldMastersName(name)
+        && !crownMasters && !crownMastersQualifier;
+    if (developmentTour) {
+        rankings.push('Future Champions OOM');
+    } else if (challengeTour) {
+        rankings.push('Rising Stars OOM');
+    } else if (!team && !league && !series) {
         if (typeof isMainOrderOfMeritRankingTournament === 'function' && isMainOrderOfMeritRankingTournament(name)) rankings.push('mainOom');
         if (typeof isProTourRankingTournament === 'function' && isProTourRankingTournament(name)) rankings.push('ProTour');
         if (typeof isPlayersChampionshipTournament === 'function' && isPlayersChampionshipTournament(name)) rankings.push('Players Championship OOM');
         if (typeof isEuropeanTourTournament === 'function' && isEuropeanTourTournament(name)) rankings.push('European Tour OOM');
     }
-    return { event, rows, rankings, team, qualifier, slam, playoffs, league };
+    return { event, rows, rankings, team, qualifier: qualifier && !crownMastersQualifier, slam, playoffs, league,
+        challengeTour, developmentTour, crownMasters, crownMastersQualifier };
 }

@@ -5,6 +5,7 @@ const EUROPEAN_CHAMPIONSHIP_DRAW_VERSION = 1;
 const PRO_TOUR_ORDER_OF_MERIT_VERSION = 3;
 const PRO_TOUR_ROLLING_PERIOD_MS = 52 * 7 * 24 * 60 * 60 * 1000;
 let proTourOrderOfMeritRefreshCache = null;
+const sanitisedProTourHistories = new WeakSet();
 const EUROPEAN_CHAMPIONSHIP_SEED_ORDER = [
     1, 32, 16, 17, 8, 25, 9, 24, 4, 29, 13, 20, 5, 28, 12, 21,
     2, 31, 15, 18, 7, 26, 10, 23, 3, 30, 14, 19, 6, 27, 11, 22
@@ -113,13 +114,16 @@ function normaliseProTourPrizeHistory(candidate, referenceTime) {
     if (!candidate || candidate.isBye) return [];
 
     if (Array.isArray(candidate.proTourPrizeHistory)) {
-        candidate.proTourPrizeHistory = candidate.proTourPrizeHistory
-            .map(entry => ({
-                tournament: String(entry?.tournament || ''),
-                amount: Math.max(0, Number(entry?.amount) || 0),
-                earnedAt: Number(entry?.earnedAt)
-            }))
-            .filter(entry => entry.tournament && entry.amount > 0 && Number.isFinite(entry.earnedAt));
+        if (!sanitisedProTourHistories.has(candidate.proTourPrizeHistory)) {
+            candidate.proTourPrizeHistory = candidate.proTourPrizeHistory
+                .map(entry => ({
+                    tournament: String(entry?.tournament || ''),
+                    amount: Math.max(0, Number(entry?.amount) || 0),
+                    earnedAt: Number(entry?.earnedAt)
+                }))
+                .filter(entry => entry.tournament && entry.amount > 0 && Number.isFinite(entry.earnedAt));
+            sanitisedProTourHistories.add(candidate.proTourPrizeHistory);
+        }
         return candidate.proTourPrizeHistory;
     }
 
@@ -225,8 +229,15 @@ function refreshProTourOrderOfMerit(candidates, referenceDate) {
 
     list.forEach(candidate => {
         if (!candidate || candidate.isBye) return;
-        const activeEntries = normaliseProTourPrizeHistory(candidate, referenceTime)
-            .filter(entry => entry.earnedAt > cutoff && entry.earnedAt <= referenceTime);
+        const normalizedEntries = normaliseProTourPrizeHistory(candidate, referenceTime);
+        let activeEntries = null;
+        normalizedEntries.forEach((entry, index) => {
+            const isActive = entry.earnedAt > cutoff && entry.earnedAt <= referenceTime;
+            if (!isActive && activeEntries === null) activeEntries = normalizedEntries.slice(0, index);
+            else if (isActive && activeEntries !== null) activeEntries.push(entry);
+        });
+        if (activeEntries === null) activeEntries = normalizedEntries;
+        else sanitisedProTourHistories.add(activeEntries);
         candidate.proTourPrizeHistory = activeEntries;
         candidate.proTourPrizeMoney = activeEntries.reduce((total, entry) => total + entry.amount, 0);
         candidate.proTourRankingVersion = PRO_TOUR_ORDER_OF_MERIT_VERSION;

@@ -176,10 +176,10 @@ const interviewsDB = [
     },
     {
         title_pl: "🎤 Wywiad przed kamerami", title_en: "🎤 On-Camera Interview", title_de: "🎤 Kamera-Interview", title_nl: "🎤 Camera-interview",
-        desc_pl: "Cloud Sports: 'Właśnie pokonałeś aktualnego mistrza świata. Czujesz się faworytem do trofeum?'",
-        desc_en: "Cloud Sports: 'You just knocked out the reigning World Champion. Do you consider yourself the favorite now?'",
-        desc_de: "Cloud Sports: 'Du hast gerade den amtierenden Weltmeister besiegt. Siehst du dich jetzt als Titelfavorit?'",
-        desc_nl: "Cloud Sports: 'Je hebt zojuist de regerend wereldkampioen uitgeschakeld. Zie je jezelf nu als favoriet?'",
+        desc_pl: "Cloud Sports: 'Właśnie pokonałeś aktualnego mistrza świata, którym jest {opponent}. Czujesz się faworytem do trofeum?'",
+        desc_en: "Cloud Sports: 'You just knocked out the reigning World Champion, {opponent}. Do you consider yourself the favorite now?'",
+        desc_de: "Cloud Sports: 'Du hast gerade den amtierenden Weltmeister {opponent} besiegt. Siehst du dich jetzt als Titelfavorit?'",
+        desc_nl: "Cloud Sports: 'Je hebt zojuist regerend wereldkampioen {opponent} uitgeschakeld. Zie je jezelf nu als favoriet?'",
         choices: [
             {
                 text_pl: "[Profesjonalizm] Podchodzę do każdego meczu krok po kroku. Następna runda to zupełnie nowe wyzwanie.",
@@ -351,10 +351,10 @@ const interviewsDB = [
     },
     {
         title_pl: "🎤 Wywiad po pudłach na dublach", title_en: "🎤 Post-Match Scramble", title_de: "🎤 Nach Doppel-Problemen", title_nl: "🎤 Na dubbel-problemen",
-        desc_pl: "DartsZone: 'Wygrałeś, ale zmarnowałeś dziś aż 14 lotek na podwójnych. Skąd taki kryzys na finiszach?'",
-        desc_en: "DartsZone: 'You survived, but squandered 14 darts at doubles today. What caused the checkout drought?'",
-        desc_de: "DartsZone: 'Du hast gewonnen, aber 14 Darts auf Doppel vergeben. Woher kamen die Checkout-Probleme?'",
-        desc_nl: "DartsZone: 'Je wint, maar miste wel 14 pijlen op de dubbels. Waar kwamen die problemen vandaan?'",
+        desc_pl: "DartsZone: 'Wygrałeś, ale zmarnowałeś dziś {missedDoubles} lotek na podwójnych. Skąd taki kryzys na finiszach?'",
+        desc_en: "DartsZone: 'You survived, but squandered {missedDoubles} darts at doubles today. What caused the checkout drought?'",
+        desc_de: "DartsZone: 'Du hast gewonnen, aber {missedDoubles} Darts auf Doppel vergeben. Woher kamen die Checkout-Probleme?'",
+        desc_nl: "DartsZone: 'Je wint, maar miste wel {missedDoubles} pijlen op de dubbels. Waar kwamen die problemen vandaan?'",
         choices: [
             {
                 text_pl: "[Profesjonalizm] Zauważyłem techniczny błąd w wypuszczeniu lotki. Jutro rano spędzę 2 godziny tylko na rzutach w pierścień podwójny.",
@@ -426,10 +426,10 @@ const interviewsDB = [
     },
     {
         title_pl: "🎤 Wywiad po trudnym powrocie (Comeback)", title_en: "🎤 Great Comeback", title_de: "🎤 Nach großem Comeback", title_nl: "🎤 Na grote comeback",
-        desc_pl: "Cloud Sports: 'Przegrywałeś już 1:5, a wygrałeś 6:5! Jak dokonałeś tego cudu?'",
-        desc_en: "Cloud Sports: 'You were 1-5 down and pulled off a 6-5 miracle! How on earth did you turn it around?'",
-        desc_de: "Cloud Sports: 'Du lagst 1:5 hinten und hast 6:5 gewonnen! Wie hast du dieses Wunder geschafft?'",
-        desc_nl: "Cloud Sports: 'Je stond 1-5 achter en won alsnog met 6-5! Hoe flikte je dat huzarenstukje?'",
+        desc_pl: "Cloud Sports: 'Przegrywałeś już {trailScore}, a wygrałeś {finalScore}! Jak odwróciłeś ten mecz?'",
+        desc_en: "Cloud Sports: 'You were {trailScore} down and came back to win {finalScore}! How did you turn it around?'",
+        desc_de: "Cloud Sports: 'Du lagst {trailScore} hinten und hast noch {finalScore} gewonnen! Wie hast du das Spiel gedreht?'",
+        desc_nl: "Cloud Sports: 'Je stond {trailScore} achter en won alsnog met {finalScore}! Hoe draaide je de wedstrijd om?'",
         choices: [
             {
                 text_pl: "[Profesjonalizm] Zmieniłem tempo stania przy oche i skupiłem się na wygrywaniu pojedynczych legów.",
@@ -651,10 +651,10 @@ const interviewsDB = [
     },
     {
         title_pl: "🎤 Strefa Wywiadów DartsZone", title_en: "🎤 DartsZone Flash Area", title_de: "🎤 DartsZone Interviewzone", title_nl: "🎤 DartsZone Interviewzone",
-        desc_pl: "Dziennikarz: 'Wygrałeś spotkanie, rzucając aż osiem 180-tek w sześciu legach. Czy to był perfekcyjny scoring?'",
-        desc_en: "Reporter: 'You won the match hitting eight 180s in just six legs. Was that maximum scoring perfection?'",
-        desc_de: "Reporter: 'Acht 180er in sechs Legs! War das die absolute Perfektion beim Scoring?'",
-        desc_nl: "Verslaggever: 'Acht 180-ers in slechts zes legs! Was dat ultieme perfectie op de triples?'",
+        desc_pl: "Dziennikarz: 'Wygrałeś spotkanie, rzucając {oneEighties} razy 180 w {totalLegs} legach. Czy to był perfekcyjny scoring?'",
+        desc_en: "Reporter: 'You won the match with {oneEighties} maximums in {totalLegs} legs. Was that scoring perfection?'",
+        desc_de: "Reporter: '{oneEighties} 180er in {totalLegs} Legs! War das die absolute Perfektion beim Scoring?'",
+        desc_nl: "Verslaggever: '{oneEighties} 180-ers in {totalLegs} legs! Was dat ultieme perfectie op de triples?'",
         choices: [
             {
                 text_pl: "[Profesjonalizm] Scoring był solidny, ale duble wciąż wymagają poprawy. Zawsze jest miejsce na postęp.",
@@ -976,10 +976,10 @@ const interviewsDB = [
     },
     {
         title_pl: "🎤 Strefa Błyskawiczna PDChat", title_en: "🎤 PDChat Flash Desk", title_de: "🎤 PDChat Blitz-Zone", title_nl: "🎤 PDChat Flitsdesk",
-        desc_pl: "Dziennikarz: 'Wygrałeś mecz ze średnią poniżej 85 punktów. Jak podsumujesz to mało efektowne spotkanie?'",
-        desc_en: "Reporter: 'You scraped through with a sub-85 average. How do you assess this scrappy performance?'",
-        desc_de: "Reporter: 'Ein mühsamer Sieg mit einem Schnitt unter 85. Wie bewertest du diesen Arbeitssieg?'",
-        desc_nl: "Verslaggever: 'Een moeizame zege met een gemiddelde onder de 85. Hoe kijk je terug op deze worstelpartij?'",
+        desc_pl: "Dziennikarz: 'Wygrałeś mecz ze średnią {matchAverage}. Jak podsumujesz to mało efektowne spotkanie?'",
+        desc_en: "Reporter: 'You scraped through with an average of {matchAverage}. How do you assess this performance?'",
+        desc_de: "Reporter: 'Ein mühsamer Sieg mit einem Schnitt von {matchAverage}. Wie bewertest du diesen Arbeitssieg?'",
+        desc_nl: "Verslaggever: 'Een moeizame zege met een gemiddelde van {matchAverage}. Hoe kijk je terug op deze partij?'",
         choices: [
             {
                 text_pl: "[Profesjonalizm] Czasami trzeba umieć wygrać brzydki mecz. Zwycięstwo to zwycięstwo, ale wracam prosto do tarczy treningowej.",
@@ -1076,16 +1076,16 @@ const interviewsDB = [
     },
     {
         title_pl: "🎤 Strefa Wywiadów Viaplayr", title_en: "🎤 Viaplayr Flash Corner", title_de: "🎤 Viaplayr Blitz-Ecke", title_nl: "🎤 Viaplayr Flitshoek",
-        desc_pl: "Reporter: 'Wygrałeś mecz bez straty ani jednego lega (tzw. whitewash 6:0). Czy rywal w ogóle zawiesił poprzeczkę?'",
-        desc_en: "Reporter: 'You swept the match without conceding a single leg (6-0 whitewash). Did your rival even challenge you?'",
-        desc_de: "Reporter: 'Ein glatter 6:0-Whitewash ohne Legverlust. War dein Gegner überhaupt eine Hürde?'",
-        desc_nl: "Verslaggever: 'Een afgetekende 6-0 whitewash zonder legverlies. Was je tegenstander überhaupt een partij?'",
+        desc_pl: "Reporter: 'Wygrałeś mecz bez straty ani jednego lega, wynikiem {finalScore}. Czy rywal w ogóle zawiesił poprzeczkę?'",
+        desc_en: "Reporter: 'You swept the match {finalScore} without conceding a single leg. Did your rival challenge you?'",
+        desc_de: "Reporter: 'Ein glatter {finalScore}-Whitewash ohne Legverlust. War dein Gegner überhaupt eine Hürde?'",
+        desc_nl: "Verslaggever: 'Een afgetekende {finalScore}-whitewash zonder legverlies. Was je tegenstander een partij?'",
         choices: [
             {
-                text_pl: "[Profesjonalizm] Wynik 6:0 nie oddaje walki na tarczy. Rywal miał swoje szanse na dublach, ja byłem po prostu skuteczniejszy.",
-                text_en: "[Professionalism] The 6-0 scoreline is flattering. He had chances at doubles; I was just sharper on my checkouts.",
-                text_de: "[Professionalität] Das 6:0 täuscht etwas. Er hatte seine Chancen auf Doppel, ich war heute einfach konsequenter.",
-                text_nl: "[Professionaliteit] De 6-0 vertekent het beeld. Hij had kansen op de dubbels, ik was vandaag gewoon klinischer.",
+                text_pl: "[Profesjonalizm] Wynik {finalScore} nie oddaje całej walki na tarczy. Ja byłem po prostu skuteczniejszy.",
+                text_en: "[Professionalism] The {finalScore} scoreline does not tell the whole story. I was simply sharper today.",
+                text_de: "[Professionalität] Das {finalScore} erzählt nicht die ganze Geschichte. Ich war heute einfach konsequenter.",
+                text_nl: "[Professionaliteit] De {finalScore} vertelt niet het hele verhaal. Ik was vandaag gewoon klinischer.",
                 effect: { prof: 3, pop: 0 },
                 outcome_pl: "Rywal dziękuje Ci w wywiadzie za okazany szacunek mimo wysokiej porażki.", outcome_en: "Your defeated opponent publicly thanks you for your respectful comments.", outcome_de: "Dein Gegner bedankt sich öffentlich für deine fairen Worte trotz der Niederlage.", outcome_nl: "Je tegenstander bedankt je publiekelijk voor je respectvolle woorden na de afstraffing."
             },
@@ -1151,10 +1151,10 @@ const interviewsDB = [
     },
     {
         title_pl: "🎤 Wywiad po meczu z legendą darta", title_en: "🎤 Legend Clash Interview", title_de: "🎤 Nach dem Duell mit der Legende", title_nl: "🎤 Na het duel met de legende",
-        desc_pl: "DartsZone: 'Właśnie pokonałeś wielokrotnego mistrza świata i legendę tego sportu. Czas na zmianę warty na szczycie?'",
-        desc_en: "DartsZone: 'You just dethroned a multi-time World Champion and living legend. Is this the official changing of the guard?'",
-        desc_de: "DartsZone: 'Du hast gerade einen mehrfachen Weltmeister und Legende geschlagen. Ist das der Wachwechsel?'",
-        desc_nl: "DartsZone: 'Je hebt zojuist een meervoudig wereldkampioen en levende legende verslagen. Is de macht gewisseld?'",
+        desc_pl: "DartsZone: 'Właśnie pokonałeś wielokrotnego mistrza świata, którym jest {opponent}. Czas na zmianę warty na szczycie?'",
+        desc_en: "DartsZone: 'You just defeated multi-time World Champion {opponent}. Is this the official changing of the guard?'",
+        desc_de: "DartsZone: 'Du hast gerade den mehrfachen Weltmeister {opponent} geschlagen. Ist das der Wachwechsel?'",
+        desc_nl: "DartsZone: 'Je hebt zojuist meervoudig wereldkampioen {opponent} verslagen. Is de macht gewisseld?'",
         choices: [
             {
                 text_pl: "[Profesjonalizm] Gra z taką legendą to ogromny zaszczyt. Osiągnął w tym sporcie wszystko, mam do niego bezgraniczny szacunek.",
@@ -1175,5 +1175,59 @@ const interviewsDB = [
         ]
     }
 ];
+
+// Tylko pytania o fakty, które silnik potrafi potwierdzić po rozegranym meczu,
+// mogą trafić do losowania. Pozostałe starsze szablony zostają w bazie, ale
+// nie wymyślają już zachowań zawodników, publiczności ani przebiegu spotkania.
+const verifiedInterviewTriggers = Object.freeze({
+    2: 'high_avg_105',
+    7: 'reigning_world_champion',
+    14: 'bad_doubles',
+    15: 'nine_darter',
+    17: 'comeback',
+    26: 'many_180s',
+    39: 'low_avg',
+    42: 'big_fish',
+    43: 'whitewash',
+    46: 'multi_world_champion'
+});
+
+interviewsDB.forEach((interview, index) => {
+    interview.trigger = verifiedInterviewTriggers[index] || 'unverified';
+});
+
+interviewsDB.push({
+    trigger: 'verified_summary',
+    title_pl: '🎤 Wywiad po meczu', title_en: '🎤 Post-match Interview',
+    title_de: '🎤 Interview nach dem Spiel', title_nl: '🎤 Interview na de wedstrijd',
+    desc_pl: "Dziennikarz: 'Pokonałeś {opponent} wynikiem {finalScore}, osiągając średnią {matchAverage}. Co zdecydowało o zwycięstwie?'",
+    desc_en: "Reporter: 'You beat {opponent} {finalScore} with an average of {matchAverage}. What decided the match?'",
+    desc_de: "Reporter: 'Du hast {opponent} mit {finalScore} und einem Schnitt von {matchAverage} besiegt. Was war entscheidend?'",
+    desc_nl: "Verslaggever: 'Je versloeg {opponent} met {finalScore} en een gemiddelde van {matchAverage}. Wat gaf de doorslag?'",
+    choices: [
+        {
+            text_pl: '[Profesjonalizm] Zachowałem koncentrację i dobrze wykorzystywałem swoje szanse.',
+            text_en: '[Professionalism] I stayed focused and took my chances at the right moments.',
+            text_de: '[Professionalität] Ich blieb konzentriert und nutzte meine Chancen in den richtigen Momenten.',
+            text_nl: '[Professionaliteit] Ik bleef geconcentreerd en benutte mijn kansen op de juiste momenten.',
+            effect: { prof: 2, pop: 0 },
+            outcome_pl: 'Spokojna analiza spotkania zyskuje uznanie ekspertów.',
+            outcome_en: 'Your measured match analysis earns praise from the pundits.',
+            outcome_de: 'Deine sachliche Spielanalyse findet bei den Experten Anerkennung.',
+            outcome_nl: 'Je nuchtere wedstrijdanalyse krijgt waardering van de analisten.'
+        },
+        {
+            text_pl: '[Medialność] W kluczowych momentach przejąłem kontrolę nad tym meczem.',
+            text_en: '[Showmanship] I took control of the match in the decisive moments.',
+            text_de: '[Showmanship] In den entscheidenden Momenten übernahm ich die Kontrolle über das Spiel.',
+            text_nl: '[Showmanship] Op de beslissende momenten nam ik de controle over de wedstrijd.',
+            effect: { prof: -1, pop: 2 },
+            outcome_pl: 'Pewna siebie wypowiedź trafia do pomeczowych skrótów.',
+            outcome_en: 'Your confident quote makes the post-match highlights.',
+            outcome_de: 'Dein selbstbewusstes Zitat landet in den Spielberichten.',
+            outcome_nl: 'Je zelfverzekerde uitspraak haalt de samenvattingen.'
+        }
+    ]
+});
 
 // --- LOSOWE EVENTY ---

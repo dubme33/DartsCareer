@@ -53,6 +53,71 @@ function startCrowd() {
             return { name: fallbackName, country: '' };
         }
 
+        function getMatchIntroMainOomRank(candidate) {
+            if (!candidate) return Number.MAX_SAFE_INTEGER;
+            let ranking = [];
+            if (typeof getCachedRankedPlayers === 'function') {
+                ranking = getCachedRankedPlayers('main');
+            } else {
+                ranking = [
+                    ...(typeof pdcPlayers !== 'undefined' && Array.isArray(pdcPlayers) ? pdcPlayers : []),
+                    ...(typeof player !== 'undefined' && player ? [player] : [])
+                ].filter(Boolean).sort((first, second) =>
+                    (Number(second.prizeMoney) || 0) - (Number(first.prizeMoney) || 0));
+            }
+            const index = ranking.findIndex(rankedCandidate => rankedCandidate === candidate
+                || (typeof samePlayer === 'function' && samePlayer(rankedCandidate, candidate)));
+            return index >= 0 ? index + 1 : Number.MAX_SAFE_INTEGER;
+        }
+
+        function getMatchIntroOrder(p1Candidate, p2Candidate) {
+            const p1Rank = getMatchIntroMainOomRank(p1Candidate);
+            const p2Rank = getMatchIntroMainOomRank(p2Candidate);
+            // Wyższy numer oznacza niższe miejsce w OOM, więc ten zawodnik
+            // wychodzi pierwszy. Przy nierozstrzygnięciu zachowujemy dawną,
+            // stabilną kolejność P2 -> P1.
+            return p1Rank > p2Rank
+                ? [{ candidate: p1Candidate, isP1: true }, { candidate: p2Candidate, isP1: false }]
+                : [{ candidate: p2Candidate, isP1: false }, { candidate: p1Candidate, isP1: true }];
+        }
+
+        function isFloorTournamentWithoutWalkons(tournament) {
+            if (!tournament) return false;
+            if (tournament.noWalkons === true) return true;
+            const name = `${tournament.name || ''} ${tournament.sourceName || ''}`.toLocaleLowerCase('pl');
+            const specialType = String(tournament.specialType || '').toLocaleLowerCase('pl');
+            const isQualifier = specialType.includes('qualifier')
+                || specialType === 'pdcqschool'
+                || name.includes('qualifier')
+                || name.includes('kwalifikacj')
+                || name.includes('q-school')
+                || name.includes('pro card trials');
+            const isPlayersChampionship = name.includes('players championship') || name.includes('pro players cup');
+            const isPlayersChampionshipFinals = name.includes('players championship finals')
+                || name.includes('pro players finals');
+            const isChallengeTour = specialType === 'challengetour'
+                || name.includes('rising stars circuit')
+                || name.includes('challenge tour');
+            const isDevelopmentTour = specialType === 'developmenttour'
+                || name.includes('future champions circuit')
+                || name.includes('development tour');
+            return isQualifier || isChallengeTour || isDevelopmentTour
+                || (isPlayersChampionship && !isPlayersChampionshipFinals);
+        }
+
+        function startMatchWithoutWalkons() {
+            const skipBtn = document.getElementById('t-btn-skip-walkon');
+            if (skipBtn) skipBtn.style.display = 'none';
+            if (typeof hideCareerEntranceVisual === 'function') hideCareerEntranceVisual();
+            if (crowdAudio) {
+                crowdAudio.pause();
+                crowdAudio.currentTime = 0;
+            }
+            clearTimeout(window.aiTimeout);
+            if (currentMatch) currentMatch.introInProgress = false;
+            setTurnUI();
+        }
+
         function getMatchWalkonAudioSource(candidate) {
             if (!candidate?.name) return '';
             if (typeof candidate.walkon === 'string' && candidate.walkon) return candidate.walkon;
@@ -80,6 +145,11 @@ function startCrowd() {
 
         function playMatchIntro(p1Name, p2Name) {
             cancelMatchIntro();
+            const tournament = typeof activeTournament !== 'undefined' ? activeTournament : null;
+            if (currentMatch?.isTournament && isFloorTournamentWithoutWalkons(tournament)) {
+                startMatchWithoutWalkons();
+                return false;
+            }
             isWalkonSkipped = false;
             const generation = matchIntroGeneration;
             const introMatch = currentMatch;
@@ -111,17 +181,22 @@ function startCrowd() {
             const p2Candidate = getMatchIntroPlayer(false, p2Name);
             p1Name = p1Candidate.name || p1Name;
             p2Name = p2Candidate.name || p2Name;
-            let p2CountryEn = enCountries[p2Candidate.country] || p2Candidate.country || '';
-            let p1CountryEn = enCountries[p1Candidate.country] || p1Candidate.country || '';
-            if (typeof showCareerEntranceVisual === 'function') showCareerEntranceVisual(p2Candidate);
+            const [firstEntrance, secondEntrance] = getMatchIntroOrder(p1Candidate, p2Candidate);
+            const firstCandidate = firstEntrance.candidate;
+            const secondCandidate = secondEntrance.candidate;
+            const firstName = firstCandidate?.name || '';
+            const secondName = secondCandidate?.name || '';
+            const firstCountryEn = enCountries[firstCandidate?.country] || firstCandidate?.country || '';
+            const secondCountryEn = enCountries[secondCandidate?.country] || secondCandidate?.country || '';
+            if (typeof showCareerEntranceVisual === 'function') showCareerEntranceVisual(firstCandidate);
             
             let u1 = hasSpeechSynthesis
-                ? new SpeechSynthesisUtterance(`Ladies and gentlemen, please welcome... from ${p2CountryEn}... ${p2Name}!`)
+                ? new SpeechSynthesisUtterance(`Ladies and gentlemen, please welcome... from ${firstCountryEn}... ${firstName}!`)
                 : {};
             u1.lang = 'en-GB'; u1.pitch = 0.85; u1.rate = 0.9; u1.volume = 1.0 * globalVolume;
             
             let u2 = hasSpeechSynthesis
-                ? new SpeechSynthesisUtterance(`And his opponent... from ${p1CountryEn}... ${p1Name}!`)
+                ? new SpeechSynthesisUtterance(`And his opponent... from ${secondCountryEn}... ${secondName}!`)
                 : {};
             u2.lang = 'en-GB'; u2.pitch = 0.8; u2.rate = 0.9; u2.volume = 1.0 * globalVolume;
             
@@ -171,18 +246,19 @@ function startCrowd() {
                 }
             }
 
-            u1.onend = () => playCandidateWalkon(p2Candidate, false, playPlayerIntro);
+            u1.onend = () => playCandidateWalkon(firstCandidate, firstEntrance.isP1, playSecondIntro);
 
-            function playPlayerIntro() { 
+            function playSecondIntro() {
                 if (!isActive()) return;
-                if (typeof showCareerEntranceVisual === 'function') showCareerEntranceVisual(p1Candidate);
+                if (typeof showCareerEntranceVisual === 'function') showCareerEntranceVisual(secondCandidate);
                 if (hasSpeechSynthesis) window.speechSynthesis.speak(u2);
                 else u2.onend();
             }
 
-            u2.onend = () => playCandidateWalkon(p1Candidate, true, finishWalkon);
+            u2.onend = () => playCandidateWalkon(secondCandidate, secondEntrance.isP1, finishWalkon);
             if (hasSpeechSynthesis) window.speechSynthesis.speak(u1);
             else u1.onend();
+            return true;
         }
 
         function finishWalkon() {

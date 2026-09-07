@@ -1,14 +1,20 @@
 const ACHIEVEMENT_UI_TRANSLATIONS = {
-    pl: { reward: 'Nagroda: £{amount}', unlocked: '★ ODBLOKOWANE', unlockedAlert: '🏆 ODBLOKOWANO OSIĄGNIĘCIE!\n\n{title}\nOtrzymujesz bonus: £{amount}' },
-    en: { reward: 'Reward: £{amount}', unlocked: '★ UNLOCKED', unlockedAlert: '🏆 ACHIEVEMENT UNLOCKED!\n\n{title}\nYou receive a bonus: £{amount}' },
-    de: { reward: 'Belohnung: £{amount}', unlocked: '★ FREIGESCHALTET', unlockedAlert: '🏆 ERFOLG FREIGESCHALTET!\n\n{title}\nDu erhältst einen Bonus: £{amount}' },
-    nl: { reward: 'Beloning: £{amount}', unlocked: '★ ONTGRENDELD', unlockedAlert: '🏆 PRESTATIE ONTGRENDELD!\n\n{title}\nJe ontvangt een bonus: £{amount}' }
+    pl: { reward: 'Nagroda: £{amount}', earned: 'Otrzymano: £{amount}', unlocked: '★ ODBLOKOWANE', unlockedAlert: '🏆 ODBLOKOWANO OSIĄGNIĘCIE!\n\n{title}\nOtrzymujesz bonus: £{amount}' },
+    en: { reward: 'Reward: £{amount}', earned: 'Earned: £{amount}', unlocked: '★ UNLOCKED', unlockedAlert: '🏆 ACHIEVEMENT UNLOCKED!\n\n{title}\nYou receive a bonus: £{amount}' },
+    de: { reward: 'Belohnung: £{amount}', earned: 'Erhalten: £{amount}', unlocked: '★ FREIGESCHALTET', unlockedAlert: '🏆 ERFOLG FREIGESCHALTET!\n\n{title}\nDu erhältst einen Bonus: £{amount}' },
+    nl: { reward: 'Beloning: £{amount}', earned: 'Ontvangen: £{amount}', unlocked: '★ ONTGRENDELD', unlockedAlert: '🏆 PRESTATIE ONTGRENDELD!\n\n{title}\nJe ontvangt een bonus: £{amount}' }
 };
 
 function trAchievementUi(key, values = {}) {
     const language = typeof currentLang === 'string' && ACHIEVEMENT_UI_TRANSLATIONS[currentLang] ? currentLang : 'pl';
     const template = ACHIEVEMENT_UI_TRANSLATIONS[language][key] || ACHIEVEMENT_UI_TRANSLATIONS.pl[key] || key;
     return template.replace(/\{(\w+)\}/g, (_, name) => values[name] ?? `{${name}}`);
+}
+
+function getAchievementRewardText(achievement, isUnlocked) {
+    const amount = Math.max(0, Number(achievement?.rewardMoney) || 0).toLocaleString('en-GB');
+    if (!isUnlocked) return trAchievementUi('reward', { amount });
+    return `${trAchievementUi('unlocked')} · ${trAchievementUi('earned', { amount })}`;
 }
 
 function initCareerChronicle() {
@@ -214,7 +220,7 @@ function initCareerChronicle() {
                     let isUnlocked = player.achievements.includes(ach.id);
                     let title = ach[`title${langSuffix}`] || ach.title_pl;
                     let desc = ach[`desc${langSuffix}`] || ach.desc_pl;
-                    let rewardText = trAchievementUi('reward', { amount: ach.rewardMoney.toLocaleString('en-GB') });
+                    let rewardText = getAchievementRewardText(ach, isUnlocked);
                     
                     let progress = 0;
                     if (ach.type === '180s') progress = player.careerStats.total180s;
@@ -227,7 +233,7 @@ function initCareerChronicle() {
                         <div class="achiev-info">
                             <p class="achiev-title">${title}</p>
                             <p class="achiev-desc">${desc}</p>
-                            <span class="achiev-reward">${isUnlocked ? trAchievementUi('unlocked') : rewardText}</span>
+                            <span class="achiev-reward">${rewardText}</span>
                             ${!isUnlocked && ach.target > 1 ? `
                             <div class="achiev-progress-bg">
                                 <div class="achiev-progress-fill" style="width: ${progressPercent}%;"></div>
@@ -268,7 +274,7 @@ function initCareerChronicle() {
         function validateModData(modData) {
             if (!isPlainObject(modData)) throw new Error('mod.json musi zawierać obiekt JSON.');
 
-            const arrayFields = ['pdcPlayers', 'tournamentDatabase', 'techSponsorsDB'];
+            const arrayFields = ['pdcPlayers', 'tournamentDatabase', 'regularSponsorsDB', 'techSponsorsDB', 'historicalChampions'];
             arrayFields.forEach(field => {
                 if (modData[field] !== undefined && !Array.isArray(modData[field])) {
                     throw new Error(`Pole ${field} musi być tablicą.`);
@@ -276,6 +282,12 @@ function initCareerChronicle() {
             });
             if (modData.pdcPlayers && !modData.pdcPlayers.every(isPlainObject)) throw new Error('Niepoprawna lista zawodników w modzie.');
             if (modData.tournamentDatabase && !modData.tournamentDatabase.every(isPlainObject)) throw new Error('Niepoprawna lista turniejów w modzie.');
+            if (modData.historicalChampions && !modData.historicalChampions.every(isPlainObject)) throw new Error('Niepoprawna lista historycznych mistrzów.');
+            for (const field of ['regularSponsorsDB', 'techSponsorsDB']) {
+                if (modData[field] && !modData[field].every(name => typeof name === 'string' && name.trim())) {
+                    throw new Error(`Pole ${field} może zawierać wyłącznie niepuste nazwy sponsorów.`);
+                }
+            }
             if (modData.sponsorTiers !== undefined && !isPlainObject(modData.sponsorTiers)) throw new Error('Niepoprawne poziomy sponsorów.');
             if (modData.shopDatabase !== undefined && !isPlainObject(modData.shopDatabase)) throw new Error('Niepoprawna baza sklepu.');
         }
@@ -288,6 +300,64 @@ function initCareerChronicle() {
             Object.entries(source).forEach(([key, value]) => {
                 if (key !== '__proto__' && key !== 'constructor' && key !== 'prototype') target[key] = value;
             });
+        }
+
+        function normalizeKnownModTournamentNames(tournament) {
+            const normalized = { ...tournament };
+            const sourceName = String(normalized.sourceName || '');
+            if (/^Rising Stars Circuit\s+\d+$/i.test(sourceName)) {
+                normalized.name = String(normalized.name || '').replace(/^Winmau Challenge Tour\b/i, 'PDC Challenge Tour');
+            } else if (/^Future Champions Circuit\s+\d+$/i.test(sourceName)) {
+                normalized.name = String(normalized.name || '').replace(/^Winmau Development Tour\b/i, 'PDC Development Tour');
+            }
+            return normalized;
+        }
+
+        function createIndexedSponsorNameMap(defaultNames, previousNames, nextNames) {
+            const nameMap = new Map();
+            nextNames.forEach((nextName, index) => {
+                const target = String(nextName || '').trim();
+                if (!target) return;
+                const defaultName = defaultNames[index];
+                const previousName = previousNames[index];
+                if (typeof defaultName === 'string' && defaultName) nameMap.set(defaultName, target);
+                if (typeof previousName === 'string' && previousName) nameMap.set(previousName, target);
+                nameMap.set(target, target);
+            });
+            return nameMap;
+        }
+
+        function applyRegularSponsorMod(regularSponsorNames) {
+            if (!Array.isArray(regularSponsorNames)) return;
+            const previousNames = [...regularSponsorsDB];
+            const defaultNames = typeof DEFAULT_REGULAR_SPONSORS_DB !== 'undefined'
+                ? [...DEFAULT_REGULAR_SPONSORS_DB]
+                : previousNames;
+            const protectedNames = typeof MOD_PROTECTED_REGULAR_SPONSORS_DB !== 'undefined'
+                ? [...MOD_PROTECTED_REGULAR_SPONSORS_DB]
+                : ['M1KEYbet'];
+            const replaceableSlotCount = Math.max(0, defaultNames.length - protectedNames.length);
+            const nextNames = regularSponsorNames.slice(0, replaceableSlotCount).map(name => name.trim());
+            const nameMap = createIndexedSponsorNameMap(defaultNames, previousNames, nextNames);
+            regularSponsorsDB.splice(0, regularSponsorsDB.length, ...nextNames, ...protectedNames);
+
+            const renameSponsor = sponsor => {
+                if (sponsor && typeof sponsor.name === 'string' && nameMap.has(sponsor.name)) {
+                    sponsor.name = nameMap.get(sponsor.name);
+                }
+            };
+            if (typeof player !== 'undefined' && player) {
+                (Array.isArray(player.activeSponsors) ? player.activeSponsors : []).forEach(renameSponsor);
+                const goals = player.sponsorGoals?.goals;
+                if (Array.isArray(goals)) goals.forEach(goal => {
+                    if (goal && typeof goal.sponsor === 'string' && nameMap.has(goal.sponsor)) {
+                        goal.sponsor = nameMap.get(goal.sponsor);
+                    }
+                });
+            }
+            if (typeof availableSponsorOffers !== 'undefined' && Array.isArray(availableSponsorOffers)) {
+                availableSponsorOffers.forEach(renameSponsor);
+            }
         }
 
         function applyModData(modData, isCareerActive, options = {}) {
@@ -312,7 +382,7 @@ function initCareerChronicle() {
                 }
                 if (modData.tournamentDatabase) {
                     tournamentDatabase.length = 0;
-                    modData.tournamentDatabase.forEach(tournament => tournamentDatabase.push({ ...tournament }));
+                    modData.tournamentDatabase.forEach(tournament => tournamentDatabase.push(normalizeKnownModTournamentNames(tournament)));
                 }
             } else {
                 // Mod zachowuje wyniki, rozwój i identyfikatory zawodników.
@@ -376,6 +446,7 @@ function initCareerChronicle() {
                     // emerytur — nawet gdy jego prawdziwe nazwisko różni się od
                     // bazowego pseudonimu.
                     if (typeof removeRetiredPlayersFromPool === 'function') removeRetiredPlayersFromPool(pdcPlayers);
+                    if (typeof removePlayerEditorDeletedPlayersFromPool === 'function') removePlayerEditorDeletedPlayersFromPool();
                     if (typeof applyKnownPlayerCorrections === 'function') {
                         applyKnownPlayerCorrections([player, ...pdcPlayers], { preserveProgress: true, careerPlayer: player });
                     }
@@ -390,7 +461,8 @@ function initCareerChronicle() {
                     const tournamentsBySourceName = new Map(tournamentDatabase.map(tournament => [tournament.sourceName || tournament.name, tournament]));
                     const tournamentSignature = tournament => [tournament.month, tournament.day, tournament.country, tournament.city, tournament.format].join('|');
                     const tournamentsBySignature = new Map(tournamentDatabase.map(tournament => [tournamentSignature(tournament), tournament]));
-                    modData.tournamentDatabase.forEach(modTournament => {
+                    modData.tournamentDatabase.forEach(rawModTournament => {
+                        const modTournament = normalizeKnownModTournamentNames(rawModTournament);
                         const sourceName = modTournament.sourceName || modTournament.name;
                         const tournament = tournamentsBySourceName.get(sourceName) || tournamentsBySignature.get(tournamentSignature(modTournament));
                         if (tournament) {
@@ -404,6 +476,17 @@ function initCareerChronicle() {
                 }
             }
 
+            // Starszy mod może zawierać kalendarz sprzed dodania nowych cykli.
+            // Uzupełniamy brakujące wydarzenia i zachowujemy nazwy podmienione
+            // przez mod dzięki polu sourceName.
+            if (modData.tournamentDatabase && typeof syncPdc2026TournamentCalendar === 'function') {
+                syncPdc2026TournamentCalendar(tournamentDatabase, isCareerActive ? currentDate : null);
+            }
+            if (modData.historicalChampions && typeof applyHistoricalChampionModOverrides === 'function') {
+                applyHistoricalChampionModOverrides(modData.historicalChampions);
+            }
+
+            if (modData.regularSponsorsDB) applyRegularSponsorMod(modData.regularSponsorsDB);
             if (modData.techSponsorsDB) {
                 techSponsorsDB.length = 0;
                 modData.techSponsorsDB.forEach(sponsor => techSponsorsDB.push(sponsor));
@@ -457,6 +540,10 @@ function initCareerChronicle() {
             const btnRankPt = document.getElementById('btn-rank-pt'); if (btnRankPt) btnRankPt.innerText = 'ProTour OOM';
             const btnRankPc = document.getElementById('btn-rank-pc'); if (btnRankPc) btnRankPc.innerText = 'Players Champ OOM';
             const btnRankEt = document.getElementById('btn-rank-et'); if (btnRankEt) btnRankEt.innerText = 'European Tour OOM';
+            const btnRankChallenge = document.getElementById('btn-rank-challenge-tour');
+            if (btnRankChallenge && typeof trChallengeTour === 'function') btnRankChallenge.innerText = trChallengeTour('tableName');
+            const btnRankDevelopment = document.getElementById('btn-rank-development-tour');
+            if (btnRankDevelopment && typeof trDevelopmentTour === 'function') btnRankDevelopment.innerText = trDevelopmentTour('tableName');
             const screenCalH2 = document.querySelector('#screen-calendar h2'); if (screenCalH2) screenCalH2.innerText = 'Kalendarz Sezonu PDC';
             if (isCareerActive) {
                 if (typeof resetWorldNewsRankingBaseline === 'function') resetWorldNewsRankingBaseline();
