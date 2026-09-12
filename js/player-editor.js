@@ -1,5 +1,6 @@
 const PLAYER_EDITOR_MAX_PHOTO_BYTES = 2 * 1024 * 1024;
 const PLAYER_EDITOR_MAX_WALKON_BYTES = 4 * 1024 * 1024;
+const PLAYER_EDITOR_MAX_RANKING_MONEY = 999999999;
 const PLAYER_EDITOR_FALLBACK_YEAR = 2026;
 const PLAYER_EDITOR_SORT_OPTIONS = ['name-asc', 'name-desc', 'overall-desc', 'overall-asc', 'country-asc', 'age-asc', 'age-desc'];
 
@@ -21,6 +22,9 @@ const PLAYER_EDITOR_TRANSLATIONS = {
         personal: 'Dane zawodnika', firstName: 'Imię', lastName: 'Nazwisko', country: 'Kraj', birthYear: 'Rok urodzenia',
         gender: 'Płeć', male: 'Mężczyzna', female: 'Kobieta', favoriteDouble: 'Ulubiony double',
         ratings: 'Oceny meczowe', overall: 'Overall', scoring: 'Punktowanie', doubles: 'Podwójne',
+        rankingMoney: 'Pieniądze w rankingach', rankingMoneyHint: 'Ustaw bieżącą kwotę zawodnika w każdej klasyfikacji finansowej.',
+        mainOomMoney: 'Główny OOM (£)', proTourMoney: 'ProTour OOM (£)', playersChampMoney: 'Players Championship (£)',
+        europeanTourMoney: 'European Tour OOM (£)', challengeTourMoney: 'Challenge Tour (£)', developmentTourMoney: 'Development Tour (£)',
         traits: 'Cechy dodatkowe', endurance: 'Wytrzymałość', consistency: 'Regularność', mental: 'Mental',
         back: 'Wróć do menu', save: 'Zapisz zmiany', createButton: 'Dodaj zawodnika', delete: 'Usuń zawodnika',
         bulkDeleteTitle: 'Zbiorcze usuwanie', bulkDeleteHint: 'Wybierz konkretną narodowość w filtrze powyżej, aby usunąć wszystkich jej zawodników AI.',
@@ -35,6 +39,7 @@ const PLAYER_EDITOR_TRANSLATIONS = {
         deleteCareer: 'Nie można usunąć własnej postaci kariery.', deleteInUse: 'Nie można usunąć zawodnika uczestniczącego w trwającym turnieju lub bieżącym sezonie ligi.',
         invalidName: 'Podaj imię i nazwisko zawodnika.', invalidCountry: 'Wybierz kraj.',
         invalidBirthYear: 'Rok urodzenia musi mieścić się między {min} a {max}.', invalidRating: 'Sprawdź zakresy wszystkich ocen.',
+        invalidMoney: 'Kwoty rankingowe muszą być pełnymi liczbami od £0 do £999 999 999.',
         duplicate: 'Zawodnik o tej nazwie i kraju już istnieje.', invalidPhoto: 'Wybierz plik PNG, JPG lub WebP.',
         photoTooLarge: 'Zdjęcie jest za duże. Maksymalny rozmiar to 2 MB.', photoReadError: 'Nie udało się odczytać zdjęcia.',
         photoReady: 'Zdjęcie jest gotowe. Zapisz zmiany, aby je przypisać.', photoRemoved: 'Zdjęcie zostanie usunięte po zapisaniu zmian.',
@@ -59,6 +64,9 @@ const PLAYER_EDITOR_TRANSLATIONS = {
         photoHint: 'PNG, JPG or WebP, up to 2 MB.', uploadPhoto: 'Choose photo', removePhoto: 'Remove photo', photoAlt: 'Player photo',
         personal: 'Player details', firstName: 'First name', lastName: 'Last name', country: 'Country', birthYear: 'Year of birth',
         gender: 'Gender', male: 'Male', female: 'Female', favoriteDouble: 'Favourite double', ratings: 'Match ratings',
+        rankingMoney: 'Ranking prize money', rankingMoneyHint: 'Set the player’s current total in each prize-money ranking.',
+        mainOomMoney: 'Main OOM (£)', proTourMoney: 'ProTour OOM (£)', playersChampMoney: 'Players Championship (£)',
+        europeanTourMoney: 'European Tour OOM (£)', challengeTourMoney: 'Challenge Tour (£)', developmentTourMoney: 'Development Tour (£)',
         overall: 'Overall', scoring: 'Scoring', doubles: 'Doubles', traits: 'Additional traits', endurance: 'Endurance',
         consistency: 'Consistency', mental: 'Mental', back: 'Back to menu', save: 'Save changes', createButton: 'Add player', delete: 'Remove player',
         bulkDeleteTitle: 'Bulk removal', bulkDeleteHint: 'Select a specific nationality in the filter above to remove all of its AI players.',
@@ -72,7 +80,8 @@ const PLAYER_EDITOR_TRANSLATIONS = {
         deleteConfirm: 'Remove {name}?\n\nThis change will be saved in the current career.', deleted: 'Removed player {name}.',
         deleteCareer: 'Your career player cannot be removed.', deleteInUse: 'A player in an active tournament or the current league season cannot be removed.',
         invalidCountry: 'Select a country.', invalidBirthYear: 'Year of birth must be between {min} and {max}.',
-        invalidRating: 'Check the allowed ranges for all ratings.', duplicate: 'A player with this name and country already exists.',
+        invalidRating: 'Check the allowed ranges for all ratings.', invalidMoney: 'Ranking amounts must be whole numbers from £0 to £999,999,999.',
+        duplicate: 'A player with this name and country already exists.',
         invalidPhoto: 'Choose a PNG, JPG or WebP file.', photoTooLarge: 'The photo is too large. Maximum size is 2 MB.',
         photoReadError: 'The photo could not be read.', photoReady: 'The photo is ready. Save changes to assign it.',
         photoRemoved: 'The photo will be removed when you save the changes.',
@@ -97,6 +106,9 @@ const PLAYER_EDITOR_TRANSLATIONS = {
         photoHint: 'PNG, JPG oder WebP, maximal 2 MB.', uploadPhoto: 'Foto wählen', removePhoto: 'Foto entfernen', photoAlt: 'Spielerfoto',
         personal: 'Spielerdaten', firstName: 'Vorname', lastName: 'Nachname', country: 'Land', birthYear: 'Geburtsjahr',
         gender: 'Geschlecht', male: 'Männlich', female: 'Weiblich', favoriteDouble: 'Lieblingsdoppel', ratings: 'Matchwerte',
+        rankingMoney: 'Preisgeld in Ranglisten', rankingMoneyHint: 'Lege den aktuellen Betrag des Spielers in jeder Preisgeldrangliste fest.',
+        mainOomMoney: 'Haupt-OOM (£)', proTourMoney: 'ProTour OOM (£)', playersChampMoney: 'Players Championship (£)',
+        europeanTourMoney: 'European Tour OOM (£)', challengeTourMoney: 'Challenge Tour (£)', developmentTourMoney: 'Development Tour (£)',
         overall: 'Overall', scoring: 'Scoring', doubles: 'Doppel', traits: 'Zusätzliche Eigenschaften', endurance: 'Ausdauer',
         consistency: 'Konstanz', mental: 'Mental', back: 'Zurück zum Menü', save: 'Änderungen speichern', createButton: 'Spieler hinzufügen', delete: 'Spieler entfernen',
         bulkDeleteTitle: 'Mehrere Spieler entfernen', bulkDeleteHint: 'Wähle oben im Filter eine bestimmte Nationalität, um alle zugehörigen KI-Spieler zu entfernen.',
@@ -110,7 +122,8 @@ const PLAYER_EDITOR_TRANSLATIONS = {
         deleteConfirm: '{name} wirklich entfernen?\n\nDie Änderung wird in dieser Karriere gespeichert.', deleted: 'Spieler {name} wurde entfernt.',
         deleteCareer: 'Der eigene Karrierespieler kann nicht entfernt werden.', deleteInUse: 'Ein Spieler in einem laufenden Turnier oder in der aktuellen Liga-Saison kann nicht entfernt werden.',
         invalidCountry: 'Land auswählen.', invalidBirthYear: 'Das Geburtsjahr muss zwischen {min} und {max} liegen.',
-        invalidRating: 'Bitte alle Wertebereiche prüfen.', duplicate: 'Ein Spieler mit diesem Namen und Land existiert bereits.',
+        invalidRating: 'Bitte alle Wertebereiche prüfen.', invalidMoney: 'Ranglistenbeträge müssen ganze Zahlen zwischen £0 und £999.999.999 sein.',
+        duplicate: 'Ein Spieler mit diesem Namen und Land existiert bereits.',
         invalidPhoto: 'Bitte PNG, JPG oder WebP auswählen.', photoTooLarge: 'Das Foto ist zu groß. Maximal 2 MB.',
         photoReadError: 'Das Foto konnte nicht gelesen werden.', photoReady: 'Das Foto ist bereit. Änderungen speichern, um es zuzuweisen.',
         photoRemoved: 'Das Foto wird beim Speichern entfernt.',
@@ -135,6 +148,9 @@ const PLAYER_EDITOR_TRANSLATIONS = {
         photoHint: 'PNG, JPG of WebP, maximaal 2 MB.', uploadPhoto: 'Kies foto', removePhoto: 'Foto verwijderen', photoAlt: 'Spelersfoto',
         personal: 'Spelersgegevens', firstName: 'Voornaam', lastName: 'Achternaam', country: 'Land', birthYear: 'Geboortejaar',
         gender: 'Geslacht', male: 'Man', female: 'Vrouw', favoriteDouble: 'Favoriete dubbel', ratings: 'Wedstrijdratings',
+        rankingMoney: 'Prijzengeld in ranglijsten', rankingMoneyHint: 'Stel het huidige bedrag van de speler in elke prijzengeldranglijst in.',
+        mainOomMoney: 'Hoofd-OOM (£)', proTourMoney: 'ProTour OOM (£)', playersChampMoney: 'Players Championship (£)',
+        europeanTourMoney: 'European Tour OOM (£)', challengeTourMoney: 'Challenge Tour (£)', developmentTourMoney: 'Development Tour (£)',
         overall: 'Overall', scoring: 'Scoring', doubles: 'Dubbels', traits: 'Extra eigenschappen', endurance: 'Uithoudingsvermogen',
         consistency: 'Regelmaat', mental: 'Mentaal', back: 'Terug naar menu', save: 'Wijzigingen opslaan', createButton: 'Speler toevoegen', delete: 'Speler verwijderen',
         bulkDeleteTitle: 'Meerdere spelers verwijderen', bulkDeleteHint: 'Kies hierboven een specifieke nationaliteit om alle bijbehorende AI-spelers te verwijderen.',
@@ -148,7 +164,8 @@ const PLAYER_EDITOR_TRANSLATIONS = {
         deleteConfirm: '{name} verwijderen?\n\nDeze wijziging wordt in de huidige carrière opgeslagen.', deleted: 'Speler {name} is verwijderd.',
         deleteCareer: 'Je eigen carrièrespeler kan niet worden verwijderd.', deleteInUse: 'Een speler in een actief toernooi of het huidige competitieseizoen kan niet worden verwijderd.',
         invalidCountry: 'Kies een land.', invalidBirthYear: 'Het geboortejaar moet tussen {min} en {max} liggen.',
-        invalidRating: 'Controleer het bereik van alle ratings.', duplicate: 'Een speler met deze naam en dit land bestaat al.',
+        invalidRating: 'Controleer het bereik van alle ratings.', invalidMoney: 'Ranglijstbedragen moeten hele getallen van £0 tot £999.999.999 zijn.',
+        duplicate: 'Een speler met deze naam en dit land bestaat al.',
         invalidPhoto: 'Kies een PNG-, JPG- of WebP-bestand.', photoTooLarge: 'De foto is te groot. Maximaal 2 MB.',
         photoReadError: 'De foto kon niet worden gelezen.', photoReady: 'De foto is klaar. Sla de wijzigingen op om hem toe te wijzen.',
         photoRemoved: 'De foto wordt verwijderd zodra je de wijzigingen opslaat.',
@@ -546,6 +563,13 @@ function populatePlayerEditorForm(candidate = null) {
     setValue('player-editor-overall', overall);
     setValue('player-editor-scoring', Math.round(Number(candidate?.baseScoring ?? candidate?.scoring) || overall));
     setValue('player-editor-doubles', Math.round(Number(candidate?.baseDoubles ?? candidate?.doubles) || overall));
+    const rankingMoney = getPlayerEditorDisplayedRankingMoney(candidate);
+    setValue('player-editor-main-money', rankingMoney.main);
+    setValue('player-editor-protour-money', rankingMoney.proTour);
+    setValue('player-editor-pc-money', rankingMoney.playersChampionship);
+    setValue('player-editor-et-money', rankingMoney.europeanTour);
+    setValue('player-editor-challenge-money', rankingMoney.challengeTour);
+    setValue('player-editor-development-money', rankingMoney.developmentTour);
     setValue('player-editor-endurance', candidate && typeof getPlayerTrait === 'function' ? Math.round(getPlayerTrait(candidate, 'endurance')) : 60);
     setValue('player-editor-consistency', candidate && typeof getPlayerTrait === 'function' ? Math.round(getPlayerTrait(candidate, 'consistency')) : 60);
     setValue('player-editor-mental', candidate && typeof getPlayerTrait === 'function' ? Math.round(getPlayerTrait(candidate, 'mental')) : 60);
@@ -595,6 +619,89 @@ function getPlayerEditorDisplayedRatings(candidate) {
     };
 }
 
+function getPlayerEditorDisplayedRankingMoney(candidate) {
+    const amount = value => Math.max(0, Math.round(Number(value) || 0));
+    return {
+        main: amount(candidate?.prizeMoney),
+        proTour: amount(candidate?.proTourPrizeMoney),
+        playersChampionship: amount(candidate?.pcPrizeMoney),
+        europeanTour: amount(candidate?.europeanTourPrizeMoney),
+        challengeTour: amount(candidate?.challengeTourPrizeMoney),
+        developmentTour: amount(candidate?.developmentTourPrizeMoney)
+    };
+}
+
+function getPlayerEditorMoney(id) {
+    const rawValue = String(document.getElementById(id)?.value ?? '').trim();
+    if (!rawValue) return null;
+    const value = Number(rawValue);
+    return Number.isSafeInteger(value) && value >= 0 && value <= PLAYER_EDITOR_MAX_RANKING_MONEY ? value : null;
+}
+
+function getPlayerEditorReferenceTime() {
+    const time = typeof currentDate !== 'undefined'
+        ? (currentDate instanceof Date ? currentDate.getTime() : new Date(currentDate).getTime())
+        : Date.now();
+    return Number.isFinite(time) ? time : Date.now();
+}
+
+function getPlayerEditorRollingHistoryTotal(candidate, rankingType, referenceTime) {
+    if (rankingType === 'main' && typeof normaliseMainOrderOfMeritHistory === 'function'
+        && typeof getMainOomCutoffTime === 'function' && typeof getActiveMainOomHistory === 'function') {
+        const cutoff = getMainOomCutoffTime(referenceTime);
+        return getActiveMainOomHistory(normaliseMainOrderOfMeritHistory(candidate, referenceTime), cutoff, referenceTime)
+            .reduce((total, entry) => total + (Number(entry?.amount) || 0), 0);
+    }
+    if (rankingType === 'proTour' && typeof normaliseProTourPrizeHistory === 'function') {
+        const cutoff = referenceTime - (typeof PRO_TOUR_ROLLING_PERIOD_MS !== 'undefined'
+            ? PRO_TOUR_ROLLING_PERIOD_MS
+            : 52 * 7 * 24 * 60 * 60 * 1000);
+        return normaliseProTourPrizeHistory(candidate, referenceTime)
+            .filter(entry => Number(entry?.earnedAt) > cutoff && Number(entry?.earnedAt) <= referenceTime)
+            .reduce((total, entry) => total + (Number(entry?.amount) || 0), 0);
+    }
+    const currentAmount = rankingType === 'main'
+        ? Math.max(0, Number(candidate?.prizeMoney) || 0)
+        : Math.max(0, Number(candidate?.proTourPrizeMoney) || 0);
+    const adjustment = Number(candidate?.playerEditorRankingAdjustments?.[rankingType]?.amount) || 0;
+    return Math.max(0, currentAmount - adjustment);
+}
+
+function setPlayerEditorRollingAdjustment(candidate, rankingType, targetAmount, referenceTime) {
+    const historyTotal = getPlayerEditorRollingHistoryTotal(candidate, rankingType, referenceTime);
+    const amount = targetAmount - historyTotal;
+    const adjustments = {
+        ...(candidate.playerEditorRankingAdjustments && typeof candidate.playerEditorRankingAdjustments === 'object'
+            ? candidate.playerEditorRankingAdjustments
+            : {})
+    };
+    if (amount === 0) delete adjustments[rankingType];
+    else adjustments[rankingType] = { amount, appliedAt: referenceTime };
+    if (Object.keys(adjustments).length) candidate.playerEditorRankingAdjustments = adjustments;
+    else delete candidate.playerEditorRankingAdjustments;
+}
+
+function applyPlayerEditorRankingMoney(candidate, values, previousValues = null) {
+    const nextValues = values.rankingMoney;
+    const hasChanged = key => !previousValues || nextValues[key] !== previousValues[key];
+    const referenceTime = getPlayerEditorReferenceTime();
+
+    if (hasChanged('main')) {
+        setPlayerEditorRollingAdjustment(candidate, 'main', nextValues.main, referenceTime);
+        candidate.prizeMoney = nextValues.main;
+        if (typeof invalidateMainOrderOfMeritRefreshCache === 'function') invalidateMainOrderOfMeritRefreshCache();
+    }
+    if (hasChanged('proTour')) {
+        setPlayerEditorRollingAdjustment(candidate, 'proTour', nextValues.proTour, referenceTime);
+        candidate.proTourPrizeMoney = nextValues.proTour;
+        if (typeof invalidateProTourOrderOfMeritRefreshCache === 'function') invalidateProTourOrderOfMeritRefreshCache();
+    }
+    if (hasChanged('playersChampionship')) candidate.pcPrizeMoney = nextValues.playersChampionship;
+    if (hasChanged('europeanTour')) candidate.europeanTourPrizeMoney = nextValues.europeanTour;
+    if (hasChanged('challengeTour')) candidate.challengeTourPrizeMoney = nextValues.challengeTour;
+    if (hasChanged('developmentTour')) candidate.developmentTourPrizeMoney = nextValues.developmentTour;
+}
+
 function createPlayerEditorPlayer(data) {
     const year = getPlayerEditorReferenceYear();
     const id = typeof createEntityId === 'function' ? createEntityId('editor') : `editor-${Date.now()}`;
@@ -614,10 +721,12 @@ function createPlayerEditorPlayer(data) {
         baseScoring: data.scoring,
         baseDoubles: data.doubles,
         form: 0,
-        prizeMoney: 0,
-        proTourPrizeMoney: 0,
-        pcPrizeMoney: 0,
-        europeanTourPrizeMoney: 0,
+        prizeMoney: data.rankingMoney.main,
+        proTourPrizeMoney: data.rankingMoney.proTour,
+        pcPrizeMoney: data.rankingMoney.playersChampionship,
+        europeanTourPrizeMoney: data.rankingMoney.europeanTour,
+        challengeTourPrizeMoney: data.rankingMoney.challengeTour,
+        developmentTourPrizeMoney: data.rankingMoney.developmentTour,
         hasTourCard: false,
         tourCardSource: null,
         tourCardStartYear: null,
@@ -625,6 +734,7 @@ function createPlayerEditorPlayer(data) {
         historyPT: {},
         historyMain: {},
         mainPrizeHistory: [],
+        proTourPrizeHistory: [],
         seasonStats: { year, highestAvg: 0, results: [] },
         joinedSeason: year,
         editorCreated: true
@@ -683,6 +793,17 @@ function collectPlayerEditorForm(candidate) {
     if ([values.overall, values.scoring, values.doubles, values.endurance, values.consistency, values.mental].some(value => value === null)) {
         return { error: trPlayerEditor('invalidRating') };
     }
+    values.rankingMoney = {
+        main: getPlayerEditorMoney('player-editor-main-money'),
+        proTour: getPlayerEditorMoney('player-editor-protour-money'),
+        playersChampionship: getPlayerEditorMoney('player-editor-pc-money'),
+        europeanTour: getPlayerEditorMoney('player-editor-et-money'),
+        challengeTour: getPlayerEditorMoney('player-editor-challenge-money'),
+        developmentTour: getPlayerEditorMoney('player-editor-development-money')
+    };
+    if (Object.values(values.rankingMoney).some(value => value === null)) {
+        return { error: trPlayerEditor('invalidMoney') };
+    }
     const duplicate = getPlayerEditorRosterPlayers().find(other =>
         other !== candidate
         && normalizePlayerEditorIdentity(other?.name) === normalizePlayerEditorIdentity(values.name)
@@ -707,6 +828,7 @@ function savePlayerEditor(event) {
     const candidate = existing || createPlayerEditorPlayer(values);
     const wasCreated = !existing;
     const displayedRatings = existing ? getPlayerEditorDisplayedRatings(existing) : null;
+    const displayedRankingMoney = existing ? getPlayerEditorDisplayedRankingMoney(existing) : null;
     const ratingsChanged = !displayedRatings
         || values.overall !== displayedRatings.overall
         || values.scoring !== displayedRatings.scoring
@@ -734,6 +856,7 @@ function savePlayerEditor(event) {
             playerEditorRatingOverride: true
         });
     }
+    applyPlayerEditorRankingMoney(candidate, values, displayedRankingMoney);
     applyPlayerEditorTraits(candidate, values);
     if (playerEditorPhotoChanged) candidate.photo = playerEditorPendingPhoto || '';
     if (playerEditorWalkonChanged) candidate.walkon = playerEditorPendingWalkon || null;
@@ -976,7 +1099,11 @@ function refreshPlayerEditorTranslations() {
         'player-editor-birth-year-label': 'birthYear', 'player-editor-gender-label': 'gender',
         'player-editor-favorite-double-label': 'favoriteDouble', 'player-editor-ratings-title': 'ratings',
         'player-editor-overall-label': 'overall', 'player-editor-scoring-label': 'scoring',
-        'player-editor-doubles-label': 'doubles', 'player-editor-traits-title': 'traits',
+        'player-editor-doubles-label': 'doubles', 'player-editor-ranking-money-title': 'rankingMoney',
+        'player-editor-ranking-money-hint': 'rankingMoneyHint', 'player-editor-main-money-label': 'mainOomMoney',
+        'player-editor-protour-money-label': 'proTourMoney', 'player-editor-pc-money-label': 'playersChampMoney',
+        'player-editor-et-money-label': 'europeanTourMoney', 'player-editor-challenge-money-label': 'challengeTourMoney',
+        'player-editor-development-money-label': 'developmentTourMoney', 'player-editor-traits-title': 'traits',
         'player-editor-endurance-label': 'endurance', 'player-editor-consistency-label': 'consistency',
         'player-editor-mental-label': 'mental', 'player-editor-back': 'back', 'player-editor-delete': 'delete'
     };

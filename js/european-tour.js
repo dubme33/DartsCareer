@@ -165,6 +165,7 @@ function getProTourRefreshSnapshot(candidate) {
     const lastEntry = history?.at(-1);
     const lastEarnedAt = Number(lastEntry?.earnedAt);
     const lastAmount = Number(lastEntry?.amount);
+    const editorAdjustment = candidate?.playerEditorRankingAdjustments?.proTour;
     return {
         candidate,
         history,
@@ -172,7 +173,9 @@ function getProTourRefreshSnapshot(candidate) {
         lastEarnedAt: Number.isFinite(lastEarnedAt) ? lastEarnedAt : null,
         lastAmount: Number.isFinite(lastAmount) ? lastAmount : null,
         prizeMoney: Number(candidate?.proTourPrizeMoney) || 0,
-        version: candidate?.proTourRankingVersion
+        version: candidate?.proTourRankingVersion,
+        editorAdjustmentAmount: Number(editorAdjustment?.amount) || 0,
+        editorAdjustmentAppliedAt: Number(editorAdjustment?.appliedAt) || 0
     };
 }
 
@@ -182,12 +185,15 @@ function isProTourRefreshSnapshotCurrent(snapshot, candidate) {
     const lastEntry = history?.at(-1);
     const lastEarnedAt = Number(lastEntry?.earnedAt);
     const lastAmount = Number(lastEntry?.amount);
+    const editorAdjustment = candidate?.playerEditorRankingAdjustments?.proTour;
     return snapshot.history === history
         && snapshot.historyLength === (history?.length || 0)
         && snapshot.lastEarnedAt === (Number.isFinite(lastEarnedAt) ? lastEarnedAt : null)
         && snapshot.lastAmount === (Number.isFinite(lastAmount) ? lastAmount : null)
         && snapshot.prizeMoney === (Number(candidate?.proTourPrizeMoney) || 0)
-        && snapshot.version === candidate?.proTourRankingVersion;
+        && snapshot.version === candidate?.proTourRankingVersion
+        && snapshot.editorAdjustmentAmount === (Number(editorAdjustment?.amount) || 0)
+        && snapshot.editorAdjustmentAppliedAt === (Number(editorAdjustment?.appliedAt) || 0);
 }
 
 function canReuseProTourOrderOfMeritRefresh(candidates, referenceTime) {
@@ -208,6 +214,12 @@ function updateProTourOrderOfMeritRefreshCache(candidates, referenceTime) {
                 nextExpiryTime = expiryTime;
             }
         });
+        const adjustmentAppliedAt = Number(candidate?.playerEditorRankingAdjustments?.proTour?.appliedAt);
+        const adjustmentExpiryTime = adjustmentAppliedAt + PRO_TOUR_ROLLING_PERIOD_MS;
+        if (Number.isFinite(adjustmentAppliedAt) && Number.isFinite(adjustmentExpiryTime)
+            && adjustmentExpiryTime > referenceTime && adjustmentExpiryTime < nextExpiryTime) {
+            nextExpiryTime = adjustmentExpiryTime;
+        }
     });
     proTourOrderOfMeritRefreshCache = {
         referenceTime,
@@ -219,6 +231,15 @@ function updateProTourOrderOfMeritRefreshCache(candidates, referenceTime) {
 function invalidateProTourOrderOfMeritRefreshCache() {
     proTourOrderOfMeritRefreshCache = null;
     if (typeof invalidatePlayerRankingCache === 'function') invalidatePlayerRankingCache('protour');
+}
+
+function getProTourPlayerEditorAdjustment(candidate, referenceTime) {
+    const adjustment = candidate?.playerEditorRankingAdjustments?.proTour;
+    const amount = Number(adjustment?.amount);
+    const appliedAt = Number(adjustment?.appliedAt);
+    if (!Number.isFinite(amount) || !Number.isFinite(appliedAt)) return 0;
+    const cutoff = referenceTime - PRO_TOUR_ROLLING_PERIOD_MS;
+    return appliedAt > cutoff && appliedAt <= referenceTime ? amount : 0;
 }
 
 function refreshProTourOrderOfMerit(candidates, referenceDate) {
@@ -239,7 +260,8 @@ function refreshProTourOrderOfMerit(candidates, referenceDate) {
         if (activeEntries === null) activeEntries = normalizedEntries;
         else sanitisedProTourHistories.add(activeEntries);
         candidate.proTourPrizeHistory = activeEntries;
-        candidate.proTourPrizeMoney = activeEntries.reduce((total, entry) => total + entry.amount, 0);
+        const historyTotal = activeEntries.reduce((total, entry) => total + entry.amount, 0);
+        candidate.proTourPrizeMoney = Math.max(0, historyTotal + getProTourPlayerEditorAdjustment(candidate, referenceTime));
         candidate.proTourRankingVersion = PRO_TOUR_ORDER_OF_MERIT_VERSION;
     });
     if (list.length >= 64) updateProTourOrderOfMeritRefreshCache(list, referenceTime);

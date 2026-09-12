@@ -1,5 +1,6 @@
-// Bazowe (fikcyjne) nazwiska historycznych mistrzów. Pole aliases służy
-// wyłącznie do połączenia rekordu z zawodnikiem przemianowanym przez mod.
+// Bazowe (fikcyjne) nazwiska historycznych mistrzów. Pole aliases łączy rekord
+// z zawodnikiem przemianowanym przez mod, a pierwszy alias jest bezpiecznym
+// fallbackiem dla emeryta nieobecnego w aktualnej bazie zawodników moda.
 const historicalChampionProfiles = {
     'phil-taylor': { name: 'Philip Tailor', country: 'Anglia', aliases: ['Phil Taylor'] },
     'james-wade': { name: 'Jamie Wadey', country: 'Anglia', aliases: ['James Wade'] },

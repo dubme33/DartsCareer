@@ -426,6 +426,21 @@ function getWorldMastersTournamentParticipants(tournament = activeTournament) {
     return [];
 }
 
+function getWorldMastersEventSeedPlayers(tournament = activeTournament) {
+    if (!isWorldMastersTournament(tournament)) return [];
+    const event = getWorldMastersEvent(tournament);
+    const field = event ? worldMastersState?.events?.[event.id] : null;
+    if (!Array.isArray(field?.invitedKeys)) return [];
+
+    // Rozstawienie World Series jest numerowane wyłącznie w obrębie ośmiu
+    // zaproszonych gwiazd. Ich pozycja w głównym OOM ustala kolejność, ale nie
+    // jest kopiowana jako numer rozstawienia (np. #7 OOM może być rozstawiony #3).
+    return resolveWorldMastersPlayers(field.invitedKeys)
+        .sort((first, second) => (Number(second.prizeMoney) || 0) - (Number(first.prizeMoney) || 0)
+            || (Number(second.ovr) || 0) - (Number(first.ovr) || 0))
+        .slice(0, 8);
+}
+
 function getWorldMastersTournamentRound(tournament = activeTournament) {
     if (isWorldMastersFinalsQualifierTournament(tournament)) {
         return getWorldMastersFinalsQualifierOpeningRound(getWorldMastersFinalsQualifierParticipants().length);

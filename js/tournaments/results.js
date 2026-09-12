@@ -233,6 +233,10 @@ function finalizeTournamentMatchHistory(tournament, fallbackHtml = typeof lastTo
     if (hasTournamentMatchHistory(tournamentMatchHistory)) {
         tournament.matchHistory = tournamentMatchHistory;
         tournament.historyLogs = '';
+        if (typeof archiveGrandSlamTournamentFinalists === 'function') {
+            archiveGrandSlamTournamentFinalists(tournament,
+                typeof currentDate !== 'undefined' && currentDate instanceof Date ? currentDate.getFullYear() : new Date().getFullYear());
+        }
         return true;
     }
     tournament.historyLogs = fallbackHtml;

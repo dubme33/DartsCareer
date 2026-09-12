@@ -1,4 +1,4 @@
-const WORLD_CHAMPIONSHIP_QUALIFICATION_VERSION = 1;
+const WORLD_CHAMPIONSHIP_QUALIFICATION_VERSION = 2;
 const WORLD_CHAMPIONSHIP_FIELD_SIZE = 128;
 const WORLD_CHAMPIONSHIP_OOM_PLACES = 80;
 
@@ -86,6 +86,20 @@ function getWorldChampionshipQualificationCandidates(candidates) {
     return uniqueWorldChampionshipPlayers(source).sort(compareWorldChampionshipOom);
 }
 
+function getWorldChampionshipSideTourRanking(candidates, type) {
+    if (type === 'developmentTour' && typeof getDevelopmentTourOrderOfMerit === 'function') {
+        return getDevelopmentTourOrderOfMerit(candidates, { includeZero: false });
+    }
+    if (type === 'challengeTour' && typeof getChallengeTourOrderOfMerit === 'function') {
+        return getChallengeTourOrderOfMerit(candidates, { includeZero: false });
+    }
+    const property = type === 'developmentTour' ? 'developmentTourPrizeMoney' : 'challengeTourPrizeMoney';
+    return uniqueWorldChampionshipPlayers(candidates)
+        .filter(candidate => (Number(candidate[property]) || 0) > 0)
+        .sort((first, second) => (Number(second[property]) || 0) - (Number(first[property]) || 0)
+            || compareWorldChampionshipOom(first, second));
+}
+
 function buildWorldChampionshipQualification(candidates, referenceDate = (typeof currentDate !== 'undefined' ? currentDate : new Date(2026, 11, 1))) {
     const ranked = getWorldChampionshipQualificationCandidates(candidates);
     const selected = [];
@@ -142,12 +156,15 @@ function buildWorldChampionshipQualification(candidates, referenceDate = (typeof
     addCategory('scandinaviaBaltic', 'Najlepszy zawodnik ze Skandynawii lub krajów bałtyckich', 1, outsideTop80, candidate => isWorldChampionshipCountryGroup(candidate, 'scandinaviaBaltic'));
     addCategory('oceania', 'Czterech najlepszych zawodników z Oceanii', 4, outsideTop80, candidate => isWorldChampionshipCountryGroup(candidate, 'oceania'));
     addCategory('oom81to128', 'Czterech najlepszych niezakwalifikowanych z miejsc 81–128 OOM', 4, ranked.slice(80, 128));
-    addCategory('youth16to23', 'Czterech najlepszych graczy w wieku 16–23 lat spoza Top 80 OOM', 4, outsideTop80, candidate => {
-        const age = getWorldChampionshipPlayerAge(candidate, referenceDate);
-        return age >= 16 && age <= 23;
-    });
     addCategory('africa', 'Najlepszy zawodnik z Afryki', 1, outsideTop80, candidate => isWorldChampionshipCountryGroup(candidate, 'africa'));
-    addCategory('nonCard', 'Czterech najlepszych zawodników bez karty PDC', 4, outsideTop80, candidate => candidate.hasTourCard !== true);
+    addCategory('africaExtra', 'Drugi najwyżej sklasyfikowany niezakwalifikowany zawodnik z Afryki', 1,
+        outsideTop80, candidate => isWorldChampionshipCountryGroup(candidate, 'africa'));
+    addCategory('newZealand', 'Najwyżej sklasyfikowany niezakwalifikowany zawodnik z Nowej Zelandii', 1,
+        outsideTop80, candidate => isWorldChampionshipCountry(candidate, 'Nowa Zelandia'));
+    addCategory('developmentTop3', 'TOP 3 rankingu PDC Development Tour', 3,
+        getWorldChampionshipSideTourRanking(ranked, 'developmentTour'));
+    addCategory('challengeTop3', 'TOP 3 rankingu PDC Challenge Tour', 3,
+        getWorldChampionshipSideTourRanking(ranked, 'challengeTour'));
 
     if (selected.length < WORLD_CHAMPIONSHIP_FIELD_SIZE) {
         addCategory(

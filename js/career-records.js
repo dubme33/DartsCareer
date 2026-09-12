@@ -252,14 +252,33 @@ function seedHistoricalCareerChampions(records) {
     records.historicalChampionsVersion = HISTORICAL_CHAMPIONS_VERSION;
 }
 
-function applyHistoricalChampionModOverrides(overrides) {
-    if (!Array.isArray(overrides) || typeof historicalChampionProfiles === 'undefined') return;
+function applyHistoricalChampionModOverrides(overrides, { useRealNameFallback = false } = {}) {
+    if (typeof historicalChampionProfiles === 'undefined') return;
+    if (useRealNameFallback) {
+        Object.values(historicalChampionProfiles).forEach(profile => {
+            const realName = Array.isArray(profile?.aliases)
+                ? profile.aliases.find(alias => typeof alias === 'string' && alias.trim())
+                : '';
+            if (realName) profile.name = realName.trim();
+        });
+    }
+    if (!Array.isArray(overrides)) return;
     overrides.forEach(override => {
         const profile = override && historicalChampionProfiles[override.id];
         if (!profile) return;
         if (typeof override.name === 'string' && override.name.trim()) profile.name = override.name.trim();
         if (typeof override.country === 'string' && override.country.trim()) profile.country = override.country.trim();
     });
+}
+
+function applyHistoricalChampionModData(modData = {}) {
+    // Starsze mody nie posiadają sekcji historicalChampions. Sama obecność moda
+    // oznacza jednak, że prawdziwe nazwy są pożądane również dla emerytów, których
+    // nie da się odnaleźć w aktualnej liście pdcPlayers.
+    applyHistoricalChampionModOverrides(
+        Array.isArray(modData?.historicalChampions) ? modData.historicalChampions : [],
+        { useRealNameFallback: true }
+    );
 }
 
 function getCareerRecordTournament(tournament) {

@@ -17,6 +17,7 @@ function getMainOomRefreshSnapshot(candidate) {
     const lastEntry = history?.at(-1);
     const lastEarnedAt = Number(lastEntry?.earnedAt);
     const lastAmount = Number(lastEntry?.amount);
+    const editorAdjustment = candidate?.playerEditorRankingAdjustments?.main;
     return {
         candidate,
         history,
@@ -24,7 +25,9 @@ function getMainOomRefreshSnapshot(candidate) {
         lastEarnedAt: Number.isFinite(lastEarnedAt) ? lastEarnedAt : null,
         lastAmount: Number.isFinite(lastAmount) ? lastAmount : null,
         prizeMoney: Number(candidate?.prizeMoney) || 0,
-        version: candidate?.mainOomHistoryVersion
+        version: candidate?.mainOomHistoryVersion,
+        editorAdjustmentAmount: Number(editorAdjustment?.amount) || 0,
+        editorAdjustmentAppliedAt: Number(editorAdjustment?.appliedAt) || 0
     };
 }
 
@@ -34,12 +37,15 @@ function isMainOomRefreshSnapshotCurrent(snapshot, candidate) {
     const lastEntry = history?.at(-1);
     const lastEarnedAt = Number(lastEntry?.earnedAt);
     const lastAmount = Number(lastEntry?.amount);
+    const editorAdjustment = candidate?.playerEditorRankingAdjustments?.main;
     return snapshot.history === history
         && snapshot.historyLength === (history?.length || 0)
         && snapshot.lastEarnedAt === (Number.isFinite(lastEarnedAt) ? lastEarnedAt : null)
         && snapshot.lastAmount === (Number.isFinite(lastAmount) ? lastAmount : null)
         && snapshot.prizeMoney === (Number(candidate?.prizeMoney) || 0)
-        && snapshot.version === candidate?.mainOomHistoryVersion;
+        && snapshot.version === candidate?.mainOomHistoryVersion
+        && snapshot.editorAdjustmentAmount === (Number(editorAdjustment?.amount) || 0)
+        && snapshot.editorAdjustmentAppliedAt === (Number(editorAdjustment?.appliedAt) || 0);
 }
 
 function canReuseMainOrderOfMeritRefresh(candidates, referenceTime) {
@@ -60,6 +66,10 @@ function updateMainOrderOfMeritRefreshCache(candidates, referenceTime) {
                 nextExpiryTime = expiryTime;
             }
         });
+        const adjustmentExpiryTime = getMainOomExpiryTime(candidate?.playerEditorRankingAdjustments?.main?.appliedAt);
+        if (Number.isFinite(adjustmentExpiryTime) && adjustmentExpiryTime > referenceTime && adjustmentExpiryTime < nextExpiryTime) {
+            nextExpiryTime = adjustmentExpiryTime;
+        }
     });
     mainOrderOfMeritRefreshCache = {
         referenceTime,
@@ -145,6 +155,15 @@ function getMainOomCutoffTime(referenceTime) {
     return cutoff.getTime();
 }
 
+function getMainOomPlayerEditorAdjustment(candidate, referenceTime) {
+    const adjustment = candidate?.playerEditorRankingAdjustments?.main;
+    const amount = Number(adjustment?.amount);
+    const appliedAt = Number(adjustment?.appliedAt);
+    if (!Number.isFinite(amount) || !Number.isFinite(appliedAt)) return 0;
+    const cutoff = getMainOomCutoffTime(referenceTime);
+    return appliedAt > cutoff && appliedAt <= referenceTime ? amount : 0;
+}
+
 // Prognoza odczytuje historię kopii zawodnika. Nigdy nie przesuwa rankingu
 // ani nie usuwa nagród z prawdziwego zapisu przy oglądaniu przyszłych dat.
 function getMainOomDefence(candidate, referenceDate = currentDate) {
@@ -152,16 +171,29 @@ function getMainOomDefence(candidate, referenceDate = currentDate) {
     const cutoff = getMainOomCutoffTime(now);
     const history = normaliseMainOrderOfMeritHistory({ ...candidate }, now)
         .filter(entry => entry.earnedAt > cutoff && entry.earnedAt <= now);
-    const entries = history.map(entry => ({ ...entry, expiresAt: getMainOomExpiryTime(entry.earnedAt) }))
+    const adjustment = candidate?.playerEditorRankingAdjustments?.main;
+    const adjustmentAmount = getMainOomPlayerEditorAdjustment(candidate, now);
+    const adjustmentEntry = adjustmentAmount > 0 ? [{
+        tournament: '__player_editor_adjustment__',
+        amount: adjustmentAmount,
+        earnedAt: Number(adjustment.appliedAt),
+        expiresAt: getMainOomExpiryTime(adjustment.appliedAt)
+    }] : [];
+    const entries = [
+        ...history.map(entry => ({ ...entry, expiresAt: getMainOomExpiryTime(entry.earnedAt) })),
+        ...adjustmentEntry
+    ]
         .sort((a, b) => a.expiresAt - b.expiresAt);
-    const total = history.reduce((sum, entry) => sum + entry.amount, 0);
+    const historyTotal = history.reduce((sum, entry) => sum + entry.amount, 0);
+    const total = Math.max(0, historyTotal + adjustmentAmount);
     const windows = [30, 90].map(days => {
         const date = new Date(now);
         date.setDate(date.getDate() + days);
         const futureCutoff = getMainOomCutoffTime(date.getTime());
-        const expiring = history.filter(entry => entry.earnedAt <= futureCutoff)
+        const remainingHistory = history.filter(entry => entry.earnedAt > futureCutoff)
             .reduce((sum, entry) => sum + entry.amount, 0);
-        return { days, date: date.getTime(), expiring, remaining: total - expiring };
+        const remaining = Math.max(0, remainingHistory + getMainOomPlayerEditorAdjustment(candidate, date.getTime()));
+        return { days, date: date.getTime(), expiring: Math.max(0, total - remaining), remaining };
     });
     return { total, entries, windows };
 }
@@ -434,7 +466,8 @@ function refreshMainOrderOfMerit(candidates, referenceDate) {
             normaliseMainOrderOfMeritHistory(candidate, referenceTime), cutoff, referenceTime
         );
         candidate.mainPrizeHistory = activeEntries;
-        candidate.prizeMoney = activeEntries.reduce((total, entry) => total + entry.amount, 0);
+        const historyTotal = activeEntries.reduce((total, entry) => total + entry.amount, 0);
+        candidate.prizeMoney = Math.max(0, historyTotal + getMainOomPlayerEditorAdjustment(candidate, referenceTime));
         candidate.mainOomHistoryVersion = MAIN_ORDER_OF_MERIT_VERSION;
     });
 

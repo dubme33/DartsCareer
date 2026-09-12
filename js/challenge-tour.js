@@ -6,7 +6,7 @@ const CHALLENGE_TOUR_TEXT = Object.freeze({
     pl: Object.freeze({
         tableName: 'Tabela Rising Stars',
         modTableName: 'Tabela {tour}',
-        guide: 'Ranking obejmuje wyłącznie nagrody zdobyte w {tour}. Nie wpływa na główny OOM ani ProTour OOM i ustala kolejność rezerwowych do Players Championship.',
+        guide: 'Ranking obejmuje wyłącznie nagrody zdobyte w {tour}. Nie wpływa na główny OOM ani ProTour OOM i ustala kolejność rezerwowych do Players Championship. Dwaj najwyżej sklasyfikowani zawodnicy bez karty otrzymują na koniec sezonu dwuletnią kartę PDC.',
         player: 'Zawodnik',
         money: 'Nagrody',
         empty: 'Ranking jest pusty. Pierwsze nagrody pojawią się po rozpoczęciu cyklu.'
@@ -14,7 +14,7 @@ const CHALLENGE_TOUR_TEXT = Object.freeze({
     en: Object.freeze({
         tableName: 'Rising Stars table',
         modTableName: '{tour} table',
-        guide: 'The ranking includes only prize money earned on the {tour}. It does not affect the main or ProTour OOM and determines the Players Championship reserve order.',
+        guide: 'The ranking includes only prize money earned on the {tour}. It does not affect the main or ProTour OOM and determines the Players Championship reserve order. The two highest-ranked players without a card earn a two-year PDC Tour Card at the end of the season.',
         player: 'Player',
         money: 'Prize money',
         empty: 'The ranking is empty. The first earnings will appear after the circuit begins.'
@@ -22,7 +22,7 @@ const CHALLENGE_TOUR_TEXT = Object.freeze({
     de: Object.freeze({
         tableName: 'Rising-Stars-Tabelle',
         modTableName: '{tour}-Tabelle',
-        guide: 'Die Rangliste umfasst nur Preisgeld aus der {tour}. Sie zählt weder für die Haupt- noch die ProTour-Rangliste und bestimmt die Ersatzreihenfolge für die Players Championship.',
+        guide: 'Die Rangliste umfasst nur Preisgeld aus der {tour}. Sie zählt weder für die Haupt- noch die ProTour-Rangliste und bestimmt die Ersatzreihenfolge für die Players Championship. Die zwei bestplatzierten Spieler ohne Karte erhalten am Saisonende eine zweijährige PDC Tour Card.',
         player: 'Spieler',
         money: 'Preisgeld',
         empty: 'Die Rangliste ist leer. Die ersten Preisgelder erscheinen nach dem Start der Serie.'
@@ -30,7 +30,7 @@ const CHALLENGE_TOUR_TEXT = Object.freeze({
     nl: Object.freeze({
         tableName: 'Rising Stars-stand',
         modTableName: '{tour}-stand',
-        guide: 'De ranglijst bevat alleen prijzengeld uit de {tour}. Dit telt niet mee voor de hoofd- of ProTour-ranglijst en bepaalt de reservelijst voor de Players Championship.',
+        guide: 'De ranglijst bevat alleen prijzengeld uit de {tour}. Dit telt niet mee voor de hoofd- of ProTour-ranglijst en bepaalt de reservelijst voor de Players Championship. De twee hoogst geklasseerde spelers zonder kaart verdienen aan het einde van het seizoen een PDC Tour Card voor twee jaar.',
         player: 'Speler',
         money: 'Prijzengeld',
         empty: 'De ranglijst is leeg. De eerste verdiensten verschijnen zodra de cyclus begint.'

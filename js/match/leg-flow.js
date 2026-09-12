@@ -1,3 +1,27 @@
+function achievementMatchesTournament(achievement, data) {
+            if (!achievement || !data) return false;
+            const tournament = typeof data === 'object' ? data : null;
+            const names = [tournament?.name, tournament?.sourceName, tournament ? null : data]
+                .map(value => String(value || '').trim())
+                .filter(Boolean);
+            const exactMatch = Array.isArray(achievement.tourMatches)
+                && achievement.tourMatches.some(expected => names.includes(expected));
+            const partialMatch = typeof achievement.tourMatch === 'string' && achievement.tourMatch
+                && names.some(name => name.includes(achievement.tourMatch));
+            let patternMatch = false;
+            if (typeof achievement.tourNamePattern === 'string' && achievement.tourNamePattern) {
+                try {
+                    const pattern = new RegExp(achievement.tourNamePattern, 'i');
+                    patternMatch = names.some(name => pattern.test(name));
+                } catch (_error) {
+                    patternMatch = false;
+                }
+            }
+            const typeMatch = Boolean(tournament && achievement.tournamentSpecialType
+                && tournament.specialType === achievement.tournamentSpecialType);
+            return Boolean(exactMatch || partialMatch || patternMatch || typeMatch);
+        }
+
 function checkAchievements(type, data = null) {
             if (!player.achievements) player.achievements = [];
             let newlyUnlocked = false;
@@ -14,13 +38,7 @@ function checkAchievements(type, data = null) {
                 if (ach.type === 'sudden_death' && type === 'sudden_death') unlock = true;
                 if (ach.type === 'tour_win' && type === 'tour_win') unlock = true;
                 if (ach.type === 'specific_tour' && type === 'tour_win' && data) {
-                    const tournament = typeof data === 'object' ? data : null;
-                    const tournamentName = tournament ? tournament.name : data;
-                    const matchesTournamentName = ach.tourMatches
-                        ? ach.tourMatches.includes(tournamentName)
-                        : tournamentName && tournamentName.includes(ach.tourMatch);
-                    const matchesTournamentType = tournament && ach.tournamentSpecialType && tournament.specialType === ach.tournamentSpecialType;
-                    if (matchesTournamentName || matchesTournamentType) unlock = true;
+                    if (achievementMatchesTournament(ach, data)) unlock = true;
                 }
                 
                 // NOWE WARUNKI: Big Fish, Zamki 100+, Ranking

@@ -45,17 +45,33 @@ const CAREER_PLANNING_TEXT = {
     etVacancy: ['Wolny los', 'Bye', 'Freilos', 'Bye'],
     women: ['4 kobiety spoza Top 80 OOM', '4 women outside the OOM Top 80', '4 Frauen außerhalb der OOM-Top-80', '4 vrouwen buiten de OOM Top 80'],
     youth16to18: ['1 zawodnik w wieku 16–18 lat', '1 player aged 16–18', '1 Spieler im Alter von 16–18', '1 speler van 16–18 jaar'],
-    youth16to23: ['4 zawodników w wieku 16–23 lat', '4 players aged 16–23', '4 Spieler im Alter von 16–23', '4 spelers van 16–23 jaar'],
-    nonCard: ['4 zawodników bez karty PDC', '4 non-Tour-Card players', '4 Spieler ohne Tour Card', '4 spelers zonder Tour Card'],
+    developmentTop3: ['TOP 3 PDC Development Tour', 'PDC Development Tour Top 3', 'Top 3 der PDC Development Tour', 'Top 3 PDC Development Tour'],
+    challengeTop3: ['TOP 3 PDC Challenge Tour', 'PDC Challenge Tour Top 3', 'Top 3 der PDC Challenge Tour', 'Top 3 PDC Challenge Tour'],
+    africaExtra: ['Dodatkowe miejsce dla Afryki', 'Additional African place', 'Zusätzlicher Startplatz für Afrika', 'Extra plaats voor Afrika'],
+    newZealand: ['Dodatkowe miejsce dla Nowej Zelandii', 'Additional New Zealand place', 'Zusätzlicher Startplatz für Neuseeland', 'Extra plaats voor Nieuw-Zeeland'],
     oom81to128: ['4 kolejnych z miejsc 81–128 OOM', 'Next 4 from OOM positions 81–128', 'Nächste 4 der OOM-Plätze 81–128', 'Volgende 4 van OOM-plaatsen 81–128'],
     oomFallback: ['Uzupełnienie brakujących miejsc według OOM', 'Unfilled places allocated by OOM', 'Auffüllen freier Plätze nach OOM', 'Open plaatsen aangevuld volgens OOM'],
-    worldsNote: ['Top 80 wchodzi bezpośrednio. Kolejne pule pomijają już zakwalifikowanych. Decyduje OOM, następnie ProTour i OVR; brak kandydatów uzupełnia OOM.', 'The Top 80 qualify directly. Later routes exclude players already selected. Order: OOM, then ProTour and OVR; missing places are filled by OOM.', 'Die Top 80 qualifizieren sich direkt. Weitere Wege schließen bereits Qualifizierte aus. Reihenfolge: OOM, ProTour, OVR; freie Plätze werden nach OOM ergänzt.', 'De Top 80 plaatst zich direct. Latere routes sluiten reeds geplaatste spelers uit. Volgorde: OOM, ProTour, OVR; open plaatsen worden via OOM aangevuld.'],
+    worldsNote: ['Top 80 wchodzi bezpośrednio. TOP 3 Development Tour i Challenge Tour schodzi w dół własnej tabeli, gdy ktoś ma już awans. Pozostałe pule regionalne również pomijają zakwalifikowanych; braki uzupełnia OOM.', 'The Top 80 qualify directly. Development Tour and Challenge Tour Top 3 places pass down their own rankings when a player has already qualified. Regional routes also skip qualified players; missing places are filled by the OOM.', 'Die Top 80 qualifizieren sich direkt. Die Top-3-Plätze der Development Tour und Challenge Tour rücken in der jeweiligen Rangliste nach, wenn ein Spieler bereits qualifiziert ist. Auch regionale Wege überspringen Qualifizierte; freie Plätze werden nach OOM aufgefüllt.', 'De Top 80 plaatst zich rechtstreeks. De Top 3-plaatsen van de Development Tour en Challenge Tour schuiven door in hun eigen ranking wanneer een speler al geplaatst is. Regionale routes slaan geplaatste spelers eveneens over; open plaatsen worden via de OOM aangevuld.'],
     card: ['Kwalifikator posiadaczy karty PDC', 'PDC Tour Card qualifier', 'PDC-Tour-Card-Qualifikation', 'PDC Tour Card-kwalificatie'],
     host: ['Kwalifikator gospodarzy bez karty', 'Host-nation qualifier without Tour Cards', 'Gastgeberqualifikation ohne Tour Card', 'Gastlandkwalificatie zonder Tour Card'],
     nordicBaltic: ['Kwalifikator nordycko-bałtycki bez karty', 'Nordic & Baltic non-card qualifier', 'Nordisch-baltische Qualifikation ohne Tour Card', 'Noords-Baltische kwalificatie zonder Tour Card'],
     eastEurope: ['Kwalifikator Europy Wschodniej bez karty', 'Eastern Europe non-card qualifier', 'Osteuropa-Qualifikation ohne Tour Card', 'Oost-Europese kwalificatie zonder Tour Card'],
     continentalNote: ['Bezpośredni awans: 16 z OOM i 16 kolejnych z ProTour, wyłącznie z kartą PDC. Pozostałe 16 miejsc pochodzi z czterech kwalifikatorów.', 'Direct places: 16 OOM and the next 16 ProTour players, all with Tour Cards. Four qualifiers award the remaining 16 places.', 'Direktplätze: 16 OOM und die nächsten 16 ProTour-Spieler, alle mit Tour Card. Vier Qualifikationen vergeben die übrigen 16 Plätze.', 'Direct: 16 OOM-spelers en de volgende 16 ProTour-spelers, allemaal met Tour Card. Vier kwalificaties verdelen de overige 16 plaatsen.'],
-    automatic: ['Awans bezpośredni: Top 16 OOM + 24 kolejnych z ProTour', 'Direct: Top 16 OOM + next 24 ProTour', 'Direkt: Top 16 OOM + nächste 24 ProTour', 'Direct: Top 16 OOM + volgende 24 ProTour'],
+    automatic: ['Zapisana pula 40 miejsc bezpośrednich', 'Saved pool of 40 direct places', 'Gespeicherter Pool mit 40 Direktplätzen', 'Opgeslagen groep van 40 rechtstreekse plaatsen'],
+    slamTelevisedFinalists: ['Finaliści turniejów telewizyjnych (maks. 24)', 'Televised-event finalists (max. 24)', 'Finalisten der TV-Turniere (max. 24)', 'Finalisten van tv-toernooien (max. 24)'],
+    slamYouth2025: ['Finaliści młodzieżowych MŚ 2025', '2025 World Youth Championship finalists', 'Finalisten der Jugend-WM 2025', 'Finalisten jeugd-WK 2025'],
+    slamYouth: ['Najwyżej sklasyfikowany zawodnik U21', 'Highest-ranked U21 player', 'Bestplatzierter U21-Spieler', 'Hoogst geklasseerde U21-speler'],
+    slamChallenge: ['Lider PDC Challenge Tour', 'PDC Challenge Tour leader', 'Führender der PDC Challenge Tour', 'Leider PDC Challenge Tour'],
+    slamDevelopment: ['Lider PDC Development Tour', 'PDC Development Tour leader', 'Führender der PDC Development Tour', 'Leider PDC Development Tour'],
+    slamWomen: ['Dwie najwyżej sklasyfikowane kobiety', 'Two highest-ranked women', 'Zwei bestplatzierte Frauen', 'Twee hoogst geklasseerde vrouwen'],
+    slamAsia: ['Najwyżej sklasyfikowany zawodnik z Azji', 'Highest-ranked Asian player', 'Bestplatzierter Spieler aus Asien', 'Hoogst geklasseerde Aziatische speler'],
+    slamNorthAmerica: ['Najwyżej sklasyfikowany zawodnik z Ameryki Północnej', 'Highest-ranked North American player', 'Bestplatzierter Spieler aus Nordamerika', 'Hoogst geklasseerde Noord-Amerikaanse speler'],
+    slamNordicBaltic: ['Najwyżej sklasyfikowany zawodnik nordycko-bałtycki', 'Highest-ranked Nordic & Baltic player', 'Bestplatzierter nordisch-baltischer Spieler', 'Hoogst geklasseerde Noordse/Baltische speler'],
+    slamAnz: ['Najwyżej sklasyfikowany zawodnik z Australii lub Nowej Zelandii', 'Highest-ranked Australian or New Zealand player', 'Bestplatzierter Spieler aus Australien oder Neuseeland', 'Hoogst geklasseerde speler uit Australië of Nieuw-Zeeland'],
+    slamEuropeanTourWinners: ['Uzupełnienie: zwycięzcy European Tour', 'Top-up: European Tour winners', 'Auffüllung: European-Tour-Sieger', 'Aanvulling: winnaars European Tour'],
+    slamPlayersChampionshipWinners: ['Uzupełnienie: zwycięzcy Players Championship', 'Top-up: Players Championship winners', 'Auffüllung: Players-Championship-Sieger', 'Aanvulling: winnaars Players Championship'],
+    slamFallback: ['Awaryjne uzupełnienie według OOM', 'Fallback allocation by OOM', 'Ersatzweise Auffüllung nach OOM', 'Noodaanvulling volgens OOM'],
+    slamNote: ['Grand Slam ma 40 miejsc bezpośrednich i 8 z kwalifikatora kartowiczów. Powtarzający się zawodnik zajmuje tylko jedno miejsce. Braki uzupełniają najpierw zwycięzcy European Tour, potem Players Championship; przy równej liczbie zwycięstw decyduje OOM.', 'The Grand Slam has 40 direct places and 8 from the Tour Card Holder Qualifier. A duplicate player occupies only one place. European Tour winners fill gaps first, followed by Players Championship winners; OOM breaks ties in win counts.', 'Der Grand Slam hat 40 Direktplätze und 8 Plätze aus der Tour-Card-Qualifikation. Doppelt qualifizierte Spieler belegen nur einen Platz. Zuerst rücken European-Tour-Sieger nach, dann Players-Championship-Sieger; bei gleicher Siegzahl entscheidet die OOM.', 'De Grand Slam heeft 40 rechtstreekse plaatsen en 8 via de Tour Card Holder Qualifier. Een dubbele speler bezet maar één plaats. Eerst vullen winnaars van de European Tour aan, daarna winnaars van Players Championship; bij een gelijk aantal zeges beslist de OOM.'],
     crownOom24: ['Top 24 OOM — awans bezpośredni', 'Top 24 OOM — direct qualification', 'Top 24 OOM — direkte Qualifikation', 'Top 24 OOM — directe plaatsing'],
     crownQualifier: ['Kwalifikacje: 8 miejsc', 'Qualifier: 8 places', 'Qualifikation: 8 Plätze', 'Kwalificatie: 8 plaatsen'],
     crownMastersNote: ['Top 24 posiadaczy karty według OOM awansuje bezpośrednio. O osiem pozostałych miejsc walczą inni kartowicze oraz TOP 8 Rising Stars i TOP 8 Future Champions z poprzedniego sezonu. Gdy wcześniejsza tabela nie istnieje (pierwsza edycja 2026), kolejność zastępcza wynika z OVR, potem OOM.', 'The Top 24 Tour Card holders by OOM qualify directly. Other card holders plus the previous season’s Rising Stars Top 8 and Future Champions Top 8 compete for eight places. If no prior table exists (the first 2026 edition), OVR and then OOM provide the fallback order.', 'Die Top 24 Tour-Card-Inhaber der OOM sind direkt qualifiziert. Die übrigen Karteninhaber sowie die Top 8 der Rising Stars und Future Champions aus der Vorsaison spielen um acht Plätze. Fehlt eine frühere Rangliste (erste Ausgabe 2026), entscheidet ersatzweise OVR, dann OOM.', 'De Top 24 Tour Card-houders volgens de OOM plaatsen zich direct. De overige kaarthouders plus de Top 8 van Rising Stars en Future Champions van het vorige seizoen spelen om acht plaatsen. Ontbreekt zo’n eerdere stand (de eerste editie van 2026), dan bepaalt eerst OVR en daarna OOM de volgorde.'],
@@ -91,6 +107,7 @@ const CAREER_PLANNING_TEXT = {
     amount: ['Kwota', 'Amount', 'Betrag', 'Bedrag'],
     noExpiries: ['Nie masz obecnie pieniędzy rankingowych do obrony.', 'You currently have no ranking money to defend.', 'Du hast aktuell kein Ranglistenpreisgeld zu verteidigen.', 'Je hebt momenteel geen rankinggeld te verdedigen.'],
     reconciliation: ['Historyczne wyrównanie OOM', 'Historical OOM adjustment', 'Historische OOM-Anpassung', 'Historische OOM-correctie'],
+    editorAdjustment: ['Korekta w edytorze zawodników', 'Player editor adjustment', 'Anpassung im Spielereditor', 'Correctie in spelerseditor'],
     legacy: ['Historyczna nagroda', 'Historical prize', 'Historisches Preisgeld', 'Historische prijs'],
     seasonTotal: ['{name} — suma sezonu {year}', '{name} — season {year} total', '{name} — Saison {year} gesamt', '{name} — seizoenstotaal {year}']
 };
@@ -194,9 +211,16 @@ function buildQualificationPreview(tournament, candidates, referenceDate = curre
         const qualifier = tournamentDatabase.find(event => event.specialType === 'pdcTourCardQualifier'
             && [tournament.name, tournament.sourceName].filter(Boolean).includes(event.qualifierFor));
         const saved = tournament.pdcTourCardQualification;
-        const state = saved?.year === year ? saved : null;
-        const automatic = state ? resolve(state.automaticPlayerIds) : buildPdcTourCardAutomaticField(tournament, all);
-        add('automatic', 40, automatic, Boolean(state));
+        const state = saved?.year === year && Array.isArray(saved?.automaticPlayerIds) ? saved : null;
+        const projected = state ? null : buildGrandSlamAutomaticQualification(tournament, all, referenceDate);
+        const qualificationCategories = state?.categories || projected?.categories || [];
+        if (qualificationCategories.length) {
+            qualificationCategories.forEach(category => add(category.key, category.requested,
+                state ? resolve(category.playerIds) : category.players, Boolean(state)));
+        } else if (state) {
+            add('automatic', 40, resolve(state.automaticPlayerIds), true);
+        }
+        const automatic = state ? resolve(state.automaticPlayerIds) : projected.players;
         const used = new Set(automatic.map(key));
         const eligible = all.filter(p => p.hasTourCard === true && !used.has(key(p)));
         if (qualifier) {
@@ -209,6 +233,7 @@ function buildQualificationPreview(tournament, candidates, referenceDate = curre
                 .filter(p => !used.has(key(p))).slice(0, 8));
         }
         size = 48;
+        note = 'slamNote';
     } else if (kind === 'worldSeries') {
         const state = typeof worldMastersState !== 'undefined' && worldMastersState?.year === year ? worldMastersState : {};
         const wsKey = getWorldMastersPlayerKey;
@@ -357,6 +382,7 @@ function renderPlanningContinentalReserves(preview) {
 function getPlanningPrizeName(entry) {
     const key = entry.eventKey || entry.tournament || '';
     if (key.includes('opening-reconciliation') || key === '__opening_oom_reconciliation__') return trPlanning('reconciliation');
+    if (key === '__player_editor_adjustment__') return trPlanning('editorAdjustment');
     const historical = key.match(/^(players-championship-finals|players-championship|european-tour|uk-open|world-championship|world-matchplay|world-grand-prix|european-championship|grand-slam)-(\d{4})$/);
     if (historical) {
         const names = { 'players-championship-finals': 'Players Championship Finals', 'players-championship': 'Players Championship',

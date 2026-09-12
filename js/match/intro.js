@@ -146,7 +146,10 @@ function startCrowd() {
         function playMatchIntro(p1Name, p2Name) {
             cancelMatchIntro();
             const tournament = typeof activeTournament !== 'undefined' ? activeTournament : null;
-            if (currentMatch?.isTournament && isFloorTournamentWithoutWalkons(tournament)) {
+            const allTournamentWalkons = typeof areWalkonsEnabledInAllTournaments === 'function'
+                && areWalkonsEnabledInAllTournaments();
+            if (currentMatch?.isTournament && isFloorTournamentWithoutWalkons(tournament)
+                && !allTournamentWalkons) {
                 startMatchWithoutWalkons();
                 return false;
             }

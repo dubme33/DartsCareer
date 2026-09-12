@@ -42,8 +42,11 @@ function getTournamentStaminaCost(tournament) {
         ? isEuropeanTourTournament(tournament)
         : (name.includes('continental tour') || name.includes('european tour'));
     const isPremierLeagueEvent = name.includes('premier league') || name.includes('global darts league');
+    const isSecondaryFloorEvent = ['challengeTour', 'developmentTour'].includes(tournament.specialType)
+        || name.includes('challenge tour') || name.includes('rising stars circuit')
+        || name.includes('development tour') || name.includes('future champions circuit');
 
-    if (isPlayersEvent || isContinentalTourEvent || isPremierLeagueEvent) {
+    if (isPlayersEvent || isContinentalTourEvent || isPremierLeagueEvent || isSecondaryFloorEvent) {
         return STAMINA_CONFIG.regularTournamentCost;
     }
 

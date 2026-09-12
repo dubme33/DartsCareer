@@ -188,7 +188,7 @@ const pdcPlayers = [
     // odpowiednikami, aby zachować konwencję całej bazy gry.
     { name: "Krzysztof Kciuba", country: "Polska", birthYear: 1980, ovr: 61, scoring: 62, doubles: 60, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0 },
     { name: "Karolina Radecka", country: "Polska", gender: "female", birthYear: 1987, ovr: 60, scoring: 61, doubles: 59, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0 },
-    { name: "Radoslaw Szaranski", country: "Polska", birthYear: 1979, ovr: 62, scoring: 63, doubles: 61, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0 },
+    { name: "Radosz Sagan", country: "Polska", birthYear: 1979, ovr: 59, scoring: 60, doubles: 58, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0, challengeTourPrizeMoney: 0, developmentTourPrizeMoney: 0, hasTourCard: false },
     { name: "Miroslaw Grudzinski", country: "Polska", birthYear: 1984, ovr: 58, scoring: 59, doubles: 57, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0 },
     { name: "Dawid Robacki", country: "Polska", birthYear: 1981, ovr: 57, scoring: 58, doubles: 56, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0 },
     { name: "Wojciech Brulewicz", country: "Polska", birthYear: 1992, ovr: 56, scoring: 57, doubles: 55, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0 },
@@ -359,7 +359,7 @@ const challengeTour2026ExistingReferenceRanks = Object.freeze([
     [9, "Elliot Mercer"], [10, "Jake Tweddell"], [11, "Nate Potter"], [12, "Chris Wickenden"],
     [13, "Henry Ward"], [14, "Steven Lennon"], [15, "Martin Dragt"], [16, "Scot Waites"],
     [17, "Jake Aldridge"], [18, "Lew Pride"], [23, "Michele Turetti"], [24, "Tom Evetts"],
-    [28, "Ollie Mitchell"], [33, "Pat Williams"], [36, "Cal Goffin"], [39, "Mike Unterbuchner"],
+    [28, "Ollie Mitchell"], [32, "Radosz Sagan"], [33, "Pat Williams"], [36, "Cal Goffin"], [39, "Mike Unterbuchner"],
     [53, "Nicolas Thullier"], [56, "Patrick Tringel"], [57, "Jose Justica"], [73, "Drago Horvat"],
     [88, "Scot Campbell"], [89, "Greg Hall"], [93, "Pal Szekel"], [95, "Marcel Walper"]
 ]);
@@ -375,7 +375,6 @@ const challengeTour2026PlayerAdditions = Object.freeze([
     [29, "Stefan Koster", "Holandia", 2001],
     [30, "Dean Haines", "Anglia", 1999],
     [31, "Davy Evens", "Anglia", 1989],
-    [32, "Radosz Sagan", "Polska", 1979],
     [34, "Dan Truman", "Szkocja", 1979],
     [35, "Benny Towns", "Anglia", 2009],
     [37, "Jensen Walters", "Anglia", 2006],
@@ -610,7 +609,6 @@ const playerDatabaseCorrections = {
     'jose de sousa': { ovr: 70, scoring: 71, doubles: 69 },
     'josé de sousa': { ovr: 70, scoring: 71, doubles: 69 },
     'motomu sakaii': { ovr: 66, scoring: 67, doubles: 65 },
-    'radoslaw szaranski': { ovr: 62, scoring: 63, doubles: 61 },
     'adam leak': { country: 'Australia' },
     'adam leek': { country: 'Australia' },
     'adam leeke': { country: 'Australia' },
@@ -771,6 +769,27 @@ function applyKnownPlayerCorrections(players, options = {}) {
 
 applyKnownPlayerCorrections(pdcPlayers);
 
+// Ten sam prawdziwy zawodnik został wcześniej dodany dwukrotnie: jako stary
+// regionalny wpis oraz później jako uczestnik Challenge Tour. Zachowujemy
+// nowszy profil "Radosz Sagan" (Radek Szagański w modzie), a poniższa migracja
+// usuwa dawny wariant również ze starych zapisów i paczek moda.
+const obsoleteDuplicatePlayerNames = new Set([
+    'radoslaw szaranski',
+    'radoslaw szaganski',
+    'radosław szagański'
+]);
+
+function removeObsoleteDuplicatePlayers(players) {
+    if (!Array.isArray(players)) return 0;
+    const normalize = value => String(value || '').trim().replace(/\s+/g, ' ').toLocaleLowerCase('pl');
+    const remaining = players.filter(candidate => ![candidate?.sourceName, candidate?.name]
+        .map(normalize)
+        .some(name => obsoleteDuplicatePlayerNames.has(name)));
+    const removed = players.length - remaining.length;
+    if (removed) players.splice(0, players.length, ...remaining);
+    return removed;
+}
+
 const worldCupRosterStartIndex = pdcPlayers.findIndex(candidate => candidate.name === 'Jani Havis' && candidate.country === 'Finlandia');
 const worldCupNonRankingPlayerKeys = new Set(
     worldCupRosterStartIndex >= 0
@@ -799,5 +818,6 @@ applyWorldCupNonRankingStatus(pdcPlayers);
 // Narodów. Dzięki temu zachowujemy indeksy starszej bazy używane przez mody i
 // nie klasyfikujemy graczy cyklów pobocznych jako gości turniejów reprezentacyjnych.
 pdcPlayers.push(...challengeTour2026NewPlayers, ...developmentTour2026NewPlayers, ...additionalPolishPlayers2026);
+removeObsoleteDuplicatePlayers(pdcPlayers);
 
 // --- BAZA TURNIEJÓW ---

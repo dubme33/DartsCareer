@@ -1411,6 +1411,11 @@ function finishWorldCupMatch() {
 
 function finishWorldCupTournament(winner) {
     const completedFinanceTournament = activeTournament;
+    const finalMatch = worldCupState?.knockout?.round === 2 ? worldCupState.knockout.matches?.[0] : null;
+    const runnerUpId = finalMatch
+        ? (finalMatch.winnerId === finalMatch.team1Id ? finalMatch.team2Id : finalMatch.team1Id)
+        : null;
+    const runnerUp = runnerUpId ? getWorldCupTeam(runnerUpId) : null;
     worldCupState.phase = 'completed';
     worldCupState.completed = true;
     if (activeTournament) {
@@ -1419,6 +1424,9 @@ function finishWorldCupTournament(winner) {
             country: winner.country,
             players: winner.players.map(candidate => candidate.name)
         };
+        if (runnerUp && typeof archiveGrandSlamWorldCupFinalists === 'function') {
+            archiveGrandSlamWorldCupFinalists(activeTournament, winner, runnerUp);
+        }
         if (typeof recordCareerChampion === 'function') recordCareerChampion(activeTournament, winner);
         activeTournament.historyLogs = buildWorldCupTournamentHistory(winner);
         if (typeof recordWorldNewsTeamTitle === 'function') recordWorldNewsTeamTitle(winner, activeTournament);

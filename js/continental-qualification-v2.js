@@ -1,5 +1,6 @@
 const CONTINENTAL_QUALIFIER_TYPE = 'continentalQualifier';
 const CONTINENTAL_QUALIFICATION_VERSION = 2;
+const CONTINENTAL_TOUR_DRAW_VERSION = 1;
 const CONTINENTAL_TOUR_FIELD_SIZE = 48;
 const CONTINENTAL_TOP_16_WITHDRAWAL_CHANCE = 0.20;
 
@@ -552,6 +553,30 @@ function getContinentalTourMainField(mainTournament) {
         fieldSize,
         shortfall: Math.max(0, CONTINENTAL_TOUR_FIELD_SIZE - fieldSize)
     };
+}
+
+function buildContinentalTourMainDraw(mainTournament, field = getContinentalTourMainField(mainTournament), random = Math.random) {
+    if (!field) return [];
+    const seeds = field.oomPlayers.slice(0, 16);
+    const rankingEntrants = shuffleContinentalQualifierPlayers(field.proTourPlayers.slice(0, 16), random);
+    const qualifierEntrants = shuffleContinentalQualifierPlayers(field.qualifiedPlayers.slice(0, 16), random);
+    const seedOrder = [1, 16, 8, 9, 4, 13, 5, 12, 2, 15, 7, 10, 3, 14, 6, 11];
+    const draw = [];
+
+    for (let index = 0; index < 16; index++) {
+        // Top 16 OOM rozpoczyna od drugiej rundy. W każdym meczu pierwszej rundy
+        // zawodnik z miejsca rankingowego ProTour trafia na jednego kwalifikanta.
+        // Osobne tasowanie obu koszyków uniemożliwia parę kwalifikant–kwalifikant.
+        draw.push(
+            seeds[seedOrder[index] - 1] || createContinentalQualifierBye(),
+            createContinentalQualifierBye(),
+            rankingEntrants[index] || createContinentalQualifierBye(),
+            qualifierEntrants[index] || createContinentalQualifierBye()
+        );
+    }
+
+    if (mainTournament) mainTournament.continentalTourDrawVersion = CONTINENTAL_TOUR_DRAW_VERSION;
+    return draw;
 }
 
 function getContinentalQualifierOutcomeMessage(qualified) {

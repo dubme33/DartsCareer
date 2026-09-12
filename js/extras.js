@@ -375,6 +375,7 @@ function initCareerChronicle() {
                             ? candidate.defaultTemplateIndex
                             : index
                     }));
+                    if (typeof removeObsoleteDuplicatePlayers === 'function') removeObsoleteDuplicatePlayers(pdcPlayers);
                     if (typeof removeRetiredPlayersFromPool === 'function') removeRetiredPlayersFromPool(pdcPlayers);
                     if (typeof applyKnownPlayerCorrections === 'function') applyKnownPlayerCorrections(pdcPlayers);
                     if (typeof deduplicatePdcPlayers === 'function') deduplicatePdcPlayers();
@@ -442,6 +443,7 @@ function initCareerChronicle() {
                             pdcPlayers.push(newCandidate);
                         }
                     });
+                    if (typeof removeObsoleteDuplicatePlayers === 'function') removeObsoleteDuplicatePlayers(pdcPlayers);
                     // Mod nie może wskrzesić zawodnika usuniętego przez system
                     // emerytur — nawet gdy jego prawdziwe nazwisko różni się od
                     // bazowego pseudonimu.
@@ -482,7 +484,9 @@ function initCareerChronicle() {
             if (modData.tournamentDatabase && typeof syncPdc2026TournamentCalendar === 'function') {
                 syncPdc2026TournamentCalendar(tournamentDatabase, isCareerActive ? currentDate : null);
             }
-            if (modData.historicalChampions && typeof applyHistoricalChampionModOverrides === 'function') {
+            if (typeof applyHistoricalChampionModData === 'function') {
+                applyHistoricalChampionModData(modData);
+            } else if (modData.historicalChampions && typeof applyHistoricalChampionModOverrides === 'function') {
                 applyHistoricalChampionModOverrides(modData.historicalChampions);
             }
 

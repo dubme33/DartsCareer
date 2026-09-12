@@ -784,6 +784,7 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
 
                 player = gameState.player;
                 if (typeof initializeCareerDifficulty === 'function') initializeCareerDifficulty(player);
+                if (typeof initializeWalkonTournamentMode === 'function') initializeWalkonTournamentMode(player);
                 if (!player.activeSponsors) player.activeSponsors = [];
                 if (typeof player.technicalPartner === 'undefined') player.technicalPartner = null;
                 if (!player.historyPT) player.historyPT = {};
@@ -797,6 +798,7 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
                     if (!candidate.historyMain) candidate.historyMain = {};
                     pdcPlayers.push(candidate);
                 });
+                if (typeof removeObsoleteDuplicatePlayers === 'function') removeObsoleteDuplicatePlayers(pdcPlayers);
                 if (typeof restorePlayerLifecycleState === 'function') restorePlayerLifecycleState(gameState.playerLifecycleState);
                 mergeNewDefaultPlayersIntoSave();
                 if (typeof applyKnownPlayerCorrections === 'function') {
@@ -841,6 +843,9 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
                 }
                 if (typeof migratePdcTourCardSystem === 'function') {
                     migratePdcTourCardSystem([player, ...pdcPlayers], currentDate);
+                }
+                if (typeof migratePdcSecondaryTourCardAwards === 'function') {
+                    migratePdcSecondaryTourCardAwards([player, ...pdcPlayers], currentDate, player);
                 }
                 if (typeof initializeCareerRecords === 'function') initializeCareerRecords();
                 if (typeof initializeTournamentFinances === 'function') initializeTournamentFinances();
@@ -1116,6 +1121,50 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
         let availableSponsorOffers = [];
         let availableTechOffers = [];
         const TECH_SPONSOR_CONTRACT_MONTHS = Object.freeze({ min: 18, max: 36 });
+        const SPONSOR_OFFER_SORT_MODES = Object.freeze([
+            'default', 'payout-desc', 'payout-asc', 'months-desc', 'months-asc'
+        ]);
+        let sponsorOfferSortMode = 'default';
+
+        function normalizeSponsorOfferSortMode(value) {
+            return SPONSOR_OFFER_SORT_MODES.includes(value) ? value : 'default';
+        }
+
+        function getSortedSponsorOffers(offers, mode = sponsorOfferSortMode) {
+            const normalizedMode = normalizeSponsorOfferSortMode(mode);
+            const decorated = (Array.isArray(offers) ? offers : [])
+                .map((offer, index) => ({ offer, index }));
+            if (normalizedMode === 'default') return decorated.map(entry => entry.offer);
+
+            decorated.sort((first, second) => {
+                const payoutDifference = (Number(second.offer?.monthlyValue) || 0)
+                    - (Number(first.offer?.monthlyValue) || 0);
+                const monthsDifference = (Number(second.offer?.months) || 0)
+                    - (Number(first.offer?.months) || 0);
+                let difference = 0;
+                if (normalizedMode === 'payout-desc') difference = payoutDifference;
+                else if (normalizedMode === 'payout-asc') difference = -payoutDifference;
+                else if (normalizedMode === 'months-desc') difference = monthsDifference;
+                else if (normalizedMode === 'months-asc') difference = -monthsDifference;
+                if (difference) return difference;
+
+                // Przy remisie ważniejszy jest drugi parametr oferty, a następnie
+                // zachowujemy kolejność, w której oferta została wylosowana.
+                const secondaryDifference = normalizedMode.startsWith('payout')
+                    ? monthsDifference
+                    : payoutDifference;
+                return secondaryDifference || first.index - second.index;
+            });
+            return decorated.map(entry => entry.offer);
+        }
+
+        function changeSponsorOfferSort(value) {
+            sponsorOfferSortMode = normalizeSponsorOfferSortMode(value);
+            const select = document.getElementById('sponsor-offer-sort');
+            if (select) select.value = sponsorOfferSortMode;
+            showSponsorsScreen();
+            return sponsorOfferSortMode;
+        }
 
         function getTechnicalSponsorContractMonths() {
             const { min, max } = TECH_SPONSOR_CONTRACT_MONTHS;
@@ -1197,9 +1246,10 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
 
         function getSponsorLogoHTML(sponsorName) {
             // Szuka loga w modzie, jeśli go nie ma -> szuka go w lokalnym folderze sponsors/, jeśli i tego nie ma -> wyświetla sam tekst
-            let imgSrc = (moddedAssets && moddedAssets.sponsors && moddedAssets.sponsors[sponsorName]) 
-                ? moddedAssets.sponsors[sponsorName] 
-                : `sponsors/${sponsorName}.png`;
+            const modLogo = typeof getModSponsorLogoAsset === 'function'
+                ? getModSponsorLogoAsset(moddedAssets, sponsorName)
+                : moddedAssets?.sponsors?.[sponsorName];
+            let imgSrc = modLogo || `sponsors/${sponsorName}.png`;
                 
             const safeName = escapeHtml(sponsorName);
             return `<div class="sponsor-logo" style="overflow: hidden; padding: 2px;">
@@ -1221,6 +1271,8 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
             if (typeof renderPlayerStaffContextNotes === 'function') renderPlayerStaffContextNotes();
 
             document.getElementById('sponsor-count').innerText = player.activeSponsors.length;
+            const sortSelect = document.getElementById('sponsor-offer-sort');
+            if (sortSelect) sortSelect.value = sponsorOfferSortMode;
 
             // Renderowanie Aktywnych Zwykłych Sponsorów
             const actRegBox = document.getElementById('sponsors-active');
@@ -1254,7 +1306,7 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
             // Renderowanie Ofert Zwykłych
             const offRegBox = document.getElementById('sponsor-offers-list');
             offRegBox.innerHTML = "";
-            availableSponsorOffers.forEach(s => {
+            getSortedSponsorOffers(availableSponsorOffers).forEach(s => {
                 let btn = player.activeSponsors.length >= 3 ? `<button class="btn-sign" disabled style="background:gray;">Limit (3/3)</button>` : `<button class="btn-sign" onclick="signContract('${s.id}', 'regular')">${t('t-sign')}</button>`;
                 offRegBox.innerHTML += `<div class="sponsor-card">
                     ${getSponsorLogoHTML(s.name)}
@@ -1271,7 +1323,7 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
             // Renderowanie Ofert Technicznych
             const offTechBox = document.getElementById('tech-offers-list');
             offTechBox.innerHTML = "";
-            availableTechOffers.forEach(offer => { // Zmiana nazwy zmiennej z 't' na 'offer'
+            getSortedSponsorOffers(availableTechOffers).forEach(offer => { // Zmiana nazwy zmiennej z 't' na 'offer'
                 let btn = player.technicalPartner ? `<button class="btn-sign" disabled style="background:gray;">Limit (1/1)</button>` : `<button class="btn-sign" onclick="signContract('${offer.id}', 'tech')">${t('t-sign')}</button>`;
                 offTechBox.innerHTML += `<div class="sponsor-card">
                     ${getSponsorLogoHTML(offer.name)}

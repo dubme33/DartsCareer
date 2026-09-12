@@ -1,5 +1,5 @@
 const UK_OPEN_TYPE = 'ukOpen';
-const UK_OPEN_QUALIFICATION_VERSION = 1;
+const UK_OPEN_QUALIFICATION_VERSION = 2;
 const UK_OPEN_FIELD_SIZE = 160;
 const UK_OPEN_CARD_HOLDER_PLACES = 128;
 const UK_OPEN_SIDE_TOUR_PLACES = 16;
@@ -116,13 +116,21 @@ function buildUKOpenQualificationState(candidates, referenceDate = (typeof curre
 function isValidUKOpenQualificationState(state, referenceDate = (typeof currentDate !== 'undefined' ? currentDate : null)) {
     const date = referenceDate instanceof Date ? referenceDate : new Date(referenceDate || Date.now());
     const year = Number.isNaN(date.getTime()) ? 2026 : date.getFullYear();
-    return Boolean(state && state.version === UK_OPEN_QUALIFICATION_VERSION && state.year === year
-        && UK_OPEN_GROUPS.every(group => Array.isArray(state[group.stateKey])));
+    if (!state || state.version !== UK_OPEN_QUALIFICATION_VERSION || state.year !== year
+        || !UK_OPEN_GROUPS.every(group => Array.isArray(state[group.stateKey])
+            && state[group.stateKey].length === group.places)) return false;
+    const playerIds = UK_OPEN_GROUPS.flatMap(group => state[group.stateKey]);
+    return playerIds.length === UK_OPEN_FIELD_SIZE && new Set(playerIds).size === UK_OPEN_FIELD_SIZE;
 }
 
 function ensureUKOpenQualificationState(tournament, candidates, referenceDate = (typeof currentDate !== 'undefined' ? currentDate : null)) {
     if (!tournament) return buildUKOpenQualificationState(candidates, referenceDate);
     if (!isValidUKOpenQualificationState(tournament.ukOpenQualification, referenceDate)) {
+        const availablePlayers = getUKOpenCandidates(candidates);
+        if (availablePlayers.filter(candidate => candidate.hasTourCard === true).length < UK_OPEN_CARD_HOLDER_PLACES
+            && typeof fillPdcTourCardVacancies === 'function') {
+            fillPdcTourCardVacancies(availablePlayers, referenceDate, 'vacancy');
+        }
         tournament.ukOpenQualification = buildUKOpenQualificationState(candidates, referenceDate);
     }
     return tournament.ukOpenQualification;

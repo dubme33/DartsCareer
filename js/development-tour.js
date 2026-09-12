@@ -9,7 +9,7 @@ const DEVELOPMENT_TOUR_TEXT = Object.freeze({
     pl: Object.freeze({
         tableName: 'Tabela Future Champions',
         modTableName: 'Tabela {tour}',
-        guide: 'Ranking obejmuje wyłącznie nagrody zdobyte w {tour}. Cykl jest dostępny dla graczy, którzy na początku roku mają 16–23 lata i nie zajmują miejsca w TOP 64 głównego OOM. Nagrody nie wpływają na pozostałe rankingi.',
+        guide: 'Ranking obejmuje wyłącznie nagrody zdobyte w {tour}. Cykl jest dostępny dla graczy, którzy na początku roku mają 16–23 lata i nie zajmują miejsca w TOP 64 głównego OOM. Nagrody nie wpływają na pozostałe rankingi. Dwaj najwyżej sklasyfikowani zawodnicy bez karty otrzymują na koniec sezonu dwuletnią kartę PDC.',
         player: 'Zawodnik',
         money: 'Nagrody',
         empty: 'Ranking jest pusty. Pierwsze nagrody pojawią się po rozpoczęciu cyklu.'
@@ -17,7 +17,7 @@ const DEVELOPMENT_TOUR_TEXT = Object.freeze({
     en: Object.freeze({
         tableName: 'Future Champions table',
         modTableName: '{tour} table',
-        guide: 'The ranking includes only prize money earned on the {tour}. The circuit is open to players aged 16–23 at the start of the year who are outside the main OOM Top 64. Prize money does not affect other rankings.',
+        guide: 'The ranking includes only prize money earned on the {tour}. The circuit is open to players aged 16–23 at the start of the year who are outside the main OOM Top 64. Prize money does not affect other rankings. The two highest-ranked players without a card earn a two-year PDC Tour Card at the end of the season.',
         player: 'Player',
         money: 'Prize money',
         empty: 'The ranking is empty. The first earnings will appear after the circuit begins.'
@@ -25,7 +25,7 @@ const DEVELOPMENT_TOUR_TEXT = Object.freeze({
     de: Object.freeze({
         tableName: 'Future-Champions-Tabelle',
         modTableName: '{tour}-Tabelle',
-        guide: 'Die Rangliste umfasst nur Preisgeld aus der {tour}. Spielberechtigt sind zu Jahresbeginn 16- bis 23-Jährige außerhalb der Top 64 der Haupt-OOM. Das Preisgeld zählt für keine andere Rangliste.',
+        guide: 'Die Rangliste umfasst nur Preisgeld aus der {tour}. Spielberechtigt sind zu Jahresbeginn 16- bis 23-Jährige außerhalb der Top 64 der Haupt-OOM. Das Preisgeld zählt für keine andere Rangliste. Die zwei bestplatzierten Spieler ohne Karte erhalten am Saisonende eine zweijährige PDC Tour Card.',
         player: 'Spieler',
         money: 'Preisgeld',
         empty: 'Die Rangliste ist leer. Die ersten Preisgelder erscheinen nach dem Start der Serie.'
@@ -33,7 +33,7 @@ const DEVELOPMENT_TOUR_TEXT = Object.freeze({
     nl: Object.freeze({
         tableName: 'Future Champions-stand',
         modTableName: '{tour}-stand',
-        guide: 'De ranglijst bevat alleen prijzengeld uit de {tour}. De reeks is voor spelers die aan het begin van het jaar 16–23 zijn en buiten de Top 64 van de hoofd-OOM staan. Het prijzengeld telt niet mee voor andere ranglijsten.',
+        guide: 'De ranglijst bevat alleen prijzengeld uit de {tour}. De reeks is voor spelers die aan het begin van het jaar 16–23 zijn en buiten de Top 64 van de hoofd-OOM staan. Het prijzengeld telt niet mee voor andere ranglijsten. De twee hoogst geklasseerde spelers zonder kaart verdienen aan het einde van het seizoen een PDC Tour Card voor twee jaar.',
         player: 'Speler',
         money: 'Prijzengeld',
         empty: 'De ranglijst is leeg. De eerste verdiensten verschijnen zodra de cyclus begint.'

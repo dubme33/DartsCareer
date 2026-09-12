@@ -7,6 +7,34 @@ function createEmptyModAssets() {
     return { photos: Object.create(null), music: Object.create(null), sounds: Object.create(null), sponsors: Object.create(null) };
 }
 
+const MOD_SPONSOR_LOGO_ALIAS_GROUPS = Object.freeze([
+    Object.freeze(['elten', 'eltensafetyshoes'])
+]);
+
+function normalizeModSponsorLogoName(value) {
+    return String(value || '')
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLocaleLowerCase('en')
+        .replace(/[^a-z0-9]/g, '');
+}
+
+function getModSponsorLogoAsset(assets, sponsorName) {
+    const sponsorAssets = assets?.sponsors;
+    if (!sponsorAssets || typeof sponsorAssets !== 'object') return '';
+    if (typeof sponsorAssets[sponsorName] === 'string') return sponsorAssets[sponsorName];
+
+    const normalizedName = normalizeModSponsorLogoName(sponsorName);
+    if (!normalizedName) return '';
+    const acceptedNames = new Set([normalizedName]);
+    MOD_SPONSOR_LOGO_ALIAS_GROUPS.forEach(group => {
+        if (group.includes(normalizedName)) group.forEach(alias => acceptedNames.add(alias));
+    });
+    const match = Object.entries(sponsorAssets).find(([assetName, assetUrl]) =>
+        typeof assetUrl === 'string' && acceptedNames.has(normalizeModSponsorLogoName(assetName)));
+    return match?.[1] || '';
+}
+
 async function readModEntryBlob(entry, mimeType) {
     const blob = await entry.async('blob');
     if (!(blob instanceof Blob)) throw new Error('Niepoprawny plik binarny w modzie.');

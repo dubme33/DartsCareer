@@ -110,6 +110,7 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
                     sourceName: selectedPlayer.sourceName || selectedPlayer.name,
                     difficulty: typeof getSelectedCareerDifficulty === 'function'
                         ? getSelectedCareerDifficulty('existing') : 'normal',
+                    walkonTournamentMode: 'stage',
                     defaultTemplateIndex: Number.isInteger(selectedPlayer.defaultTemplateIndex)
                         ? selectedPlayer.defaultTemplateIndex
                         : selectedIndex,
@@ -226,6 +227,7 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
                 careerDebutSeason: currentDate.getFullYear(),
                 difficulty: typeof getSelectedCareerDifficulty === 'function'
                     ? getSelectedCareerDifficulty('custom') : 'normal',
+                walkonTournamentMode: 'stage',
                 overall: ovr, ovr: ovr, scoring: ovr + 2, doubles: ovr - 2,
                 favoriteDouble: parseInt(document.getElementById('favorite-double').value),
                 budget: 150, prof: 50, pop: 20, stamina: 100,
@@ -308,6 +310,7 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
         function updateHub() {
             if (typeof player.stamina === 'undefined') player.stamina = 100; // Inicjalizacja dla starych zapisów
             if (typeof refreshCareerDifficultyUI === 'function') refreshCareerDifficultyUI();
+            if (typeof refreshWalkonSettingsUI === 'function') refreshWalkonSettingsUI();
 
             document.getElementById('hub-name').innerText = player.name;
             document.getElementById('hub-flag').innerHTML = getFlagImg(player.country);
@@ -661,6 +664,13 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
                     if (typeof processPdcTourCardCycleStart === 'function') {
                         processPdcTourCardCycleStart([...pdcPlayers, player], currentDate);
                     }
+                    if (typeof awardPdcSecondaryTourCards === 'function') {
+                        awardPdcSecondaryTourCards([...pdcPlayers, player], completedYear, player);
+                    }
+                    if (typeof fillPdcTourCardVacancies === 'function'
+                        && (typeof isPdcQSchoolYear !== 'function' || !isPdcQSchoolYear(currentDate))) {
+                        fillPdcTourCardVacancies([...pdcPlayers, player], currentDate, 'vacancy');
+                    }
                     player.pcPrizeMoney = 0;
                     if (typeof pdcPlayers !== 'undefined') {
                         pdcPlayers.forEach(p => p.pcPrizeMoney = 0);
@@ -689,6 +699,7 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
                             delete tournament.travelPreparationLoss;
                             delete tournament.playersChampionshipWithdrawals;
                             delete tournament.playersChampionshipReplacements;
+                            delete tournament.playersChampionshipPairedWithdrawalKeys;
                             delete tournament.withdrawalReportEntries;
                             delete tournament.withdrawalReportSent;
                             delete tournament.withdrawalReportSentYear;
@@ -1253,7 +1264,10 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
             });
         }
 
+        let currentPdcRankingType = 'main';
+
         function showPdcRankings(type = 'main') {
+            currentPdcRankingType = type;
             document.getElementById('btn-rank-main').style.background = type === 'main' ? 'var(--accent-green)' : '#34495e';
             document.getElementById('btn-rank-pt').style.background = type === 'protour' ? 'var(--accent-green)' : '#34495e';
             document.getElementById('btn-rank-pc').style.background = type === 'pc' ? 'var(--accent-green)' : '#34495e';
@@ -1268,6 +1282,10 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
             if (btnDevelopmentTour) {
                 btnDevelopmentTour.style.background = type === 'developmentTour' ? 'var(--accent-green)' : '#2980b9';
                 if (typeof trDevelopmentTour === 'function') btnDevelopmentTour.innerText = trDevelopmentTour('tableName');
+            }
+            const btnAverageRecords = document.getElementById('btn-rank-averages');
+            if (btnAverageRecords) {
+                btnAverageRecords.style.background = type === 'averages' ? 'var(--accent-green)' : '#2471a3';
             }
             
             // INTELIGENTNE WYKRYWANIE MODA (Sprawdza czy Littler jest w grze)
@@ -1308,6 +1326,14 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
             if (type === 'worldMasters') {
                 if (typeof renderWorldMastersRanking === 'function') renderWorldMastersRanking(list);
                 else list.innerHTML = '<div style="text-align:center; margin-top:40px; color:#bdc3c7;">Tabela Global Masters jest niedostępna.</div>';
+                attachRankingProfileLinks(list, type);
+                showScreen('screen-pdc');
+                return;
+            }
+
+            if (type === 'averages') {
+                if (typeof renderAverageRecordsRanking === 'function') renderAverageRecordsRanking(list);
+                else list.innerHTML = `<div style="text-align:center; margin-top:40px; color:#bdc3c7;">${escapeHtml(t('t-average-records-unavailable'))}</div>`;
                 attachRankingProfileLinks(list, type);
                 showScreen('screen-pdc');
                 return;

@@ -72,8 +72,44 @@ function getCareerProfilePlayers() {
     return [...uniquePlayers.values()];
 }
 
+function getPlayerCareerHighestAverage(candidate) {
+    if (!candidate || candidate.isBye) return 0;
+    if (!candidate.careerStats || typeof candidate.careerStats !== 'object' || Array.isArray(candidate.careerStats)) {
+        candidate.careerStats = {};
+    }
+
+    const stored = Number(candidate.careerStats.highestAvg);
+    const season = Number(candidate.seasonStats?.highestAvg);
+    const storedAverage = Number.isFinite(stored) && stored >= 0 ? stored : 0;
+    const seasonAverage = Number.isFinite(season) && season >= 0 ? season : 0;
+    const bestAverage = Number(Math.max(storedAverage, seasonAverage).toFixed(2));
+
+    candidate.careerStats.highestAvg = bestAverage;
+    if (seasonAverage > storedAverage && Number.isInteger(Number(candidate.seasonStats?.year))) {
+        candidate.careerStats.highestAvgYear = Number(candidate.seasonStats.year);
+    }
+    return bestAverage;
+}
+
+function recordPlayerCareerHighestAverage(candidate, average, year = getCurrentSeasonYear()) {
+    const numericAverage = Number(average);
+    if (!candidate || candidate.isBye || !Number.isFinite(numericAverage) || numericAverage < 0) return false;
+
+    const roundedAverage = Number(numericAverage.toFixed(2));
+    const previousBest = getPlayerCareerHighestAverage(candidate);
+    if (roundedAverage <= previousBest) return false;
+
+    candidate.careerStats.highestAvg = roundedAverage;
+    if (Number.isInteger(Number(year))) candidate.careerStats.highestAvgYear = Number(year);
+    return true;
+}
+
 function initPlayerSeasonStats(candidate, year = getCurrentSeasonYear()) {
     if (!candidate || candidate.isBye) return null;
+
+    // Zachowaj rekord kończącego się sezonu, zanim jego statystyki zostaną
+    // wyzerowane. Dotyczy to również zawodników AI i starszych zapisów.
+    getPlayerCareerHighestAverage(candidate);
 
     if (!candidate.seasonStats || Number(candidate.seasonStats.year) !== year) {
         // Przed wyczyszczeniem starego sezonu przenosimy jego zwycięstwa do
@@ -100,6 +136,7 @@ function initAllPlayerSeasonStats(year = getCurrentSeasonYear()) {
 function resetAllPlayerSeasonStats(year = getCurrentSeasonYear()) {
     getCareerProfilePlayers().forEach(candidate => {
         ensurePlayerCareerTitles(candidate);
+        getPlayerCareerHighestAverage(candidate);
         candidate.seasonStats = { year, highestAvg: 0, results: [] };
     });
 }
@@ -112,7 +149,13 @@ function recordSeasonHighestAverage(candidate, average) {
     if (!stats) return false;
 
     const roundedAverage = Number(numericAverage.toFixed(2));
-    if (roundedAverage <= stats.highestAvg) return false;
+    const isCareerPlayer = typeof isCurrentPlayer === 'function'
+        ? isCurrentPlayer(candidate)
+        : (typeof player !== 'undefined' && candidate === player);
+    const careerUpdated = isCareerPlayer && typeof recordCareerBestAverage === 'function'
+        ? recordCareerBestAverage(roundedAverage)
+        : recordPlayerCareerHighestAverage(candidate, roundedAverage, stats.year);
+    if (roundedAverage <= stats.highestAvg) return careerUpdated;
 
     stats.highestAvg = roundedAverage;
     return true;
@@ -426,7 +469,7 @@ function getPlayerCareerTitleSeries(title) {
 
 function getPlayerCareerTitleRows(titles) {
     const series = new Map();
-    const individual = [];
+    const individual = new Map();
     titles.forEach(title => {
         const seriesName = getPlayerCareerTitleSeries(title);
         if (seriesName) {
@@ -434,18 +477,35 @@ function getPlayerCareerTitleRows(titles) {
             return;
         }
         const name = getPlayerCareerTitleDisplayName(title);
-        let remaining = title.count;
-        Object.entries(title.winsByYear).forEach(([year, count]) => {
-            for (let index = 0; index < count; index++) individual.push({ name, year: Number(year), count: 1 });
-            remaining -= count;
+        const key = normalizePlayerCareerTitle(name);
+        const row = individual.get(key) || { name, count: 0, yearCounts: {}, unknownCount: 0 };
+        const titleCount = Math.max(0, Math.floor(Number(title.count) || 0));
+        let remaining = titleCount;
+        Object.entries(title.winsByYear || {}).sort(([first], [second]) => Number(first) - Number(second)).forEach(([year, count]) => {
+            if (!/^\d{4}$/.test(year) || remaining <= 0) return;
+            const amount = Math.min(remaining, Math.max(0, Math.floor(Number(count) || 0)));
+            if (!amount) return;
+            row.yearCounts[year] = (row.yearCounts[year] || 0) + amount;
+            remaining -= amount;
         });
-        if (remaining > 0) individual.push({ name, year: null, count: remaining });
+        row.count += titleCount;
+        row.unknownCount += remaining;
+        individual.set(key, row);
     });
     const compareNames = (a, b) => a.name.localeCompare(b.name, getPlayerProfileLocale());
+    const individualRows = [...individual.values()].map(row => {
+        const years = Object.entries(row.yearCounts)
+            .map(([year, count]) => ({ year: Number(year), count }))
+            .sort((first, second) => first.year - second.year);
+        return { name: row.name, count: row.count, years, unknownCount: row.unknownCount,
+            latestYear: years.length ? years[years.length - 1].year : 0 };
+    });
     return [
         ...[...series].map(([name, count]) => ({ name, count, series: true }))
             .sort((a, b) => b.count - a.count || compareNames(a, b)),
-        ...individual.sort((a, b) => (b.year || 0) - (a.year || 0) || compareNames(a, b))
+        ...individualRows.sort((a, b) => b.count - a.count
+            || b.latestYear - a.latestYear
+            || compareNames(a, b))
     ];
 }
 
@@ -454,11 +514,14 @@ function renderPlayerCareerTitles(candidate) {
     const totalTitles = titles.reduce((sum, title) => sum + Math.max(0, Number(title.count) || 0), 0);
     const listMarkup = titles.length
         ? getPlayerCareerTitleRows(titles).map(title => {
-            const year = title.series ? '' : title.year
-                ? ` <time datetime="${title.year}">${title.year}</time>`
-                : ` <small class="profile-career-title-unknown">— ${escapeHtml(trPlayerProfile('unknownTitleYear'))}</small>`;
+            const yearParts = title.series ? [] : (title.years || []).map(({ year, count }) =>
+                `<time datetime="${year}">${year}${count > 1 ? ` ×${count}` : ''}</time>`);
+            if (!title.series && title.unknownCount > 0) {
+                yearParts.push(`<small class="profile-career-title-unknown">${title.unknownCount > 1 ? `${title.unknownCount}× ` : ''}${escapeHtml(trPlayerProfile('unknownTitleYear'))}</small>`);
+            }
+            const years = yearParts.length ? ` ${yearParts.join(', ')}` : '';
             const count = title.series || title.count > 1 ? `<strong>×${title.count}</strong>` : '';
-            return `<li><span>${escapeHtml(title.name)}${year}</span>${count}</li>`;
+            return `<li><span>${escapeHtml(title.name)}${years}</span>${count}</li>`;
         }).join('')
         : `<li class="profile-career-titles-empty">${escapeHtml(trPlayerProfile('noCareerTitles'))}</li>`;
     return `<aside class="profile-career-titles">
