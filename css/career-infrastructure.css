@@ -12,6 +12,7 @@
 #screen-career-infrastructure section h3 { color: #e2eaf6; text-align: left; }
 .career-infrastructure-context { color: #f4d37d !important; font-weight: 700; }
 .career-infrastructure-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-top: 16px; }
+.career-investments-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 .career-infrastructure-card { display: flex; flex-direction: column; min-width: 0; padding: 17px; background: #17263d; border: 1px solid #465876; border-radius: 9px; overflow-wrap: anywhere; }
 .career-infrastructure-card.selected { border-color: #5bc7ae; background: #17353a; box-shadow: 0 0 0 1px rgba(91,199,174,.2); }
 .career-infrastructure-card-head { display: flex; justify-content: space-between; gap: 10px; align-items: flex-start; }

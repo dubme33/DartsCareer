@@ -1,0 +1,20 @@
+.tournament-watch-tile { grid-column: 1 / -1; cursor: default; text-align: left; }
+.tournament-watch-tile h3 { color: #f1c40f; }
+.tournament-watch-tile p { max-width: 850px; line-height: 1.55; }
+.tournament-watch-actions, .tournament-watch-group-actions { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+.tournament-watch-tile button { background: #193c63; border: 1px solid #42729a; color: #fff; padding: 9px 13px; border-radius: 7px; cursor: pointer; }
+.tournament-watch-tile button:hover { background: #24547e; }
+.tournament-watch-tile button:focus-visible, .tournament-watch-tile summary:focus-visible, .tournament-watch-tile input:focus-visible { outline: 2px solid #f1c40f; outline-offset: 3px; }
+#tournament-watch-count { display: block; color: #2ecc71; margin: 12px 0; }
+#tournament-watch-hint { display: block; color: #adc3d8; line-height: 1.5; margin-top: 14px; }
+#tournament-watch-list { display: grid; gap: 8px; }
+#tournament-watch-list details { background: #102c4b; border: 1px solid #345675; border-radius: 8px; padding: 0 12px; }
+#tournament-watch-list summary { cursor: pointer; padding: 12px 0; color: #ecf0f1; }
+#tournament-watch-list summary span { float: right; color: #2ecc71; padding-left: 8px; }
+.tournament-watch-events { max-height: 340px; overflow-y: auto; margin-bottom: 12px; }
+.tournament-watch-events label { display: flex; align-items: center; gap: 10px; padding: 10px 4px; cursor: pointer; border-top: 1px solid #284864; }
+.tournament-watch-events input { width: 18px; height: 18px; flex-shrink: 0; accent-color: #2ecc71; }
+.tournament-watch-events span { flex: 1; overflow-wrap: anywhere; color: #ecf0f1; }
+.tournament-watch-events small { color: #adc3d8; white-space: nowrap; }
+@media (max-width: 600px) { .tournament-watch-tile { padding: 16px; } .tournament-watch-actions button { flex: 1; } }
+#screen-hub .tournament-watch-tile:hover { transform: none; filter: none; background-color: var(--primary-color); }

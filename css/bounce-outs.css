@@ -1,0 +1,12 @@
+.bounce-out-settings-tile { cursor: default; }
+.bounce-out-settings-tile select { width: 100%; padding: 10px; margin: 10px 0; background: #102c4b; color: #fff; border: 1px solid #527a9d; border-radius: 6px; }
+.bounce-out-settings-tile small { display: block; color: #adc3d8; line-height: 1.5; }
+.dartboard-container { position: relative; }
+#match-bounce-out { position: absolute; bottom: 12px; left: 50%; transform: translateX(-50%); width: max-content; max-width: 95%; box-sizing: border-box; background: #592f19; border: 1px solid #f5b041; color: #fff; padding: 8px 12px; border-radius: 8px; font-size: 14px; pointer-events: none; z-index: 3; }
+#match-bounce-out[hidden] { display: none; }
+.bounce-out-active { animation: bounce-out-feedback .9s ease-out; }
+@keyframes bounce-out-feedback { 0% { opacity: 0; margin-bottom: 10px; } 15%, 75% { opacity: 1; margin-bottom: 0; } 100% { opacity: 0; } }
+.bounce-out-dart { position: absolute; width: 4px; height: 26px; background: #e5e7eb; border-radius: 3px; pointer-events: none; z-index: 2; animation: bounce-out-dart .45s ease-in forwards; transform-origin: center; }
+.bounce-out-dart::after { content: ''; position: absolute; bottom: 1px; left: -5px; width: 14px; height: 10px; background: #f5b041; clip-path: polygon(50% 0, 100% 100%, 50% 75%, 0 100%); }
+@keyframes bounce-out-dart { from { opacity: 1; transform: rotate(-20deg); } to { opacity: 0; transform: translate(20px, 80px) rotate(80deg); } }
+@media (prefers-reduced-motion: reduce) { .bounce-out-active, .bounce-out-dart { animation: none; } }

@@ -1,0 +1,7 @@
+.player-event-status { margin: 10px 0; padding: 14px 17px; border: 1px solid #a8793e; border-left-width: 4px; border-radius: 8px; background: #342a22; color: #ffe1b0; text-align: left; overflow-wrap: anywhere; }
+.player-event-status strong { display: block; font-size: 15px; }
+.player-event-status p { margin: 7px 0 0; font-size: 13px; line-height: 1.7; }
+.event-injury { border-color: #b86b76; background: #36232e; color: #ffd1d8; }
+.event-form-up { border-color: #49a48b; background: #172f33; color: #b7efdc; }
+.player-event-healthy { color: #a3e7ca; font-size: 14px; }
+.news-condition { border-left-color: #b86b76; }

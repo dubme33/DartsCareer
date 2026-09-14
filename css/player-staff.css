@@ -3,7 +3,7 @@
 #screen-player-staff { text-align: left; }
 #player-staff-intro, .staff-note, .staff-context-note { color: #bdc9dc; font-size: 13px; line-height: 1.7; }
 .staff-context-note { padding: 12px 16px; background: #182c41; border: 1px solid #42617b; border-radius: 7px; }
-.staff-summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 24px 0; }
+.staff-summary { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 24px 0; }
 .staff-summary > div { padding: 16px; background: #162439; border: 1px solid #435873; border-radius: 8px; min-width: 0; overflow-wrap: anywhere; }
 .staff-summary span { display: block; color: #bac9dc; font-size: 12px; margin-bottom: 8px; }
 .staff-summary strong { color: #f4d37d; font-size: 23px; }
@@ -48,7 +48,7 @@
 }
 @media (max-width: 560px) {
     .staff-grid, #player-staff-team { grid-template-columns: minmax(0, 1fr); }
-    .staff-summary { gap: 7px; }
+    .staff-summary { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; }
     .staff-summary > div { padding: 12px 9px; }
     .staff-summary strong { font-size: 18px; }
     .staff-summary span { font-size: 11px; }
