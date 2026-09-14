@@ -276,8 +276,11 @@ const translations = {
         "t-average-records-empty": "Brak zarejestrowanych średnich dla tego widoku.",
         "t-average-records-unavailable": "Ranking rekordowych średnich jest niedostępny.",
         "t-back-pdc": "Wróć",
-        "t-fav-double": "Ulubiony double:",
-        "t-fav-double-hint": "+5 p.p. do trafienia, gdy celujesz w wybrany double.",
+        "t-fav-double": "Pierwszy ulubiony double (+5 p.p.):",
+        "t-fav-double-second": "Drugi ulubiony double (+3 p.p.):",
+        "t-fav-double-third": "Trzeci ulubiony double (+1 p.p.):",
+        "t-fav-double-hint": "Wybierz trzy różne pola. Bonus zwiększa szansę trafienia wybranego doubla o 5, 3 lub 1 punkt procentowy.",
+        "t-fav-double-duplicate": "Ulubione double muszą być trzema różnymi polami.",
         "t-tour-card-start": "Czy chcesz zaczynać z kartą PDC?",
         "t-tour-card-no": "Nie — zagraj w Q-Schoolu",
         "t-tour-card-yes": "Tak — zacznij w Top 64 OOM",
@@ -409,6 +412,7 @@ const translations = {
         "t-avg-short": "Śr:",
         "t-btn-sim-round": "SYMULUJ RUNDĘ (MECZE AI)",
         "t-btn-sim-tournament": "SYMULUJ CAŁY TURNIEJ",
+        "t-btn-sim-to-match": "Symuluj do mojego meczu",
         "t-btn-sim-tournament-results": "SYMULUJ CAŁY TURNIEJ",
         "t-simulation-title": "Symulowanie turnieju…",
         "t-simulation-note": "Poczekaj na zakończenie. Wyniki i nagrody są rozliczane w kolejności meczów.",
@@ -719,8 +723,11 @@ const translations = {
         "t-average-records-empty": "No recorded averages are available for this view.",
         "t-average-records-unavailable": "The record-average ranking is unavailable.",
         "t-back-pdc": "Back to Menu",
-        "t-fav-double": "Favorite double:",
-        "t-fav-double-hint": "+5% hit chance when aiming at this double.",
+        "t-fav-double": "First favourite double (+5 p.p.):",
+        "t-fav-double-second": "Second favourite double (+3 p.p.):",
+        "t-fav-double-third": "Third favourite double (+1 p.p.):",
+        "t-fav-double-hint": "Choose three different fields. The bonus increases the hit chance of the selected double by 5, 3 or 1 percentage point.",
+        "t-fav-double-duplicate": "Your favourite doubles must be three different fields.",
         "t-tour-card-start": "Do you want to start with a PDC Tour Card?",
         "t-tour-card-no": "No — enter Q-School",
         "t-tour-card-yes": "Yes — start inside the OOM Top 64",
@@ -861,6 +868,7 @@ const translations = {
         "t-avg-short": "Avg:",
         "t-btn-sim-round": "SIMULATE ROUND (AI MATCHES)",
         "t-btn-sim-tournament": "SIMULATE ENTIRE TOURNAMENT",
+        "t-btn-sim-to-match": "Simulate until my match",
         "t-btn-sim-tournament-results": "SIMULATE ENTIRE TOURNAMENT",
         "t-simulation-title": "Simulating tournament…",
         "t-simulation-note": "Please wait until completion. Results and prizes are processed in match order.",
@@ -1026,8 +1034,11 @@ const translations = {
         "t-back-tro": "Zurück zum Menü",
         "t-back-train": "Zurück zum Menü",
         "t-from": "Von",
-        "t-fav-double": "Lieblings-Double:",
-        "t-fav-double-hint": "+5% Trefferchance beim Zielen auf dieses Double.",
+        "t-fav-double": "Erstes Lieblingsdoppel (+5 Prozentpunkte):",
+        "t-fav-double-second": "Zweites Lieblingsdoppel (+3 Prozentpunkte):",
+        "t-fav-double-third": "Drittes Lieblingsdoppel (+1 Prozentpunkt):",
+        "t-fav-double-hint": "Wähle drei verschiedene Felder. Der Bonus erhöht die Trefferchance des gewählten Doppels um 5, 3 oder 1 Prozentpunkt.",
+        "t-fav-double-duplicate": "Deine Lieblingsdoppel müssen drei verschiedene Felder sein.",
         "t-tour-card-start": "Möchtest du mit einer PDC Tour Card starten?",
         "t-tour-card-no": "Nein — Q-School spielen",
         "t-tour-card-yes": "Ja — in den OOM Top 64 starten",
@@ -1290,6 +1301,7 @@ const translations = {
         "t-avg-short": "Ø:",
         "t-btn-sim-round": "RUNDE SIMULIEREN (KI-SPIELE)",
         "t-btn-sim-tournament": "GESAMTES TURNIER SIMULIEREN",
+        "t-btn-sim-to-match": "Bis zu meinem Spiel simulieren",
         "t-btn-sim-tournament-results": "GESAMTES TURNIER SIMULIEREN",
         "t-simulation-title": "Turnier wird simuliert…",
         "t-simulation-note": "Bitte bis zum Abschluss warten. Ergebnisse und Preisgelder werden in Spielreihenfolge verarbeitet.",
@@ -1623,8 +1635,11 @@ const translations = {
         "t-average-records-empty": "Voor deze weergave zijn geen geregistreerde gemiddelden beschikbaar.",
         "t-average-records-unavailable": "De ranglijst met gemiddelderecords is niet beschikbaar.",
         "t-back-pdc": "Terug naar menu",
-        "t-fav-double": "Favoriete double:",
-        "t-fav-double-hint": "+5% trefkans bij het richten op deze double.",
+        "t-fav-double": "Eerste favoriete dubbel (+5 procentpunten):",
+        "t-fav-double-second": "Tweede favoriete dubbel (+3 procentpunten):",
+        "t-fav-double-third": "Derde favoriete dubbel (+1 procentpunt):",
+        "t-fav-double-hint": "Kies drie verschillende vakken. De bonus verhoogt de trefkans van de gekozen dubbel met 5, 3 of 1 procentpunt.",
+        "t-fav-double-duplicate": "Je favoriete dubbels moeten drie verschillende vakken zijn.",
         "t-tour-card-start": "Wil je met een PDC Tour Card beginnen?",
         "t-tour-card-no": "Nee — speel Q-School",
         "t-tour-card-yes": "Ja — start in de OOM Top 64",
@@ -1765,6 +1780,7 @@ const translations = {
         "t-avg-short": "Gem:",
         "t-btn-sim-round": "SIMULEER RONDE (AI-WEDSTRIJDEN)",
         "t-btn-sim-tournament": "SIMULEER HELE TOERNOOI",
+        "t-btn-sim-to-match": "Simuleer tot mijn wedstrijd",
         "t-btn-sim-tournament-results": "SIMULEER HELE TOERNOOI",
         "t-simulation-title": "Toernooi wordt gesimuleerd…",
         "t-simulation-note": "Wacht tot de simulatie klaar is. Resultaten en prijzengeld worden in wedstrijdvolgorde verwerkt.",
@@ -2051,6 +2067,7 @@ const translations = {
             if(typeof refreshWorldNewsTranslations === 'function') refreshWorldNewsTranslations();
             if(typeof refreshSeasonArchiveTranslations === 'function') refreshSeasonArchiveTranslations();
             if(typeof refreshPlayerStaffTranslations === 'function') refreshPlayerStaffTranslations();
+            if(typeof refreshPlayerEventsViews === 'function') refreshPlayerEventsViews();
             if(typeof refreshPlayerTraitsTranslations === 'function') refreshPlayerTraitsTranslations();
             if(typeof refreshCareerInfrastructureTranslations === 'function') refreshCareerInfrastructureTranslations();
             if(typeof refreshCareerLifestyleTranslations === 'function') refreshCareerLifestyleTranslations();
@@ -2061,6 +2078,12 @@ const translations = {
             if(typeof refreshPanelTopBackTranslations === 'function') refreshPanelTopBackTranslations();
             if(typeof refreshCareerDifficultyUI === 'function') refreshCareerDifficultyUI();
             if(typeof refreshWalkonSettingsUI === 'function') refreshWalkonSettingsUI();
+            if(typeof refreshTournamentWatchSettingsUI === 'function') refreshTournamentWatchSettingsUI();
+            if(typeof refreshBounceOutSettingsUI === 'function') refreshBounceOutSettingsUI();
+            if (typeof updateFavoriteDoubleChoices === 'function') {
+                updateFavoriteDoubleChoices();
+                updateFavoriteDoubleChoices('player-editor-');
+            }
             const challengeTourButton = document.getElementById('btn-rank-challenge-tour');
             if (challengeTourButton && typeof trChallengeTour === 'function') challengeTourButton.innerText = trChallengeTour('tableName');
             const developmentTourButton = document.getElementById('btn-rank-development-tour');

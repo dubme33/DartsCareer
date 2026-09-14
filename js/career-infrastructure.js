@@ -4,6 +4,10 @@ const CAREER_INFRASTRUCTURE_CONFIG = Object.freeze({
     version: 1,
     initialPreparation: 70,
     basePurchasePrice: 100000,
+    investments: Object.freeze({
+        academy: Object.freeze({ price: 100000, extraNewgenChance: 0.05 }),
+        pub: Object.freeze({ price: 125000, monthlyIncome: 2500 })
+    }),
     facilities: Object.freeze({
         training: Object.freeze({
             upgradePrices: Object.freeze({ 2: 150000, 3: 350000 }),
@@ -103,6 +107,25 @@ function initializeCareerInfrastructure(reset = false, candidate = player) {
             : purchasedOn,
         nextMaintenanceDueOn
     };
+    const investments = {};
+    const today = getCareerInfrastructureDateKey();
+    for (const type of Object.keys(CAREER_INFRASTRUCTURE_CONFIG.investments)) {
+        const saved = previous.investments?.[type];
+        const owned = saved?.owned === true;
+        const investmentPurchasedOn = owned && parseCareerInfrastructureDate(saved.purchasedOn) && saved.purchasedOn <= today
+            ? saved.purchasedOn : (owned ? today : '');
+        investments[type] = { owned, purchasedOn: investmentPurchasedOn };
+        if (type === 'pub') {
+            const lastIncomeOn = owned && parseCareerInfrastructureDate(saved.lastIncomeOn)
+                && saved.lastIncomeOn >= investmentPurchasedOn && saved.lastIncomeOn <= today ? saved.lastIncomeOn : investmentPurchasedOn;
+            Object.assign(investments.pub, {
+                lastIncomeOn,
+                nextIncomeDueOn: owned ? addCareerInfrastructureMonth(lastIncomeOn, parseCareerInfrastructureDate(investmentPurchasedOn).getDate()) : '',
+                totalIncome: owned ? clampCareerInfrastructureValue(saved.totalIncome, 0, Number.MAX_SAFE_INTEGER, 0) : 0
+            });
+        }
+    }
+    normalized.investments = investments;
     if (!reset && previous === candidate.careerInfrastructure) {
         Object.assign(previous, normalized);
         candidate.careerInfrastructure = previous;
@@ -199,6 +222,58 @@ function getCareerAnalysisTravelReduction(candidate = player) {
 
 function canChangeCareerInfrastructure() {
     return typeof isTournamentSimulationBusy !== 'function' || !isTournamentSimulationBusy();
+}
+
+function purchaseCareerInvestment(type) {
+    if (!canChangeCareerInfrastructure() || !Object.hasOwn(CAREER_INFRASTRUCTURE_CONFIG.investments, type)) return false;
+    const state = getCareerInfrastructureState();
+    if (!state || state.investments[type].owned) return false;
+    const config = CAREER_INFRASTRUCTURE_CONFIG.investments[type];
+    if ((Number(player.budget) || 0) < config.price) {
+        refreshCareerInfrastructureViews('insufficient', { amount: config.price });
+        return false;
+    }
+    if (typeof confirm === 'function' && !confirm(typeof trCareerInfrastructure === 'function'
+        ? trCareerInfrastructure('confirmInvestment', { name: trCareerInfrastructure(type), amount: careerInfrastructureMoney(config.price) })
+        : `Buy ${type} for £${config.price}?`)) return false;
+    // A confirmation handler may change the state; recheck before charging.
+    if (!canChangeCareerInfrastructure() || state.investments[type].owned || (Number(player.budget) || 0) < config.price) return false;
+    player.budget = Number(player.budget) - config.price;
+    const today = getCareerInfrastructureDateKey();
+    Object.assign(state.investments[type], { owned: true, purchasedOn: today });
+    if (type === 'pub') Object.assign(state.investments.pub, {
+        lastIncomeOn: today, nextIncomeDueOn: addCareerInfrastructureMonth(today), totalIncome: 0
+    });
+    refreshCareerInfrastructureViews('investmentPurchased', { name: typeof trCareerInfrastructure === 'function' ? trCareerInfrastructure(type) : type,
+        amount: config.price });
+    if (typeof saveGame === 'function') saveGame(true);
+    return true;
+}
+
+function getCareerAcademyNewgenChance(candidate = player) {
+    return getCareerInfrastructureState(candidate)?.investments.academy.owned
+        ? CAREER_INFRASTRUCTURE_CONFIG.investments.academy.extraNewgenChance : 0;
+}
+
+function processCareerInvestmentIncome() {
+    const result = { changed: false, total: 0, paid: [] };
+    if (!canChangeCareerInfrastructure()) return result;
+    const pub = getCareerInfrastructureState()?.investments.pub;
+    if (!pub?.owned) return result;
+    const today = getCareerInfrastructureDateKey();
+    const anchorDay = parseCareerInfrastructureDate(pub.purchasedOn).getDate();
+    while (pub.nextIncomeDueOn && pub.nextIncomeDueOn <= today) {
+        const amount = CAREER_INFRASTRUCTURE_CONFIG.investments.pub.monthlyIncome;
+        player.budget = (Number(player.budget) || 0) + amount;
+        pub.totalIncome += amount;
+        result.changed = true;
+        result.total += amount;
+        result.paid.push({ date: pub.nextIncomeDueOn, amount });
+        pub.lastIncomeOn = pub.nextIncomeDueOn;
+        pub.nextIncomeDueOn = addCareerInfrastructureMonth(pub.lastIncomeOn, anchorDay);
+    }
+    if (result.changed && typeof notifyCareerInvestmentIncome === 'function') notifyCareerInvestmentIncome(result);
+    return result;
 }
 
 function refreshCareerInfrastructureViews(feedbackKey = '', params = {}) {

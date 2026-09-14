@@ -118,6 +118,7 @@ function getTraitProgressMultiplier(candidate, type) {
 
 function awardPlayerTraitXP(candidate, type, amount) {
     if (!PLAYER_TRAIT_TYPES.includes(type) || !Number.isFinite(amount) || amount <= 0) return 0;
+    if (typeof isPlayerInjured === 'function' && isPlayerInjured(candidate)) return 0;
     const state = initializePlayerTraits(candidate);
     if (!state || state[type] >= 100) return 0;
     const total = Math.round((state[`${type}XP`] + amount) * 10) / 10;
@@ -130,7 +131,8 @@ function awardPlayerTraitXP(candidate, type, amount) {
 function getPlayerTraitTrainingXP(type, random = Math.random) {
     const bonus = typeof getPlayerStaffTrainingBonus === 'function' ? getPlayerStaffTrainingBonus(type) : 0;
     const analysisBonus = typeof getCareerAnalysisTrainingBonus === 'function' ? getCareerAnalysisTrainingBonus(player) : 0;
-    const professionalism = Math.max(0, Math.min(100, Number(player.prof) || 0));
+    const professionalism = typeof getPlayerProfessionalism === 'function' ? getPlayerProfessionalism()
+        : Math.max(0, Math.min(100, Number(player.prof) || 0));
     return (16 + random() * 4 - 2) * (0.8 + professionalism / 250)
         * getTraitProgressMultiplier(player, type) * (1 + bonus / 100) * (1 + analysisBonus / 100);
 }
@@ -189,6 +191,7 @@ function applyPlayerTraitsToMatchStats(candidate, stats, isP1, match = currentMa
     const preparation = typeof getCareerPreparationMatchModifier === 'function'
         ? getCareerPreparationMatchModifier(candidate)
         : 0;
-    const modifier = forms[key] - getEnduranceMatchPenalty(candidate, leg) + preparation;
+    const eventForm = typeof getPlayerFormEventModifier === 'function' ? getPlayerFormEventModifier(candidate) : 0;
+    const modifier = forms[key] - getEnduranceMatchPenalty(candidate, leg) + preparation + eventForm;
     return { ...stats, scoring: stats.scoring + modifier, doubles: stats.doubles + modifier };
 }

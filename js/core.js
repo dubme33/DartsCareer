@@ -251,6 +251,7 @@
 
             opponentSelect.replaceChildren();
             pdcPlayers.forEach((candidate, index) => {
+                if (typeof isPlayerInjured === 'function' && isPlayerInjured(candidate)) return;
                 const option = document.createElement('option');
                 option.value = index;
                 option.textContent = `${candidate.name} (OVR: ${getDisplayedOvr(candidate)})`;
@@ -465,17 +466,43 @@
                 updateAimButtons();
             }
 
-            const favoriteDoubleSelect = document.getElementById('favorite-double');
-            if (favoriteDoubleSelect) {
-                favoriteDoubleSelect.innerHTML = "";
-                for (let i = 20; i >= 1; i--) {
-                    favoriteDoubleSelect.innerHTML += `<option value="${i}" ${i === 20 ? 'selected' : ''}>D${i}</option>`;
-                }
-            }
+            renderFavoriteDoubleOptions();
             
             renderOpponentOptions();
             requestAnimationFrame(setupStartScreenLayoutSync);
         };
+
+        function getFavoriteDoubleSelectValues(prefix = '') {
+            return ['favorite-double', 'favorite-double-second', 'favorite-double-third'].map(id => {
+                const value = document.getElementById(`${prefix}${id}`)?.value;
+                return value ? Number(value) : null;
+            });
+        }
+
+        function updateFavoriteDoubleChoices(prefix = '') {
+            const values = getFavoriteDoubleSelectValues(prefix);
+            ['favorite-double', 'favorite-double-second', 'favorite-double-third'].forEach((id, index) => {
+                const select = document.getElementById(`${prefix}${id}`);
+                if (!select) return;
+                const duplicate = values[index] !== null && values.some((value, other) => other !== index && value === values[index]);
+                const message = typeof t === 'function' ? t('t-fav-double-duplicate') : 'Choose three different doubles.';
+                select.setCustomValidity?.(duplicate ? message : '');
+                Array.from(select.options || []).forEach(option => {
+                    option.disabled = Boolean(option.value) && values.some((value, other) => other !== index && value === Number(option.value));
+                });
+            });
+        }
+
+        function renderFavoriteDoubleOptions(prefix = '', values = [20, 16, 18], allowEmpty = false) {
+            ['favorite-double', 'favorite-double-second', 'favorite-double-third'].forEach((id, index) => {
+                const select = document.getElementById(`${prefix}${id}`);
+                if (!select) return;
+                select.innerHTML = (allowEmpty && index > 0 ? '<option value="">—</option>' : '')
+                    + Array.from({ length: 20 }, (_, offset) => `<option value="${20 - offset}">D${20 - offset}</option>`).join('');
+                select.value = values[index] == null ? '' : String(values[index]);
+            });
+            updateFavoriteDoubleChoices(prefix);
+        }
 
         function updatePotentialHint() {
             const val = document.getElementById('potential').value;
@@ -595,6 +622,7 @@
 
         function changeTournamentOverall(p, delta) {
             if (!p || !Number.isFinite(delta)) return;
+            if (typeof isPlayerInjured === 'function' && isPlayerInjured(p)) return;
             const ageAdjustedDelta = scalePlayerDevelopmentChange(p, delta);
 
             if (isCurrentPlayer(p)) {
@@ -726,6 +754,10 @@
             const p1IsCareer = isCurrentPlayer(p1), p2IsCareer = isCurrentPlayer(p2);
             let p1Ratings = p1IsCareer ? player : p1;
             let p2Ratings = p2IsCareer ? player : p2;
+            if (typeof getPlayerEventMatchRatings === 'function') {
+                p1Ratings = getPlayerEventMatchRatings(p1, p1Ratings);
+                p2Ratings = getPlayerEventMatchRatings(p2, p2Ratings);
+            }
             if (typeof getWorldMastersMatchRatings === 'function') {
                 p1Ratings = getWorldMastersMatchRatings(p1, p1Ratings);
                 p2Ratings = getWorldMastersMatchRatings(p2, p2Ratings);
@@ -743,6 +775,34 @@
 
         const AI_TOURNAMENT_RATING_TRANSFER = 0.2;
         const CAREER_TOURNAMENT_RATING_TRANSFER = 0.8;
+
+        function getTournamentDevelopmentPrestigeFactor(tournament = activeTournament) {
+            if (typeof tournament === 'string') {
+                const name = tournament;
+                tournament = typeof tournamentDatabase !== 'undefined' && Array.isArray(tournamentDatabase)
+                    ? tournamentDatabase.find(event => event.name === name || event.sourceName === name) || { name }
+                    : { name };
+            }
+            const sourceName = String(tournament?.sourceName || tournament?.name || '');
+            const name = sourceName.toLowerCase();
+            const type = String(tournament?.specialType || '').toLowerCase();
+
+            // Cykl pozostaje rozpoznawalny po zmianie nazwy przez mod.
+            if (type === 'challengetour' || type === 'developmenttour'
+                || /rising stars circuit|challenge tour|future champions circuit|development tour/.test(name)) return 0.25;
+            if (tournament?.qualifierFor || /qualifier|kwalifikac|q-?school/.test(`${name} ${type}`)
+                || /pro card trials|champion['’]s gateway/.test(name)) return 0.2;
+            if (/(world|global) darts championship/.test(name)) return 1.25;
+            if (type === 'classicmasters' || type === 'ukopen'
+                || /matchplay|grand prix|grand slam|champion['’]s slam|uk open|british open|european championship|continental championship|players championship finals|pro players finals|crown masters|winmau world masters/.test(name)) return 1.15;
+            if (type === 'worldmastersfinals' || /world series finals|global masters finals/.test(name)) return 1.1;
+            if (type === 'worldmasters'
+                || (typeof isWorldMastersName === 'function' && isWorldMastersName(sourceName))) return 0.9;
+            if (/european tour|continental tour/.test(name)) return 1.05;
+            if (/players championship|pro players cup/.test(name)) return 0.85;
+            if (/global darts league|premier league/.test(name)) return 1.1;
+            return 1;
+        }
 
         function getTournamentRatingTransferFactor(candidate) {
             const rating = Number(isCurrentPlayer(candidate) ? player.overall
@@ -763,14 +823,15 @@
             // Prawdziwy transfer Elo: dokładnie ta sama bazowa wartość trafia do
             // zwycięzcy i znika u przegranego. Poprzedni wzór odejmował od przegranego
             // expectedWinner zamiast 1 - expectedWinner, więc niespodzianki tworzyły OVR.
-            // Mecze kariery zachowują dotychczasową siłę nagrody dla prowadzonego
+            // Mecze kariery mają większą bazową siłę nagrody dla prowadzonego
             // zawodnika. Mniejszy współczynnik stosujemy do licznych spotkań AI–AI,
             // które były źródłem inflacji całej czołówki rankingu.
             const transferRate = isCurrentPlayer(winner) || isCurrentPlayer(loser)
                 ? CAREER_TOURNAMENT_RATING_TRANSFER
                 : AI_TOURNAMENT_RATING_TRANSFER;
             const transfer = (1 - expectedWinner) * transferRate * roundWeight
-                * Math.min(getTournamentRatingTransferFactor(winner), getTournamentRatingTransferFactor(loser));
+                * Math.min(getTournamentRatingTransferFactor(winner), getTournamentRatingTransferFactor(loser))
+                * getTournamentDevelopmentPrestigeFactor(activeTournament);
             changeTournamentOverall(winner, transfer);
             changeTournamentOverall(loser, -transfer);
         }

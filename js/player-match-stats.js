@@ -134,7 +134,7 @@ function ensureSeasonMatchStats(candidate) {
         season.matchStats = { version: 1, since: currentDate.getTime(), recordedKeys: [] };
     }
     const stats = season.matchStats;
-    for (const field of ['played', 'wins', 'losses', 'averageTotal', 'averageCount', 'doubleHits', 'doubleAttempts', 'doubleMatches', 'oneEighties', 'oneEightyMatches', 'estimatedDoubleMatches', 'estimatedOneEightyMatches']) {
+    for (const field of ['played', 'wins', 'losses', 'averageTotal', 'averageCount', 'doubleHits', 'doubleAttempts', 'doubleMatches', 'oneEighties', 'oneEightyMatches', 'estimatedDoubleMatches', 'estimatedOneEightyMatches', 'bounceOuts', 'bounceOutMatches', 'estimatedBounceOutMatches']) {
         stats[field] = getOptionalMatchStat(stats[field]) ?? 0;
     }
     stats.recordedKeys = Array.isArray(stats.recordedKeys) ? stats.recordedKeys.filter(key => typeof key === 'string') : [];
@@ -197,11 +197,17 @@ function recordPlayerMatchStats(p1, p2, result, options = {}) {
                 stats.oneEighties += oneEighties; stats.oneEightyMatches++;
                 if (detail?.source === 'quick-simulation') stats.estimatedOneEightyMatches++;
             }
+            const bounceOuts = getOptionalMatchStat(detail?.bounceOuts);
+            if (Number.isInteger(bounceOuts) && bounceOuts >= 0) {
+                stats.bounceOuts += bounceOuts; stats.bounceOutMatches++;
+                if (detail?.source === 'quick-simulation') stats.estimatedBounceOutMatches++;
+            }
             candidate.recentMatches = [{ key, timestamp: currentDate.getTime(), opponentId: opponent.id || '',
                 opponentName: opponent.name, opponentCountry: opponent.country || '', tournament: tournament.name,
                 sourceTournament: tournament.sourceName || tournament.name, tournamentSpecialType: tournament.specialType || '',
                 worldMastersEvent: tournament.worldMastersEvent || '', scoreFor, scoreAgainst, won,
-                scoreType: format.type === 'sets' ? 'sets' : 'legs', average
+                scoreType: format.type === 'sets' ? 'sets' : 'legs', average,
+                ...(detail?.report ? { report: detail.report } : {})
             }, ...getRecentPlayerMatches(candidate)].slice(0, 10);
             recorded = true;
         });
@@ -227,7 +233,10 @@ function recordCompletedSinglesMatch(match, tournament = activeTournament) {
         result[`${side}Avg`] = darts > 0 && accumulated !== null && remaining !== null
             ? (accumulated + 501 - remaining) / darts * 3 : null;
         result[`${side}Stats`] = { doubleHits: match.stats[`${side}DoubleHits`],
-            doubleAttempts: match.stats[`${side}DoubleAttempts`], oneEighties: match.stats[`${side}OneEighties`] };
+            doubleAttempts: match.stats[`${side}DoubleAttempts`], oneEighties: match.stats[`${side}OneEighties`],
+            bounceOuts: match.stats[`${side}BounceOuts`] || 0,
+            report: typeof createCompletedMatchReport === 'function'
+                ? createCompletedMatchReport(match, side === 'p1', side === 'p1' ? p1 : match.opponent, tournament) : null };
     }
     return recordPlayerMatchStats(p1, match.opponent, result, { tournament, format: match.matchFormat,
         round: match.spectatorRound ?? (typeof tournamentRound !== 'undefined' ? tournamentRound : undefined) });
@@ -253,7 +262,8 @@ function renderPlayerMatchStatistics(candidate) {
         return `<li class="profile-recent-match"><span class="profile-match-result ${match.won ? 'profile-match-win' : 'profile-match-loss'}">${html(tr(match.won ? 'win' : 'loss'))}</span>
             <div><strong>${getFlagImg(opponent?.country || match.opponentCountry)} ${html(opponent?.name || match.opponentName)}</strong>
             <small>${formatPlayerProfileDate(match.timestamp)} · ${html(name)}</small></div>
-            <div class="profile-match-score"><strong>${match.scoreFor}:${match.scoreAgainst}</strong><small>${html(tr(match.scoreType === 'sets' ? 'sets' : 'legs'))}${match.average === null ? '' : ` · ${html(tr('matchAverage', { average: Number(match.average).toFixed(2) }))}`}</small></div></li>`;
+            <div class="profile-match-score"><strong>${match.scoreFor}:${match.scoreAgainst}</strong><small>${html(tr(match.scoreType === 'sets' ? 'sets' : 'legs'))}${match.average === null ? '' : ` · ${html(tr('matchAverage', { average: Number(match.average).toFixed(2) }))}`}</small>
+            ${match.report && typeof trMatchReport === 'function' ? `<button type="button" class="profile-match-report-button" onclick="${html(`openPlayerMatchReport(${JSON.stringify(getPlayerMatchStatsKey(candidate))},${JSON.stringify(match.key)})`)}">${html(trMatchReport('open'))}</button>` : ''}</div></li>`;
     }).join('');
     return `<section class="profile-panel"><h3>${html(tr('season', { year: season.year }))}</h3>
         ${stats.played ? `<p class="profile-stats-note">${html(tr('recorded', { count: stats.played, date: formatPlayerProfileDate(stats.since) }))}</p>` : `<p class="profile-empty">${html(tr('empty'))}</p>`}
@@ -261,6 +271,7 @@ function renderPlayerMatchStatistics(candidate) {
             ${card('average', stats.averageCount ? (stats.averageTotal / stats.averageCount).toFixed(2) : '—', coverage(stats.averageCount))}
             ${card('doubles', doubles, `${stats.doubleMatches ? (stats.doubleAttempts ? `${stats.doubleHits}/${stats.doubleAttempts}` : html(tr('noAttempts'))) : html(tr('noData'))}<br>${coverage(stats.doubleMatches, stats.estimatedDoubleMatches)}`)}
             ${card('oneEighties', oneEighties, coverage(stats.oneEightyMatches, stats.estimatedOneEightyMatches))}
+            ${typeof getBounceOutText === 'function' ? `<div class="profile-ranking-card"><span>${html(getBounceOutText().stat)}</span><strong>${stats.bounceOutMatches ? `${stats.estimatedBounceOutMatches ? '≈ ' : ''}${stats.bounceOuts}` : '—'}</strong><small>${coverage(stats.bounceOutMatches, stats.estimatedBounceOutMatches)}</small></div>` : ''}
             ${card('balance', `${stats.wins}–${stats.losses}`, `${html(tr('wins'))} / ${html(tr('losses'))}`)}
         </div><p class="profile-stats-note">${html(tr('averageNote'))}</p><p class="profile-stats-note">${html(tr('scope'))}</p>
     </section><section class="profile-panel"><h3>${html(tr('recent'))}</h3>

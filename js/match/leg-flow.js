@@ -265,7 +265,7 @@ function checkAchievements(type, data = null) {
             return true;
         }
 
-        function processThrow(isP1, targetSec, targetMult, hitSec, hitMult) {
+        function processThrow(isP1, targetSec, targetMult, hitSec, hitMult, result = null) {
             if (!currentMatch || currentMatch.isFinishing) return;
 
             // To jest ostateczna granica bezpieczeństwa dla wszystkich źródeł
@@ -274,6 +274,13 @@ function checkAchievements(type, data = null) {
             // dopisać czwartej lotki do bieżącego podejścia.
             const throwingSide = isP1 ? 'p1' : 'p2';
             if (currentMatch.turn !== throwingSide || currentMatch.dartsThrown >= 3 || currentMatch.isTurnLocked) return;
+
+            const bounced = result?.bounceOut === true;
+            if (bounced) {
+                hitSec = 0; hitMult = 0;
+                if (typeof recordMatchBounceOut === 'function') recordMatchBounceOut(isP1, result);
+                if (typeof showBounceOutFeedback === 'function') showBounceOutFeedback(result);
+            }
 
             if (currentMatch.p1Momentum === undefined) { currentMatch.p1Momentum = 0; currentMatch.p2Momentum = 0; }
 
@@ -294,9 +301,16 @@ function checkAchievements(type, data = null) {
             }
 
             currentTurnScore += points;
-            if (typeof addDartToCanvas === 'function') addDartToCanvas(hitSec, hitMult, isP1 ? '#f1c40f' : '#ecf0f1', targetSec, targetMult);
+            if (!bounced && typeof addDartToCanvas === 'function') addDartToCanvas(hitSec, hitMult, isP1 ? '#f1c40f' : '#ecf0f1', targetSec, targetMult);
 
             let st = currentMatch.stats; let newScore = currentScore - points;
+            const actualResult = { ...(result || {}), sector: hitSec, mult: hitMult };
+            if (typeof recordMatchReportDart === 'function') {
+                recordMatchReportDart(currentMatch, isP1, currentScore, { sector: targetSec, mult: targetMult }, actualResult);
+            }
+            if (typeof recordMentalThrowOutcome === 'function') {
+                recordMentalThrowOutcome(isP1, currentScore, { sector: targetSec, mult: targetMult }, actualResult);
+            }
 
             let isAimingAtFinishingDouble = (targetMult === 2 && (currentScore <= 40 || (currentScore === 50 && targetSec === 25)));
 
@@ -339,7 +353,7 @@ function checkAchievements(type, data = null) {
                 let multStr = hitMult === 3 ? 'T' : (hitMult === 2 ? 'D' : '');
                 let secStr = hitSec === 25 ? (hitMult === 2 ? 'Bull' : '25') : hitSec;
                 if (points > 0) logThrow(`${playerName} ${t('t-log-throws')}: ${multStr}${secStr} (${points})`, logType);
-                else logThrow(`${playerName} ${t('t-log-throws')}: ${t('t-log-miss-0')}`, logType);
+                else logThrow(bounced ? `${playerName}: ${getBounceOutText().log}` : `${playerName} ${t('t-log-throws')}: ${t('t-log-miss-0')}`, logType);
 
                 if (currentScore <= 50 && targetMult === 2 && hitMult !== 2) adjustMomentum(isP1, -1);
             }

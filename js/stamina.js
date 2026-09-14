@@ -55,6 +55,7 @@ function getTournamentStaminaCost(tournament) {
 
 function chargeTournamentParticipationStamina(tournament, participationDate = currentDate) {
     if (!tournament || typeof player === 'undefined' || !player) return 0;
+    if (typeof isPlayerInjured === 'function' && isPlayerInjured(player, participationDate)) return 0;
 
     const parsedDate = new Date(participationDate);
     const validDate = Number.isNaN(parsedDate.getTime()) ? new Date() : parsedDate;

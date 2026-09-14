@@ -830,6 +830,8 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
                     syncPdc2026TournamentCalendar(tournamentDatabase, gameState.currentDate);
                 }
                 currentDate = new Date(gameState.currentDate);
+                if (typeof initializeTournamentWatchSettings === 'function') initializeTournamentWatchSettings(player);
+                if (typeof initializeBounceOutSettings === 'function') initializeBounceOutSettings(player);
                 if (typeof normalizeSponsorGoals === 'function') normalizeSponsorGoals();
                 if (typeof resetSponsorOffers === 'function') resetSponsorOffers();
                 if (typeof migrateEuropeanTourOrderOfMeritFromHistory === 'function') {
@@ -949,6 +951,7 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
                 if (typeof restoreWorldNews === 'function') restoreWorldNews();
             if (typeof restoreSeasonArchive === 'function') restoreSeasonArchive();
             if (typeof restorePlayerStaff === 'function') restorePlayerStaff();
+            if (typeof initializePlayerEvents === 'function') initializePlayerEvents();
             if (typeof initializeAllPlayerTraits === 'function') initializeAllPlayerTraits();
             if (typeof restoreCareerInfrastructure === 'function') restoreCareerInfrastructure();
             if (typeof restoreCareerLifestyle === 'function') restoreCareerLifestyle();
@@ -1182,7 +1185,8 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
             let rankBonus = Math.max(0, 130 - rank) * 15; // Bycie #1 to bonus ~1950 funtów/mc
             let ovrBonus = Math.max(0, player.overall - 45) * 40; 
             let base = 250;
-            let popMultiplier = 0.5 + (player.pop / 100); // 100 Medialności daje 50% WIĘCEJ kasy od każdego sponsora!
+            const mediaPresence = typeof getPlayerMediaPresence === 'function' ? getPlayerMediaPresence() : player.pop;
+            let popMultiplier = 0.5 + (mediaPresence / 100); // 100 Medialności daje 50% WIĘCEJ kasy od każdego sponsora!
             return (base + rankBonus + ovrBonus) * popMultiplier;
         }
 
@@ -1424,6 +1428,8 @@ function getBoostedPlayerStats() {
         overall: Math.min(100, Math.max(40, Math.round(player.overall) + b.o + sPenalty)),
         scoring: Math.min(100, Math.max(40, Math.round(player.scoring) + b.s + sPenalty)),
         doubles: Math.min(100, Math.max(40, Math.round(player.doubles) + b.d + sPenalty)),
+        favoriteDouble: player.favoriteDouble,
+        favoriteDoubles: Array.isArray(player.favoriteDoubles) ? player.favoriteDoubles.slice(0, 3) : undefined,
         bonusStr: b.o > 0 ? `(+${b.o} ${t('t-gear')})` : '',
         staminaPenalty: sPenalty
     };
@@ -1673,6 +1679,7 @@ async function updateProfileWalkon(event) {
         function showTrainingScreen() {
             initPlayerXP();
             initTrainingLimit();
+            if (typeof refreshPlayerEventsViews === 'function') refreshPlayerEventsViews();
             if (typeof renderPlayerStaffContextNotes === 'function') renderPlayerStaffContextNotes();
             const sessionsThisWeek = player.trainingSessionsThisWeek;
             const sessionsRemaining = TRAINING_CONFIG.weeklyLimit - sessionsThisWeek;
@@ -1703,7 +1710,8 @@ async function updateProfileWalkon(event) {
 
             ['t-train-sc-btn', 't-train-db-btn'].forEach(buttonId => {
                 const button = document.getElementById(buttonId);
-                if (button) button.disabled = sessionsRemaining <= 0 || player.stamina < TRAINING_CONFIG.staminaCost;
+                if (button) button.disabled = sessionsRemaining <= 0 || player.stamina < TRAINING_CONFIG.staminaCost
+                    || (typeof isPlayerInjured === 'function' && isPlayerInjured(player));
             });
 
             if (typeof renderPlayerTraitTraining === 'function') renderPlayerTraitTraining(sessionsRemaining);
@@ -1713,6 +1721,9 @@ async function updateProfileWalkon(event) {
 
         function performTraining(type) {
             if (typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy()) return false;
+            if (typeof isPlayerInjured === 'function' && isPlayerInjured(player)) {
+                return typeof showPlayerInjuryBlocked === 'function' ? showPlayerInjuryBlocked() : false;
+            }
             const isTrait = type === 'endurance' || type === 'consistency' || type === 'mental';
             if (!['scoring', 'doubles', 'endurance', 'consistency', 'mental'].includes(type)
                 || (isTrait && typeof awardPlayerTraitXP !== 'function')) return false;
@@ -1723,7 +1734,8 @@ async function updateProfileWalkon(event) {
                 ? activeTournament : pending;
             const playerParticipates = !currentTournament || typeof isCareerPlayerParticipatingInTournament !== 'function'
                 || isCareerPlayerParticipatingInTournament(currentTournament);
-            if (currentTournament && playerParticipates) {
+            if (currentTournament && (playerParticipates
+                || (typeof isTournamentSelectedForWatching === 'function' && isTournamentSelectedForWatching(currentTournament)))) {
                 if (typeof trPlayerTraits === 'function') alert(trPlayerTraits('tournamentBlocked'));
                 return false;
             }
@@ -1735,7 +1747,7 @@ async function updateProfileWalkon(event) {
                     || typeof startTournament !== 'function'
                     || typeof isSkippingTournament === 'undefined') return false;
                 activateTournamentFromCalendar(currentTournament);
-                isSkippingTournament = true;
+                if (typeof shouldAutoSimulateUnwatchedTournament !== 'function') isSkippingTournament = true;
                 const simulation = startTournament();
                 const resumeTraining = () => {
                     const unfinishedTournament = (typeof activeTournament !== 'undefined' && activeTournament && !activeTournament.completed)
@@ -1780,7 +1792,8 @@ async function updateProfileWalkon(event) {
                 const equipmentBonus = getTrainingEquipmentBonus();
                 const staffBonus = typeof getPlayerStaffTrainingBonus === 'function' ? getPlayerStaffTrainingBonus(type) : 0;
                 const analysisBonus = typeof getCareerAnalysisTrainingBonus === 'function' ? getCareerAnalysisTrainingBonus(player) : 0;
-                const profMultiplier = 0.8 + (player.prof / 100) * 0.4; // 100 Profesjonalizmu daje 20% więcej XP za trening
+                const professionalism = typeof getPlayerProfessionalism === 'function' ? getPlayerProfessionalism() : player.prof;
+                const profMultiplier = 0.8 + (professionalism / 100) * 0.4; // 100 Profesjonalizmu daje 20% więcej XP za trening
                 const rawGainedXP = Math.max(1, baseXP + (Math.random() * 4 - 2)) * (1 + (equipmentBonus / 100))
                     * profMultiplier * (1 + staffBonus / 100) * (1 + analysisBonus / 100);
                 const gainedXP = typeof scalePlayerDevelopmentChange === 'function'
@@ -1830,7 +1843,11 @@ async function updateProfileWalkon(event) {
                 const throwStats = typeof applyMentalPressureToStats === 'function'
                     ? applyMentalPressureToStats(pObj, statsObj, isP1, aim, currentScore) : statsObj;
                 let result = calculateVisitThrow(aim.sector, aim.mult, throwStats, groupingVisit);
+                if (typeof recordMatchBounceOut === 'function' && recordMatchBounceOut(isP1, result)) {
+                    if (typeof logThrow === 'function') logThrow(`${pObj.name}: ${getBounceOutText().log}`, isP1 ? 'hit' : 'ai');
+                }
                 if (scoringVisit) recordAiScoringObstruction(scoringVisit, aim, result, 3 - i);
+                if (typeof recordMatchReportDart === 'function') recordMatchReportDart(currentMatch, isP1, currentScore, aim, result);
                 if (typeof recordMentalThrowOutcome === 'function') recordMentalThrowOutcome(isP1, currentScore, aim, result);
                 let hitSec = result.sector;
                 let hitMult = result.mult;

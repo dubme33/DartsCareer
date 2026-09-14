@@ -1,6 +1,6 @@
 // Fixed fictional candidates: browsing the market never consumes simulation RNG.
-const PLAYER_STAFF_CONFIG = Object.freeze({ slots: 3 });
-// Costs are a recurring career expense. Managers have lower salaries because
+const PLAYER_STAFF_CONFIG = Object.freeze({ slots: 3, outsideSlotRoles: Object.freeze(['careerManager', 'socialManager']) });
+// Costs are a recurring career expense. Sponsorship managers have lower salaries because
 // their only benefit is a small percentage of regular sponsor income.
 const PLAYER_STAFF_CANDIDATES = Object.freeze([
     { id: 'scoring-1', role: 'scoring', name: 'Adam Lis', level: 1, bonus: 5, signingFee: 6000, salary: 2000 },
@@ -20,11 +20,25 @@ const PLAYER_STAFF_CANDIDATES = Object.freeze([
     { id: 'physio-3', role: 'physio', name: 'Lena Fischer', level: 3, bonus: 3, signingFee: 33000, salary: 7500 },
     { id: 'manager-1', role: 'manager', name: 'Piotr Zieliński', level: 1, bonus: 3, signingFee: 9000, salary: 400 },
     { id: 'manager-2', role: 'manager', name: 'Emma Collins', level: 2, bonus: 5, signingFee: 25000, salary: 1000 },
-    { id: 'manager-3', role: 'manager', name: 'Victor Laurent', level: 3, bonus: 8, signingFee: 60000, salary: 2000 }
+    { id: 'manager-3', role: 'manager', name: 'Victor Laurent', level: 3, bonus: 8, signingFee: 60000, salary: 2000 },
+    { id: 'career-manager-1', role: 'careerManager', name: 'Marek Wolski', level: 1, bonus: 5, signingFee: 5000, salary: 1000 },
+    { id: 'career-manager-2', role: 'careerManager', name: 'Sarah Miller', level: 2, bonus: 10, signingFee: 15000, salary: 2500 },
+    { id: 'career-manager-3', role: 'careerManager', name: 'Thomas Grant', level: 3, bonus: 15, signingFee: 35000, salary: 5000 },
+    { id: 'social-manager-1', role: 'socialManager', name: 'Julia Maj', level: 1, bonus: 5, signingFee: 5000, salary: 1000 },
+    { id: 'social-manager-2', role: 'socialManager', name: 'Mia Taylor', level: 2, bonus: 10, signingFee: 15000, salary: 2500 },
+    { id: 'social-manager-3', role: 'socialManager', name: 'Alex Morgan', level: 3, bonus: 15, signingFee: 35000, salary: 5000 }
 ].map(candidate => Object.freeze(candidate)));
 
 function getPlayerStaffCandidate(id) {
     return PLAYER_STAFF_CANDIDATES.find(candidate => candidate.id === id) || null;
+}
+
+function usesPlayerStaffSlot(candidate) {
+    return Boolean(candidate && !PLAYER_STAFF_CONFIG.outsideSlotRoles.includes(candidate.role));
+}
+
+function getPlayerStaffSlotUsage(contracts = getPlayerStaffState().contracts) {
+    return contracts.filter(contract => usesPlayerStaffSlot(getPlayerStaffCandidate(contract.candidateId))).length;
 }
 
 function playerStaffDateKey(date = currentDate) {
@@ -56,7 +70,8 @@ function getPlayerStaffState() {
     const roles = new Set();
     for (const saved of raw.contracts) {
         const candidate = getPlayerStaffCandidate(saved?.candidateId);
-        if (!candidate || roles.has(candidate.role) || state.contracts.length >= PLAYER_STAFF_CONFIG.slots) continue;
+        if (!candidate || roles.has(candidate.role)
+            || (usesPlayerStaffSlot(candidate) && getPlayerStaffSlotUsage(state.contracts) >= PLAYER_STAFF_CONFIG.slots)) continue;
         if (!parsePlayerStaffDate(saved.signedOn) || !parsePlayerStaffDate(saved.lastPaidOn)
             || saved.signedOn > saved.lastPaidOn || saved.lastPaidOn > today) continue;
         roles.add(candidate.role);
@@ -88,6 +103,18 @@ function getPlayerStaffBonus(role) {
     return getActivePlayerStaff().find(candidate => candidate.role === role)?.bonus || 0;
 }
 
+// Keep base values separate so rendering, loading and monthly payments cannot
+// stack the bonuses. Dismissal or an unpaid salary removes support immediately.
+function getPlayerProfessionalism() {
+    const base = Number(player?.prof);
+    return Math.max(0, Math.min(100, (Number.isFinite(base) ? base : 50) + getPlayerStaffBonus('careerManager')));
+}
+
+function getPlayerMediaPresence() {
+    const base = Number(player?.pop);
+    return Math.max(0, Math.min(100, (Number.isFinite(base) ? base : 20) + getPlayerStaffBonus('socialManager')));
+}
+
 function getPlayerStaffTrainingBonus(type) {
     if (type === 'mental') return getPlayerStaffBonus('psychologist');
     if (type === 'endurance') return getPlayerStaffBonus('fitness');
@@ -110,7 +137,7 @@ function getPlayerStaffHireStatus(id) {
     const contracts = getPlayerStaffState().contracts;
     if (contracts.some(contract => contract.candidateId === id)) return 'employed';
     if (contracts.some(contract => getPlayerStaffCandidate(contract.candidateId).role === candidate.role)) return 'roleTaken';
-    if (contracts.length >= PLAYER_STAFF_CONFIG.slots) return 'full';
+    if (usesPlayerStaffSlot(candidate) && getPlayerStaffSlotUsage(contracts) >= PLAYER_STAFF_CONFIG.slots) return 'full';
     if (!Number.isFinite(Number(player.budget)) || Number(player.budget) < candidate.signingFee + candidate.salary) return 'funds';
     return 'available';
 }

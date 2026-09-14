@@ -117,7 +117,8 @@ function renderPlayerTraitProfile(candidate) {
 function renderPlayerTraitTraining(sessionsRemaining) {
     const root = document.getElementById('train-player-traits');
     if (!root || typeof player === 'undefined' || !player) return;
-    const unavailable = sessionsRemaining <= 0 || player.stamina < 20;
+    const unavailable = sessionsRemaining <= 0 || player.stamina < 20
+        || (typeof isPlayerInjured === 'function' && isPlayerInjured(player));
     root.innerHTML = `<h3 id="train-player-traits-title">${escapeHtml(trPlayerTraits('training'))}</h3><p class="trait-note">${escapeHtml(trPlayerTraits('separate'))}</p>
         <div class="trait-grid">${PLAYER_TRAIT_TYPES.map(type => {
             const value = getPlayerTrait(player, type);

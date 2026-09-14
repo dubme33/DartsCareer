@@ -113,6 +113,38 @@ const PLAYER_STAFF_TEXT = {
     }
 };
 
+const PLAYER_STAFF_MANAGEMENT_TEXT = {
+    pl: {
+        intro: 'Trzy miejsca w sztabie, osiem specjalizacji. Każdą rolę może pełnić jedna osoba. Menadżer kariery i menadżer social mediów nie zajmują miejsc w sztabie.',
+        manager: 'Menadżer sponsorski', careerManager: 'Menadżer kariery', socialManager: 'Menadżer social mediów',
+        outside: 'Menadżerowie poza limitem', outsideNote: 'Nie zajmuje miejsca w sztabie.',
+        careerManagerBonus: 'Stałe +{bonus} punktów profesjonalizmu przez czas opłaconej umowy (maks. 100). Wspiera wszystkie treningi.',
+        socialManagerBonus: 'Stałe +{bonus} punktów medialności przez czas opłaconej umowy (maks. 100). Zwiększa liczbę fanów i wartość nowych ofert sponsorów.'
+    },
+    en: {
+        intro: 'Three staff slots, eight specializations. One person per role. Career and social media managers do not occupy staff slots.',
+        manager: 'Sponsorship manager', careerManager: 'Career manager', socialManager: 'Social media manager',
+        outside: 'Managers outside the limit', outsideNote: 'Does not occupy a staff slot.',
+        careerManagerBonus: '+{bonus} professionalism points while the contract is paid (maximum 100). Supports all training.',
+        socialManagerBonus: '+{bonus} media presence points while the contract is paid (maximum 100). Increases followers and the value of new sponsor offers.'
+    },
+    de: {
+        intro: 'Drei Stabsplätze, acht Spezialisierungen. Eine Person pro Rolle. Karriere- und Social-Media-Manager belegen keinen Stabsplatz.',
+        manager: 'Sponsoring-Manager', careerManager: 'Karrieremanager', socialManager: 'Social-Media-Manager',
+        outside: 'Manager außerhalb des Limits', outsideNote: 'Belegt keinen Stabsplatz.',
+        careerManagerBonus: '+{bonus} Professionalitätspunkte während des bezahlten Vertrags (maximal 100). Unterstützt alle Trainingsarten.',
+        socialManagerBonus: '+{bonus} Medienpräsenzpunkte während des bezahlten Vertrags (maximal 100). Mehr Follower und wertvollere neue Sponsorenangebote.'
+    },
+    nl: {
+        intro: 'Drie stafplaatsen, acht specialisaties. Eén persoon per rol. Carrière- en socialmediamanagers nemen geen stafplaats in.',
+        manager: 'Sponsormanager', careerManager: 'Carrièremanager', socialManager: 'Socialmediamanager',
+        outside: 'Managers buiten de limiet', outsideNote: 'Neemt geen stafplaats in.',
+        careerManagerBonus: '+{bonus} professionaliteitspunten zolang het contract betaald is (maximaal 100). Ondersteunt alle trainingen.',
+        socialManagerBonus: '+{bonus} mediapunten zolang het contract betaald is (maximaal 100). Meer volgers en waardevollere nieuwe sponsoraanbiedingen.'
+    }
+};
+for (const [language, text] of Object.entries(PLAYER_STAFF_MANAGEMENT_TEXT)) Object.assign(PLAYER_STAFF_TEXT[language], text);
+
 function trPlayerStaff(key, params = {}) {
     const language = typeof currentLang === 'string' ? currentLang : 'en';
     let text = PLAYER_STAFF_TEXT[language]?.[key] || PLAYER_STAFF_TEXT.en[key] || key;
@@ -160,7 +192,7 @@ function updatePlayerStaffHub() {
     const node = document.getElementById('player-staff-tile-desc');
     if (!node) return;
     const contracts = getPlayerStaffState().contracts;
-    node.textContent = trPlayerStaff('tile', { used: contracts.length, limit: PLAYER_STAFF_CONFIG.slots,
+    node.textContent = trPlayerStaff('tile', { used: getPlayerStaffSlotUsage(contracts), limit: PLAYER_STAFF_CONFIG.slots,
         amount: playerStaffMoney(contracts.reduce((sum, contract) => sum + getPlayerStaffCandidate(contract.candidateId).salary, 0)) });
 }
 
@@ -185,6 +217,7 @@ function renderPlayerStaffCard(candidate, contract = null) {
     return `<article class="staff-card${contract ? ' staff-employed' : ''}" aria-label="${e(candidate.name)}">
         <div class="staff-card-top"><span>${e(trPlayerStaff(candidate.role))}</span><span class="staff-level">${e(trPlayerStaff('level', { level: candidate.level }))}</span></div>
         <h4>${e(candidate.name)}</h4><p class="staff-bonus">${e(playerStaffBonusDescription(candidate))}</p>
+        ${!usesPlayerStaffSlot(candidate) ? `<p class="staff-note">${e(trPlayerStaff('outsideNote'))}</p>` : ''}
         <dl class="staff-prices"><div><dt>${e(trPlayerStaff('signingFee'))}</dt><dd>${e(playerStaffMoney(candidate.signingFee))}</dd></div>
             <div><dt>${e(trPlayerStaff('salary'))}</dt><dd>${e(playerStaffMoney(candidate.salary))}</dd></div></dl>
         ${contract ? `<p class="staff-note">${e(trPlayerStaff('signed', { date: playerStaffDisplayDate(contract.signedOn) }))}</p>
@@ -201,7 +234,8 @@ function renderPlayerStaff() {
     const contracts = getPlayerStaffState().contracts;
     const e = escapeHtml;
     const summary = document.getElementById('player-staff-summary');
-    if (summary) summary.innerHTML = [['budget', playerStaffMoney(player.budget)], ['slots', `${contracts.length}/${PLAYER_STAFF_CONFIG.slots}`],
+    if (summary) summary.innerHTML = [['budget', playerStaffMoney(player.budget)], ['slots', `${getPlayerStaffSlotUsage(contracts)}/${PLAYER_STAFF_CONFIG.slots}`],
+        ['outside', `${contracts.length - getPlayerStaffSlotUsage(contracts)}/2`],
         ['payroll', playerStaffMoney(contracts.reduce((sum, contract) => sum + getPlayerStaffCandidate(contract.candidateId).salary, 0))]]
         .map(([label, value]) => `<div><span>${e(trPlayerStaff(label))}</span><strong>${e(value)}</strong></div>`).join('');
     const team = document.getElementById('player-staff-team');
@@ -233,7 +267,7 @@ function refreshPlayerStaffTranslations() {
     const filter = document.getElementById('player-staff-filter');
     if (filter) {
         const role = filter.value || 'all';
-        filter.innerHTML = ['all', 'scoring', 'doubles', 'fitness', 'psychologist', 'physio', 'manager'].map(value => `<option value="${value}">${escapeHtml(trPlayerStaff(value))}</option>`).join('');
+        filter.innerHTML = ['all', 'scoring', 'doubles', 'fitness', 'psychologist', 'physio', 'manager', 'careerManager', 'socialManager'].map(value => `<option value="${value}">${escapeHtml(trPlayerStaff(value))}</option>`).join('');
         filter.value = role;
     }
     const feedback = document.getElementById('player-staff-feedback');

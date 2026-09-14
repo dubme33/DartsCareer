@@ -175,8 +175,55 @@ function isCareerPlayerInRemainingBracket() {
         && tournamentBracket.some(candidate => typeof isCurrentPlayer === 'function' && isCurrentPlayer(candidate));
 }
 
+function isCareerPlayerWaitingForTournamentEntry() {
+    if (!activeTournament || activeTournament.completed || isCareerPlayerInRemainingBracket()
+        || typeof getUKOpenPlayerEntryRound !== 'function') return false;
+    const candidates = typeof getPdcTourCardPlayers === 'function'
+        ? getPdcTourCardPlayers(true)
+        : [...(Array.isArray(pdcPlayers) ? pdcPlayers : []), ...(player?.name ? [player] : [])];
+    const entryRound = getUKOpenPlayerEntryRound(activeTournament, player, candidates);
+    return entryRound !== null && entryRound < 160
+        && (!tournamentBracket?.length || Number(tournamentRound) > entryRound);
+}
+
+function updateTournamentEntrySimulationButton(id, show = true) {
+    const button = document.getElementById(id);
+    if (!button) return;
+    button.style.display = show && !(typeof currentMatch !== 'undefined' && currentMatch)
+        && isCareerPlayerWaitingForTournamentEntry() ? 'block' : 'none';
+    button.innerText = t('t-btn-sim-to-match');
+    button.disabled = isTournamentSimulationBusy();
+}
+
+async function simulateUntilCareerPlayerMatch() {
+    if (isTournamentSimulationBusy() || tournamentSimulationSaveBlocked || currentMatch
+        || isSkippingTournament || !isCareerPlayerWaitingForTournamentEntry()) return false;
+    if (!tournamentBracket?.length) startTournament();
+    if (tournamentBracket?.length <= 1 || !isCareerPlayerWaitingForTournamentEntry()) return false;
+
+    const tournament = activeTournament;
+    return runTournamentSimulation(async () => {
+        let simulatedRounds = 0;
+        while (!isCareerPlayerInRemainingBracket() && simulatedRounds < 3) {
+            if (!isCareerPlayerWaitingForTournamentEntry()) throw new Error('Zawodnik nie może już dołączyć do turnieju.');
+            const previousRound = tournamentRound;
+            const outcome = await advanceTournamentInBatches(tournament);
+            if (outcome || tournamentRound >= previousRound) throw new Error('Nie udało się przejść do kolejnej rundy UK Open.');
+            simulatedRounds++;
+        }
+        if (!isCareerPlayerInRemainingBracket()) throw new Error('Nie udało się dojść do pierwszego meczu zawodnika.');
+        document.getElementById('results-modal').style.display = 'none';
+        if (typeof updateHub === 'function') updateHub();
+        updateTournamentEntrySimulationButton('t-btn-sim-to-match-hub');
+        showBracket();
+        saveGame(true);
+        return true;
+    });
+}
+
 function setRemainingTournamentButtonsDisabled(disabled) {
-    ['t-btn-sim-tournament', 't-btn-sim-tournament-results'].forEach(id => {
+    ['t-btn-sim-tournament', 't-btn-sim-tournament-results', 't-btn-sim-to-match',
+        't-btn-sim-to-match-results', 't-btn-sim-to-match-hub'].forEach(id => {
         const button = document.getElementById(id);
         if (button) button.disabled = disabled;
     });
@@ -269,7 +316,8 @@ async function simulateRemainingTournament(options = {}) {
     // Zwykły przycisk po odpadnięciu nie może wycofać gracza. Taką zgodę
     // przekazuje wyłącznie potwierdzone „Odpuść” dla istniejącej drabinki.
     if (!Array.isArray(tournamentBracket) || tournamentBracket.length <= 1
-        || (isCareerPlayerInRemainingBracket() && options?.withdrawCareerPlayer !== true)) return false;
+        || ((isCareerPlayerInRemainingBracket() || isCareerPlayerWaitingForTournamentEntry())
+            && options?.withdrawCareerPlayer !== true)) return false;
 
     return runTournamentSimulation(async () => {
         const outcome = await simulateTournamentRoundsInBatches(activeTournament);

@@ -117,6 +117,8 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
                     overall, ovr: overall, scoring, doubles,
                     baseOvr: overall, baseScoring: scoring, baseDoubles: doubles, form: 0,
                     favoriteDouble: asNumber(selectedPlayer.favoriteDouble, 20),
+                    favoriteDoubles: Array.isArray(selectedPlayer.favoriteDoubles)
+                        ? selectedPlayer.favoriteDoubles.slice(0, 3) : [asNumber(selectedPlayer.favoriteDouble, 20), null, null],
                     // Prize money determines ranking; the budget is the separate amount used in the shop.
                     budget: Math.min(10000, Math.max(500, Math.round(prizeMoney * 0.002))),
                     prof: Math.min(95, Math.max(55, Math.round(45 + (overall - 40) * 0.75))),
@@ -179,6 +181,9 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
                 if (typeof initializeWorldNews === 'function') initializeWorldNews(true);
                 if (typeof initializeSeasonArchive === 'function') initializeSeasonArchive(true);
                 if (typeof initializePlayerStaff === 'function') initializePlayerStaff(true);
+                if (typeof initializePlayerEvents === 'function') initializePlayerEvents(true);
+                if (typeof initializeTournamentWatchSettings === 'function') initializeTournamentWatchSettings(player, true);
+                if (typeof initializeBounceOutSettings === 'function') initializeBounceOutSettings(player, true);
                 if (typeof initializeAllPlayerTraits === 'function') initializeAllPlayerTraits(true);
                 if (typeof initializeCareerInfrastructure === 'function') initializeCareerInfrastructure(true);
                 if (typeof initializeCareerLifestyle === 'function') initializeCareerLifestyle(true);
@@ -210,6 +215,13 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
             }
             
             if (typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy()) return;
+            const favoriteDoubles = getFavoriteDoubleSelectValues();
+            updateFavoriteDoubleChoices();
+            if (favoriteDoubles.some(value => !Number.isInteger(value) || value < 1 || value > 20)
+                || new Set(favoriteDoubles).size !== 3) {
+                document.getElementById('favorite-double')?.reportValidity?.();
+                return;
+            }
             const potVal = document.getElementById('potential').value;
             let ovr = 55;
             if (potVal === 'weak') ovr = 45;
@@ -229,7 +241,8 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
                     ? getSelectedCareerDifficulty('custom') : 'normal',
                 walkonTournamentMode: 'stage',
                 overall: ovr, ovr: ovr, scoring: ovr + 2, doubles: ovr - 2,
-                favoriteDouble: parseInt(document.getElementById('favorite-double').value),
+                favoriteDouble: favoriteDoubles[0],
+                favoriteDoubles,
                 budget: 150, prof: 50, pop: 20, stamina: 100,
                 prizeMoney: 0,
                 proTourPrizeMoney: 0,
@@ -270,6 +283,9 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
             if (typeof initializeWorldNews === 'function') initializeWorldNews(true);
             if (typeof initializeSeasonArchive === 'function') initializeSeasonArchive(true);
             if (typeof initializePlayerStaff === 'function') initializePlayerStaff(true);
+                if (typeof initializePlayerEvents === 'function') initializePlayerEvents(true);
+                if (typeof initializeTournamentWatchSettings === 'function') initializeTournamentWatchSettings(player, true);
+                if (typeof initializeBounceOutSettings === 'function') initializeBounceOutSettings(player, true);
             if (typeof initializeAllPlayerTraits === 'function') initializeAllPlayerTraits(true);
             if (typeof initializeCareerInfrastructure === 'function') initializeCareerInfrastructure(true);
             if (typeof initializeCareerLifestyle === 'function') initializeCareerLifestyle(true);
@@ -311,11 +327,15 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
             if (typeof player.stamina === 'undefined') player.stamina = 100; // Inicjalizacja dla starych zapisów
             if (typeof refreshCareerDifficultyUI === 'function') refreshCareerDifficultyUI();
             if (typeof refreshWalkonSettingsUI === 'function') refreshWalkonSettingsUI();
+            if (typeof refreshTournamentWatchSettingsUI === 'function') refreshTournamentWatchSettingsUI();
+            if (typeof refreshBounceOutSettingsUI === 'function') refreshBounceOutSettingsUI();
+            if (typeof updateTournamentEntrySimulationButton === 'function') updateTournamentEntrySimulationButton('t-btn-sim-to-match-hub');
 
             document.getElementById('hub-name').innerText = player.name;
             document.getElementById('hub-flag').innerHTML = getFlagImg(player.country);
             
             let bStats = typeof getBoostedPlayerStats === 'function' ? getBoostedPlayerStats() : { overall: player.overall, scoring: player.scoring, doubles: player.doubles, bonusStr: '', staminaPenalty: 0 };
+            if (typeof getPlayerEventMatchRatings === 'function') bStats = getPlayerEventMatchRatings(player, bStats);
             
             document.getElementById('hub-ovr').innerText = bStats.overall;
             
@@ -347,12 +367,14 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
             let baseByRank = Math.pow(rankFactor, 2.5); 
             
             // Mnożnik medialności (od 0.6 dla nudziarzy do x16 dla showmanów 100 Pop)
-            let popFactor = Math.pow(player.pop / 25, 2); 
+            const effectivePop = typeof getPlayerMediaPresence === 'function' ? getPlayerMediaPresence() : player.pop;
+            const effectiveProf = typeof getPlayerProfessionalism === 'function' ? getPlayerProfessionalism() : player.prof;
+            let popFactor = Math.pow(effectivePop / 25, 2); 
             
             let followers = Math.floor(baseByRank * popFactor * 0.8);
             
-            if(document.getElementById('hub-prof')) document.getElementById('hub-prof').innerText = Math.round(player.prof);
-            if(document.getElementById('hub-pop')) document.getElementById('hub-pop').innerText = Math.round(player.pop);
+            if(document.getElementById('hub-prof')) document.getElementById('hub-prof').innerText = Math.round(effectiveProf);
+            if(document.getElementById('hub-pop')) document.getElementById('hub-pop').innerText = Math.round(effectivePop);
             if(document.getElementById('hub-followers')) document.getElementById('hub-followers').innerText = followers.toLocaleString('pl-PL');
             if (typeof refreshActiveRivals === 'function') {
                 const rivalTileDesc = document.getElementById('rival-tile-desc');
@@ -360,6 +382,7 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
             }
             if (typeof updateWorldNewsBadge === 'function') updateWorldNewsBadge();
             if (typeof updatePlayerStaffHub === 'function') updatePlayerStaffHub();
+            if (typeof refreshPlayerEventsViews === 'function') refreshPlayerEventsViews();
             if (typeof renderPlayerTraitsHub === 'function') renderPlayerTraitsHub();
             if (typeof updateCareerInfrastructureHub === 'function') updateCareerInfrastructureHub();
             if (typeof updateCareerLifestyleHub === 'function') updateCareerLifestyleHub();
@@ -405,6 +428,7 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
                 : null;
             if (nameDisplay) nameDisplay.innerText = tournamentDisplayName;
             if (tournamentTile) tournamentTile.style.display = 'block';
+            if (typeof updateTournamentEntrySimulationButton === 'function') updateTournamentEntrySimulationButton('t-btn-sim-to-match-hub');
             if (typeof updateCareerInfrastructureHub === 'function') updateCareerInfrastructureHub();
             return tournament;
         }
@@ -420,6 +444,7 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
         // bezpieczną odpowiedź „tak”, aby nie dopuścić do treningu przed własnym meczem.
         function isCareerPlayerParticipatingInTournament(tournament, careerPlayer = player) {
             if (!tournament || !careerPlayer) return true;
+            if (typeof isPlayerInjured === 'function' && isPlayerInjured(careerPlayer)) return false;
             const isCareerPlayer = candidate => {
                 if (!candidate) return false;
                 if (candidate === careerPlayer) return true;
@@ -570,6 +595,20 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
                 recoverPendingTournamentForCurrentDate(true);
             }
             if (activeTournament && !activeTournament.completed) {
+                const autoSimulatePending = typeof shouldAutoSimulateUnwatchedTournament === 'function'
+                    ? shouldAutoSimulateUnwatchedTournament(activeTournament)
+                    : typeof isPlayerInjured === 'function' && isPlayerInjured(player);
+                if (autoSimulatePending
+                    && typeof startTournament === 'function') {
+                    // The draw makes the final eligibility decision. Do not
+                    // withdraw a player based on an advance qualification preview.
+                    if (typeof shouldAutoSimulateUnwatchedTournament !== 'function') isSkippingTournament = true;
+                    const simulation = startTournament();
+                    const resumeDay = () => activeTournament && !activeTournament.completed
+                        ? false : advanceDay({ recoverStamina });
+                    return simulation && typeof simulation.then === 'function'
+                        ? simulation.then(completed => completed ? resumeDay() : false) : resumeDay();
+                }
                 const messages = {
                     pl: 'Najpierw dokończ turniej albo wybierz opcję „Odpuść turniej”.',
                     en: 'Finish the tournament first or choose “Skip tournament”.',
@@ -593,6 +632,7 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
                 settleSponsorGoals(currentDate.getFullYear());
             }
             currentDate.setDate(currentDate.getDate() + 1);
+            const investmentIncome = typeof processCareerInvestmentIncome === 'function' ? processCareerInvestmentIncome() : null;
             const staffPayroll = typeof processPlayerStaffPayroll === 'function' ? processPlayerStaffPayroll() : null;
             const infrastructureMaintenance = typeof processCareerInfrastructureMaintenance === 'function'
                 ? processCareerInfrastructureMaintenance()
@@ -715,10 +755,12 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
                     updateHub();
                 }
             }
+            const playerEvents = typeof processDailyPlayerEvents === 'function' ? processDailyPlayerEvents() : null;
+            if (playerEvents?.changed) updateHub();
             if (typeof recordWorldNewsRankingChange === 'function') recordWorldNewsRankingChange();
             const shouldAutoSaveToday = currentDate.getDate() === 1 || currentDate.getDate() === 15
-                || staffPayroll?.changed === true || infrastructureMaintenance?.changed === true
-                || equipmentWear?.changed === true;
+                || staffPayroll?.changed === true || infrastructureMaintenance?.changed === true || investmentIncome?.changed === true
+                || equipmentWear?.changed === true || playerEvents?.changed === true;
 
             // --- Kwalifikacje do Ligi (1 lutego) ---
             if (currentDate.getMonth() === 1 && currentDate.getDate() === 1) {
@@ -765,7 +807,15 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
                     let bodyToday = t('t-email-tour-today-body').replace('{city}', t(todayTournament.city));
                     addEmail(t('t-sender-org'), subjectToday, bodyToday);
                     
-                    alert(`${t('t-alert-tour-start')} ${tournamentDisplayName}!${formatWarning}`);
+                    const autoSimulateToday = typeof shouldAutoSimulateUnwatchedTournament === 'function'
+                        && shouldAutoSimulateUnwatchedTournament(todayTournament);
+                    if (!autoSimulateToday) alert(`${t('t-alert-tour-start')} ${tournamentDisplayName}!${formatWarning}`);
+
+                    if (typeof shouldAutoSimulateUnwatchedTournament === 'function') {
+                        activateTournamentFromCalendar(todayTournament);
+                        if (shouldAutoSaveToday && typeof saveGame === 'function') saveGame(true);
+                        return startTournament();
+                    }
 
                     const isContinentalQualifier = typeof isContinentalQualifierTournament === 'function'
                         && isContinentalQualifierTournament(todayTournament);
@@ -791,7 +841,8 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
                         && isCrownMastersQualifierTournament(todayTournament)
                         && typeof isCareerPlayerEligibleForCrownMastersQualifier === 'function'
                         && !isCareerPlayerEligibleForCrownMastersQualifier(todayTournament, player);
-                    if (playerSkipsContinentalQualifier || cardHolderSkipsQSchool
+                    const playerSkipsForInjury = typeof isPlayerInjured === 'function' && isPlayerInjured(player);
+                    if (playerSkipsForInjury || playerSkipsContinentalQualifier || cardHolderSkipsQSchool
                         || cardHolderSkipsChallengeTour || playerSkipsDevelopmentTour || playerSkipsTourCardQualifier
                         || playerSkipsCrownMastersQualifier) {
                         // Gracz nie bierze udziału w tej ścieżce kwalifikacji.
@@ -1059,6 +1110,7 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
                 document.getElementById('t-btn-next-round').style.display = 'none';
                 const simulateTournamentButton = document.getElementById('t-btn-sim-tournament-results');
                 if (simulateTournamentButton) simulateTournamentButton.style.display = 'none';
+                if (typeof updateTournamentEntrySimulationButton === 'function') updateTournamentEntrySimulationButton('t-btn-sim-to-match-results', false);
                 document.getElementById('t-btn-tour-back').style.display = 'block';
                 document.getElementById('results-modal').style.display = 'flex';
             } else {

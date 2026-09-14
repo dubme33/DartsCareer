@@ -35,7 +35,10 @@ function createGrandSlamGroupState(participants, tournament = activeTournament) 
         .sort((first, second) => (Number(second.prizeMoney) || 0) - (Number(first.prizeMoney) || 0)
             || (Number(second.ovr) || 0) - (Number(first.ovr) || 0));
 
-    if (rankedParticipants.length < 48) return null;
+    if (rankedParticipants.length < 48) {
+        if (typeof createPlayerEventBye !== 'function') return null;
+        while (rankedParticipants.length < 48) rankedParticipants.push(createPlayerEventBye());
+    }
 
     const field = rankedParticipants.slice(0, 48);
     const groups = Array.from({ length: 16 }, (_, index) => ({
@@ -135,13 +138,17 @@ function simulateGrandSlamAiGroupMatches(includeCareerPlayer = false) {
     return step.value;
 }
 
-function* iterateGrandSlamAiGroupMatches(includeCareerPlayer = false) {
+function* iterateGrandSlamAiGroupMatches(includeCareerPlayer = false, onlyNextRound = false) {
     if (!grandSlamState || grandSlamState.phase !== 'groups') return 0;
     let simulated = 0;
+    const nextRound = onlyNextRound ? Math.min(...grandSlamState.groups.flatMap(group => group.matches
+        .map((match, index) => match.played ? Infinity : index))) : null;
 
     for (const [groupIndex, group] of grandSlamState.groups.entries()) {
+        if (typeof repairInjuredTournamentBracket === 'function') group.members = repairInjuredTournamentBracket(group.members);
         for (const [matchIndex, match] of group.matches.entries()) {
             if (match.played) continue;
+            if (onlyNextRound && matchIndex !== nextRound) continue;
             const p1 = group.members[match.p1Index];
             const p2 = group.members[match.p2Index];
             if (!includeCareerPlayer && (isCurrentPlayer(p1) || isCurrentPlayer(p2))) continue;
@@ -160,11 +167,12 @@ function areGrandSlamGroupsComplete() {
 }
 
 function completeGrandSlamGroupStage() {
-    if (!areGrandSlamGroupsComplete()) return null;
+    if (grandSlamState?.phase !== 'groups' || !areGrandSlamGroupsComplete()) return null;
 
     const winnersBySeed = new Map();
+    const standings = grandSlamState.groups.map(updateGrandSlamGroupStandings);
     grandSlamState.groups.forEach((group, index) => {
-        const winner = updateGrandSlamGroupStandings(group)[0];
+        const winner = standings[index][0];
         if (winner) winnersBySeed.set(index + 1, group.members[winner.memberIndex]);
     });
     if (winnersBySeed.size !== 16) return null;
@@ -172,10 +180,20 @@ function completeGrandSlamGroupStage() {
     const knockoutParticipants = GRAND_SLAM_KNOCKOUT_SEED_ORDER.map(seed => winnersBySeed.get(seed));
     if (knockoutParticipants.some(candidate => !candidate)) return null;
 
-    if (typeof recordTournamentFinanceResult === 'function'
-        && grandSlamState.groups.some(group => group.members.some(isCurrentPlayer))
-        && !knockoutParticipants.some(isCurrentPlayer)) {
-        recordTournamentFinanceResult(player, activeTournament, { round: 48, prizeMoney: 0, stage: 'groupExit' });
+    if (!grandSlamState.groupPrizesPaid) {
+        grandSlamState.groups.forEach((group, groupIndex) => {
+            standings[groupIndex].slice(1).forEach((row, index) => {
+                const candidate = group.members[row.memberIndex];
+                if (!candidate || candidate.isBye) return;
+                const position = index + 2;
+                const prizeMoney = getGrandSlamGroupPrizeMoney(position);
+                awardPrizeMoney(candidate, prizeMoney, activeTournament.name);
+                recordSeasonTournamentResult(candidate, activeTournament, {
+                    round: 48, won: false, prizeMoney, stage: position === 2 ? 'groupSecond' : 'groupThird'
+                });
+            });
+        });
+        grandSlamState.groupPrizesPaid = true;
     }
 
     grandSlamState.phase = 'knockout';
@@ -208,14 +226,14 @@ function appendGrandSlamGroupResultsToHistory() {
     grandSlamState.historyRecorded = true;
 }
 
-function initializeGrandSlamTournament(participants, simulateEntireGroupStage = false) {
-    const initialization = iterateGrandSlamInitialization(participants, simulateEntireGroupStage);
+function initializeGrandSlamTournament(participants, simulateEntireGroupStage = false, deferAiMatches = false) {
+    const initialization = iterateGrandSlamInitialization(participants, simulateEntireGroupStage, deferAiMatches);
     let step = initialization.next();
     while (!step.done) step = initialization.next();
     return step.value;
 }
 
-function* iterateGrandSlamInitialization(participants, simulateEntireGroupStage = false) {
+function* iterateGrandSlamInitialization(participants, simulateEntireGroupStage = false, deferAiMatches = false) {
     const tournamentKey = getGrandSlamTournamentKey();
     if (!grandSlamState || grandSlamState.tournamentKey !== tournamentKey || grandSlamState.phase === 'completed') {
         grandSlamState = createGrandSlamGroupState(participants);
@@ -223,7 +241,7 @@ function* iterateGrandSlamInitialization(participants, simulateEntireGroupStage 
     if (!grandSlamState) return null;
 
     if (grandSlamState.phase === 'groups') {
-        yield* iterateGrandSlamAiGroupMatches(simulateEntireGroupStage);
+        if (!deferAiMatches) yield* iterateGrandSlamAiGroupMatches(simulateEntireGroupStage);
         if (areGrandSlamGroupsComplete()) {
             const knockoutParticipants = completeGrandSlamGroupStage();
             appendGrandSlamGroupResultsToHistory();
@@ -247,9 +265,11 @@ function shouldRefreshGrandSlamOpeningDraw(tournament = activeTournament) {
         && tournamentBracket?.length === 32);
 }
 
-function simulateGrandSlamRemainingAiGroupMatches() {
+function simulateGrandSlamRemainingAiGroupMatches(onlyNextRound = false) {
     if (typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy()) return false;
-    simulateGrandSlamAiGroupMatches(false);
+    const rounds = iterateGrandSlamAiGroupMatches(false, onlyNextRound === true);
+    let step = rounds.next();
+    while (!step.done) step = rounds.next();
     if (areGrandSlamGroupsComplete()) {
         const knockoutParticipants = completeGrandSlamGroupStage();
         appendGrandSlamGroupResultsToHistory();
@@ -266,10 +286,18 @@ function simulateGrandSlamRemainingAiGroupMatches() {
 
 function startGrandSlamCareerGroupMatch() {
     if (typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy()) return false;
+    if (typeof isPlayerInjured === 'function' && isPlayerInjured(player)) {
+        return typeof showPlayerInjuryBlocked === 'function' ? showPlayerInjuryBlocked() : false;
+    }
     const pending = getPendingGrandSlamCareerMatch();
     if (!pending) return;
 
     const opponent = isCurrentPlayer(pending.p1) ? pending.p2 : pending.p1;
+    if (opponent.isBye || (typeof isPlayerInjured === 'function' && isPlayerInjured(opponent))) {
+        recordGrandSlamGroupMatch(pending.groupIndex, pending.matchIndex, isCurrentPlayer(pending.p1),
+            isCurrentPlayer(pending.p1) ? 5 : 0, isCurrentPlayer(pending.p2) ? 5 : 0);
+        return simulateGrandSlamRemainingAiGroupMatches();
+    }
     tournamentBracket = [player, opponent];
     tournamentRound = 32;
     document.getElementById('bracket-modal').style.display = 'none';
@@ -346,14 +374,18 @@ function showGrandSlamGroups() {
     const playButton = document.getElementById('t-btn-play-match');
     const simulateButton = document.getElementById('t-btn-sim-round');
     const simulateTournamentButton = document.getElementById('t-btn-sim-tournament');
+    if (typeof updateTournamentEntrySimulationButton === 'function') updateTournamentEntrySimulationButton('t-btn-sim-to-match', false);
     title.innerText = `🏆 ${activeTournament.name} — Faza grupowa`;
     list.innerHTML = `<p style="margin:0 0 10px; color:#bdc3c7;">16 grup po 3 zawodników. Awans uzyskuje wyłącznie zwycięzca każdej grupy.</p>${grandSlamState.groups.map(renderGrandSlamGroup).join('')}`;
 
     playButton.onclick = startGrandSlamCareerGroupMatch;
     playButton.innerText = pending ? `Zagraj: Grupa ${pending.group.label}` : 'Brak meczu gracza';
     playButton.style.display = pending ? 'block' : 'none';
-    simulateButton.onclick = simulateGrandSlamRemainingAiGroupMatches;
-    simulateButton.innerText = 'Symuluj mecze AI w grupach';
+    const watchingGroups = typeof isTournamentSelectedForWatching === 'function'
+        && isTournamentSelectedForWatching(activeTournament)
+        && !grandSlamState.groups.some(group => group.members.some(isCurrentPlayer));
+    simulateButton.onclick = () => simulateGrandSlamRemainingAiGroupMatches(watchingGroups);
+    simulateButton.innerText = watchingGroups ? getTournamentWatchText().groupRound : 'Symuluj mecze AI w grupach';
     simulateButton.style.display = hasAiMatches ? 'block' : 'none';
     if (simulateTournamentButton) simulateTournamentButton.style.display = 'none';
     document.getElementById('bracket-modal').style.display = 'flex';

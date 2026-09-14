@@ -200,6 +200,7 @@ function startSpectatingTournamentMatch(bracketIndex) {
     const p1 = tournamentBracket[bracketIndex];
     const p2 = tournamentBracket[bracketIndex + 1];
     if (!p1 || !p2 || p1.isBye || p2.isBye || isCurrentPlayer(p1) || isCurrentPlayer(p2)) return false;
+    if (typeof isPlayerInjured === 'function' && (isPlayerInjured(p1) || isPlayerInjured(p2))) return false;
 
     const existingResult = getSpectatedTournamentMatchResult(p1, p2);
     if (existingResult) return false;
@@ -299,7 +300,9 @@ function finishSpectatedTournamentMatch() {
         p1Score,
         p2Score,
         p1Avg: p1Average,
-        p2Avg: p2Average
+        p2Avg: p2Average,
+        p1BounceOuts: watchedMatch.stats.p1BounceOuts || 0,
+        p2BounceOuts: watchedMatch.stats.p2BounceOuts || 0
     };
 
     if (typeof recordSeasonHighestAverage === 'function') {

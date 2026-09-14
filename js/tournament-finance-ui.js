@@ -6,9 +6,12 @@ const TOURNAMENT_FINANCE_TRANSLATIONS = {
         nonRanking: 'Nagroda nie zwiększa OOM — trafia do budżetu.', noPrize: 'Kwalifikacje bez nagród pieniężnych i bez wpływu na OOM.',
         teamNote: 'Każdy zawodnik otrzymuje połowę nagrody pary. Turniej nie zwiększa OOM.',
         groupExit: 'Odpadnięcie w grupie', groupSecond: '2. miejsce w grupie', groupThird: '3. miejsce w grupie',
+        groupFourth: '4. miejsce w grupie', groupWinBonus: 'Bonus: wygranie grupy', total: 'SUMA',
         position: '{place}. miejsce w lidze', placementNote: 'Miejsca 5–8: wypłata za sezon ligowy przy rozliczeniu play-offów, bez udziału w finale.',
-        slamNote: 'Odpadnięcie w fazie grupowej nie daje wypłaty w obecnych zasadach gry.',
+        slamNote: '16 grup po 3 zawodników. 2. miejsce: £12 500, 3. miejsce: £5 000. Zwycięzca grupy awansuje do Last 16 bez dodatkowej premii.',
         summary: 'Twoje rozliczenie', prize: 'Nagroda turniejowa', sponsorBonus: 'Premie sponsorskie za turniej', bonuses: 'Osiągnięcia i 9-dartery',
+        grossPrize: 'Nagroda turniejowa brutto', tax: 'Podatek od nagrody (30%)', prizeAfterTax: 'Nagroda po opodatkowaniu', afterTax: 'Dla Ciebie po podatku',
+        taxNote: 'Na trudnym poziomie od Twoich nagród turniejowych potrącany jest podatek 30%. Do budżetu trafia 70% nagrody; rankingi uwzględniają pełną kwotę brutto.',
         travel: 'Faktycznie pobrana opłata za podróż', net: 'Bilans turnieju', knownNet: 'Znany bilans turnieju', ongoing: 'W trakcie — kwoty naliczone dotychczas', settled: 'Rozliczona edycja',
         scope: 'Bilans obejmuje tylko gotówkę przypisaną do tego turnieju. Nie obejmuje zakupów, utrzymania bazy ani pensji sztabu.',
         sponsorNote: 'Regularni sponsorzy płacą co miesiąc, a premie za cele są rozliczane 31 grudnia. Nie dopisujemy ich do zysku z pojedynczego turnieju.',
@@ -23,9 +26,12 @@ const TOURNAMENT_FINANCE_TRANSLATIONS = {
         nonRanking: 'Prize money goes to your budget, without increasing OOM.', noPrize: 'Qualifiers award no prize money and do not affect OOM.',
         teamNote: 'Each player receives half of the team prize. The event does not increase OOM.',
         groupExit: 'Group-stage exit', groupSecond: '2nd in group', groupThird: '3rd in group',
+        groupFourth: '4th in group', groupWinBonus: 'Bonus: winning the group', total: 'TOTAL',
         position: 'League place {place}', placementNote: 'Places 5–8: season placement payouts at the play-offs, without entering the finals.',
-        slamNote: 'Group-stage exits receive no payout under the current game rules.',
+        slamNote: '16 groups of 3 players. 2nd place: £12,500; 3rd place: £5,000. Group winners advance to the Last 16 without an extra bonus.',
         summary: 'Your statement', prize: 'Tournament prize', sponsorBonus: 'Tournament sponsor bonuses', bonuses: 'Achievements and nine-darters',
+        grossPrize: 'Gross tournament prize', tax: 'Prize tax (30%)', prizeAfterTax: 'Prize after tax', afterTax: 'Your prize after tax',
+        taxNote: 'On Hard difficulty, 30% tax is deducted from your tournament prizes. Your budget receives 70%; rankings count the full gross prize.',
         travel: 'Travel fee actually charged', net: 'Tournament balance', knownNet: 'Known tournament balance', ongoing: 'In progress — amounts recorded so far', settled: 'Settled edition',
         scope: 'Only cash attributable to this tournament is included. Purchases, base upkeep and staff salaries are excluded.',
         sponsorNote: 'Regular sponsors pay monthly; goal bonuses are settled on 31 December. These are not allocated to a single tournament.',
@@ -40,9 +46,12 @@ const TOURNAMENT_FINANCE_TRANSLATIONS = {
         nonRanking: 'Preisgeld erhöht das Budget, aber nicht die OOM.', noPrize: 'Qualifikationen ohne Preisgeld und ohne Einfluss auf die OOM.',
         teamNote: 'Jeder Spieler erhält die Hälfte des Teampreisgeldes. Kein Einfluss auf die OOM.',
         groupExit: 'Aus in der Gruppenphase', groupSecond: '2. Gruppenplatz', groupThird: '3. Gruppenplatz',
+        groupFourth: '4. Gruppenplatz', groupWinBonus: 'Bonus: Gruppensieg', total: 'SUMME',
         position: 'Ligaplatz {place}', placementNote: 'Plätze 5–8: Saisonpreisgeld bei den Play-offs, ohne Teilnahme am Finale.',
-        slamNote: 'Beim Ausscheiden in der Gruppe gibt es nach den aktuellen Spielregeln keine Auszahlung.',
+        slamNote: '16 Gruppen mit je 3 Spielern. Platz 2: £12.500; Platz 3: £5.000. Gruppensieger ziehen ohne zusätzlichen Bonus ins Achtelfinale ein.',
         summary: 'Deine Abrechnung', prize: 'Turnierpreisgeld', sponsorBonus: 'Turnierbezogene Sponsorenprämien', bonuses: 'Erfolge und Neun-Darter',
+        grossPrize: 'Brutto-Turnierpreisgeld', tax: 'Preisgeldsteuer (30%)', prizeAfterTax: 'Preisgeld nach Steuern', afterTax: 'Dein Preisgeld nach Steuern',
+        taxNote: 'Auf Schwer werden 30% Steuer von deinem Turnierpreisgeld abgezogen. Dein Budget erhält 70%; Ranglisten berücksichtigen das volle Brutto-Preisgeld.',
         travel: 'Tatsächlich berechnete Reisekosten', net: 'Turnierbilanz', knownNet: 'Bekannte Turnierbilanz', ongoing: 'Laufend — bisher erfasste Beträge', settled: 'Abgerechnete Ausgabe',
         scope: 'Nur diesem Turnier zugeordnete Geldbewegungen. Käufe, Basisunterhalt und Personalgehälter sind ausgeschlossen.',
         sponsorNote: 'Sponsoren zahlen monatlich, Zielprämien am 31. Dezember. Diese Zahlungen werden keinem einzelnen Turnier zugeordnet.',
@@ -57,9 +66,12 @@ const TOURNAMENT_FINANCE_TRANSLATIONS = {
         nonRanking: 'Prijzengeld gaat naar het budget, zonder de OOM te verhogen.', noPrize: 'Kwalificaties zonder prijzengeld en zonder invloed op de OOM.',
         teamNote: 'Elke speler krijgt de helft van het teamprijzengeld. Geen invloed op de OOM.',
         groupExit: 'Uitgeschakeld in de groep', groupSecond: '2e in de groep', groupThird: '3e in de groep',
+        groupFourth: '4e in de groep', groupWinBonus: 'Bonus: groepswinst', total: 'TOTAAL',
         position: 'Competitieplaats {place}', placementNote: 'Plaatsen 5–8: seizoensuitbetaling bij de play-offs, zonder deelname aan de finale.',
-        slamNote: 'Uitschakeling in de groep levert volgens de huidige spelregels geen uitbetaling op.',
+        slamNote: '16 groepen van 3 spelers. 2e plaats: £12.500; 3e plaats: £5.000. Groepswinnaars gaan zonder extra bonus naar de laatste 16.',
         summary: 'Jouw afrekening', prize: 'Toernooiprijs', sponsorBonus: 'Sponsorbonussen voor dit toernooi', bonuses: 'Prestaties en negendarters',
+        grossPrize: 'Bruto toernooiprijs', tax: 'Belasting op prijzengeld (30%)', prizeAfterTax: 'Prijs na belasting', afterTax: 'Jouw prijs na belasting',
+        taxNote: 'Op Moeilijk wordt 30% belasting ingehouden op jouw toernooiprijzen. Je budget ontvangt 70%; ranglijsten tellen het volledige brutobedrag.',
         travel: 'Werkelijk betaalde reiskosten', net: 'Toernooisaldo', knownNet: 'Bekend toernooisaldo', ongoing: 'Lopend — tot nu toe geregistreerde bedragen', settled: 'Afgerekende editie',
         scope: 'Alleen geldstromen voor dit toernooi. Aankopen, basisonderhoud en staflonen zijn uitgesloten.',
         sponsorNote: 'Sponsors betalen maandelijks; doelbonussen worden op 31 december afgerekend. Deze betalingen horen niet bij één toernooi.',
@@ -98,7 +110,7 @@ function renderTournamentPrizeTable(event) {
     if (preview.qualifier) return `<p class="finance-notice">${h(tr('noPrize'))}</p>`;
     const stageLabel = row => {
         if (row.position) return tr('position', { place: row.position });
-        if (['groupExit', 'groupSecond', 'groupThird'].includes(row.stage)) return tr(row.stage);
+        if (['groupExit', 'groupSecond', 'groupThird', 'groupFourth', 'groupWinBonus'].includes(row.stage)) return tr(row.stage);
         if (row.stage) {
             const rounds = { winner: 2, runnerUp: 2, semiFinal: 4, quarterFinal: 8, last16: 16 };
             return getSeasonResultStage(rounds[row.stage], row.stage === 'winner');
@@ -106,8 +118,9 @@ function renderTournamentPrizeTable(event) {
         return getSeasonResultStage(row.round, row.won);
     };
     return `<p class="finance-ranking">${preview.rankings.length ? `${h(tr('ranking'))} <strong>${preview.rankings.map(key => h(tr(key))).join(' · ')}</strong>` : h(tr('nonRanking'))}</p>
-        <div class="finance-table-wrap"><table class="finance-table"><thead><tr><th scope="col">${h(tr('result'))}</th><th scope="col">${h(tr('amount'))}</th>${preview.team ? `<th scope="col">${h(tr('teamAmount'))}</th>` : ''}</tr></thead>
-        <tbody>${preview.rows.map(row => `<tr class="${row.won || row.stage === 'winner' ? 'finance-winner' : ''}"><th scope="row">${h(stageLabel(row))}</th><td>${h(tournamentFinanceMoney(row.amount))}</td>${preview.team ? `<td>${h(tournamentFinanceMoney(row.teamAmount))}</td>` : ''}</tr>`).join('')}</tbody></table></div>
+        <div class="finance-table-wrap"><table class="finance-table"><thead><tr><th scope="col">${h(tr('result'))}</th><th scope="col">${h(tr('amount'))}</th>${preview.prizeTaxRate ? `<th scope="col">${h(tr('afterTax'))}</th>` : ''}${preview.team ? `<th scope="col">${h(tr('teamAmount'))}</th>` : ''}</tr></thead>
+        <tbody>${preview.rows.map(row => `<tr class="${row.won || row.stage === 'winner' ? 'finance-winner' : ''}"><th scope="row">${h(stageLabel(row))}</th><td>${h(row.noPrize ? '—' : tournamentFinanceMoney(row.amount))}</td>${preview.prizeTaxRate ? `<td>${h(row.noPrize ? '—' : tournamentFinanceMoney(row.netAmount))}</td>` : ''}${preview.team ? `<td>${h(tournamentFinanceMoney(row.teamAmount))}</td>` : ''}</tr>`).join('')}</tbody>${preview.totalPrizeFund == null ? '' : `<tfoot><tr><th scope="row">${h(tr('total'))}</th><td>${h(tournamentFinanceMoney(preview.totalPrizeFund))}</td>${preview.prizeTaxRate ? '<td>—</td>' : ''}</tr></tfoot>`}</table></div>
+        ${preview.prizeTaxRate ? `<p class="finance-notice">${h(tr('taxNote'))}</p>` : ''}
         <p class="finance-note">${h(tr('prizeNote'))}</p>${preview.team || preview.slam || preview.playoffs ? `<p class="finance-note">${h(tr(preview.team ? 'teamNote' : preview.slam ? 'slamNote' : 'placementNote'))}</p>` : ''}`;
 }
 
@@ -119,7 +132,7 @@ function renderTournamentFinanceSummary(event, year = getCurrentSeasonYear()) {
     const row = (key, value) => `<div><dt>${h(tr(key))}</dt><dd>${h(tournamentFinanceMoney(value))}</dd></div>`;
     return `<section class="finance-statement"><h3>${h(tr('summary'))} · ${year}</h3>
         <p class="finance-note">${h(tr(settled ? 'settled' : 'ongoing'))}</p><dl>
-        ${row('prize', entry.prize)}${row('sponsorBonus', entry.sponsorBonus)}${row('bonuses', entry.bonuses)}${row('travel', entry.travel === null ? null : -entry.travel)}
+        ${row(entry.tax > 0 ? 'grossPrize' : 'prize', entry.prize)}${entry.tax > 0 ? `${row('tax', -entry.tax)}${row('prizeAfterTax', entry.prize === null ? null : entry.prize - entry.tax)}` : ''}${row('sponsorBonus', entry.sponsorBonus)}${row('bonuses', entry.bonuses)}${row('travel', entry.travel === null ? null : -entry.travel)}
         <div class="finance-net ${net < 0 ? 'finance-negative' : ''}"><dt>${h(tr(entry.partial ? 'knownNet' : 'net'))}</dt><dd>${h(tournamentFinanceMoney(net))}</dd></div></dl>
         ${entry.partial ? `<p class="finance-notice">${h(tr('partial'))}</p>` : ''}
         <p class="finance-note">${h(tr('sponsorNote'))}</p><p class="finance-note">${h(tr('scope'))}</p></section>`;

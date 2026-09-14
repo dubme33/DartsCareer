@@ -264,6 +264,9 @@ function restoreActiveTournamentMatchHistory(savedHistory, fallbackLastHtml = ''
 }
 
 function showRoundResults() {
+            if (typeof updateTournamentEntrySimulationButton === 'function') {
+                updateTournamentEntrySimulationButton('t-btn-sim-to-match-results');
+            }
             if (typeof updateTournamentFinanceResults === 'function') updateTournamentFinanceResults(activeTournament);
             document.getElementById('t-tour-end-title').innerText = t('t-round-results');
             document.getElementById('results-content').innerHTML = currentRoundHTML;
@@ -273,6 +276,7 @@ function showRoundResults() {
                 && tournamentBracket.some(candidate => typeof isCurrentPlayer === 'function' && isCurrentPlayer(candidate));
             if (simulateTournamentButton) {
                 simulateTournamentButton.style.display = activeTournament && tournamentBracket.length > 1 && !playerStillInTournament
+                    && !(typeof isCareerPlayerWaitingForTournamentEntry === 'function' && isCareerPlayerWaitingForTournamentEntry())
                     ? 'block'
                     : 'none';
             }
@@ -281,6 +285,7 @@ function showRoundResults() {
         }
 
         function showTournamentEnd() {
+            if (typeof updateTournamentEntrySimulationButton === 'function') updateTournamentEntrySimulationButton('t-btn-sim-to-match-results', false);
             if (typeof updateTournamentFinanceResults === 'function') updateTournamentFinanceResults(activeTournament || tournamentFinanceResultsEvent);
             document.getElementById('t-tour-end-title').innerText = t('t-tour-end-title');
             document.getElementById('results-content').innerHTML = lastTournamentResults;
@@ -292,6 +297,7 @@ function showRoundResults() {
         }
 
         function showCompletedTournamentResults(tournament) {
+            if (typeof updateTournamentEntrySimulationButton === 'function') updateTournamentEntrySimulationButton('t-btn-sim-to-match-results', false);
             const historyHtml = getCompletedTournamentHistoryHtml(tournament);
             if (!historyHtml) return false;
             if (typeof updateTournamentFinanceResults === 'function') updateTournamentFinanceResults(tournament);

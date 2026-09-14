@@ -11,6 +11,19 @@ const PLAYERS_CHAMPIONSHIP_PRIZE_MONEY = Object.freeze({
 
 const GLOBAL_LEAGUE_PLACEMENT_PRIZES = Object.freeze({ 5: 95000, 6: 90000, 7: 85000, 8: 80000 });
 
+const GRAND_SLAM_PRIZE_MONEY = Object.freeze({
+    winner: 200000, 2: 100000, 4: 60000, 8: 35000, 16: 20000,
+    groupSecond: 12500, groupThird: 5000
+});
+const GRAND_SLAM_PRIZE_FUND = GRAND_SLAM_PRIZE_MONEY.winner + GRAND_SLAM_PRIZE_MONEY[2]
+    + 2 * GRAND_SLAM_PRIZE_MONEY[4] + 4 * GRAND_SLAM_PRIZE_MONEY[8] + 8 * GRAND_SLAM_PRIZE_MONEY[16]
+    + 16 * (GRAND_SLAM_PRIZE_MONEY.groupSecond + GRAND_SLAM_PRIZE_MONEY.groupThird);
+
+function getGrandSlamGroupPrizeMoney(position) {
+    return position === 2 ? GRAND_SLAM_PRIZE_MONEY.groupSecond
+        : position === 3 ? GRAND_SLAM_PRIZE_MONEY.groupThird : 0;
+}
+
 function getPrizeMoney(tName, round, won) {
     if (typeof isUKOpenTournament === 'function' && isUKOpenTournament(tName)) {
         return getUKOpenPrizeMoney(round, won);
@@ -41,9 +54,7 @@ function getPrizeMoney(tName, round, won) {
         if(!won && round === 4) return 40000; if(!won && round === 8) return 25000;
         if(!won && round === 16) return 15000; if(!won && round === 32) return 7500;
     } else if (tName.includes("Grand Slam") || tName.includes("Champion's Slam")) {
-        if(won && round === 2) return 200000; if(!won && round === 2) return 100000;
-        if(!won && round === 4) return 60000; if(!won && round === 8) return 35000;
-        if(!won && round === 16) return 20000; if(!won && round === 32) return 10000;
+        return won && round === 2 ? GRAND_SLAM_PRIZE_MONEY.winner : GRAND_SLAM_PRIZE_MONEY[round] || 0;
     } else if (tName.includes("UK Open") || tName.includes("British Open")) {
         if(won && round === 2) return 120000; if(!won && round === 2) return 60000;
         if(!won && round === 4) return 35000; if(!won && round === 8) return 20000;
@@ -93,15 +104,35 @@ function getPrizeMoney(tName, round, won) {
     }
 }
 
+function getTournamentPrizePayout(candidate, amount) {
+    const grossAmount = Number.isFinite(amount) && amount > 0 ? amount : 0;
+    const taxRate = typeof getCareerDifficultyTournamentPrizeTaxRate === 'function'
+        ? getCareerDifficultyTournamentPrizeTaxRate(candidate) : 0;
+    const taxAmount = Math.round(grossAmount * taxRate * 100) / 100;
+    const netAmount = taxAmount ? Math.round((grossAmount - taxAmount) * 100) / 100 : grossAmount;
+    return { grossAmount, taxRate, taxAmount, netAmount };
+}
+
+function payCareerTournamentPrizeMoney(candidate, amount, tournament) {
+    const payout = getTournamentPrizePayout(candidate, amount);
+    if (!isCurrentPlayer(candidate) || payout.grossAmount <= 0) return payout;
+    player.budget = (Number(player.budget) || 0) + payout.netAmount;
+    if (typeof recordTournamentCash === 'function') {
+        recordTournamentCash(tournament, 'prize', payout.grossAmount);
+        recordTournamentCash(tournament, 'tax', payout.taxAmount);
+    }
+    return payout;
+}
+
         function awardPrizeMoney(p, amount, tName, { countTowardsRankings = true } = {}) {
-            if (!p || typeof amount !== 'number' || isNaN(amount) || amount <= 0) return;
+            if (!p || !Number.isFinite(amount) || amount <= 0) return;
             tName = String(tName || '');
             const isChallengeTourEvent = typeof isChallengeTourTournament === 'function'
                 && isChallengeTourTournament(tName);
             const isDevelopmentTourEvent = typeof isDevelopmentTourTournament === 'function'
                 && isDevelopmentTourTournament(tName);
             const isSecondaryTourEvent = isChallengeTourEvent || isDevelopmentTourEvent;
-            if (typeof recordTournamentCash === 'function' && isCurrentPlayer(p)) recordTournamentCash(tName, 'prize', amount);
+            payCareerTournamentPrizeMoney(p, amount, tName);
             if (typeof recordSeasonArchivePrize === 'function') {
                 recordSeasonArchivePrize(p, amount, tName, {
                     countTowardsRankings: countTowardsRankings && !isSecondaryTourEvent
@@ -122,7 +153,6 @@ function getPrizeMoney(tName, round, won) {
                 } else {
                     p.challengeTourPrizeMoney = (Number(p.challengeTourPrizeMoney) || 0) + amount;
                 }
-                if (isCurrentPlayer(p)) player.budget += amount;
                 return;
             }
 
@@ -134,19 +164,16 @@ function getPrizeMoney(tName, round, won) {
                 } else {
                     p.developmentTourPrizeMoney = (Number(p.developmentTourPrizeMoney) || 0) + amount;
                 }
-                if (isCurrentPlayer(p)) player.budget += amount;
                 return;
             }
 
             // Turnieje nierankingowe: nagroda trafia wyłącznie do budżetu gracza.
             if (tName.includes("Global Darts League") || tName.includes("Premier")) {
-                if (isCurrentPlayer(p)) player.budget += amount;
                 return;
             }
             if (typeof isWorldMastersName === 'function' && isWorldMastersName(tName)
                 && !(typeof isCrownMastersTournament === 'function'
                     && (isCrownMastersTournament(tName) || isCrownMastersQualifierTournament(tName)))) {
-                if (isCurrentPlayer(p)) player.budget += amount;
                 return;
             }
 
@@ -154,7 +181,6 @@ function getPrizeMoney(tName, round, won) {
             // dowolny ranking), np. dla rozstawionych European Tour odpadających
             // w swoim pierwszym meczu po wolnym losie.
             if (!countTowardsRankings) {
-                if (isCurrentPlayer(p)) player.budget += amount;
                 return;
             }
 
@@ -215,7 +241,6 @@ function getPrizeMoney(tName, round, won) {
                 awardEuropeanTourOrderOfMeritPrizeMoney(p, amount, tName);
             }
 
-            if (isCurrentPlayer(p)) player.budget += amount;
         }
 
         

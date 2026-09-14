@@ -144,7 +144,8 @@ function previewUKOpenQualificationState(tournament, candidates, referenceDate =
 
 function resolveUKOpenPlayerIds(ids, candidates) {
     const byKey = new Map(getUKOpenCandidates(candidates).map(candidate => [getUKOpenPlayerKey(candidate), candidate]));
-    return (Array.isArray(ids) ? ids : []).map(key => byKey.get(key)).filter(Boolean);
+    return (Array.isArray(ids) ? ids : []).map(key => byKey.get(key)).filter(candidate => candidate
+        && (typeof isPlayerAvailableForPlay !== 'function' || isPlayerAvailableForPlay(candidate)));
 }
 
 function getUKOpenQualificationGroups(tournament, candidates, referenceDate = (typeof currentDate !== 'undefined' ? currentDate : null), lock = false) {
@@ -162,6 +163,14 @@ function getUKOpenQualificationGroups(tournament, candidates, referenceDate = (t
 function getUKOpenFullField(tournament, candidates, referenceDate = (typeof currentDate !== 'undefined' ? currentDate : null), lock = true) {
     return getUKOpenQualificationGroups(tournament, candidates, referenceDate, lock)
         .flatMap(group => group.players);
+}
+
+function getUKOpenPlayerEntryRound(tournament, candidate, candidates, referenceDate = (typeof currentDate !== 'undefined' ? currentDate : null)) {
+    const key = getUKOpenPlayerKey(candidate);
+    if (!key || !isUKOpenTournament(tournament)) return null;
+    const group = getUKOpenQualificationGroups(tournament, candidates, referenceDate)
+        .find(group => group.players.some(entrant => getUKOpenPlayerKey(entrant) === key));
+    return group?.entryRound || null;
 }
 
 function getUKOpenOpeningParticipants(tournament, candidates, referenceDate = (typeof currentDate !== 'undefined' ? currentDate : null)) {

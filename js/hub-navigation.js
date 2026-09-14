@@ -147,6 +147,7 @@ function getHubDaysBetween(first, second) {
 
 function isHubTournamentRelevant(tournament) {
     if (!tournament || typeof player !== 'object' || !player) return Boolean(tournament);
+    if (typeof isTournamentSelectedForWatching === 'function' && isTournamentSelectedForWatching(tournament)) return true;
     const qSchool = typeof isPdcQSchoolTournament === 'function'
         ? isPdcQSchoolTournament(tournament)
         : tournament.specialType === 'pdcQSchool';
@@ -230,7 +231,15 @@ function getHubRecommendation(upcoming, qualification) {
     const trainingUsed = Number(typeof player === 'object' && player ? player.trainingSessionsThisWeek : 0) || 0;
     const unread = Number(typeof unreadMailsCount !== 'undefined' ? unreadMailsCount : 0) || 0;
 
-    if (upcoming?.days <= 0) return { action: 'tournament', title: text.actionTournamentTitle, desc: text.actionTournamentDesc, button: text.actionTournamentButton };
+    if (upcoming?.days <= 0) {
+        const watching = typeof isTournamentSelectedForWatching === 'function'
+            && isTournamentSelectedForWatching(upcoming.tournament)
+            && typeof isCareerPlayerParticipatingInTournament === 'function'
+            && !isCareerPlayerParticipatingInTournament(upcoming.tournament);
+        const watchText = watching ? getTournamentWatchText() : null;
+        return { action: 'tournament', title: watchText?.watchTitle || text.actionTournamentTitle,
+            desc: watchText?.watchDesc || text.actionTournamentDesc, button: text.actionTournamentButton };
+    }
     if (isHubCareerInFirstFortnight() && tutorialState && (!tutorialState.opened || !tutorialState.visitedSections.includes('firstSteps'))) {
         return { action: 'tutorial', title: text.actionTutorialTitle, desc: hubNavigationFormat(text.actionTutorialDesc, tutorialProgress), button: text.actionTutorialButton };
     }

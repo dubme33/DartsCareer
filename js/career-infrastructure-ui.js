@@ -73,6 +73,50 @@ const CAREER_INFRASTRUCTURE_TEXT = {
     }
 };
 
+const CAREER_INVESTMENT_TEXT = {
+    pl: {
+        title: '✈️ Baza, podróże i inwestycje', tile: '✈️ Baza i inwestycje',
+        investmentsTitle: '💼 Inwestycje w karierę', academy: 'Akademia darterska', pub: 'Pub',
+        academyEffect: '+{chance}% szans co sezon na jednego dodatkowego newgena z Twojego kraju. Losowanie odbywa się przy rozpoczęciu nowego sezonu.',
+        pubEffect: 'Pasywny dochód netto: {amount}/mies. Pierwsza wypłata po miesiącu, kolejne w dniu zakupu (lub ostatniego dnia krótszego miesiąca), przed pensjami sztabu.',
+        buyInvestment: 'Kup: {name}', investmentOwned: 'Zakupiono', investmentPrice: 'Cena zakupu: {amount}',
+        pubNextIncome: 'Następna wypłata: {date}', pubTotalIncome: 'Łączny dochód: {amount}',
+        confirmInvestment: 'Kupić: {name} za {amount}?', investmentPurchased: 'Zakupiono: {name} za {amount}.',
+        pubIncomeSubject: 'Dochód z pubu', pubIncomeBody: 'Pub przyniósł {amount} dochodu. Następna wypłata: {date}.'
+    },
+    en: {
+        title: '✈️ Base, travel and investments', tile: '✈️ Base and investments',
+        investmentsTitle: '💼 Career investments', academy: 'Darts academy', pub: 'Pub',
+        academyEffect: '+{chance}% chance each season of one extra newgen from your country. The draw takes place at the start of the new season.',
+        pubEffect: 'Net passive income: {amount}/month. First payment after one month, then on the purchase day (or the last day of a shorter month), before staff salaries.',
+        buyInvestment: 'Buy: {name}', investmentOwned: 'Purchased', investmentPrice: 'Purchase price: {amount}',
+        pubNextIncome: 'Next payment: {date}', pubTotalIncome: 'Total income: {amount}',
+        confirmInvestment: 'Buy {name} for {amount}?', investmentPurchased: 'Purchased {name} for {amount}.',
+        pubIncomeSubject: 'Pub income', pubIncomeBody: 'Your pub earned {amount}. Next payment: {date}.'
+    },
+    de: {
+        title: '✈️ Basis, Reisen und Investitionen', tile: '✈️ Basis und Investitionen',
+        investmentsTitle: '💼 Karriereinvestitionen', academy: 'Dartsakademie', pub: 'Pub',
+        academyEffect: '+{chance}% Chance pro Saison auf einen zusätzlichen Nachwuchsspieler aus deinem Land. Auslosung zum Saisonbeginn.',
+        pubEffect: 'Passives Nettoeinkommen: {amount}/Monat. Erste Zahlung nach einem Monat, danach am Kauftag (oder letzten Tag kürzerer Monate), vor Stabsgehältern.',
+        buyInvestment: 'Kaufen: {name}', investmentOwned: 'Gekauft', investmentPrice: 'Kaufpreis: {amount}',
+        pubNextIncome: 'Nächste Zahlung: {date}', pubTotalIncome: 'Gesamteinkommen: {amount}',
+        confirmInvestment: '{name} für {amount} kaufen?', investmentPurchased: '{name} für {amount} gekauft.',
+        pubIncomeSubject: 'Pub-Einkommen', pubIncomeBody: 'Dein Pub hat {amount} verdient. Nächste Zahlung: {date}.'
+    },
+    nl: {
+        title: '✈️ Basis, reizen en investeringen', tile: '✈️ Basis en investeringen',
+        investmentsTitle: '💼 Carrière-investeringen', academy: 'Dartsacademie', pub: 'Pub',
+        academyEffect: '+{chance}% kans per seizoen op één extra nieuwkomer uit jouw land. De trekking vindt plaats aan het begin van het seizoen.',
+        pubEffect: 'Passief netto-inkomen: {amount}/maand. Eerste betaling na een maand, daarna op de aankoopdag (of laatste dag van kortere maanden), vóór stafsalarissen.',
+        buyInvestment: 'Koop: {name}', investmentOwned: 'Gekocht', investmentPrice: 'Aankoopprijs: {amount}',
+        pubNextIncome: 'Volgende betaling: {date}', pubTotalIncome: 'Totaal inkomen: {amount}',
+        confirmInvestment: '{name} kopen voor {amount}?', investmentPurchased: '{name} gekocht voor {amount}.',
+        pubIncomeSubject: 'Pub-inkomsten', pubIncomeBody: 'Je pub verdiende {amount}. Volgende betaling: {date}.'
+    }
+};
+for (const [language, text] of Object.entries(CAREER_INVESTMENT_TEXT)) Object.assign(CAREER_INFRASTRUCTURE_TEXT[language], text);
+
 let careerInfrastructureFeedback = { key: '', params: {} };
 
 function trCareerInfrastructure(key, params = {}) {
@@ -158,6 +202,33 @@ function renderCareerFacilityCard(type, level) {
     </article>`;
 }
 
+function renderCareerInvestmentCard(type) {
+    const config = CAREER_INFRASTRUCTURE_CONFIG.investments[type];
+    const investment = getCareerInfrastructureState().investments[type];
+    const e = careerInfrastructureEscape;
+    const name = trCareerInfrastructure(type);
+    const effect = trCareerInfrastructure(type + 'Effect', {
+        chance: Math.round((config.extraNewgenChance || 0) * 100), amount: careerInfrastructureMoney(config.monthlyIncome || 0)
+    });
+    const unavailable = !canChangeCareerInfrastructure() || (Number(player.budget) || 0) < config.price;
+    return `<article class="career-infrastructure-card">
+        <div class="career-infrastructure-card-head"><h4>${e(name)}</h4><strong>${e(careerInfrastructureMoney(config.price))}</strong></div>
+        <p>${e(effect)}</p>
+        ${investment.owned && type === 'pub' ? `<p>${e(trCareerInfrastructure('pubNextIncome', { date: careerInfrastructureDate(investment.nextIncomeDueOn) }))}</p>
+            <p>${e(trCareerInfrastructure('pubTotalIncome', { amount: careerInfrastructureMoney(investment.totalIncome) }))}</p>` : ''}
+        <button type="button" class="action-btn green" onclick="purchaseCareerInvestment('${type}')" ${investment.owned || unavailable ? 'disabled' : ''}>${e(trCareerInfrastructure(investment.owned ? 'investmentOwned' : 'buyInvestment', { name }))}</button>
+    </article>`;
+}
+
+function notifyCareerInvestmentIncome(result) {
+    if (!result?.changed || typeof addEmail !== 'function') return;
+    const pub = getCareerInfrastructureState().investments.pub;
+    addEmail(trCareerInfrastructure('sender'), trCareerInfrastructure('pubIncomeSubject'),
+        `<p>${careerInfrastructureEscape(trCareerInfrastructure('pubIncomeBody', {
+            amount: careerInfrastructureMoney(result.total), date: careerInfrastructureDate(pub.nextIncomeDueOn)
+        }))}</p>`);
+}
+
 function renderCareerInfrastructure() {
     if (typeof document === 'undefined' || typeof player === 'undefined' || !player) return;
     const screenTitle = document.getElementById('career-infrastructure-title');
@@ -217,6 +288,8 @@ function renderCareerInfrastructure() {
             <p>${careerInfrastructureEscape(trCareerInfrastructure('travelIntro'))}</p><p class="career-infrastructure-context">${careerInfrastructureEscape(travelContext)}</p>
             ${chargedTravel}<div class="career-infrastructure-grid travel-grid">${CAREER_TRAVEL_STANDARDS.map(standard => renderCareerTravelCard(standard, tournament, locked)).join('')}</div></section>
         <section><h3>${careerInfrastructureEscape(trCareerInfrastructure('baseTitle'))}</h3>${baseBody}</section>
+        <section><h3>${careerInfrastructureEscape(trCareerInfrastructure('investmentsTitle'))}</h3>
+            <div class="career-infrastructure-grid career-investments-grid">${Object.keys(CAREER_INFRASTRUCTURE_CONFIG.investments).map(renderCareerInvestmentCard).join('')}</div></section>
         <details class="career-infrastructure-rules"><summary>${careerInfrastructureEscape(trCareerInfrastructure('rulesTitle'))}</summary><p>${careerInfrastructureEscape(trCareerInfrastructure('rules'))}</p></details>`;
     const feedback = document.getElementById('career-infrastructure-feedback');
     if (feedback) feedback.textContent = getCareerInfrastructureFeedbackText();

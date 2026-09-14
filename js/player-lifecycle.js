@@ -409,14 +409,14 @@ function getNewgenStartingOverall(random = Math.random) {
     return 52 + Math.floor(random() * 5);
 }
 
-function createAnnualNewgen(year, existingNames, random = Math.random) {
+function createAnnualNewgen(year, existingNames, random = Math.random, countryOverride = null) {
     const overall = getNewgenStartingOverall(random);
     // New professionals can break through later too, not only as teenagers.
     const age = 17 + Math.floor(random() * 19); // 17–35 inclusive
     const scoring = Math.max(40, Math.min(99, overall + (Math.floor(random() * 5) - 1)));
     const doubles = Math.max(40, Math.min(99, overall + (Math.floor(random() * 5) - 3)));
     const gender = random() < 0.18 ? 'female' : 'male';
-    const country = pickNewgenCountry(random);
+    const country = countryOverride || pickNewgenCountry(random);
     const name = createFictionalNewgenName(existingNames, country, gender, random);
     existingNames.add(name);
     return {
@@ -532,6 +532,13 @@ function processAnnualPlayerLifecycle(completedYear) {
     const newgenCount = Math.max(2 + Math.floor(Math.random() * 3), retirements.length);
     const existingNames = new Set([...pdcPlayers, player].filter(Boolean).map(candidate => candidate.name));
     const newgens = Array.from({ length: newgenCount }, () => createAnnualNewgen(newSeasonYear, existingNames));
+    const academyChance = typeof getCareerAcademyNewgenChance === 'function' && player?.country
+        ? getCareerAcademyNewgenChance(player) : 0;
+    if (academyChance > 0 && Math.random() < academyChance) {
+        const academyNewgen = createAnnualNewgen(newSeasonYear, existingNames, Math.random, player.country);
+        academyNewgen.academyGraduate = true;
+        newgens.push(academyNewgen);
+    }
     pdcPlayers.push(...newgens);
     if (typeof initializeAllPlayerTraits === 'function') initializeAllPlayerTraits();
 

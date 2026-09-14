@@ -417,12 +417,13 @@ function ensureWorldMastersEventField(tournament) {
 }
 
 function getWorldMastersTournamentParticipants(tournament = activeTournament) {
+    const available = candidate => typeof isPlayerAvailableForPlay !== 'function' || isPlayerAvailableForPlay(candidate);
     if (isWorldMastersTournament(tournament)) {
         const field = ensureWorldMastersEventField(tournament);
-        return field ? [...resolveWorldMastersPlayers(field.invitedKeys), ...resolveWorldMastersPlayers(field.localKeys)] : [];
+        return field ? [...resolveWorldMastersPlayers(field.invitedKeys), ...resolveWorldMastersPlayers(field.localKeys)].filter(available) : [];
     }
-    if (isWorldMastersFinalsQualifierTournament(tournament)) return getWorldMastersFinalsQualifierParticipants();
-    if (isWorldMastersFinalsTournament(tournament)) return getWorldMastersFinalsField().participants;
+    if (isWorldMastersFinalsQualifierTournament(tournament)) return getWorldMastersFinalsQualifierParticipants().filter(available);
+    if (isWorldMastersFinalsTournament(tournament)) return getWorldMastersFinalsField().participants.filter(available);
     return [];
 }
 
@@ -545,7 +546,8 @@ function buildWorldMastersFinalsQualifierDraw(participants, random = Math.random
 function getWorldMastersFinalsQualifierParticipants() {
     const state = ensureWorldMastersState();
     const existingQualifier = state.finalsQualifier;
-    const eligiblePlayers = getWorldMastersFinalsQualifierEligiblePlayers();
+    const eligiblePlayers = getWorldMastersFinalsQualifierEligiblePlayers()
+        .filter(candidate => typeof isPlayerAvailableForPlay !== 'function' || isPlayerAvailableForPlay(candidate));
     const eligibleKeys = eligiblePlayers.map(getWorldMastersPlayerKey);
     const eligibleKeySet = new Set(eligibleKeys);
     const usesCurrentRules = existingQualifier?.version === WORLD_MASTERS_FINALS_QUALIFIER_VERSION

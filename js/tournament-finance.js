@@ -34,6 +34,7 @@ function initializeTournamentFinances(reset = false) {
         entry.sponsorBonus = null;
         if (Number.isFinite(result.prizeMoney) && result.prizeMoney >= 0) entry.prize += result.prizeMoney;
         else entry.prize = null;
+        if (Number.isFinite(result.prizeTax) && result.prizeTax >= 0) entry.tax += result.prizeTax;
         entry.settledAt = result.timestamp || null;
         entry.round = result.round;
         entry.won = Boolean(result.won);
@@ -59,7 +60,7 @@ function ensureTournamentFinanceEntry(event, year = getCurrentSeasonYear()) {
     if (!ledger) return null;
     const key = getTournamentFinanceKey(tournament, year);
     return ledger.entries[key] ||= { year, name: tournament.name, sourceName: tournament.sourceName || tournament.name,
-        specialType: tournament.specialType || '', prize: 0, travel: 0, bonuses: 0, sponsorBonus: 0,
+        specialType: tournament.specialType || '', prize: 0, tax: 0, travel: 0, bonuses: 0, sponsorBonus: 0,
         partial: false, startedAt: currentDate.getTime(), settledAt: null };
 }
 
@@ -68,7 +69,7 @@ function getTournamentFinanceEntry(event, year = getCurrentSeasonYear()) {
 }
 
 function recordTournamentCash(event, kind, amount, date = currentDate) {
-    if (!['prize', 'travel', 'bonuses', 'sponsorBonus'].includes(kind) || !Number.isFinite(amount) || amount < 0) return;
+    if (!['prize', 'tax', 'travel', 'bonuses', 'sponsorBonus'].includes(kind) || !Number.isFinite(amount) || amount < 0) return;
     const entry = ensureTournamentFinanceEntry(event, getCurrentSeasonYear(date));
     if (!entry) return;
     if (kind === 'travel') entry.travel = amount; // One journey per edition; use the actual debit.
@@ -102,7 +103,7 @@ function recordTournamentAchievementCash(amount, event = null) {
 
 function getTournamentNetCash(entry) {
     if (!entry || entry.prize === null || entry.travel === null) return null;
-    return entry.prize + (entry.bonuses || 0) + (entry.sponsorBonus || 0) - entry.travel;
+    return entry.prize + (entry.bonuses || 0) + (entry.sponsorBonus || 0) - (entry.tax || 0) - entry.travel;
 }
 
 function isFinanceQualifier(event) {
@@ -153,7 +154,12 @@ function getTournamentPrizePreview(tournament) {
             add(2, true);
             for (let round = 2; round <= openingRound; round *= 2) add(round);
         }
-        if (slam) rows.push({ stage: 'groupExit', amount: 0 });
+        if (slam) rows.push(
+            { stage: 'groupSecond', amount: getGrandSlamGroupPrizeMoney(2) },
+            { stage: 'groupThird', amount: getGrandSlamGroupPrizeMoney(3) },
+            { stage: 'groupFourth', amount: 0, noPrize: true },
+            { stage: 'groupWinBonus', amount: 0, noPrize: true }
+        );
         if (playoffs) Object.entries(GLOBAL_LEAGUE_PLACEMENT_PRIZES).forEach(([position, amount]) => rows.push({ position: Number(position), amount }));
     }
     const rankings = [];
@@ -170,6 +176,15 @@ function getTournamentPrizePreview(tournament) {
         if (typeof isPlayersChampionshipTournament === 'function' && isPlayersChampionshipTournament(name)) rankings.push('Players Championship OOM');
         if (typeof isEuropeanTourTournament === 'function' && isEuropeanTourTournament(name)) rankings.push('European Tour OOM');
     }
-    return { event, rows, rankings, team, qualifier: qualifier && !crownMastersQualifier, slam, playoffs, league,
+    const prizeTaxRate = typeof getCareerDifficultyTournamentPrizeTaxRate === 'function'
+        ? getCareerDifficultyTournamentPrizeTaxRate() : 0;
+    rows.forEach(row => {
+        const payout = typeof getTournamentPrizePayout === 'function'
+            ? getTournamentPrizePayout(typeof player !== 'undefined' ? player : null, row.amount) : null;
+        row.taxAmount = payout?.taxAmount || 0;
+        row.netAmount = row.amount === null ? null : payout?.netAmount ?? row.amount;
+    });
+    return { event, rows, rankings, team, qualifier: qualifier && !crownMastersQualifier, slam, playoffs, league, prizeTaxRate,
+        totalPrizeFund: slam ? GRAND_SLAM_PRIZE_FUND : null,
         challengeTour, developmentTour, crownMasters, crownMastersQualifier };
 }

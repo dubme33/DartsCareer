@@ -189,7 +189,8 @@ function getWorldCupPlayerIdentity(candidate) {
 
 function getWorldCupRankedPlayers() {
     const candidates = [player, ...(Array.isArray(pdcPlayers) ? pdcPlayers : [])]
-        .filter(candidate => candidate && !candidate.isBye);
+        .filter(candidate => candidate && !candidate.isBye
+            && (typeof isPlayerAvailableForPlay !== 'function' || isPlayerAvailableForPlay(candidate)));
     const uniquePlayers = new Map();
     candidates.forEach(candidate => {
         const key = getWorldCupPlayerIdentity(candidate);
@@ -226,7 +227,8 @@ function repairWorldCupTeamRosters() {
 
         currentPlayers.forEach(candidate => {
             const key = getWorldCupPlayerIdentity(candidate);
-            if (!candidate || !key || playerKeys.has(key) || uniquePlayers.length >= 2) {
+            if (!candidate || !key || playerKeys.has(key) || uniquePlayers.length >= 2
+                || (typeof isPlayerInjured === 'function' && isPlayerInjured(candidate))) {
                 changed = true;
                 teamChanged = true;
                 return;
@@ -332,14 +334,16 @@ function getWorldCupTeamLabel(team) {
 function getWorldCupTeamRating(team) {
     const players = team && Array.isArray(team.players) ? team.players : [];
     if (!players.length) return 55;
-    const teamRating = players.reduce((sum, candidate) => sum + (Number(candidate.ovr ?? candidate.overall) || 55), 0) / players.length;
+    const teamRating = players.reduce((sum, candidate) => sum + (Number(candidate.ovr ?? candidate.overall) || 55)
+        + (typeof getPlayerFormEventModifier === 'function' ? getPlayerFormEventModifier(candidate) : 0), 0) / players.length;
     return Math.max(45, Math.min(96, teamRating));
 }
 
 function getWorldCupSimulatedAverage(team, won, mentalPenalty = 0, preparationModifier = 0) {
     const players = team && Array.isArray(team.players) ? team.players : [];
     if (!players.length) return 60;
-    const teamOverall = players.reduce((sum, candidate) => sum + (Number(candidate.ovr ?? candidate.overall) || 55), 0) / players.length;
+    const teamOverall = players.reduce((sum, candidate) => sum + (Number(candidate.ovr ?? candidate.overall) || 55)
+        + (typeof getPlayerFormEventModifier === 'function' ? getPlayerFormEventModifier(candidate) : 0), 0) / players.length;
     const form = typeof getTournamentSimulationForm === 'function'
         ? players.reduce((sum, candidate) => sum + (getTournamentSimulationForm(candidate) || 0), 0) / players.length
         : 0;
@@ -503,6 +507,7 @@ function buildWorldCupState() {
 }
 
 function simulateWorldCupMatch(match) {
+    repairWorldCupTeamRosters();
     const team1 = getWorldCupTeam(match.team1Id);
     const team2 = getWorldCupTeam(match.team2Id);
     const format = getWorldCupMatchFormat(match.stage);
@@ -519,6 +524,8 @@ function simulateWorldCupMatch(match) {
     const mentalTotals = [0, 0];
     let score1 = 0;
     let score2 = 0;
+    const bounceOutTotals = [0, 0];
+    let bounceOutSimulatedDarts = 0;
 
     while (score1 < format.legsToWin && score2 < format.legsToWin) {
         const penalties = mentalTeams ? getMentalLegPenalties(mentalTeams[0], mentalTeams[1], {
@@ -526,12 +533,22 @@ function simulateWorldCupMatch(match) {
             tournament: { name: WORLD_CUP_TOURNAMENT_NAME }
         }) : [0, 0];
         mentalTotals[0] += penalties[0]; mentalTotals[1] += penalties[1];
-        const chance = mentalTeams ? adjustMentalLegWinChance(team1Chance, penalties) : team1Chance;
+        let chance = mentalTeams ? adjustMentalLegWinChance(team1Chance, penalties) : team1Chance;
+        if (typeof simulateBounceOutLeg === 'function') {
+            const bounce = simulateBounceOutLeg(chance);
+            bounceOutTotals[0] += bounce.counts[0]; bounceOutTotals[1] += bounce.counts[1];
+            bounceOutSimulatedDarts += bounce.darts; chance = bounce.chance;
+        }
         if (Math.random() < chance) score1++; else score2++;
     }
     const team1Won = score1 > score2;
-    const team1Average = getWorldCupSimulatedAverage(team1, team1Won, mentalTotals[0] / (score1 + score2), preparationModifiers[0]);
-    const team2Average = getWorldCupSimulatedAverage(team2, !team1Won, mentalTotals[1] / (score1 + score2), preparationModifiers[1]);
+    let team1Average = getWorldCupSimulatedAverage(team1, team1Won, mentalTotals[0] / (score1 + score2), preparationModifiers[0]);
+    let team2Average = getWorldCupSimulatedAverage(team2, !team1Won, mentalTotals[1] / (score1 + score2), preparationModifiers[1]);
+    if (typeof getBounceOutAdjustedAverage === 'function') {
+        team1Average = Number(getBounceOutAdjustedAverage(team1Average, bounceOutTotals[0], bounceOutSimulatedDarts));
+        team2Average = Number(getBounceOutAdjustedAverage(team2Average, bounceOutTotals[1], bounceOutSimulatedDarts));
+    }
+    match.bounceOuts1 = bounceOutTotals[0]; match.bounceOuts2 = bounceOutTotals[1];
     recordWorldCupTeamAverage(team1, team1Average);
     recordWorldCupTeamAverage(team2, team2Average);
     finishWorldCupStateMatch(match, team1Won ? team1.id : team2.id, score1, score2);
@@ -630,8 +647,13 @@ function awardWorldCupTeamPrize(teamId, amount, stage, won = false) {
         // swoją połowę do portfela, bez zmiany Order of Merit ani innych rankingów.
         if (isCurrentPlayer(candidate)) {
             if (!Number.isFinite(Number(player.budget))) player.budget = 0;
-            player.budget += individualPrize;
-            if (typeof recordTournamentCash === 'function') recordTournamentCash({ name: WORLD_CUP_TOURNAMENT_NAME, specialType: 'worldCup' }, 'prize', individualPrize);
+            const tournament = { name: WORLD_CUP_TOURNAMENT_NAME, specialType: 'worldCup' };
+            if (typeof payCareerTournamentPrizeMoney === 'function') {
+                payCareerTournamentPrizeMoney(candidate, individualPrize, tournament);
+            } else {
+                player.budget += individualPrize;
+                if (typeof recordTournamentCash === 'function') recordTournamentCash(tournament, 'prize', individualPrize);
+            }
         }
         if (typeof recordSeasonTournamentResult === 'function') {
             recordSeasonTournamentResult(candidate, { name: WORLD_CUP_TOURNAMENT_NAME }, {
@@ -1164,6 +1186,7 @@ function renderWorldCupQualifications() {
 
 function showWorldCupOverview() {
     if (!worldCupState) return;
+    if (typeof updateTournamentEntrySimulationButton === 'function') updateTournamentEntrySimulationButton('t-btn-sim-to-match', false);
     const modal = document.getElementById('bracket-modal');
     const title = document.getElementById('bracket-title');
     const list = document.getElementById('bracket-list');
@@ -1254,7 +1277,8 @@ function startWorldCupTournament() {
         if (typeof saveGame === 'function') saveGame(true);
     }
     const isSkipping = typeof isSkippingTournament !== 'undefined' && isSkippingTournament;
-    if (isSkipping) {
+    if (isSkipping || (typeof shouldAutoSimulateUnwatchedTournament === 'function'
+        && shouldAutoSimulateUnwatchedTournament(activeTournament, worldCupState.teams.some(teamContainsCareerPlayer)))) {
         worldCupState.skipPlayerMatches = true;
         isSkippingTournament = false;
     }
@@ -1281,7 +1305,8 @@ function startWorldCupQualifiers() {
         if (typeof saveGame === 'function') saveGame(true);
     }
     const isSkipping = typeof isSkippingTournament !== 'undefined' && isSkippingTournament;
-    if (isSkipping) {
+    if (isSkipping || (typeof shouldAutoSimulateUnwatchedTournament === 'function'
+        && shouldAutoSimulateUnwatchedTournament(activeTournament, worldCupState.teams.some(teamContainsCareerPlayer)))) {
         worldCupState.skipPlayerMatches = true;
         isSkippingTournament = false;
     }
@@ -1330,9 +1355,13 @@ function isCareerPlayerThrowing(isP1) {
 
 function startWorldCupMatch(match) {
     if (typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy()) return false;
+    if (typeof isPlayerInjured === 'function' && isPlayerInjured(player)) {
+        return typeof showPlayerInjuryBlocked === 'function' ? showPlayerInjuryBlocked() : false;
+    }
     repairWorldCupTeamRosters();
     const team1 = getWorldCupTeam(match.team1Id);
     const team2 = getWorldCupTeam(match.team2Id);
+    if (!teamContainsCareerPlayer(team1) && !teamContainsCareerPlayer(team2)) return false;
     const playerTeam = teamContainsCareerPlayer(team1) ? team1 : team2;
     const opponentTeam = playerTeam === team1 ? team2 : team1;
     const format = getWorldCupMatchFormat(match.stage);

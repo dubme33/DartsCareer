@@ -72,6 +72,22 @@ function getPrefix(m) { return m === 1 ? "" : (m === 2 ? "D" : "T"); }
             });
         }
 
+        function animateBounceOutDart(result) {
+            const canvas = document.getElementById('dartboard');
+            if (!canvas?.parentElement || typeof canvas.getBoundingClientRect !== 'function') return;
+            const boardRect = canvas.getBoundingClientRect(), parentRect = canvas.parentElement.getBoundingClientRect();
+            const sector = result.bouncedSector, mult = result.bouncedMult;
+            const angle = sector === 25 ? 0 : -Math.PI / 2 + dartboardOrder.indexOf(sector) * Math.PI / 10;
+            const radius = sector === 25 ? (mult === 2 ? 0 : 11) : mult === 3 ? 75 : mult === 2 ? 125 : 105;
+            const dart = document.createElement('span');
+            dart.className = 'bounce-out-dart'; dart.setAttribute('aria-hidden', 'true');
+            dart.style.left = `${boardRect.left - parentRect.left + (canvas.width / 2 + radius * Math.cos(angle)) * boardRect.width / canvas.width}px`;
+            dart.style.top = `${boardRect.top - parentRect.top + (canvas.height / 2 + radius * Math.sin(angle)) * boardRect.height / canvas.height}px`;
+            canvas.parentElement.appendChild(dart);
+            dart.addEventListener('animationend', () => dart.remove(), { once: true });
+            setTimeout(() => dart.remove(), 600);
+        }
+
         function addDartToCanvas(hitSec, hitMult, color, targetSec, targetMult) {
             const canvas = document.getElementById('dartboard'); const cx = canvas.width / 2, cy = canvas.height / 2; let angle, radius;
             

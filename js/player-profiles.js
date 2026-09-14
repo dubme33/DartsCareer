@@ -6,6 +6,7 @@ const PLAYER_CAREER_TITLES_VERSION = 1;
 const PLAYER_PROFILE_TRANSLATIONS = {
     pl: {
         winner: 'Zwycięzca', runnerUp: 'Finalista', semiFinalist: 'Półfinalista', quarterFinalist: 'Ćwierćfinalista',
+        groupSecond: '2. miejsce w grupie', groupThird: '3. miejsce w grupie', afterTax: 'Po podatku',
         last16: '1/8 finału', last32: 'Ostatnia 32', last64: 'Ostatnia 64', last128: 'Ostatnia 128', lastRound: 'Ostatnia {round}',
         noPrize: 'bez nagrody', orderOfMerit: 'Order of Merit', proSeries: 'Pro Series', playersCup: 'Players Cup', gdl: 'GDL',
         noResults: 'Brak rozegranych turniejów w tym sezonie.', noHighlights: 'Największe sukcesy pojawią się po rozegraniu turniejów.',
@@ -15,6 +16,7 @@ const PLAYER_PROFILE_TRANSLATIONS = {
     },
     en: {
         winner: 'Champion', runnerUp: 'Runner-up', semiFinalist: 'Semi-finalist', quarterFinalist: 'Quarter-finalist',
+        groupSecond: '2nd in group', groupThird: '3rd in group', afterTax: 'After tax',
         last16: 'Last 16', last32: 'Last 32', last64: 'Last 64', last128: 'Last 128', lastRound: 'Last {round}',
         noPrize: 'no prize money', orderOfMerit: 'Order of Merit', proSeries: 'Pro Series', playersCup: 'Players Cup', gdl: 'GDL',
         noResults: 'No tournaments played this season.', noHighlights: 'Major achievements will appear after tournaments are played.',
@@ -24,6 +26,7 @@ const PLAYER_PROFILE_TRANSLATIONS = {
     },
     de: {
         winner: 'Sieger', runnerUp: 'Finalist', semiFinalist: 'Halbfinalist', quarterFinalist: 'Viertelfinalist',
+        groupSecond: '2. Gruppenplatz', groupThird: '3. Gruppenplatz', afterTax: 'Nach Steuern',
         last16: 'Letzte 16', last32: 'Letzte 32', last64: 'Letzte 64', last128: 'Letzte 128', lastRound: 'Letzte {round}',
         noPrize: 'kein Preisgeld', orderOfMerit: 'Order of Merit', proSeries: 'Pro Series', playersCup: 'Players Cup', gdl: 'GDL',
         noResults: 'In dieser Saison wurden noch keine Turniere gespielt.', noHighlights: 'Die größten Erfolge erscheinen nach gespielten Turnieren.',
@@ -33,6 +36,7 @@ const PLAYER_PROFILE_TRANSLATIONS = {
     },
     nl: {
         winner: 'Winnaar', runnerUp: 'Finalist', semiFinalist: 'Halvefinalist', quarterFinalist: 'Kwartfinalist',
+        groupSecond: '2e in de groep', groupThird: '3e in de groep', afterTax: 'Na belasting',
         last16: 'Laatste 16', last32: 'Laatste 32', last64: 'Laatste 64', last128: 'Laatste 128', lastRound: 'Laatste {round}',
         noPrize: 'geen prijzengeld', orderOfMerit: 'Order of Merit', proSeries: 'Pro Series', playersCup: 'Players Cup', gdl: 'GDL',
         noResults: 'Dit seizoen zijn nog geen toernooien gespeeld.', noHighlights: 'De grootste prestaties verschijnen na gespeelde toernooien.',
@@ -464,6 +468,12 @@ function getPlayerCareerTitleSeries(title) {
     if (typeof isEuropeanTourTournament === 'function' && isEuropeanTourTournament(tournament)) {
         return 'European Tour';
     }
+    if (tournament.specialType === 'challengeTour' || /rising\s+stars\s+circuit|challenge\s+tour/i.test(names)) {
+        return 'Challenge Tour';
+    }
+    if (tournament.specialType === 'developmentTour' || /future\s+champions\s+circuit|development\s+tour/i.test(names)) {
+        return 'Development Tour';
+    }
     return null;
 }
 
@@ -567,6 +577,12 @@ function recordSeasonTournamentResult(candidate, tournament, details = {}) {
         rankingPrizeMoney,
         timestamp
     };
+    const financeEntry = typeof isCurrentPlayer === 'function' && isCurrentPlayer(candidate)
+        && typeof getTournamentFinanceEntry === 'function' ? getTournamentFinanceEntry(tournament) : null;
+    if (financeEntry?.prize === prizeMoney && Number.isFinite(financeEntry.tax)) {
+        result.prizeTax = financeEntry.tax;
+        result.netPrizeMoney = prizeMoney - financeEntry.tax;
+    }
     stats.results.push(result);
     if (typeof recordTournamentFinanceResult === 'function') recordTournamentFinanceResult(candidate, tournament, result);
     if (typeof recordSponsorGoalTournament === 'function') recordSponsorGoalTournament(candidate, tournament, result);
@@ -653,8 +669,12 @@ function renderSeasonResult(result) {
         : result.tournament;
     const stage = result.stage && (result.tournament === 'Puchar Narodów' || result.tournament === 'World Cup of Darts') && typeof getWorldCupSeasonResultStage === 'function'
         ? getWorldCupSeasonResultStage(result.stage)
-        : (result.stage || getSeasonResultStage(result.round, result.won));
-    const prizeText = result.prizeMoney > 0 ? `£${result.prizeMoney.toLocaleString('en-GB')}` : trPlayerProfile('noPrize');
+        : (['groupSecond', 'groupThird'].includes(result.stage) ? trPlayerProfile(result.stage)
+            : result.stage || getSeasonResultStage(result.round, result.won));
+    let prizeText = result.prizeMoney > 0 ? `£${result.prizeMoney.toLocaleString('en-GB')}` : trPlayerProfile('noPrize');
+    if (result.prizeTax > 0 && Number.isFinite(result.netPrizeMoney)) {
+        prizeText += ` · ${trPlayerProfile('afterTax')}: £${result.netPrizeMoney.toLocaleString('en-GB')}`;
+    }
     return `<li class="profile-list-item">
         <div><strong>${escapeHtml(tournamentName)}</strong><span>${escapeHtml(stage)}</span></div>
         <small>${formatPlayerProfileDate(result.timestamp)} · ${prizeText}</small>
@@ -712,6 +732,7 @@ function openPlayerProfile(playerId, rankingType = 'main') {
         ${rankingMarkup}
         <div class="profile-ranking-card profile-average-card"><span>${trPlayerProfile('seasonHighestAverage')}</span><strong>${stats.highestAvg > 0 ? stats.highestAvg.toFixed(2) : '—'}</strong></div>
     </section>
+    ${typeof renderPlayerEventProfile === 'function' ? renderPlayerEventProfile(selectedPlayer) : ''}
     ${typeof renderPlayerTraitProfile === 'function' ? renderPlayerTraitProfile(selectedPlayer) : ''}
     ${typeof renderPlayerMatchStatistics === 'function' ? renderPlayerMatchStatistics(selectedPlayer) : ''}
     <section class="profile-panel">

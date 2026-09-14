@@ -42,7 +42,7 @@ function getAiDevelopmentMatchExpectation(ratingDifference, format, profile) {
         + 0.25 * race(ratingDifference + spread);
 }
 
-function getAiDevelopmentMatchWeight(tournament, round) {
+function getAiDevelopmentBaseMatchWeight(tournament, round) {
     const names = `${tournament.name || ''} ${tournament.sourceName || ''} ${tournament.specialType || ''}`;
     if (/qualifier|kwalifikac|q-school|qschool|pro card trials/i.test(names)) return 0.35;
     const profile = getTournamentSimulationProfile({ ...tournament, name: names });
@@ -51,7 +51,13 @@ function getAiDevelopmentMatchWeight(tournament, round) {
     return eventWeight * (round === 2 ? 1.2 : round === 4 ? 1.1 : 1);
 }
 
+function getAiDevelopmentMatchWeight(tournament, round) {
+    return getAiDevelopmentBaseMatchWeight(tournament, round)
+        * getTournamentDevelopmentPrestigeFactor(tournament);
+}
+
 function recordAiDevelopmentMatch(candidate, opponent, won, tournament, format = {}, round) {
+    if (typeof isPlayerInjured === 'function' && (isPlayerInjured(candidate) || isPlayerInjured(opponent))) return;
     if (!candidate || !opponent || candidate.isBye || opponent.isBye || tournament?.isDoubles
         || !tournament?.name || typeof won !== 'boolean'
         || (typeof isCurrentPlayer === 'function' && isCurrentPlayer(candidate))) return;
@@ -61,7 +67,7 @@ function recordAiDevelopmentMatch(candidate, opponent, won, tournament, format =
     let state = candidate.aiDevelopment;
     if (!state || state.version !== AI_SEASON_DEVELOPMENT_VERSION || state.year !== year) {
         state = candidate.aiDevelopment = { version: AI_SEASON_DEVELOPMENT_VERSION, year,
-            since: currentDate.getTime(), matches: 0, weight: 0, wins: 0, expectedWins: 0,
+            since: currentDate.getTime(), matches: 0, weight: 0, baseWeight: 0, wins: 0, expectedWins: 0,
             sensitivity: 0, inSeasonDelta: 0, settled: false };
     }
     if (state.settled) return;
@@ -70,6 +76,9 @@ function recordAiDevelopmentMatch(candidate, opponent, won, tournament, format =
     const expected = difference => getAiDevelopmentMatchExpectation(difference, format, profile);
     const difference = rating - opposition;
     const weight = getAiDevelopmentMatchWeight(tournament, Number(round));
+    // Wcześniejsze mecze ze starego zapisu zachowują neutralny prestiż.
+    if (!Number.isFinite(state.baseWeight) || state.baseWeight < 0) state.baseWeight = state.weight;
+    state.baseWeight += getAiDevelopmentBaseMatchWeight(tournament, Number(round));
     state.matches++;
     state.weight += weight;
     state.wins += won ? weight : 0;
@@ -99,11 +108,11 @@ function limitAiDevelopmentGrowth(rating, change) {
     return increase;
 }
 
-function increaseAiSeasonDevelopmentGrowth(change, limit = AI_SEASON_DEVELOPMENT_MAX_CHANGE) {
+function increaseAiSeasonDevelopmentGrowth(change, limit = AI_SEASON_DEVELOPMENT_MAX_CHANGE, prestigeFactor = 1) {
     if (!Number.isFinite(change) || change <= 0) return change;
     // Niewielkie +5% dotyczy wyłącznie dodatniej oceny całego sezonu.
-    // Limit sezonowy i hamowanie rozwoju elity nadal obowiązują bez zmian.
-    return Math.min(limit, change * AI_SEASON_DEVELOPMENT_GROWTH_MULTIPLIER);
+    // Następnie uwzględniamy prestiż, nadal respektując limit i progi elity.
+    return Math.min(limit, Math.min(limit, change * AI_SEASON_DEVELOPMENT_GROWTH_MULTIPLIER) * prestigeFactor);
 }
 
 function settleAiSeasonDevelopment(completedYear) {
@@ -119,13 +128,17 @@ function settleAiSeasonDevelopment(completedYear) {
         if (!Number.isFinite(before)) continue;
         // Mała próbka nie pozwala wnioskować o całym sezonie. 60 ważonych
         // meczów pozwala na pełne ±10; pojedynczy puchar nie daje skoku o 9 OVR.
-        const limit = AI_SEASON_DEVELOPMENT_MAX_CHANGE * Math.min(1, state.weight / 60);
+        const baseWeight = Number.isFinite(state.baseWeight) && state.baseWeight >= 0 ? state.baseWeight : state.weight;
+        const limit = AI_SEASON_DEVELOPMENT_MAX_CHANGE * Math.min(1, baseWeight / 60);
+        // Samo obniżenie wag znikałoby w ilorazie wyniku i czułości przy
+        // długim sezonie. Średni prestiż ogranicza też końcową dodatnią premię.
+        const prestigeFactor = baseWeight > 0 ? Math.max(0.2, Math.min(1.25, state.weight / baseWeight)) : 1;
         const performanceChange = state.matches >= 12
             ? Math.max(-limit, Math.min(limit, (state.wins - state.expectedWins) / (state.sensitivity + 0.6)))
             : state.inSeasonDelta;
         const seasonStart = before - state.inSeasonDelta;
         const totalChange = state.matches >= 12
-            ? limitAiDevelopmentGrowth(seasonStart, increaseAiSeasonDevelopmentGrowth(performanceChange, limit))
+            ? limitAiDevelopmentGrowth(seasonStart, increaseAiSeasonDevelopmentGrowth(performanceChange, limit, prestigeFactor))
             : state.inSeasonDelta;
         const after = Math.max(45, Math.min(99, seasonStart + totalChange));
         const adjustment = after - before;

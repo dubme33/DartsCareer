@@ -20,7 +20,9 @@ const PLAYER_EDITOR_TRANSLATIONS = {
         photo: 'Zdjęcie zawodnika', noPhoto: 'BRAK ZDJĘCIA', photoHint: 'PNG, JPG lub WebP, maksymalnie 2 MB.',
         uploadPhoto: 'Wybierz zdjęcie', removePhoto: 'Usuń zdjęcie', photoAlt: 'Zdjęcie zawodnika',
         personal: 'Dane zawodnika', firstName: 'Imię', lastName: 'Nazwisko', country: 'Kraj', birthYear: 'Rok urodzenia',
-        gender: 'Płeć', male: 'Mężczyzna', female: 'Kobieta', favoriteDouble: 'Ulubiony double',
+        gender: 'Płeć', male: 'Mężczyzna', female: 'Kobieta', favoriteDouble: 'Pierwszy double (+5 p.p.)',
+        secondFavoriteDouble: 'Drugi double (+3 p.p.)', thirdFavoriteDouble: 'Trzeci double (+1 p.p.)',
+        invalidFavoriteDoubles: 'Ulubione double muszą być różnymi polami od D1 do D20.',
         ratings: 'Oceny meczowe', overall: 'Overall', scoring: 'Punktowanie', doubles: 'Podwójne',
         rankingMoney: 'Pieniądze w rankingach', rankingMoneyHint: 'Ustaw bieżącą kwotę zawodnika w każdej klasyfikacji finansowej.',
         mainOomMoney: 'Główny OOM (£)', proTourMoney: 'ProTour OOM (£)', playersChampMoney: 'Players Championship (£)',
@@ -63,7 +65,9 @@ const PLAYER_EDITOR_TRANSLATIONS = {
         baseOrigin: 'Game database', modOrigin: 'Mod entry', customOrigin: 'Added in editor', careerOrigin: 'Your player', photo: 'Player photo', noPhoto: 'NO PHOTO',
         photoHint: 'PNG, JPG or WebP, up to 2 MB.', uploadPhoto: 'Choose photo', removePhoto: 'Remove photo', photoAlt: 'Player photo',
         personal: 'Player details', firstName: 'First name', lastName: 'Last name', country: 'Country', birthYear: 'Year of birth',
-        gender: 'Gender', male: 'Male', female: 'Female', favoriteDouble: 'Favourite double', ratings: 'Match ratings',
+        gender: 'Gender', male: 'Male', female: 'Female', favoriteDouble: 'First double (+5 p.p.)', ratings: 'Match ratings',
+        secondFavoriteDouble: 'Second double (+3 p.p.)', thirdFavoriteDouble: 'Third double (+1 p.p.)',
+        invalidFavoriteDoubles: 'Favourite doubles must be different fields from D1 to D20.',
         rankingMoney: 'Ranking prize money', rankingMoneyHint: 'Set the player’s current total in each prize-money ranking.',
         mainOomMoney: 'Main OOM (£)', proTourMoney: 'ProTour OOM (£)', playersChampMoney: 'Players Championship (£)',
         europeanTourMoney: 'European Tour OOM (£)', challengeTourMoney: 'Challenge Tour (£)', developmentTourMoney: 'Development Tour (£)',
@@ -105,7 +109,9 @@ const PLAYER_EDITOR_TRANSLATIONS = {
         baseOrigin: 'Spieldatenbank', modOrigin: 'Mod-Eintrag', customOrigin: 'Im Editor erstellt', careerOrigin: 'Dein Spieler', photo: 'Spielerfoto', noPhoto: 'KEIN FOTO',
         photoHint: 'PNG, JPG oder WebP, maximal 2 MB.', uploadPhoto: 'Foto wählen', removePhoto: 'Foto entfernen', photoAlt: 'Spielerfoto',
         personal: 'Spielerdaten', firstName: 'Vorname', lastName: 'Nachname', country: 'Land', birthYear: 'Geburtsjahr',
-        gender: 'Geschlecht', male: 'Männlich', female: 'Weiblich', favoriteDouble: 'Lieblingsdoppel', ratings: 'Matchwerte',
+        gender: 'Geschlecht', male: 'Männlich', female: 'Weiblich', favoriteDouble: 'Erstes Doppel (+5 Prozentpunkte)', ratings: 'Matchwerte',
+        secondFavoriteDouble: 'Zweites Doppel (+3 Prozentpunkte)', thirdFavoriteDouble: 'Drittes Doppel (+1 Prozentpunkt)',
+        invalidFavoriteDoubles: 'Lieblingsdoppel müssen verschiedene Felder von D1 bis D20 sein.',
         rankingMoney: 'Preisgeld in Ranglisten', rankingMoneyHint: 'Lege den aktuellen Betrag des Spielers in jeder Preisgeldrangliste fest.',
         mainOomMoney: 'Haupt-OOM (£)', proTourMoney: 'ProTour OOM (£)', playersChampMoney: 'Players Championship (£)',
         europeanTourMoney: 'European Tour OOM (£)', challengeTourMoney: 'Challenge Tour (£)', developmentTourMoney: 'Development Tour (£)',
@@ -147,7 +153,9 @@ const PLAYER_EDITOR_TRANSLATIONS = {
         baseOrigin: 'Speldatabase', modOrigin: 'Mod-item', customOrigin: 'Toegevoegd in editor', careerOrigin: 'Jouw speler', photo: 'Spelersfoto', noPhoto: 'GEEN FOTO',
         photoHint: 'PNG, JPG of WebP, maximaal 2 MB.', uploadPhoto: 'Kies foto', removePhoto: 'Foto verwijderen', photoAlt: 'Spelersfoto',
         personal: 'Spelersgegevens', firstName: 'Voornaam', lastName: 'Achternaam', country: 'Land', birthYear: 'Geboortejaar',
-        gender: 'Geslacht', male: 'Man', female: 'Vrouw', favoriteDouble: 'Favoriete dubbel', ratings: 'Wedstrijdratings',
+        gender: 'Geslacht', male: 'Man', female: 'Vrouw', favoriteDouble: 'Eerste dubbel (+5 procentpunten)', ratings: 'Wedstrijdratings',
+        secondFavoriteDouble: 'Tweede dubbel (+3 procentpunten)', thirdFavoriteDouble: 'Derde dubbel (+1 procentpunt)',
+        invalidFavoriteDoubles: 'Favoriete dubbels moeten verschillende vakken van D1 tot D20 zijn.',
         rankingMoney: 'Prijzengeld in ranglijsten', rankingMoneyHint: 'Stel het huidige bedrag van de speler in elke prijzengeldranglijst in.',
         mainOomMoney: 'Hoofd-OOM (£)', proTourMoney: 'ProTour OOM (£)', playersChampMoney: 'Players Championship (£)',
         europeanTourMoney: 'European Tour OOM (£)', challengeTourMoney: 'Challenge Tour (£)', developmentTourMoney: 'Development Tour (£)',
@@ -404,6 +412,11 @@ function renderPlayerEditorCountryOptions(selectedCountry = '') {
 }
 
 function renderPlayerEditorDoubleOptions(selectedDouble = 16) {
+    const values = Array.isArray(selectedDouble) ? selectedDouble : [selectedDouble, null, null];
+    if (typeof renderFavoriteDoubleOptions === 'function') {
+        renderFavoriteDoubleOptions('player-editor-', values, true);
+        return;
+    }
     const select = document.getElementById('player-editor-favorite-double');
     if (!select) return;
     select.replaceChildren();
@@ -413,7 +426,7 @@ function renderPlayerEditorDoubleOptions(selectedDouble = 16) {
         option.textContent = `D${value}`;
         select.appendChild(option);
     }
-    select.value = String(Number.isInteger(Number(selectedDouble)) ? selectedDouble : 16);
+    select.value = String(Number.isInteger(Number(values[0])) ? values[0] : 16);
 }
 
 function renderPlayerEditorSortOptions() {
@@ -557,7 +570,10 @@ function populatePlayerEditorForm(candidate = null) {
     const birthInput = document.getElementById('player-editor-birth-year');
     if (birthInput) birthInput.max = String(year - 12);
     setValue('player-editor-gender', candidate?.gender === 'female' ? 'female' : 'male');
-    renderPlayerEditorDoubleOptions(candidate?.favoriteDouble ?? 16);
+    const favoriteDoubles = typeof getPlayerFavoriteDoubles === 'function' ? getPlayerFavoriteDoubles(candidate)
+        : (Array.isArray(candidate?.favoriteDoubles) ? candidate.favoriteDoubles.slice(0, 3) : [candidate?.favoriteDouble ?? 16, null, null]);
+    if (favoriteDoubles[0] == null) favoriteDoubles[0] = 16;
+    renderPlayerEditorDoubleOptions(favoriteDoubles);
 
     const overall = Math.round(Number(candidate?.baseOvr ?? candidate?.ovr ?? candidate?.overall) || 60);
     setValue('player-editor-overall', overall);
@@ -713,6 +729,7 @@ function createPlayerEditorPlayer(data) {
         gender: data.gender,
         birthYear: data.birthYear,
         favoriteDouble: data.favoriteDouble,
+        favoriteDoubles: data.favoriteDoubles?.slice(0, 3) || [data.favoriteDouble, null, null],
         overall: data.overall,
         ovr: data.overall,
         scoring: data.scoring,
@@ -782,7 +799,7 @@ function collectPlayerEditorForm(candidate) {
         country,
         birthYear,
         gender: document.getElementById('player-editor-gender')?.value === 'female' ? 'female' : 'male',
-        favoriteDouble: getPlayerEditorNumber('player-editor-favorite-double', 1, 20) || 16,
+        favoriteDouble: getPlayerEditorNumber('player-editor-favorite-double', 1, 20),
         overall: getPlayerEditorNumber('player-editor-overall', 40, 99),
         scoring: getPlayerEditorNumber('player-editor-scoring', 40, 100),
         doubles: getPlayerEditorNumber('player-editor-doubles', 40, 100),
@@ -790,6 +807,17 @@ function collectPlayerEditorForm(candidate) {
         consistency: getPlayerEditorNumber('player-editor-consistency', 0, 100),
         mental: getPlayerEditorNumber('player-editor-mental', 0, 100)
     };
+    const extraDouble = (id, index) => {
+        const input = document.getElementById(id);
+        if (!input) return candidate?.favoriteDoubles?.[index] ?? null;
+        return input.value ? Number(input.value) : null;
+    };
+    values.favoriteDoubles = [values.favoriteDouble,
+        extraDouble('player-editor-favorite-double-second', 1),
+        extraDouble('player-editor-favorite-double-third', 2)];
+    const chosenDoubles = values.favoriteDoubles.filter(value => value != null);
+    if (values.favoriteDouble == null || chosenDoubles.some(value => !Number.isInteger(value) || value < 1 || value > 20)
+        || new Set(chosenDoubles).size !== chosenDoubles.length) return { error: trPlayerEditor('invalidFavoriteDoubles') };
     if ([values.overall, values.scoring, values.doubles, values.endurance, values.consistency, values.mental].some(value => value === null)) {
         return { error: trPlayerEditor('invalidRating') };
     }
@@ -839,7 +867,8 @@ function savePlayerEditor(event) {
         country: values.country,
         birthYear: values.birthYear,
         gender: values.gender,
-        favoriteDouble: values.favoriteDouble
+        favoriteDouble: values.favoriteDouble,
+        favoriteDoubles: values.favoriteDoubles.slice(0, 3)
     });
     if (ratingsChanged) {
         Object.assign(candidate, {
@@ -1097,7 +1126,9 @@ function refreshPlayerEditorTranslations() {
         'player-editor-personal-title': 'personal', 'player-editor-first-name-label': 'firstName',
         'player-editor-last-name-label': 'lastName', 'player-editor-country-label': 'country',
         'player-editor-birth-year-label': 'birthYear', 'player-editor-gender-label': 'gender',
-        'player-editor-favorite-double-label': 'favoriteDouble', 'player-editor-ratings-title': 'ratings',
+        'player-editor-favorite-double-label': 'favoriteDouble',
+        'player-editor-favorite-double-second-label': 'secondFavoriteDouble',
+        'player-editor-favorite-double-third-label': 'thirdFavoriteDouble', 'player-editor-ratings-title': 'ratings',
         'player-editor-overall-label': 'overall', 'player-editor-scoring-label': 'scoring',
         'player-editor-doubles-label': 'doubles', 'player-editor-ranking-money-title': 'rankingMoney',
         'player-editor-ranking-money-hint': 'rankingMoneyHint', 'player-editor-main-money-label': 'mainOomMoney',

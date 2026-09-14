@@ -36,6 +36,7 @@ function getWorldChampionshipPlayerKey(candidate) {
 
 function isWorldChampionshipEligiblePlayer(candidate) {
     if (!candidate || candidate.isBye || candidate.isWorldCupGuest || !candidate.name) return false;
+    if (typeof isPlayerInjured === 'function' && isPlayerInjured(candidate)) return false;
     return !(typeof isRetiredPlayer === 'function' && isRetiredPlayer(candidate));
 }
 

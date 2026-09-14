@@ -4,7 +4,7 @@ const WORLD_NEWS_CONFIG = Object.freeze({ limit: 180, pageSize: 20, upsetsPerEve
 const WORLD_NEWS_TEXT = {
     pl: {
         title: 'Ze świata darta', tile: 'Wyniki, sensacje i bohaterowie sezonu.',
-        scope: 'Doniesienia z tej kariery, wyłącznie na podstawie zapisanych wyników. Mecze gracza i AI. Bez wpływu na rozgrywkę.',
+        scope: 'Doniesienia z tej kariery: zapisane wyniki oraz zmiany zdrowia i formy gracza i zawodników AI.',
         archive: 'Archiwum: {count}/180 · zbierane od {date}', unreadCount: 'Nieprzeczytane: {count}',
         all: 'Wszystkie', unread: 'Nieprzeczytane', upset: 'Sensacje', champion: 'Mistrzowie', youth: 'Młode talenty', ranking: 'Lider OOM',
         back: 'Wróć do Menu', markRead: 'Oznacz wszystkie jako przeczytane', more: 'Pokaż więcej ({count})', fresh: 'NOWE',
@@ -28,7 +28,7 @@ const WORLD_NEWS_TEXT = {
     },
     en: {
         title: 'Darts world news', tile: 'Results, upsets and the season’s standout players.',
-        scope: 'News from this career, based only on recorded results. Includes player and AI matches. No effect on gameplay.',
+        scope: 'News from this career: recorded results and changes in health and form for you and AI players.',
         archive: 'Archive: {count}/180 · tracking since {date}', unreadCount: 'Unread: {count}',
         all: 'All', unread: 'Unread', upset: 'Upsets', champion: 'Champions', youth: 'Young talents', ranking: 'OOM leader',
         back: 'Back to Menu', markRead: 'Mark all as read', more: 'Show more ({count})', fresh: 'NEW',
@@ -52,7 +52,7 @@ const WORLD_NEWS_TEXT = {
     },
     de: {
         title: 'Nachrichten aus der Dartswelt', tile: 'Ergebnisse, Überraschungen und die Spieler der Saison.',
-        scope: 'Nachrichten aus dieser Karriere, ausschließlich aus erfassten Ergebnissen. Spieler- und KI-Partien. Ohne Einfluss auf das Spiel.',
+        scope: 'Nachrichten aus dieser Karriere: erfasste Ergebnisse sowie Gesundheit und Form des Spielers und der KI-Spieler.',
         archive: 'Archiv: {count}/180 · erfasst seit {date}', unreadCount: 'Ungelesen: {count}',
         all: 'Alle', unread: 'Ungelesen', upset: 'Überraschungen', champion: 'Turniersieger', youth: 'Junge Talente', ranking: 'OOM-Spitze',
         back: 'Zurück zum Menü', markRead: 'Alle als gelesen markieren', more: 'Mehr anzeigen ({count})', fresh: 'NEU',
@@ -76,7 +76,7 @@ const WORLD_NEWS_TEXT = {
     },
     nl: {
         title: 'Nieuws uit de dartswereld', tile: 'Uitslagen, verrassingen en de spelers van het seizoen.',
-        scope: 'Nieuws uit deze carrière, uitsluitend op basis van vastgelegde uitslagen. Inclusief speler- en AI-wedstrijden. Geen invloed op het spel.',
+        scope: 'Nieuws uit deze carrière: vastgelegde uitslagen en veranderingen in gezondheid en vorm van jou en AI-spelers.',
         archive: 'Archief: {count}/180 · bijgehouden sinds {date}', unreadCount: 'Ongelezen: {count}',
         all: 'Alles', unread: 'Ongelezen', upset: 'Verrassingen', champion: 'Kampioenen', youth: 'Jonge talenten', ranking: 'OOM-leider',
         back: 'Terug naar Menu', markRead: 'Alles als gelezen markeren', more: 'Meer tonen ({count})', fresh: 'NIEUW',
@@ -178,7 +178,7 @@ function restoreWorldNews() {
     const seenIds = new Set();
     state.entries = (Array.isArray(state.entries) ? state.entries : []).filter(item => {
         if (!item || typeof item.key !== 'string' || !Number.isSafeInteger(item.id) || item.id < 1
-            || !['upset', 'champion', 'youth', 'ranking'].includes(item.type)
+            || !['upset', 'champion', 'youth', 'ranking', 'condition'].includes(item.type)
             || !Number.isFinite(item.timestamp) || !Number.isFinite(new Date(item.timestamp).getTime())
             || !item.data || typeof item.data !== 'object' || Array.isArray(item.data)
             || seen.has(item.key) || seenIds.has(item.id)) return false;
@@ -190,6 +190,9 @@ function restoreWorldNews() {
         if (item.type === 'upset' && (!validPerson(data.opponent) || typeof data.score !== 'string' || !Number.isFinite(data.gap))) return false;
         if (item.type === 'youth' && (!Number.isFinite(data.age) || !['titleStage', 'final', 'semifinal'].includes(data.stage))) return false;
         if (item.type === 'ranking' && (!Number.isFinite(data.amount) || (data.previous && !validPerson(data.previous)))) return false;
+        if (item.type === 'condition' && (!['injury', 'recovered', 'formUp', 'formDown', 'formEnded'].includes(data.kind)
+            || typeof getValidPlayerTimedEvent !== 'function'
+            || !getValidPlayerTimedEvent(data.event, data.kind === 'injury' || data.kind === 'recovered'))) return false;
         seen.add(item.key);
         seenIds.add(item.id);
         item.read = item.read === true;
@@ -331,6 +334,9 @@ function updateWorldNewsBadge() {
 
 function getWorldNewsPresentation(item) {
     const data = item.data;
+    if (item.type === 'condition' && typeof getPlayerEventPresentation === 'function') {
+        return { ...getPlayerEventPresentation(data.kind, data.event, data.actor?.name || ''), tournament: '' };
+    }
     const tournament = data.tournament ? (typeof getTournamentDisplayName === 'function'
         ? getTournamentDisplayName(data.tournament) : data.tournament.name) : '';
     const values = { ...data, name: data.actor?.name || '', opponent: data.opponent?.name || '', previous: data.previous?.name || '',
@@ -365,8 +371,8 @@ function renderWorldNews() {
     const summary = document.getElementById('world-news-summary');
     if (summary) summary.textContent = `${trWorldNews('archive', { count: state.entries.length, date: worldNewsDate(state.since) })} · ${trWorldNews('unreadCount', { count: unread })}`;
     const filters = document.getElementById('world-news-filters');
-    if (filters) filters.innerHTML = ['all', 'unread', 'upset', 'champion', 'youth', 'ranking'].map(filter =>
-        `<button type="button" aria-pressed="${worldNewsFilter === filter}" onclick="showWorldNews('${filter}')">${escapeHtml(trWorldNews(filter))}</button>`).join('');
+    if (filters) filters.innerHTML = ['all', 'unread', 'upset', 'champion', 'youth', 'ranking', 'condition'].map(filter =>
+        `<button type="button" aria-pressed="${worldNewsFilter === filter}" onclick="showWorldNews('${filter}')">${escapeHtml(filter === 'condition' && typeof trPlayerEvents === 'function' ? trPlayerEvents('news') : trWorldNews(filter))}</button>`).join('');
     const items = getFilteredWorldNews();
     const candidates = getWorldNewsPlayers();
     const playersByKey = new Map(candidates.map(candidate => [worldNewsPersonKey(candidate), candidate]));
@@ -376,7 +382,7 @@ function renderWorldNews() {
             || resolveWorldNewsPerson(item.data[role], candidates)))
             .map(role => `<button type="button" class="world-news-profile" onclick="openWorldNewsPlayer(${item.id}, '${role}')">${escapeHtml(trWorldNews('profile', { name: item.data[role].name }))}</button>`).join('');
         return `<article class="world-news-card news-${item.type}${item.read ? '' : ' news-unread'}">
-            <div class="world-news-meta"><span class="world-news-category">${escapeHtml(trWorldNews(item.type))}</span><time>${escapeHtml(worldNewsDate(item.timestamp))}</time>${item.read ? '' : `<strong class="world-news-new">${escapeHtml(trWorldNews('fresh'))}</strong>`}</div>
+            <div class="world-news-meta"><span class="world-news-category">${escapeHtml(item.type === 'condition' && typeof trPlayerEvents === 'function' ? trPlayerEvents('news') : trWorldNews(item.type))}</span><time>${escapeHtml(worldNewsDate(item.timestamp))}</time>${item.read ? '' : `<strong class="world-news-new">${escapeHtml(trWorldNews('fresh'))}</strong>`}</div>
             <h3>${escapeHtml(text.title)}</h3>
             ${text.tournament ? `<p class="world-news-event">${escapeHtml(text.tournament)}</p>` : ''}
             <p>${escapeHtml(text.body)}</p>
@@ -396,7 +402,8 @@ function updateWorldNewsStrings() {
         'world-news-rules-title': 'rules', 'world-news-rules': 'criteria' };
     for (const [id, key] of Object.entries(fields)) {
         const node = document.getElementById(id);
-        if (node) node.textContent = (id.endsWith('title') && key === 'title' ? '📰 ' : '') + trWorldNews(key);
+        if (node) node.textContent = (id.endsWith('title') && key === 'title' ? '📰 ' : '') + trWorldNews(key)
+            + (key === 'criteria' && typeof trPlayerEvents === 'function' ? ' ' + trPlayerEvents('rules') : '');
     }
 }
 
@@ -406,7 +413,7 @@ function refreshWorldNewsTranslations() {
 }
 
 function showWorldNews(filter = 'all') {
-    worldNewsFilter = ['all', 'unread', 'upset', 'champion', 'youth', 'ranking'].includes(filter) ? filter : 'all';
+    worldNewsFilter = ['all', 'unread', 'upset', 'champion', 'youth', 'ranking', 'condition'].includes(filter) ? filter : 'all';
     worldNewsVisibleCount = WORLD_NEWS_CONFIG.pageSize;
     updateWorldNewsStrings();
     renderWorldNews();

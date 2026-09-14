@@ -40,8 +40,7 @@ function playerThrow() {
             const throwStats = getCareerDartStats(aim, score);
             const result = calculateVisitThrow(targetSector, targetMultiplier, throwStats,
                 getMatchThrowGroupingVisit(currentMatch, true));
-            if (typeof recordMentalThrowOutcome === 'function') recordMentalThrowOutcome(true, score, aim, result);
-            processThrow(true, targetSector, targetMultiplier, result.sector, result.mult);
+            processThrow(true, targetSector, targetMultiplier, result.sector, result.mult, result);
             return true;
         }
 
@@ -114,8 +113,7 @@ function playerThrow() {
             if (typeof applyMentalPressureToStats === 'function') aiStats = applyMentalPressureToStats(aiPlayer, aiStats, isP1, aim, score);
             let result = calculateVisitThrow(aim.sector, aim.mult, aiStats, getMatchThrowGroupingVisit(currentMatch, isP1));
             if (scoringVisit) recordAiScoringObstruction(scoringVisit, aim, result, dartsLeft);
-            if (typeof recordMentalThrowOutcome === 'function') recordMentalThrowOutcome(isP1, score, aim, result);
-            processThrow(isP1, aim.sector, aim.mult, result.sector, result.mult);
+            processThrow(isP1, aim.sector, aim.mult, result.sector, result.mult, result);
         }
 
         function getAdjacentSector(sector) {
@@ -169,7 +167,8 @@ function playerThrow() {
         }
 
         function calculateVisitThrow(targetSector, targetMult, stats, visit) {
-            const result = calculateThrow(targetSector, targetMult, stats, visit);
+            let result = calculateThrow(targetSector, targetMult, stats, visit);
+            if (typeof applyBounceOutToThrow === 'function') result = applyBounceOutToThrow(result, visit);
             if (visit) {
                 const hitTarget = isThrowGroupingTarget(targetSector, targetMult)
                     && result.sector === targetSector && result.mult === targetMult;
@@ -180,6 +179,24 @@ function playerThrow() {
                 visit.dartsThrown++;
             }
             return result;
+        }
+
+        function getPlayerFavoriteDoubles(stats) {
+            const values = Array.isArray(stats?.favoriteDoubles) ? stats.favoriteDoubles.slice(0, 3) : [];
+            if (stats?.favoriteDouble != null) values[0] = stats.favoriteDouble;
+            const used = new Set();
+            return Array.from({ length: 3 }, (_, index) => {
+                const value = Number(values[index]);
+                if (!Number.isInteger(value) || value < 1 || value > 20 || used.has(value)) return null;
+                used.add(value);
+                return value;
+            });
+        }
+
+        function getFavoriteDoubleHitBonus(targetSector, targetMult, stats) {
+            if (targetMult !== 2 || targetSector < 1 || targetSector > 20) return 0;
+            const index = getPlayerFavoriteDoubles(stats).indexOf(targetSector);
+            return [5, 3, 1][index] || 0;
         }
 
         function calculateThrow(targetSector, targetMult, stats, groupingVisit = null) {
@@ -224,7 +241,7 @@ function playerThrow() {
             let stat = targetMult === 2 ? stats.doubles : stats.scoring;
             stat = clamp(stat + (Number(stats.peakMatchAccuracyBoost) || 0), 25, 110);
             let hitMult = targetMult, hitSector = targetSector, roll = Math.random() * 100;
-            const isFavoriteDouble = targetMult === 2 && stats.favoriteDouble === targetSector;
+            const favoriteDoubleBonus = getFavoriteDoubleHitBonus(targetSector, targetMult, stats);
 
             if (targetMult === 3) {
                 const baseTripleHitChance = clamp(stat * 0.42, 12, 54);
@@ -243,7 +260,7 @@ function playerThrow() {
                     hitMult = Math.random() < 0.10 ? 3 : 1; 
                 }
             } else if (targetMult === 2) {
-                const baseDoubleHitChance = clamp(stat * 0.45 + (isFavoriteDouble ? 5 : 0), 12, 57);
+                const baseDoubleHitChance = clamp(stat * 0.45 + favoriteDoubleBonus, 12, 57);
                 const doubleHitChance = Math.min(57, baseDoubleHitChance + getThrowGroupingBonus(groupingVisit, targetSector, targetMult));
                 
                 // Bonus zamienia część singli w double, bez zmiany szansy na dalsze pudła.

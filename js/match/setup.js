@@ -1,4 +1,8 @@
 function startMatch(vsAI) {
+            const opponent = vsAI ? pdcPlayers[document.getElementById('opponent-select').value] : null;
+            if (typeof isPlayerInjured === 'function' && (isPlayerInjured(player) || (opponent && isPlayerInjured(opponent)))) {
+                return typeof showPlayerInjuryBlocked === 'function' ? showPlayerInjuryBlocked(isPlayerInjured(player) ? player : opponent) : false;
+            }
             if (currentMatch && currentMatch.isTournament && activeTournament) {
                 if (!confirm(t('t-confirm-free-match'))) return;
             }
@@ -83,6 +87,7 @@ function startMatch(vsAI) {
 
         function updateMatchStatsUI() {
             if (!currentMatch.stats) return;
+            if (typeof refreshMatchBounceOutStats === 'function') refreshMatchBounceOutStats();
             let s = currentMatch.stats;
             
             let p1TotalPts = s.p1AccumulatedScore + (501 - currentMatch.p1Score);
@@ -166,6 +171,14 @@ function startMatch(vsAI) {
                 || (typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy())) return false;
             clearTimeout(window.aiTimeout);
             const match = currentMatch;
+            const postMatchReport = !match.isSpectator && typeof createCompletedMatchReport === 'function'
+                ? createCompletedMatchReport(match, true, player, match.isTournament ? activeTournament : null) : null;
+            const presentReport = result => {
+                if (result !== false && currentMatch !== match && typeof publishCompletedMatchReport === 'function') {
+                    publishCompletedMatchReport(postMatchReport);
+                }
+                return result;
+            };
             // Wspólna logika wyniku i nagród, lecz reszta rundy oddaje sterowanie
             // po partiach meczów. Pozostałe tryby zachowują dotychczasowy przebieg.
             const isCareerKnockout = match.isTournament && activeTournament && !match.isSpectator && !match.isWorldCup
@@ -191,12 +204,12 @@ function startMatch(vsAI) {
                     updateScores();
                     updateMatchStatsUI();
                     showScreen('screen-match');
-                } });
+                } }).then(presentReport);
             }
             const steps = iterateMatchCompletion();
             let step = steps.next();
             while (!step.done) step = steps.next();
-            return step.value;
+            return presentReport(step.value);
         }
 
         function* iterateMatchCompletion() {

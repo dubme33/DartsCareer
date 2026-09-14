@@ -1,7 +1,7 @@
 const CAREER_DIFFICULTY_PROFILES = Object.freeze({
-    easy: Object.freeze({ growth: 1.25, decline: 0.75, sponsors: 1.25 }),
-    normal: Object.freeze({ growth: 1, decline: 1, sponsors: 1 }),
-    hard: Object.freeze({ growth: 0.75, decline: 1.25, sponsors: 0.75 })
+    easy: Object.freeze({ growth: 1.25, decline: 0.75, sponsors: 1.25, prizeTax: 0 }),
+    normal: Object.freeze({ growth: 1, decline: 1, sponsors: 1, prizeTax: 0 }),
+    hard: Object.freeze({ growth: 0.75, decline: 1.25, sponsors: 0.75, prizeTax: 0.3 })
 });
 
 const CAREER_DIFFICULTY_TEXT = Object.freeze({
@@ -10,28 +10,28 @@ const CAREER_DIFFICULTY_TEXT = Object.freeze({
         easy: 'Łatwy', normal: 'Normalny', hard: 'Trudny',
         easyDetails: 'Rozwój OVR +25% · spadki −25% · sponsorzy +25%',
         normalDetails: 'Dotychczasowy balans rozwoju, spadków i sponsorów',
-        hardDetails: 'Rozwój OVR −25% · spadki +25% · sponsorzy −25%'
+        hardDetails: 'Rozwój OVR −25% · spadki +25% · sponsorzy −25% · podatek od nagród turniejowych 30%'
     },
     en: {
         label: 'Difficulty:', tileTitle: '🎚️ Difficulty', tileIntro: 'You can change it at any point in your career.',
         easy: 'Easy', normal: 'Normal', hard: 'Hard',
         easyDetails: 'OVR growth +25% · declines −25% · sponsors +25%',
         normalDetails: 'The existing balance for growth, declines and sponsors',
-        hardDetails: 'OVR growth −25% · declines +25% · sponsors −25%'
+        hardDetails: 'OVR growth −25% · declines +25% · sponsors −25% · tournament prize tax 30%'
     },
     de: {
         label: 'Schwierigkeitsgrad:', tileTitle: '🎚️ Schwierigkeitsgrad', tileIntro: 'Du kannst ihn jederzeit in deiner Karriere ändern.',
         easy: 'Leicht', normal: 'Normal', hard: 'Schwer',
         easyDetails: 'OVR-Entwicklung +25% · Rückgänge −25% · Sponsoren +25%',
         normalDetails: 'Bisherige Balance bei Entwicklung, Rückgängen und Sponsoren',
-        hardDetails: 'OVR-Entwicklung −25% · Rückgänge +25% · Sponsoren −25%'
+        hardDetails: 'OVR-Entwicklung −25% · Rückgänge +25% · Sponsoren −25% · Steuer auf Turnierpreisgeld 30%'
     },
     nl: {
         label: 'Moeilijkheid:', tileTitle: '🎚️ Moeilijkheid', tileIntro: 'Je kunt dit op elk moment in je carrière wijzigen.',
         easy: 'Makkelijk', normal: 'Normaal', hard: 'Moeilijk',
         easyDetails: 'OVR-groei +25% · dalingen −25% · sponsors +25%',
         normalDetails: 'De bestaande balans voor groei, dalingen en sponsors',
-        hardDetails: 'OVR-groei −25% · dalingen +25% · sponsors −25%'
+        hardDetails: 'OVR-groei −25% · dalingen +25% · sponsors −25% · belasting op toernooiprijzen 30%'
     }
 });
 
@@ -62,6 +62,10 @@ function getCareerDifficultyDevelopmentMultiplier(candidate, change) {
 
 function getCareerDifficultySponsorMultiplier(candidate = typeof player !== 'undefined' ? player : null) {
     return getCareerDifficultyProfile(candidate).sponsors;
+}
+
+function getCareerDifficultyTournamentPrizeTaxRate(candidate = typeof player !== 'undefined' ? player : null) {
+    return isCareerDifficultyPlayer(candidate) ? getCareerDifficultyProfile(player).prizeTax : 0;
 }
 
 function getCareerDifficultyText() {
