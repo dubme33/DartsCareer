@@ -174,17 +174,31 @@ function initCareerChronicle() {
             showScreen('screen-chronicle');
         }
 
-        // Inicjalizacja dla starych zapisów
+        // Migracja starych i częściowo zapisanych statystyk kariery.
+        // Niektóre starsze save'y mają obiekt careerStats, ale brakuje w nim
+        // nowszych pól. Samo sprawdzenie istnienia obiektu nie wystarcza.
         function initCareerStats() {
-            if (!player.careerStats) {
-                player.careerStats = {
-                    highestAvg: 0,
-                    highestCheckout: 0,
-                    total180s: 0,
-                    nineDarters: 0,
-                    trophies: []
-                };
-            }
+            if (typeof player === 'undefined' || !player || typeof player !== 'object') return null;
+
+            const stats = player.careerStats
+                && typeof player.careerStats === 'object'
+                && !Array.isArray(player.careerStats)
+                ? player.careerStats
+                : {};
+            const nonNegativeNumber = value => {
+                const parsed = Number(value);
+                return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
+            };
+
+            stats.highestAvg = nonNegativeNumber(stats.highestAvg);
+            stats.highestCheckout = Math.floor(nonNegativeNumber(stats.highestCheckout));
+            stats.total180s = Math.floor(nonNegativeNumber(stats.total180s));
+            stats.nineDarters = Math.floor(nonNegativeNumber(stats.nineDarters));
+            stats.tonPlusCheckouts = Math.floor(nonNegativeNumber(stats.tonPlusCheckouts));
+            if (!Array.isArray(stats.trophies)) stats.trophies = [];
+
+            player.careerStats = stats;
+            return stats;
         }
 
         function showTrophyRoom() {
@@ -265,10 +279,11 @@ function initCareerChronicle() {
         }
 
         // Binarne zasoby ZIP-a i katalog muzyki rozpakowywanej na żądanie.
-        let moddedAssets = { photos: {}, music: {}, sounds: {}, sponsors: {} };
+        let moddedAssets = { photos: {}, music: {}, sounds: {}, sponsors: {}, dartboards: {} };
         let persistedModRestorePromise = null;
         let activePersistedModRecord = null;
         let activeModData = null;
+        let activeModPackage = null;
 
         // --- SYSTEM MODÓW (IMPORT PACZEK .ZIP) ---
         function validateModData(modData) {
@@ -290,6 +305,8 @@ function initCareerChronicle() {
             }
             if (modData.sponsorTiers !== undefined && !isPlainObject(modData.sponsorTiers)) throw new Error('Niepoprawne poziomy sponsorów.');
             if (modData.shopDatabase !== undefined && !isPlainObject(modData.shopDatabase)) throw new Error('Niepoprawna baza sklepu.');
+            if (modData.dartboard !== undefined) modData.dartboard = validateModDartboardConfig(modData.dartboard);
+            if (modData.type === 'dartboard-skin' && !modData.dartboard) throw new Error('Paczka tarczy nie zawiera konfiguracji dartboard.');
         }
 
         async function readModAssets(zipContent) {
@@ -576,7 +593,28 @@ function initCareerChronicle() {
             delete modData.randomEventsDatabase;
             delete modData.randomEmailsDB;
             const loadedAssets = await readModAssets(zipContent);
-            return { modData, loadedAssets };
+            if (modData.dartboard && !loadedAssets.dartboards[modData.dartboard.image]) {
+                disposeModMediaAssets(loadedAssets);
+                throw new Error(`Brak obrazu tarczy dartboards/${modData.dartboard.image} w paczce moda.`);
+            }
+            return { modData, loadedAssets, zipContent };
+        }
+
+        async function mergeDartboardModPackage(basePackage, skinZip, skinConfig) {
+            // Reuse the original ZIP entries, including compressed walk-on tracks.
+            const combined = await JSZip.loadAsync(basePackage);
+            const configEntry = combined.file('mod.json');
+            const config = configEntry ? JSON.parse(await configEntry.async('string')) : {};
+            config.dartboard = skinConfig;
+            if (config.type === 'dartboard-skin') delete config.type;
+            combined.file('mod.json', JSON.stringify(config));
+            skinZip.forEach((relativePath, entry) => {
+                if (!entry.dir && relativePath.startsWith('dartboards/')) combined.file(relativePath, entry.async('blob'));
+            });
+            const blob = await combined.generateAsync({ type: 'blob', compression: 'DEFLATE', streamFiles: true });
+            const name = String(basePackage.name || 'mod').replace(/\.zip$/i, '').replace(/-winmau-blade-x$/i, '') + '-winmau-blade-x.zip';
+            if (typeof File === 'function') return new File([blob], name, { type: 'application/zip' });
+            return Object.assign(blob, { name });
         }
 
         async function activateModPackage(modPackage, options = {}) {
@@ -585,7 +623,12 @@ function initCareerChronicle() {
             }
             // Walidujemy strukturę ZIP-a, konfigurację i zasoby startowe.
             // Utwory wejściowe będą odczytywane dopiero przed odtworzeniem.
-            const { modData, loadedAssets } = await parseModPackage(modPackage);
+            const { modData, loadedAssets, zipContent } = await parseModPackage(modPackage);
+            if (modData.type === 'dartboard-skin' && activeModPackage) {
+                disposeModMediaAssets(loadedAssets);
+                const combined = await mergeDartboardModPackage(activeModPackage, zipContent, modData.dartboard);
+                return activateModPackage(combined, options);
+            }
             if (typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy()) {
                 disposeModMediaAssets(loadedAssets);
                 throw new Error('Zmiana moda jest niedostępna podczas symulacji turnieju.');
@@ -610,7 +653,10 @@ function initCareerChronicle() {
                 throw error;
             }
             activeModData = modData;
+            activeModPackage = modPackage;
+            if (typeof window !== 'undefined' && window.matchBoardSkin) window.matchBoardSkin.setMod(loadedAssets, modData.dartboard);
             if (typeof cancelMatchIntro === 'function') cancelMatchIntro();
+            if (typeof window !== 'undefined' && window.matchCrowd) window.matchCrowd.stop();
             if (typeof crowdAudio !== 'undefined' && crowdAudio) {
                 crowdAudio.pause(); crowdAudio.removeAttribute('src'); crowdAudio.load(); crowdAudio = null;
             }

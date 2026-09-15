@@ -7,6 +7,7 @@ const CROWN_MASTERS_AUTOMATIC_PLACES = 24;
 const CROWN_MASTERS_QUALIFYING_PLACES = 8;
 const CROWN_MASTERS_SECONDARY_TOUR_PLACES = 8;
 const CROWN_MASTERS_QUALIFICATION_VERSION = 1;
+const CROWN_MASTERS_DRAW_VERSION = 2;
 const CROWN_MASTERS_TEXT = Object.freeze({
     pl: Object.freeze({ qualified: 'Awansujesz do turnieju {name}!', automatic: 'Masz już bezpośredni awans do turnieju {name}.', complete: 'Kwalifikacje do turnieju {name} zostały zakończone.' }),
     en: Object.freeze({ qualified: 'You qualify for {name}!', automatic: 'You have already qualified directly for {name}.', complete: 'The qualifier for {name} is complete.' }),
@@ -66,6 +67,11 @@ function getCrownMastersCandidates(candidates) {
         if (key && !unique.has(key)) unique.set(key, candidate);
     });
     return [...unique.values()];
+}
+
+function isCrownMastersCandidateAvailable(candidate) {
+    return Boolean(candidate && !candidate.isBye)
+        && (typeof isPlayerAvailableForPlay !== 'function' || isPlayerAvailableForPlay(candidate));
 }
 
 function compareCrownMastersOom(first, second) {
@@ -284,23 +290,48 @@ function getCrownMastersMainParticipants(mainTournament, candidates) {
         state.completed = true;
         state.migratedWithoutQualifier = true;
     }
-    const automatic = resolveCrownMastersPlayerKeys(state.automaticPlayerIds, candidates);
-    const qualifiers = resolveCrownMastersPlayerKeys(state.qualifiedPlayerIds, candidates);
+    const allCandidates = getCrownMastersCandidates(candidates);
+    const automatic = resolveCrownMastersPlayerKeys(state.automaticPlayerIds, allCandidates);
+    const qualifiers = resolveCrownMastersPlayerKeys(state.qualifiedPlayerIds, allCandidates);
+    const unavailableKeys = new Set([...automatic, ...qualifiers]
+        .filter(candidate => !isCrownMastersCandidateAvailable(candidate))
+        .map(getCrownMastersPlayerKey));
     const field = getCrownMastersCandidates([...automatic, ...qualifiers]);
+    for (let index = field.length - 1; index >= 0; index--) {
+        if (!isCrownMastersCandidateAvailable(field[index])) field.splice(index, 1);
+    }
     const used = new Set(field.map(getCrownMastersPlayerKey));
     const addReplacement = candidate => {
         const key = getCrownMastersPlayerKey(candidate);
-        if (!key || used.has(key) || field.length >= CROWN_MASTERS_FIELD_SIZE) return;
+        if (!key || used.has(key) || field.length >= CROWN_MASTERS_FIELD_SIZE
+            || !isCrownMastersCandidateAvailable(candidate)) return;
         used.add(key);
         field.push(candidate);
     };
-    resolveCrownMastersPlayerKeys(state.mainReplacementPlayerIds, candidates).forEach(addReplacement);
-    resolveCrownMastersPlayerKeys(state.qualifierPlayerIds, candidates).forEach(addReplacement);
-    getCrownMastersCandidates(candidates).sort(compareCrownMastersOom).forEach(addReplacement);
+    resolveCrownMastersPlayerKeys(state.mainReplacementPlayerIds, allCandidates).forEach(addReplacement);
+    resolveCrownMastersPlayerKeys(state.qualifierPlayerIds, allCandidates).forEach(addReplacement);
+    allCandidates.sort(compareCrownMastersOom).forEach(addReplacement);
     state.mainReplacementPlayerIds = field
         .filter(candidate => !state.automaticPlayerIds.includes(getCrownMastersPlayerKey(candidate))
             && !state.qualifiedPlayerIds.includes(getCrownMastersPlayerKey(candidate)))
         .map(getCrownMastersPlayerKey);
+    state.mainWithdrawnPlayerIds = [...unavailableKeys];
+
+    // Rozstawienie musi zawierać dokładnie 16 aktywnych uczestników. Gdy ktoś
+    // wycofa się przed losowaniem, kolejny dostępny automatyczny uczestnik
+    // awansuje na listę rozstawionych zamiast pozostawiać pusty slot.
+    const fieldByKey = new Map(field.map(candidate => [getCrownMastersPlayerKey(candidate), candidate]));
+    const seeds = [];
+    const seedKeys = new Set();
+    const addSeed = candidate => {
+        const key = getCrownMastersPlayerKey(candidate);
+        if (!key || seedKeys.has(key) || !fieldByKey.has(key) || seeds.length >= 16) return;
+        seedKeys.add(key);
+        seeds.push(candidate);
+    };
+    resolveCrownMastersPlayerKeys(state.automaticPlayerIds, field).forEach(addSeed);
+    [...field].sort(compareCrownMastersOom).forEach(addSeed);
+    state.mainSeedPlayerIds = seeds.map(getCrownMastersPlayerKey);
     return field.slice(0, CROWN_MASTERS_FIELD_SIZE);
 }
 
@@ -308,7 +339,20 @@ function buildCrownMastersDraw(participants, tournament, random = Math.random) {
     const entrants = getCrownMastersCandidates(participants);
     const state = tournament?.crownMastersQualification;
     const byKey = new Map(entrants.map(candidate => [getCrownMastersPlayerKey(candidate), candidate]));
-    const seeds = (state?.automaticPlayerIds || []).slice(0, 16).map(key => byKey.get(key)).filter(Boolean);
+    const seeds = [];
+    const resolvedSeedKeys = new Set();
+    const addSeed = candidate => {
+        const key = getCrownMastersPlayerKey(candidate);
+        if (!key || resolvedSeedKeys.has(key) || seeds.length >= 16) return;
+        resolvedSeedKeys.add(key);
+        seeds.push(candidate);
+    };
+    const requestedSeedKeys = state?.mainSeedPlayerIds?.length
+        ? state.mainSeedPlayerIds
+        : (state?.automaticPlayerIds || []).slice(0, 16);
+    requestedSeedKeys.map(key => byKey.get(key)).filter(Boolean).forEach(addSeed);
+    [...entrants].sort(compareCrownMastersOom).forEach(addSeed);
+    if (state) state.mainSeedPlayerIds = seeds.map(getCrownMastersPlayerKey);
     const seedKeys = new Set(seeds.map(getCrownMastersPlayerKey));
     const unseeded = shuffleCrownMastersPlayers(entrants.filter(candidate => !seedKeys.has(getCrownMastersPlayerKey(candidate))), random);
     const seedOrder = [1, 16, 8, 9, 4, 13, 5, 12, 2, 15, 7, 10, 3, 14, 6, 11];
@@ -317,7 +361,24 @@ function buildCrownMastersDraw(participants, tournament, random = Math.random) {
         draw[index * 2] = seeds[seedOrder[index] - 1] || unseeded.shift() || createCrownMastersBye();
         draw[index * 2 + 1] = unseeded.shift() || createCrownMastersBye();
     }
+    if (tournament) tournament.crownMastersDrawVersion = CROWN_MASTERS_DRAW_VERSION;
     return draw;
+}
+
+function shouldRefreshCrownMastersOpeningDraw(tournament, bracket, round = CROWN_MASTERS_FIELD_SIZE) {
+    if (!isCrownMastersTournament(tournament) || Number(round) !== CROWN_MASTERS_FIELD_SIZE) return false;
+    const entries = Array.isArray(bracket) ? bracket : [];
+    if (tournament?.crownMastersDrawVersion !== CROWN_MASTERS_DRAW_VERSION
+        || entries.length !== CROWN_MASTERS_FIELD_SIZE
+        || entries.some(candidate => !candidate || candidate.isBye)) return true;
+
+    const seedIds = tournament?.crownMastersQualification?.mainSeedPlayerIds || [];
+    if (seedIds.length !== 16 || new Set(seedIds).size !== 16) return true;
+    const seedKeys = new Set(seedIds);
+    return entries.some((candidate, index) => {
+        const isSeed = seedKeys.has(getCrownMastersPlayerKey(candidate));
+        return index % 2 === 0 ? !isSeed : isSeed;
+    });
 }
 
 function getCrownMastersPrizeMoney(tournamentOrName, round, won) {

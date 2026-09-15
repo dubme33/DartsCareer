@@ -395,7 +395,8 @@
 
         function changeVolume(val) {
             globalVolume = parseFloat(val);
-            if (crowdAudio) crowdAudio.volume = 0.15 * globalVolume;
+            if (typeof window !== 'undefined' && window.matchCrowd) window.matchCrowd.setVolume();
+            else if (crowdAudio) crowdAudio.volume = 0.08 * globalVolume;
             if (postMatchAudio) postMatchAudio.volume = 0.5 * globalVolume;
             if (currentWalkonAudio) currentWalkonAudio.volume = 0.6 * globalVolume;
             if (oppAudio) oppAudio.volume = 0.6 * globalVolume;

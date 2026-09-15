@@ -7,7 +7,16 @@ const BOUNCE_OUT_TEXT = {
 };
 
 function getBounceOutText() {
-    return BOUNCE_OUT_TEXT[typeof currentLang === 'string' ? currentLang : 'en'] || BOUNCE_OUT_TEXT.en;
+    const language = typeof currentLang === 'string' ? currentLang : 'en';
+    const text = BOUNCE_OUT_TEXT[language] || BOUNCE_OUT_TEXT.en;
+    if (typeof dartPhysics === 'undefined') return text;
+    const collision = {
+        pl: ' Kontakt z wbitą lotką może zmienić kąt i pole trafienia; mocne zderzenie dodaje ryzyko bounce-outu. Wyłączenie odbić usuwa też kolizyjne bounce-outy.',
+        en: ' Contact with a landed dart can change the angle and scoring field; a hard collision adds bounce-out risk. Disabling bounce-outs also disables collision bounce-outs.',
+        de: ' Kontakt mit einem steckenden Dart kann Winkel und Trefferfeld ändern; ein harter Kontakt erhöht das Bounce-out-Risiko. Deaktivieren verhindert auch Kollisions-Bounce-outs.',
+        nl: ' Contact met een geraakte dart kan de hoek en het scorevak veranderen; een harde botsing verhoogt de kans op een bounce-out. Uitschakelen voorkomt ook bounce-outs door botsingen.'
+    };
+    return { ...text, rule: text.rule + (collision[language] || collision.en) };
 }
 
 function initializeBounceOutSettings(candidate = typeof player === 'object' ? player : null, reset = false) {
@@ -60,7 +69,7 @@ function applyBounceOutToThrow(result, visit, random = Math.random) {
             visit.bounceOutLandedDarts = visit.bounceOutLandedDarts.slice(-3);
         }
     }
-    return bounced ? { sector: 0, mult: 0, bounceOut: true, bouncedSector: result.sector, bouncedMult: result.mult } : result;
+    return bounced ? { ...result, sector: 0, mult: 0, bounceOut: true, bouncedSector: result.sector, bouncedMult: result.mult } : result;
 }
 
 function recordMatchBounceOut(isP1, result, match = currentMatch) {

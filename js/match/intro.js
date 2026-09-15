@@ -34,13 +34,7 @@ function cancelMatchIntro() {
 }
 
 function startCrowd() {
-            if(!crowdAudio) {
-                let crowdSrc = moddedAssets.sounds["crowd"] || 'sounds/crowd.mp3';
-                crowdAudio = new Audio(crowdSrc);
-                crowdAudio.loop = true;
-            }
-            crowdAudio.volume = 0.15 * globalVolume;
-            crowdAudio.play().catch(e => console.log("Crowd zablokowany", e));
+            if (window.matchCrowd) window.matchCrowd.start(currentMatch, activeTournament);
         }
 
         function getMatchIntroPlayer(isP1, fallbackName) {
@@ -109,6 +103,7 @@ function startCrowd() {
             const skipBtn = document.getElementById('t-btn-skip-walkon');
             if (skipBtn) skipBtn.style.display = 'none';
             if (typeof hideCareerEntranceVisual === 'function') hideCareerEntranceVisual();
+            if (window.matchCrowd) window.matchCrowd.stop();
             if (crowdAudio) {
                 crowdAudio.pause();
                 crowdAudio.currentTime = 0;

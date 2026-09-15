@@ -37,6 +37,9 @@ function playerThrow() {
                 || currentMatch.dartsThrown >= 3 || currentMatch.isTurnLocked) return false;
             const score = currentMatch.p1Score;
             const aim = { sector: targetSector, mult: targetMultiplier };
+            if (typeof window !== 'undefined') {
+                window.matchTVDirector?.onAim({ side: 'p1', aim, score, dartNumber: currentMatch.dartsThrown + 1 });
+            }
             const throwStats = getCareerDartStats(aim, score);
             const result = calculateVisitThrow(targetSector, targetMultiplier, throwStats,
                 getMatchThrowGroupingVisit(currentMatch, true));
@@ -50,7 +53,7 @@ function playerThrow() {
                 || (currentMatch.isDoubles && !isCareerPlayerThrowing(true))
                 || (typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy())) return false;
 
-            if (typeof skipWalkon === 'function') skipWalkon();
+            if (currentMatch.introInProgress && typeof skipWalkon === 'function') skipWalkon();
             clearTimeout(window.aiTimeout);
             const visitButton = document.getElementById('t-btn-sim-visit');
             if (visitButton) visitButton.disabled = true;
@@ -83,6 +86,9 @@ function playerThrow() {
             const opponentScore = isP1 ? currentMatch.p2Score : currentMatch.p1Score;
             let aim = scoringVisit ? getAiScoringAim(score, isDIDO, dartsLeft, scoringVisit, opponentScore)
                 : getOptimalAim(score, isDIDO, dartsLeft, opponentScore);
+            if (typeof window !== 'undefined') {
+                window.matchTVDirector?.onAim({ side: isP1 ? 'p1' : 'p2', aim, score, dartNumber: currentMatch.dartsThrown + 1 });
+            }
             
             const aiPlayer = currentMatch.isDoubles
                 ? getDoublesCurrentThrower(isP1)
@@ -149,6 +155,7 @@ function playerThrow() {
                 visit = match.throwGroupingVisit = {
                     ...createThrowGroupingVisit(), dartsThrown: match.dartsThrown || 0, side, throwerIndex, leg
                 };
+                if (typeof drawnDarts !== 'undefined') visit.physicsDarts = drawnDarts.map(dart => ({ x: dart.x, y: dart.y, dartPose: dart.dartPose }));
             }
             return visit;
         }
@@ -168,7 +175,13 @@ function playerThrow() {
 
         function calculateVisitThrow(targetSector, targetMult, stats, visit) {
             let result = calculateThrow(targetSector, targetMult, stats, visit);
+            if (typeof dartPhysics !== 'undefined' && typeof getDartboardHitPoint === 'function') {
+                const point = getDartboardHitPoint(result.sector, result.mult, targetSector, targetMult);
+                result = dartPhysics.resolve(result, point, visit?.physicsDarts || [], Math.random,
+                    typeof areBounceOutsEnabled !== 'function' || areBounceOutsEnabled());
+            }
             if (typeof applyBounceOutToThrow === 'function') result = applyBounceOutToThrow(result, visit);
+            if (typeof dartPhysics !== 'undefined') dartPhysics.register(visit, result);
             if (visit) {
                 const hitTarget = isThrowGroupingTarget(targetSector, targetMult)
                     && result.sector === targetSector && result.mult === targetMult;

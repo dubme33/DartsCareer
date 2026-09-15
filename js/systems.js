@@ -785,6 +785,7 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
                 player = gameState.player;
                 if (typeof initializeCareerDifficulty === 'function') initializeCareerDifficulty(player);
                 if (typeof initializeWalkonTournamentMode === 'function') initializeWalkonTournamentMode(player);
+                if (typeof initCareerStats === 'function') initCareerStats();
                 if (!player.activeSponsors) player.activeSponsors = [];
                 if (typeof player.technicalPartner === 'undefined') player.technicalPartner = null;
                 if (!player.historyPT) player.historyPT = {};
@@ -1478,6 +1479,7 @@ function getBoostedPlayerStats() {
                         </div>
                     </div>`;
             }
+            if (typeof renderDartCustomizationShop === 'function') renderDartCustomizationShop(dartsInfo);
 
             // Renderowanie Wyposażenia Bazy
             const wearRule = document.getElementById('shop-wear-rule');

@@ -58,6 +58,7 @@ function startMatch(vsAI) {
         }
 
         function updateScores() {
+            if (typeof refreshMatchBroadcastScoreboard === 'function') refreshMatchBroadcastScoreboard();
             const isSetMatch = currentMatch.matchFormat && currentMatch.matchFormat.type === 'sets';
             
             document.getElementById('badge-sets-p1').style.display = isSetMatch ? 'flex' : 'none';
@@ -131,6 +132,14 @@ function startMatch(vsAI) {
         }
 
         function setTurnUI() {
+            if (typeof refreshMatchBroadcastScoreboard === 'function') refreshMatchBroadcastScoreboard();
+            // Intro/UI refreshes must not cancel the pending end of a visit or checkout.
+            if (currentMatch?.isTurnLocked) {
+                document.getElementById('throw-btn').disabled = true;
+                const lockedVisitButton = document.getElementById('t-btn-sim-visit');
+                if (lockedVisitButton) lockedVisitButton.disabled = true;
+                return;
+            }
             clearTimeout(window.aiTimeout); // Usuwamy stare opóźnienia
             const visitButton = document.getElementById('t-btn-sim-visit');
             if (!currentMatch || currentMatch.isFinishing) {
@@ -149,9 +158,10 @@ function startMatch(vsAI) {
                 document.getElementById('score-col-player').classList.toggle('active-turn', currentMatch.turn === 'p1'); document.getElementById('score-col-ai').classList.toggle('active-turn', currentMatch.turn === 'p2');
                 document.getElementById('player-controls').style.opacity = "0.5"; document.getElementById('throw-btn').disabled = true;
                 if (visitButton) visitButton.disabled = true;
+                const aiDelay = typeof getMatchTVAiThrowDelay === 'function' ? getMatchTVAiThrowDelay(1200) : 1200;
                 if (typeof scheduleSpectatorPlaybackAction === 'function') {
-                    window.aiTimeout = scheduleSpectatorPlaybackAction(aiTurn, 1200, 900);
-                } else window.aiTimeout = setTimeout(aiTurn, 1200);
+                    window.aiTimeout = scheduleSpectatorPlaybackAction(aiTurn, aiDelay, 900);
+                } else window.aiTimeout = setTimeout(aiTurn, aiDelay);
             }
         }
 
@@ -223,8 +233,11 @@ function startMatch(vsAI) {
             }
             // --- CHASE THE SUN (Odpalane od razu) ---
             if (postMatchAudio) { postMatchAudio.pause(); }
-            if (typeof moddedAssets !== 'undefined' && moddedAssets.sounds["chasethesun"]) {
-                postMatchAudio = new Audio(moddedAssets.sounds["chasethesun"]);
+            const postMatchCrowdSource = typeof window !== 'undefined'
+                ? window.matchCrowd?.getPostMatchSource?.(currentMatch, activeTournament) || '' : '';
+            if (typeof window !== 'undefined') window.matchCrowd?.finishMatch?.();
+            if (postMatchCrowdSource) {
+                postMatchAudio = new Audio(postMatchCrowdSource);
                 postMatchAudio.volume = 0.5 * globalVolume; 
                 postMatchAudio.play().then(() => {
                     // Czas zacznie upływać zaraz po zamknięciu alertu

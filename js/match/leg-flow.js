@@ -187,7 +187,10 @@ function checkAchievements(type, data = null) {
             if (decidingSetReachedSuddenDeath || legMatchReachedSuddenDeath) {
                 currentMatch.suddenDeathDecidesSet = decidingSetReachedSuddenDeath;
                 updateScores(); // Odświeżamy wynik przed nagłą śmiercią
-                startSuddenDeath(isP1);
+                const beginSuddenDeath = () => startSuddenDeath(isP1);
+                if (!(typeof window !== 'undefined' && window.matchTVDirector?.deferMatchAction?.(beginSuddenDeath))) {
+                    beginSuddenDeath();
+                }
                 return true;
             }
 
@@ -203,7 +206,9 @@ function checkAchievements(type, data = null) {
                 const finishAction = () => {
                     finishMatch();
                 };
-                if (typeof scheduleSpectatorPlaybackAction === 'function') {
+                if (typeof window !== 'undefined' && window.matchTVDirector?.deferMatchAction?.(finishAction)) {
+                    window.aiTimeout = null;
+                } else if (typeof scheduleSpectatorPlaybackAction === 'function') {
                     window.aiTimeout = scheduleSpectatorPlaybackAction(finishAction, 2500, 2800);
                 } else window.aiTimeout = setTimeout(finishAction, 2500);
                 return true;
@@ -258,7 +263,9 @@ function checkAchievements(type, data = null) {
                 drawDartboard();
                 updateDartDots();
             };
-            if (typeof scheduleSpectatorPlaybackAction === 'function') {
+            if (typeof window !== 'undefined' && window.matchTVDirector?.deferMatchAction?.(startNextLeg)) {
+                window.aiTimeout = null;
+            } else if (typeof scheduleSpectatorPlaybackAction === 'function') {
                 window.aiTimeout = scheduleSpectatorPlaybackAction(startNextLeg, 2500, 2500);
             } else window.aiTimeout = setTimeout(startNextLeg, 2500);
 
@@ -275,6 +282,15 @@ function checkAchievements(type, data = null) {
             const throwingSide = isP1 ? 'p1' : 'p2';
             if (currentMatch.turn !== throwingSide || currentMatch.dartsThrown >= 3 || currentMatch.isTurnLocked) return;
 
+            // Resolve the physical hit before checkout, bust, statistics and report handling.
+            // Direct/programmatic throws use the same solver as player, AI and fast visits.
+            if (typeof dartPhysics !== 'undefined' && !result?.physicsResolved && typeof getDartboardHitPoint === 'function') {
+                const point = result?.boardPoint || getDartboardHitPoint(result?.bouncedSector ?? hitSec,
+                    result?.bouncedMult ?? hitMult, targetSec, targetMult);
+                result = dartPhysics.resolve({ ...(result || {}), sector: hitSec, mult: hitMult }, point, drawnDarts,
+                    Math.random, typeof areBounceOutsEnabled !== 'function' || areBounceOutsEnabled());
+                hitSec = result.sector; hitMult = result.mult;
+            }
             const bounced = result?.bounceOut === true;
             if (bounced) {
                 hitSec = 0; hitMult = 0;
@@ -301,7 +317,8 @@ function checkAchievements(type, data = null) {
             }
 
             currentTurnScore += points;
-            if (!bounced && typeof addDartToCanvas === 'function') addDartToCanvas(hitSec, hitMult, isP1 ? '#f1c40f' : '#ecf0f1', targetSec, targetMult);
+            if (!bounced && typeof addDartToCanvas === 'function') addDartToCanvas(hitSec, hitMult, isP1 ? '#f1c40f' : '#ecf0f1', targetSec, targetMult, result, isP1 ? 'p1' : 'p2');
+            if (result?.collision && typeof getDartCollisionText === 'function') logThrow(`↗ ${playerName}: ${getDartCollisionText(result)}`, logType);
 
             let st = currentMatch.stats; let newScore = currentScore - points;
             const actualResult = { ...(result || {}), sector: hitSec, mult: hitMult };
@@ -330,7 +347,8 @@ function checkAchievements(type, data = null) {
                 }
             }
 
-            if (newScore < 0 || newScore === 1 || (newScore === 0 && hitMult !== 2)) {
+            const bust = newScore < 0 || newScore === 1 || (newScore === 0 && hitMult !== 2);
+            if (bust) {
                 logThrow(`${playerName}: ${t('t-log-bust')}`, logType);
                 newScore = isP1 ? currentMatch.p1TurnStartScore : currentMatch.p2TurnStartScore; 
                 currentTurnScore = 0; 
@@ -382,6 +400,31 @@ function checkAchievements(type, data = null) {
                 adjustMomentum(isP1, 3);
             }
 
+            const matchThrowEvent = {
+                side: isP1 ? 'p1' : 'p2', playerName,
+                scoreBefore: currentScore, scoreAfter: newScore,
+                target: { sector: targetSec, mult: targetMult },
+                hit: { sector: hitSec, mult: hitMult },
+                points: bounced ? 0 : points, bounced, bust,
+                collision: result?.collision || null,
+                boardPoint: result?.boardPoint || null,
+                dartPose: result?.dartPose || null,
+                dartNumber: currentMatch.dartsThrown,
+                legDarts: isP1 ? st.p1LegDarts : st.p2LegDarts,
+                visitScore: currentTurnScore,
+                visitComplete: currentMatch.dartsThrown >= 3 || legCompleted,
+                legCompleted
+            };
+            if (typeof window !== 'undefined' && window.matchTVDirector) {
+                try {
+                    window.matchTVDirector.onThrow(matchThrowEvent);
+                } catch (_error) { /* Television graphics cannot interrupt match scoring. */ }
+            }
+            if (typeof window !== 'undefined' && window.matchCrowd) {
+                try { window.matchCrowd.onThrow(matchThrowEvent); }
+                catch (_error) { /* Crowd audio cannot interrupt match scoring. */ }
+            }
+
             updateScores(); updateMatchStatsUI(); updateDartDots();
 
             if (legCompleted) {
@@ -407,21 +450,30 @@ function checkAchievements(type, data = null) {
 
                 logThrow(`🎯 ${playerName} ${t('t-log-wins-leg')}`, 'system');
                 const completeLeg = () => handleCompletedLeg(isP1, playerName);
+                const legDelay = typeof getMatchBoardAnimationDelay === 'function' ? getMatchBoardAnimationDelay(1000) : 1000;
+                const spectatorLegDelay = typeof getMatchBoardAnimationDelay === 'function' ? getMatchBoardAnimationDelay(1300) : 1300;
                 if (typeof scheduleSpectatorPlaybackAction === 'function') {
-                    window.aiTimeout = scheduleSpectatorPlaybackAction(completeLeg, 1000, 1300);
-                } else window.aiTimeout = setTimeout(completeLeg, 1000);
+                    window.aiTimeout = scheduleSpectatorPlaybackAction(completeLeg, legDelay, spectatorLegDelay);
+                } else window.aiTimeout = setTimeout(completeLeg, legDelay);
                 return;
             }
 
             if (currentMatch.dartsThrown >= 3) {
-                if (typeof scheduleSpectatorPlaybackAction === 'function') {
-                    window.aiTimeout = scheduleSpectatorPlaybackAction(endTurn, 100, 300);
-                } else window.aiTimeout = setTimeout(endTurn, 100);
+                const turnDelay = typeof getMatchBoardAnimationDelay === 'function' ? getMatchBoardAnimationDelay(100) : 100;
+                const spectatorTurnDelay = typeof getMatchBoardAnimationDelay === 'function' ? getMatchBoardAnimationDelay(300) : 300;
+                if (typeof window !== 'undefined' && window.matchTVDirector?.deferMatchAction?.(endTurn)) {
+                    window.aiTimeout = null;
+                } else if (typeof scheduleSpectatorPlaybackAction === 'function') {
+                    window.aiTimeout = scheduleSpectatorPlaybackAction(endTurn, turnDelay, spectatorTurnDelay);
+                } else window.aiTimeout = setTimeout(endTurn, turnDelay);
             } else if (currentMatch.isSpectator || !isP1 || (currentMatch.isDoubles && !isCareerPlayerThrowing(isP1))) {
                 clearTimeout(window.aiTimeout); // Czyścimy przed kolejnym rzutem
-                if (typeof scheduleSpectatorPlaybackAction === 'function') {
-                    window.aiTimeout = scheduleSpectatorPlaybackAction(aiTurn, 650, 650);
-                } else window.aiTimeout = setTimeout(aiTurn, 650);
+                const aiDelay = typeof getMatchTVAiThrowDelay === 'function' ? getMatchTVAiThrowDelay(650) : 650;
+                if (typeof window !== 'undefined' && window.matchTVDirector?.deferMatchAction?.(aiTurn)) {
+                    window.aiTimeout = null;
+                } else if (typeof scheduleSpectatorPlaybackAction === 'function') {
+                    window.aiTimeout = scheduleSpectatorPlaybackAction(aiTurn, aiDelay, 650);
+                } else window.aiTimeout = setTimeout(aiTurn, aiDelay);
             }
         }
 
@@ -435,43 +487,63 @@ function checkAchievements(type, data = null) {
                 else if (currentTurnScore < 40) adjustMomentum(wasP1, -1);
             }
 
-            if (currentMatch.p1Score > 0 && currentMatch.p2Score > 0) announceAudio(currentTurnScore);
-            currentMatch.dartsThrown = 0; currentMatch.isTurnLocked = false; currentTurnScore = 0; updateDartDots(); drawnDarts = [];
-            const boardClearDelay = typeof getSpectatorPlaybackDelay === 'function'
-                ? getSpectatorPlaybackDelay(500, 500)
-                : 500;
-            setTimeout(() => { drawDartboard(); }, boardClearDelay);
-            if (currentMatch.p1Score === 0 || currentMatch.p2Score === 0) return;
-            
-            if (currentMatch.vsAI) {
-                if (currentMatch.isDoubles) {
-                    const side = wasP1 ? 'p1' : 'p2';
-                    currentMatch.doublesThrower[side] = currentMatch.doublesThrower[side] === 0 ? 1 : 0;
-                }
-                currentMatch.turn = currentMatch.turn === 'p1' ? 'p2' : 'p1';
-                if(currentMatch.turn === 'p1') { 
-                    currentMatch.p1TurnStartScore = currentMatch.p1Score; 
-                    if (currentMatch.p1Score <= 170) {
-                        const requireDelay = typeof getSpectatorPlaybackDelay === 'function'
-                            ? getSpectatorPlaybackDelay(1500, 1800)
-                            : 1500;
-                        setTimeout(() => announceRequire(currentMatch.p1Score), requireDelay);
+            const announcedScore = currentTurnScore;
+            const finishTurn = () => {
+                if (!currentMatch || currentMatch.isFinishing) return;
+                currentMatch.dartsThrown = 0; currentMatch.isTurnLocked = false; currentTurnScore = 0; updateDartDots(); drawnDarts = [];
+                if (typeof window !== 'undefined') window.matchBoard3D?.clear();
+                const boardClearDelay = typeof getSpectatorPlaybackDelay === 'function'
+                    ? getSpectatorPlaybackDelay(500, 500)
+                    : 500;
+                setTimeout(() => { drawDartboard(); }, boardClearDelay);
+                if (currentMatch.p1Score === 0 || currentMatch.p2Score === 0) return;
+
+                if (currentMatch.vsAI) {
+                    if (currentMatch.isDoubles) {
+                        const side = wasP1 ? 'p1' : 'p2';
+                        currentMatch.doublesThrower[side] = currentMatch.doublesThrower[side] === 0 ? 1 : 0;
                     }
-                } else { currentMatch.p2TurnStartScore = currentMatch.p2Score; }
-                if (currentMatch.isSpectator) {
-                    clearTimeout(window.aiTimeout);
-                    const continueMatch = () => {
-                        if (currentMatch?.isSpectator) setTurnUI();
-                    };
-                    if (typeof scheduleSpectatorPlaybackAction === 'function') {
-                        window.aiTimeout = scheduleSpectatorPlaybackAction(continueMatch, 0, 1800);
-                    } else window.aiTimeout = setTimeout(continueMatch, 1800);
-                } else setTurnUI();
-            } else { 
-                currentMatch.p1TurnStartScore = currentMatch.p1Score; 
-                if (currentMatch.p1Score <= 170) setTimeout(() => announceRequire(currentMatch.p1Score), 1500);
-                setTurnUI();
+                    currentMatch.turn = currentMatch.turn === 'p1' ? 'p2' : 'p1';
+                    if(currentMatch.turn === 'p1') {
+                        currentMatch.p1TurnStartScore = currentMatch.p1Score;
+                        if (currentMatch.p1Score <= 170) {
+                            const requireDelay = typeof getSpectatorPlaybackDelay === 'function'
+                                ? getSpectatorPlaybackDelay(1500, 1800)
+                                : 1500;
+                            setTimeout(() => announceRequire(currentMatch.p1Score), requireDelay);
+                        }
+                    } else { currentMatch.p2TurnStartScore = currentMatch.p2Score; }
+                    if (currentMatch.isSpectator) {
+                        clearTimeout(window.aiTimeout);
+                        const continueMatch = () => {
+                            if (currentMatch?.isSpectator) setTurnUI();
+                        };
+                        if (typeof scheduleSpectatorPlaybackAction === 'function') {
+                            window.aiTimeout = scheduleSpectatorPlaybackAction(continueMatch, 0, 1800);
+                        } else window.aiTimeout = setTimeout(continueMatch, 1800);
+                    } else setTurnUI();
+                } else {
+                    currentMatch.p1TurnStartScore = currentMatch.p1Score;
+                    if (currentMatch.p1Score <= 170) setTimeout(() => announceRequire(currentMatch.p1Score), 1500);
+                    setTurnUI();
+                }
+            };
+
+            let callerCompletion = null;
+            if (currentMatch.p1Score > 0 && currentMatch.p2Score > 0) callerCompletion = announceAudio(announcedScore);
+            let replayWaitsForCaller = false;
+            if (typeof window !== 'undefined' && window.matchTVDirector?.onCaller) {
+                try {
+                    replayWaitsForCaller = window.matchTVDirector.onCaller(callerCompletion, {
+                        side: wasP1 ? 'p1' : 'p2', visitScore: announcedScore
+                    });
+                } catch (_error) { /* Synchronizacja callera nie może przerwać meczu. */ }
             }
+            if (replayWaitsForCaller && window.matchTVDirector?.deferMatchAction?.(finishTurn)) {
+                window.aiTimeout = null;
+                return;
+            }
+            finishTurn();
         }
 
         

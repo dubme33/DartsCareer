@@ -204,16 +204,17 @@
         .match-board, .match-stats { background: #0f3460; padding: 12px; border-radius: 10px; min-width: 0; }
         .match-board {
             display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(250px, 1fr);
-            grid-template-areas: "board aim" "board actions" "dots back";
-            grid-template-rows: auto auto 1fr; align-content: start; gap: 10px 14px;
+            grid-template-areas: "board controls" "dots controls";
+            grid-template-rows: auto auto; align-content: start; gap: 10px 14px;
         }
         .match-board .dartboard-container { grid-area: board; align-self: center; margin: 0; min-width: 0; }
         .match-board canvas { display: block; width: min(100%, 380px); height: auto; box-sizing: border-box; margin: auto; }
         .match-board .dart-info { grid-area: dots; align-self: center; margin: 0; }
         .match-board .dart-dot { width: 14px; height: 14px; }
-        .match-board .aim-controls { grid-area: aim; align-self: start; gap: 8px; margin-bottom: 0; }
-        .match-actions { grid-area: actions; display: flex; gap: 8px; }
-        #t-btn-match-back { grid-area: back; align-self: end; }
+        .match-control-column { grid-area: controls; display: flex; flex-direction: column; align-self: start; gap: 10px; min-width: 0; }
+        .match-board .aim-controls { align-self: stretch; gap: 8px; margin-bottom: 0; }
+        .match-actions { display: flex; align-self: stretch; gap: 8px; height: auto; }
+        #t-btn-match-back { align-self: stretch; }
         .match-board .action-btn { margin-top: 0; min-height: 44px; padding: 10px 8px; font-size: 14px; }
         .match-board #throw-btn { font-size: 16px; }
         .match-board button { scroll-margin-top: 200px; }
@@ -397,7 +398,7 @@
     #match-log { flex: none; height: clamp(240px, 45vh, 380px); }
 }
 @media (max-width: 600px) {
-    .match-board { grid-template-columns: minmax(0, 1fr); grid-template-areas: "board" "dots" "aim" "actions" "back"; grid-template-rows: auto; }
+    .match-board { grid-template-columns: minmax(0, 1fr); grid-template-areas: "board" "dots" "controls"; grid-template-rows: auto; }
     .match-board canvas { width: min(100%, 280px); }
     /* Na telefonie wynik przewija się normalnie, a tarcza przejmuje górę
        ekranu podczas wybierania celu. Dzięki temu panel wyniku jej nie zasłania. */

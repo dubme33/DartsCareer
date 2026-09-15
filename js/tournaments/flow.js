@@ -316,7 +316,10 @@ function getTournamentSeedRanking(tournament, candidates = getDefaultTournamentS
                 : getTournamentSeedPlayerKey(candidate),
             candidate
         ]));
-        return tournament.crownMastersQualification.automaticPlayerIds
+        const seedIds = tournament.crownMastersQualification.mainSeedPlayerIds?.length
+            ? tournament.crownMastersQualification.mainSeedPlayerIds
+            : tournament.crownMastersQualification.automaticPlayerIds;
+        return seedIds
             .map(key => byKey.get(key)).filter(Boolean).slice(0, 16);
     }
     if (specialType === 'worldmasters') {
@@ -537,9 +540,10 @@ function skipActiveTournament() {
                 const staleEuropeanChampionshipOpeningDraw = typeof isEuropeanChampionshipTournament === 'function'
                     && isEuropeanChampionshipTournament(activeTournament)
                     && tournamentRound === 32
-                    && tournamentBracket.length === 32
                     && !hasRecordedTournamentHistory
-                    && activeTournament.europeanChampionshipDrawVersion !== EUROPEAN_CHAMPIONSHIP_DRAW_VERSION;
+                    && (tournamentBracket.length !== 32
+                        || tournamentBracket.some(candidate => !candidate || candidate.isBye)
+                        || activeTournament.europeanChampionshipDrawVersion !== EUROPEAN_CHAMPIONSHIP_DRAW_VERSION);
                 const activeTournamentName = String(activeTournament?.name || '').toLowerCase();
                 const staleWorldChampionshipOpeningDraw = (
                     activeTournamentName.includes('world darts championship')
@@ -579,6 +583,9 @@ function skipActiveTournament() {
                     && activeTournament.ukOpenQualification?.version !== (
                         typeof UK_OPEN_QUALIFICATION_VERSION === 'number' ? UK_OPEN_QUALIFICATION_VERSION : 1
                     );
+                const malformedCrownMastersOpeningDraw = !hasRecordedTournamentHistory
+                    && typeof shouldRefreshCrownMastersOpeningDraw === 'function'
+                    && shouldRefreshCrownMastersOpeningDraw(activeTournament, tournamentBracket, tournamentRound);
 
                 // Starsze zapisy mogły zachować niepełną drabinkę po emeryturze
                 // lokalnego uczestnika albo nierozpoczętą obsadę sprzed zmiany
@@ -586,7 +593,7 @@ function skipActiveTournament() {
                 // ponownie z dostępnymi zastępcami i aktualną regułą OOM.
                 if (!malformedOpeningWorldMastersDraw && !staleWorldMastersFinalsQualifierDraw && !staleEuropeanChampionshipOpeningDraw
                     && !staleWorldChampionshipOpeningDraw && !staleContinentalQualificationDraw && !staleQSchoolOpeningDraw
-                    && !staleUKOpenOpeningDraw && !staleContinentalTourOpeningDraw) {
+                    && !staleUKOpenOpeningDraw && !staleContinentalTourOpeningDraw && !malformedCrownMastersOpeningDraw) {
                     propagatePlayersChampionshipWithdrawals(
                         activeTournament,
                         activeTournament.playersChampionshipWithdrawals
@@ -801,7 +808,10 @@ function skipActiveTournament() {
                 participants = getRankingQualificationGroups(activeTournament, allPlayers).flatMap(group => group.players);
                 tournamentRound = 32;
             } else if (isEuropeanChampionship) {
-                participants = getRankingQualificationGroups(activeTournament, allPlayers).flatMap(group => group.players);
+                // Kontuzjowanych uczestników Top 32 zastępują kolejni dostępni
+                // zawodnicy z European Tour OOM. W przeciwnym razie późniejsze
+                // usunięcie BYE skracało nierozpoczętą drabinkę np. do 29 miejsc.
+                participants = getRankingQualificationGroups(activeTournament, availablePlayers).flatMap(group => group.players);
                 tournamentRound = 32;
             } else {
                 let qualified = new Set();

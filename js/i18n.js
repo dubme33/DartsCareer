@@ -2080,6 +2080,7 @@ const translations = {
             if(typeof refreshWalkonSettingsUI === 'function') refreshWalkonSettingsUI();
             if(typeof refreshTournamentWatchSettingsUI === 'function') refreshTournamentWatchSettingsUI();
             if(typeof refreshBounceOutSettingsUI === 'function') refreshBounceOutSettingsUI();
+            if(typeof refreshMatchBoardViewTranslations === 'function') refreshMatchBoardViewTranslations();
             if (typeof updateFavoriteDoubleChoices === 'function') {
                 updateFavoriteDoubleChoices();
                 updateFavoriteDoubleChoices('player-editor-');

@@ -53,6 +53,7 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
             if(screenId !== 'screen-match') { 
                 cancelMatchIntro();
                 clearTimeout(window.aiTimeout);
+                if (window.matchCrowd) window.matchCrowd.stop();
                 if(crowdAudio) { crowdAudio.pause(); crowdAudio.currentTime = 0; }
                 if(postMatchAudio) { postMatchAudio.pause(); postMatchAudio.currentTime = 0; }
             }

@@ -4,7 +4,28 @@ const MOD_MUSIC_CACHE_ENTRIES = 4;
 const modMediaRuntimes = new WeakMap();
 
 function createEmptyModAssets() {
-    return { photos: Object.create(null), music: Object.create(null), sounds: Object.create(null), sponsors: Object.create(null) };
+    return { photos: Object.create(null), music: Object.create(null), sounds: Object.create(null), sponsors: Object.create(null), dartboards: Object.create(null) };
+}
+
+// Radius fractions refer to the shorter side of the original photograph.
+function validateModDartboardConfig(config) {
+    if (!config || typeof config !== 'object' || Array.isArray(config)
+        || typeof config.image !== 'string' || !config.image.trim()
+        || /[/\\]/.test(config.image) || config.image.length > 120) {
+        throw new Error('Niepoprawna konfiguracja tarczy: dartboard.image musi wskazywać nazwę obrazu w folderze dartboards.');
+    }
+    const center = config.center ?? [.5, .5];
+    const radii = config.radii ?? [6.5, 16, 70, 80, 120, 130, 170].map(radius => radius / 340);
+    if (!Array.isArray(center) || center.length !== 2 || !center.every(value => Number.isFinite(value) && value > 0 && value < 1)
+        || !Array.isArray(radii) || radii.length !== 7
+        || !radii.every((value, index) => Number.isFinite(value) && value > 0 && value <= .5 && (index === 0 || value > radii[index - 1]))) {
+        throw new Error('Niepoprawny środek lub promienie pierścieni tarczy w modzie.');
+    }
+    const rotation = config.rotation ?? 0;
+    if (!Number.isFinite(rotation) || Math.abs(rotation) > 360 || (config.name !== undefined && typeof config.name !== 'string')) {
+        throw new Error('Niepoprawna nazwa lub obrót tarczy w modzie.');
+    }
+    return { image: config.image.trim(), name: (config.name || config.image).trim().slice(0, 100), center: [...center], radii: [...radii], rotation };
 }
 
 const MOD_SPONSOR_LOGO_ALIAS_GROUPS = Object.freeze([
@@ -93,8 +114,8 @@ async function createModMediaAssets(zipContent) {
         if (folder === 'music' && audioTypes[extension]) {
             runtime.musicEntries.set(name, { entry, mimeType: audioTypes[extension] });
             assets.music[name] = true; // Obecność utworu, nie gotowy adres audio.
-        } else if ((folder === 'zdjecia' || folder === 'sponsors') && imageTypes[extension]) {
-            const kind = folder === 'zdjecia' ? 'photos' : 'sponsors';
+        } else if ((folder === 'zdjecia' || folder === 'sponsors' || folder === 'dartboards') && imageTypes[extension]) {
+            const kind = folder === 'zdjecia' ? 'photos' : folder === 'dartboards' ? 'dartboards' : 'sponsors';
             eagerEntries.set(`${kind}:${name}`, { kind, name, entry, mimeType: imageTypes[extension] });
         } else if (folder === 'sounds' && audioTypes[extension]) {
             eagerEntries.set(`sounds:${name.toLowerCase()}`, { kind: 'sounds', name: name.toLowerCase(), entry, mimeType: audioTypes[extension] });

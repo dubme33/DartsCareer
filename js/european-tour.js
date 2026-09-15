@@ -1,7 +1,7 @@
 // Sezonowy European Tour Order of Merit. Do klasyfikacji zaliczamy wyłącznie
 // nagrody zdobyte w turniejach European Tour (w niemodowanej bazie nazwanych
 // Continental Tour), a nie cały ranking ProTour ani główny OOM.
-const EUROPEAN_CHAMPIONSHIP_DRAW_VERSION = 1;
+const EUROPEAN_CHAMPIONSHIP_DRAW_VERSION = 2;
 const PRO_TOUR_ORDER_OF_MERIT_VERSION = 3;
 const PRO_TOUR_ROLLING_PERIOD_MS = 52 * 7 * 24 * 60 * 60 * 1000;
 let proTourOrderOfMeritRefreshCache = null;
@@ -325,7 +325,11 @@ function migrateEuropeanTourOrderOfMeritFromHistory(candidates, tournaments) {
 
 function buildEuropeanChampionshipDraw(candidates) {
     const seeds = getEuropeanTourOrderOfMerit(candidates).slice(0, 32);
+    while (seeds.length < 32) {
+        seeds.push(typeof createPlayerEventBye === 'function'
+            ? createPlayerEventBye()
+            : { name: '(BYE)', isBye: true, country: 'Brak', ovr: 0, overall: 0 });
+    }
     return EUROPEAN_CHAMPIONSHIP_SEED_ORDER
-        .map(seedNumber => seeds[seedNumber - 1])
-        .filter(Boolean);
+        .map(seedNumber => seeds[seedNumber - 1]);
 }
