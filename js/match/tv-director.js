@@ -10,6 +10,20 @@
     const statKicker = document.getElementById('tv-stat-kicker');
     const statTitle = document.getElementById('tv-stat-title');
     const statBody = document.getElementById('tv-stat-body');
+    const statPlayers = {
+        p1: {
+            photo: document.getElementById('tv-stat-photo-p1'), initial: document.getElementById('tv-stat-initial-p1'),
+            name: document.getElementById('tv-stat-name-p1'), score: document.getElementById('tv-stat-score-p1'),
+            matchScore: document.getElementById('tv-stat-match-p1')
+        },
+        p2: {
+            photo: document.getElementById('tv-stat-photo-p2'), initial: document.getElementById('tv-stat-initial-p2'),
+            name: document.getElementById('tv-stat-name-p2'), score: document.getElementById('tv-stat-score-p2'),
+            matchScore: document.getElementById('tv-stat-match-p2')
+        }
+    };
+    const statFormat = document.getElementById('tv-stat-format');
+    const statMatchLabel = document.getElementById('tv-stat-match-label');
     const momentBanner = document.getElementById('tv-moment-banner');
     const momentKicker = document.getElementById('tv-moment-kicker');
     const momentTitle = document.getElementById('tv-moment-title');
@@ -28,7 +42,7 @@
             legHistory: 'HISTORIA LEGÓW', oneEighties: 'RZUCONE 180', wonIn: 'wygrywa w {darts}. lotce',
             replay: 'POWTÓRKA', replayOf: 'Zakończenie lega', skip: 'Pomiń powtórkę',
             moment: 'MOMENT MECZU', legWon: 'KONIEC LEGA', maximum: 'Maksimum 180', bigVisit: 'Wysoka kolejka',
-            bullFinish: 'Bull na zakończenie', highCheckout: 'Wysoki checkout', dartCollision: 'Kolizja lotek', bounceOut: 'Bounce-out',
+            bullFinish: 'Bull na zakończenie', highCheckout: 'Wysoki checkout', bounceOut: 'Bounce-out',
             hundred: '100+', oneForty: '140+', attempts: 'trafionych', leg: 'LEG', darts: 'lotek'
         },
         en: {
@@ -36,7 +50,7 @@
             legHistory: 'LEG HISTORY', oneEighties: '180s SCORED', wonIn: 'wins in {darts} darts',
             replay: 'REPLAY', replayOf: 'Leg-winning dart', skip: 'Skip replay',
             moment: 'MATCH MOMENT', legWon: 'LEG COMPLETE', maximum: 'Maximum 180', bigVisit: 'Big visit',
-            bullFinish: 'Bull finish', highCheckout: 'High checkout', dartCollision: 'Dart collision', bounceOut: 'Bounce-out',
+            bullFinish: 'Bull finish', highCheckout: 'High checkout', bounceOut: 'Bounce-out',
             hundred: '100+', oneForty: '140+', attempts: 'made', leg: 'LEG', darts: 'darts'
         },
         de: {
@@ -44,7 +58,7 @@
             legHistory: 'LEG-VERLAUF', oneEighties: 'GEWORFENE 180ER', wonIn: 'gewinnt mit {darts} Darts',
             replay: 'WIEDERHOLUNG', replayOf: 'Leg-Dart', skip: 'Wiederholung überspringen',
             moment: 'MATCHMOMENT', legWon: 'LEG BEENDET', maximum: 'Maximum 180', bigVisit: 'Hohe Aufnahme',
-            bullFinish: 'Bull-Finish', highCheckout: 'Hohes Checkout', dartCollision: 'Dart-Kollision', bounceOut: 'Bounce-out',
+            bullFinish: 'Bull-Finish', highCheckout: 'Hohes Checkout', bounceOut: 'Bounce-out',
             hundred: '100+', oneForty: '140+', attempts: 'Treffer', leg: 'LEG', darts: 'Darts'
         },
         nl: {
@@ -52,7 +66,7 @@
             legHistory: 'LEGOVERZICHT', oneEighties: 'GEGOOIDE 180-ERS', wonIn: 'wint in {darts} darts',
             replay: 'HERHALING', replayOf: 'Winnende leg-dart', skip: 'Herhaling overslaan',
             moment: 'WEDSTRIJDMOMENT', legWon: 'LEG AFGELOPEN', maximum: 'Maximum 180', bigVisit: 'Hoge beurt',
-            bullFinish: 'Bull-finish', highCheckout: 'Hoge checkout', dartCollision: 'Dartbotsing', bounceOut: 'Bounce-out',
+            bullFinish: 'Bull-finish', highCheckout: 'Hoge checkout', bounceOut: 'Bounce-out',
             hundred: '100+', oneForty: '140+', attempts: 'geraakt', leg: 'LEG', darts: 'darts'
         }
     };
@@ -60,9 +74,7 @@
     let session = null;
     let cardTimer = null, cardHideTimer = null, focusTimer = null;
     let replayCueTimer = null, replayEndTimer = null, replayTransitionTimer = null, momentTimer = null;
-    const replayShotTimers = [];
     const cardQueue = [];
-    const replayShots = Object.freeze(['front-tight', 'left-tight', 'left-low']);
     const replaySlowMotion = 4.6;
     const replayShotLength = 2500;
 
@@ -97,6 +109,48 @@
         if (match.isDoubles) return (side === 'p1' ? match.worldCupTeamP1 : match.worldCupTeamP2)?.country || side.toUpperCase();
         const candidate = side === 'p1' ? (match.isSpectator ? match.spectatorP1 : (typeof player !== 'undefined' ? player : null)) : match.opponent;
         return candidate?.name || side.toUpperCase();
+    }
+    function initials(name) {
+        const words = String(name || '').trim().split(/\s+/).filter(Boolean);
+        return (words.length > 1 ? `${words[0][0]}${words.at(-1)[0]}` : words[0]?.slice(0, 2) || '').toUpperCase();
+    }
+    function refreshStatCardPlayers() {
+        const match = typeof currentMatch !== 'undefined' ? currentMatch : null;
+        const setMatch = match?.matchFormat?.type === 'sets';
+        for (const side of ['p1', 'p2']) {
+            const elements = statPlayers[side];
+            const name = sideName(side);
+            const sourcePhoto = document.getElementById(`score-photo-${side}`);
+            const photoUrl = sourcePhoto?.currentSrc || sourcePhoto?.src || '';
+            elements.name.textContent = name;
+            elements.initial.textContent = initials(name);
+            elements.score.textContent = String(match?.[`${side}Score`] ?? '—');
+            elements.matchScore.textContent = String(match?.[`${side}${setMatch ? 'Sets' : 'Legs'}`] ?? 0);
+            elements.photo.alt = name;
+            elements.photo.classList.toggle('world-cup-flag-photo', Boolean(sourcePhoto?.classList.contains('world-cup-flag-photo')));
+            if (photoUrl) {
+                elements.photo.classList.remove('is-missing');
+                elements.initial.hidden = true;
+                if (elements.photo.src !== photoUrl) elements.photo.src = photoUrl;
+            } else {
+                elements.photo.removeAttribute('src');
+                elements.photo.classList.add('is-missing');
+                elements.initial.hidden = false;
+            }
+        }
+        statFormat.textContent = document.getElementById('broadcast-format')?.textContent?.trim() || '';
+        statMatchLabel.textContent = document.getElementById(setMatch ? 'broadcast-sets-label' : 'broadcast-legs-label')?.textContent?.trim()
+            || (setMatch ? 'Sets' : 'Legs');
+    }
+    for (const side of ['p1', 'p2']) {
+        statPlayers[side].photo.addEventListener('load', () => {
+            statPlayers[side].photo.classList.remove('is-missing');
+            statPlayers[side].initial.hidden = true;
+        });
+        statPlayers[side].photo.addEventListener('error', () => {
+            statPlayers[side].photo.classList.add('is-missing');
+            statPlayers[side].initial.hidden = false;
+        });
     }
     function stats() { return (typeof currentMatch !== 'undefined' && currentMatch?.stats) || {}; }
     function checkoutLine(side) {
@@ -195,14 +249,15 @@
         statKicker.textContent = card.kicker;
         statTitle.textContent = card.title;
         renderRows(card.rows);
+        refreshStatCardPlayers();
         statCard.hidden = false;
         requestAnimationFrame(() => statCard.classList.add('is-visible'));
         session.lastCard = card.kind;
-        const minimum = currentMatch?.isSpectator ? 150 : 1800;
+        const minimum = currentMatch?.isSpectator ? 2400 : 4200;
         cardTimer = setTimeout(() => {
             cardTimer = null; statCard.classList.remove('is-visible');
             cardHideTimer = setTimeout(() => { statCard.hidden = true; cardHideTimer = null; pumpCards(); }, 380);
-        }, Math.max(minimum, (card.duration || 3300) / speed()));
+        }, Math.max(minimum, (card.duration || 5600) / speed()));
     }
     function overviewCard(kind = '180') {
         const copy = text();
@@ -219,7 +274,7 @@
     }
     function legCard() {
         const copy = text(), legs = ensureSession().legs.slice(-4).reverse();
-        return { kind: 'legs', kicker: copy.matchStats, title: copy.legHistory,
+        return { kind: 'legs', kicker: copy.matchStats, title: copy.legHistory, duration: 6500,
             rows: legs.map(leg => [`${copy.leg} ${leg.number} · ${leg.winner}`, copy.wonIn.replace('{darts}', leg.darts), leg.number === ensureSession().legs.length]) };
     }
 
@@ -240,8 +295,6 @@
         if (event.visitComplete && total === 180) return { ...event, replayKind: '180' };
         if (event.visitComplete && (total === 170 || total === 171)) return { ...event, replayKind: String(total) };
         if (event.bounced) return { ...event, replayKind: 'bounce' };
-        const collision = event.collision;
-        if (collision?.deflected || Number(collision?.severity) >= .75) return { ...event, replayKind: 'collision' };
         return null;
     }
     function replayHeadline(payload) {
@@ -250,7 +303,6 @@
         if (payload.replayKind === '170' || payload.replayKind === '171') return `${copy.bigVisit} ${payload.replayKind}`;
         if (payload.replayKind === 'bull-finish') return copy.bullFinish;
         if (payload.replayKind === 'high-checkout') return `${copy.highCheckout} ${Number(payload.visitScore) || ''}`.trim();
-        if (payload.replayKind === 'collision') return copy.dartCollision;
         if (payload.replayKind === 'bounce') return copy.bounceOut;
         return copy.replayOf;
     }
@@ -299,7 +351,6 @@
     }
     function clearReplayTimers() {
         clearTimeout(replayCueTimer); clearTimeout(replayEndTimer); clearTimeout(replayTransitionTimer); clearTimeout(momentTimer);
-        replayShotTimers.splice(0).forEach(clearTimeout);
         replayCueTimer = replayEndTimer = replayTransitionTimer = momentTimer = null;
     }
     function hideStinger() {
@@ -409,17 +460,17 @@
             else window.matchBoard3D?.replayLastDart?.(replaySlowMotion);
         }
     }
+    function replayShot(payload) {
+        if (payload.bounced) return 'left-low';
+        if (payload.legCompleted) return 'left-tight';
+        return 'front-tight';
+    }
     function startReplaySequence(payload, live3D) {
         if (!session?.replayRunning) return;
         session.replayPhase = 'playing';
         watermark.classList.remove('is-replay-cue'); watermark.classList.add('is-replay');
-        replayShots.forEach((shot, index) => {
-            if (index === 0) playReplayShot(payload, shot, live3D);
-            else replayShotTimers.push(setTimeout(() => playReplayShot(payload, shot, live3D),
-                scaledReplayTime(replayShotLength * index)));
-        });
-        replayEndTimer = setTimeout(() => finishReplay(false),
-            scaledReplayTime(replayShotLength * replayShots.length + 150));
+        playReplayShot(payload, replayShot(payload), live3D);
+        replayEndTimer = setTimeout(() => finishReplay(false), scaledReplayTime(replayShotLength + 150));
     }
     function beginReplayTransition(payload) {
         if (!tvActive() || !session || session.match !== currentMatch) return;

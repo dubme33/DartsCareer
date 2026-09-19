@@ -399,8 +399,18 @@ function initCareerChronicle() {
                     normalizePlayerIds(pdcPlayers, player);
                 }
                 if (modData.tournamentDatabase) {
+                    const knownTournamentNames = new Set(tournamentDatabase.flatMap(tournament => [tournament.name, tournament.sourceName]).filter(Boolean));
+                    const tournamentSignature = tournament => [tournament.month, tournament.day, tournament.country, tournament.city, tournament.format].join('|');
+                    const knownTournamentSignatures = new Set(tournamentDatabase.map(tournamentSignature));
                     tournamentDatabase.length = 0;
-                    modData.tournamentDatabase.forEach(tournament => tournamentDatabase.push(normalizeKnownModTournamentNames(tournament)));
+                    modData.tournamentDatabase.forEach(tournament => {
+                        const normalized = normalizeKnownModTournamentNames(tournament);
+                        const sourceName = normalized.sourceName || normalized.name;
+                        const isKnownTournament = knownTournamentNames.has(sourceName)
+                            || knownTournamentSignatures.has(tournamentSignature(normalized));
+                        if (normalized.isCustomTournament === undefined && !isKnownTournament) normalized.isCustomTournament = true;
+                        tournamentDatabase.push(normalized);
+                    });
                 }
             } else {
                 // Mod zachowuje wyniki, rozwój i identyfikatory zawodników.
@@ -489,7 +499,9 @@ function initCareerChronicle() {
                                 if (modTournament[field] !== undefined) tournament[field] = modTournament[field];
                             });
                         } else {
-                            tournamentDatabase.push({ ...modTournament });
+                            // Events added by a mod use the dedicated custom broadcast package.
+                            // The marker is persisted so an in-progress event keeps its identity after loading a save.
+                            tournamentDatabase.push({ ...modTournament, isCustomTournament: modTournament.isCustomTournament !== false });
                         }
                     });
                 }

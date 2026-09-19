@@ -1,7 +1,8 @@
 function playerThrow() {
             // Kliknięcia mogą już czekać w kolejce zdarzeń, gdy trzecia lotka
             // kończy podejście. Nie pozwalamy im wejść do logiki punktacji.
-            if (!currentMatch || currentMatch.isFinishing || currentMatch.isSpectator || currentMatch.turn !== 'p1' || currentMatch.dartsThrown >= 3 || currentMatch.isTurnLocked) return;
+            if (!currentMatch || currentMatch.isFinishing || currentMatch.isSpectator || currentMatch.turn !== 'p1'
+                || currentMatch.dartsThrown >= 3 || currentMatch.isTurnLocked || currentMatch.isDartInFlight) return;
             if (currentMatch.isDoubles && !isCareerPlayerThrowing(true)) return;
 
             let tSec = parseInt(document.getElementById('aim-sector').value); 
@@ -34,7 +35,7 @@ function playerThrow() {
 
         function throwCareerDart(targetSector, targetMultiplier) {
             if (!currentMatch || currentMatch.isFinishing || currentMatch.turn !== 'p1'
-                || currentMatch.dartsThrown >= 3 || currentMatch.isTurnLocked) return false;
+                || currentMatch.dartsThrown >= 3 || currentMatch.isTurnLocked || currentMatch.isDartInFlight) return false;
             const score = currentMatch.p1Score;
             const aim = { sector: targetSector, mult: targetMultiplier };
             if (typeof window !== 'undefined') {
@@ -50,6 +51,7 @@ function playerThrow() {
         function simulateOneVisit() {
             if (!currentMatch || currentMatch.isFinishing || currentMatch.isSpectator
                 || currentMatch.turn !== 'p1' || currentMatch.dartsThrown >= 3 || currentMatch.isTurnLocked
+                || currentMatch.isDartInFlight
                 || (currentMatch.isDoubles && !isCareerPlayerThrowing(true))
                 || (typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy())) return false;
 
@@ -59,19 +61,26 @@ function playerThrow() {
             if (visitButton) visitButton.disabled = true;
             const match = currentMatch;
             let simulated = false;
-            while (currentMatch === match && !match.isFinishing && match.turn === 'p1'
-                && match.dartsThrown < 3 && !match.isTurnLocked) {
+            const throwNext = () => {
+                if (currentMatch !== match || match.isFinishing || match.turn !== 'p1'
+                    || match.dartsThrown >= 3 || match.isTurnLocked) return;
                 const score = match.p1Score;
                 const isDoubleIn = Boolean(activeTournament && activeTournament.format === 'DIDO');
                 const aim = getOptimalAim(score, isDoubleIn, 3 - match.dartsThrown, match.p2Score);
-                if (!aim || !throwCareerDart(aim.sector, aim.mult)) break;
+                if (!aim || !throwCareerDart(aim.sector, aim.mult)) return;
                 simulated = true;
-            }
+                if (match.dartsThrown >= 3 || match.isTurnLocked) return;
+                const waitsForImpact = typeof window !== 'undefined'
+                    && window.matchBoard3D?.onNextImpact?.(throwNext);
+                if (!waitsForImpact) throwNext();
+            };
+            throwNext();
             return simulated;
         }
 
         function aiTurn() {
-            if (!currentMatch || currentMatch.isFinishing || currentMatch.isTurnLocked || currentMatch.dartsThrown >= 3) return;
+            if (!currentMatch || currentMatch.isFinishing || currentMatch.isTurnLocked
+                || currentMatch.isDartInFlight || currentMatch.dartsThrown >= 3) return;
             if (currentMatch.isSpectator && currentMatch.spectatorPaused) return;
             const isP1 = currentMatch.turn === 'p1';
             if (!isP1 && currentMatch.turn !== 'p2') return;

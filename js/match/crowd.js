@@ -19,6 +19,9 @@
     let lastCue = null;
     let cueHistory = [];
     let visits = makeVisitState();
+    let postMatchFor = null;
+    let postMatchFadeDelay = null;
+    let postMatchFadeInterval = null;
 
     function makeSideState() {
         return { t20Hits: 0, trebles: 0, yeahFamily: null };
@@ -115,6 +118,7 @@
         if (arena) arena.volume = ARENA_VOLUME * global;
         if (chantAudio) chantAudio.volume = CHANT_VOLUME * global;
         activeReactions.forEach(audio => { audio.volume = REACTION_VOLUME * global; });
+        if (typeof postMatchAudio !== 'undefined' && postMatchAudio) postMatchAudio.volume = 0.5 * global;
     }
 
     function rememberCue(name) {
@@ -285,6 +289,52 @@
         enabled = false;
     }
 
+    function clearPostMatchFade() {
+        clearTimeout(postMatchFadeDelay);
+        clearInterval(postMatchFadeInterval);
+        postMatchFadeDelay = null;
+        postMatchFadeInterval = null;
+    }
+
+    function stopPostMatch() {
+        clearPostMatchFade();
+        if (typeof postMatchAudio !== 'undefined' && postMatchAudio) stopAudio(postMatchAudio);
+        postMatchFor = null;
+    }
+
+    function playPostMatch(match = currentMatch, tournament = activeTournament) {
+        finishMatch();
+        const track = getPostMatchSource(match, tournament);
+        if (!track) return false;
+        if (postMatchFor === match && typeof postMatchAudio !== 'undefined'
+            && postMatchAudio && !postMatchAudio.paused) return true;
+
+        stopPostMatch();
+        let audio;
+        try { audio = new Audio(track); }
+        catch (_error) { return false; }
+        postMatchFor = match;
+        if (typeof postMatchAudio !== 'undefined') postMatchAudio = audio;
+        audio.volume = 0.5 * volume();
+        safePlay(audio);
+        postMatchFadeDelay = setTimeout(() => {
+            postMatchFadeDelay = null;
+            postMatchFadeInterval = setInterval(() => {
+                if (postMatchFor !== match || audio.paused) {
+                    clearPostMatchFade();
+                    return;
+                }
+                const nextVolume = Math.max(0, audio.volume - (0.05 * volume()));
+                audio.volume = nextVolume;
+                if (nextVolume <= 0) {
+                    stopAudio(audio);
+                    clearPostMatchFade();
+                }
+            }, 200);
+        }, 10000);
+        return true;
+    }
+
     function stop() {
         enabled = false;
         clearChant();
@@ -293,6 +343,7 @@
         activeReactions.forEach(audio => stopAudio(audio));
         activeReactions.clear();
         stopAudio(getArenaAudio());
+        stopPostMatch();
         activeMatch = null;
         crowdTournament = null;
         visits = makeVisitState();
@@ -303,7 +354,7 @@
     }
 
     window.matchCrowd = Object.freeze({
-        start, stop, finishMatch, onThrow, setVolume: updateVolumes,
+        start, stop, finishMatch, playPostMatch, stopPostMatch, onThrow, setVolume: updateVolumes,
         isStageMatch, getPostMatchSource, playChant,
         getState() {
             return {

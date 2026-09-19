@@ -330,10 +330,13 @@
         const now = suspendedAt ?? performance.now();
         const earlyBounce = bouncing && dart.data.collision?.bounced;
         const impactProgress = earlyBounce ? Math.max(.55, 1 - (dart.data.collision.contact[2] - .008) / 2.7) : 1;
-        const flight = Math.max(45, (dart.data.collision ? 480 : 340) * impactProgress * durationScale / speed);
+        // Live darts travel more briskly; replays retain the original timing so slow-motion stays readable.
+        const baseFlight = replay ? (dart.data.collision ? 480 : 340) : (dart.data.collision ? 405 : 285);
+        const flight = Math.max(45, baseFlight * impactProgress * durationScale / speed);
         const start = Math.max(now, queueUntil);
         const settle = bouncing ? Math.max(80, 420 * durationScale / speed) : Math.max(35, 180 * durationScale / speed);
-        animations.push({ dart, bouncing, replay, start, flight, settle, end: start + flight + settle });
+        animations.push({ dart, bouncing, replay, start, flight, settle, end: start + flight + settle,
+            impacted: false, impactCallbacks: [] });
         queueUntil = start + flight + (bouncing ? settle : 0);
         dart.group.visible = false;
         requestRender();
@@ -469,6 +472,15 @@
         frameId = requestAnimationFrame(renderFrame);
     }
 
+    function completeImpact(animation) {
+        if (!animation || animation.impacted) return;
+        animation.impacted = true;
+        const callbacks = animation.impactCallbacks.splice(0);
+        callbacks.forEach(callback => queueMicrotask(() => {
+            try { callback(); } catch (_error) { /* Presentation callbacks cannot break rendering. */ }
+        }));
+    }
+
     function renderFrame(now) {
         frameId = null;
         if (!active() || !visible() || paused()) { updateVisibility(); return; }
@@ -510,6 +522,7 @@
                     dart.group.rotation.copy(plannedRotation);
                 }
             } else if (bouncing) {
+                completeImpact(animation);
                 const t = Math.min(1, (age - flight) / settle);
                 const bounceOrigin = earlyBounce ? impact : new THREE.Vector3(dart.x, dart.y, .008);
                 const side = collision ? collision.normal[0] : .42;
@@ -520,6 +533,7 @@
                     scene.remove(dart.group); dartModels.splice(dartModels.indexOf(dart), 1); return false;
                 }
             } else {
+                completeImpact(animation);
                 dart.group.position.set(dart.x, dart.y, .008);
                 dart.group.rotation.copy(dart.rotation);
                 const t = Math.min(1, (age - flight) / settle);
@@ -542,6 +556,7 @@
     }
 
     function clear() {
+        animations.forEach(completeImpact);
         if (scene) dartModels.forEach(dart => scene.remove(dart.group));
         dartModels.length = 0; seenDarts = []; animations = []; queueUntil = 0;
         requestRender();
@@ -679,6 +694,14 @@
         focusTarget(sector, mult = 1) { return active() && animateCamera({ sector, mult }); },
         clearFocus() { return active() && animateCamera(null, 620); },
         capture, replayLastDart, replayThrow, stopReplay, setReplayShot, endReplayCamera,
+        onNextImpact(callback) {
+            if (typeof callback !== 'function' || !active() || !visible()) return false;
+            const animation = [...animations].reverse().find(item => !item.replay && !item.impacted);
+            if (!animation) return false;
+            animation.impactCallbacks.push(callback);
+            requestRender();
+            return true;
+        },
         animationDelay(baseDelay) {
             if (!active() || !visible()) return baseDelay;
             const speed = spectatorSpeed();

@@ -132,10 +132,15 @@ function startMatch(vsAI) {
         }
 
         function setTurnUI() {
-            if (typeof refreshMatchBroadcastScoreboard === 'function') refreshMatchBroadcastScoreboard();
+            if (!currentMatch?.isDartInFlight && typeof refreshMatchBroadcastScoreboard === 'function') {
+                refreshMatchBroadcastScoreboard();
+            }
             // Intro/UI refreshes must not cancel the pending end of a visit or checkout.
             if (currentMatch?.isTurnLocked) {
-                document.getElementById('throw-btn').disabled = true;
+                const careerThrowStillFlying = currentMatch.isDartInFlight && currentMatch.turn === 'p1'
+                    && !currentMatch.isSpectator
+                    && (!currentMatch.isDoubles || isCareerPlayerThrowing(true));
+                document.getElementById('throw-btn').disabled = !careerThrowStillFlying;
                 const lockedVisitButton = document.getElementById('t-btn-sim-visit');
                 if (lockedVisitButton) lockedVisitButton.disabled = true;
                 return;
@@ -231,32 +236,9 @@ function startMatch(vsAI) {
                 finishWorldCupMatch();
                 return;
             }
-            // --- CHASE THE SUN (Odpalane od razu) ---
-            if (postMatchAudio) { postMatchAudio.pause(); }
-            const postMatchCrowdSource = typeof window !== 'undefined'
-                ? window.matchCrowd?.getPostMatchSource?.(currentMatch, activeTournament) || '' : '';
-            if (typeof window !== 'undefined') window.matchCrowd?.finishMatch?.();
-            if (postMatchCrowdSource) {
-                postMatchAudio = new Audio(postMatchCrowdSource);
-                postMatchAudio.volume = 0.5 * globalVolume; 
-                postMatchAudio.play().then(() => {
-                    // Czas zacznie upływać zaraz po zamknięciu alertu
-                    setTimeout(() => {
-                        if (!postMatchAudio) return;
-                        let fadeVol = postMatchAudio.volume;
-                        let fadeInterval = setInterval(() => {
-                            fadeVol -= 0.05;
-                            if (fadeVol > 0) {
-                                postMatchAudio.volume = fadeVol;
-                            } else {
-                                postMatchAudio.pause();
-                                clearInterval(fadeInterval);
-                            }
-                        }, 200);
-                    }, 10000); 
-                }).catch(e => console.log("Odtwarzanie zablokowane:", e));
-            }
-            // -------------------------------------------------------------------------------
+            // Dla meczów zakończonych bez zwykłej animacji (np. szybka symulacja)
+            // zachowujemy muzykę końcową. Zwykły mecz uruchamia ją już wraz z planszą wyniku.
+            if (typeof window !== 'undefined') window.matchCrowd?.playPostMatch?.(currentMatch, activeTournament);
 
             let isP1Winner = false;
             if (currentMatch.matchFormat && currentMatch.matchFormat.type === 'sets') {

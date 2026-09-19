@@ -4,10 +4,10 @@
     const panel = document.getElementById('broadcast-scoreboard');
     if (!panel) return;
     const copy = {
-        pl: { title: 'Wynik meczu', legs: 'Legi', sets: 'Sety', first: 'Do', practice: 'Trening', friendly: 'Mecz towarzyski', turn: 'Rzuca', checkout: 'Możliwy checkout', nine: 'Szansa na nine-dartera', goalLegs: 'legów', goalSets: 'setów' },
-        en: { title: 'Match score', legs: 'Legs', sets: 'Sets', first: 'First to', practice: 'Practice', friendly: 'Friendly match', turn: 'Throwing', checkout: 'Possible checkout', nine: 'Nine-darter possible' },
-        de: { title: 'Spielstand', legs: 'Legs', sets: 'Sets', first: 'Bis', practice: 'Training', friendly: 'Freundschaftsspiel', turn: 'Am Wurf', checkout: 'Mögliches Checkout', nine: 'Neundarter möglich' },
-        nl: { title: 'Wedstrijdstand', legs: 'Legs', sets: 'Sets', first: 'Eerste tot', practice: 'Training', friendly: 'Vriendschappelijk', turn: 'Aan de beurt', checkout: 'Mogelijke checkout', nine: 'Negendarter mogelijk' }
+        pl: { title: 'Wynik meczu', legs: 'Legi', sets: 'Sety', first: 'Do', practice: 'Trening', friendly: 'Mecz towarzyski', turn: 'Rzuca', starter: 'Rozpoczyna lega', checkout: 'Możliwy checkout', nine: 'Szansa na nine-dartera', goalLegs: 'legów', goalSets: 'setów' },
+        en: { title: 'Match score', legs: 'Legs', sets: 'Sets', first: 'First to', practice: 'Practice', friendly: 'Friendly match', turn: 'Throwing', starter: 'Started the leg', checkout: 'Possible checkout', nine: 'Nine-darter possible' },
+        de: { title: 'Spielstand', legs: 'Legs', sets: 'Sets', first: 'Bis', practice: 'Training', friendly: 'Freundschaftsspiel', turn: 'Am Wurf', starter: 'Beginnt das Leg', checkout: 'Mögliches Checkout', nine: 'Neundarter möglich' },
+        nl: { title: 'Wedstrijdstand', legs: 'Legs', sets: 'Sets', first: 'Eerste tot', practice: 'Training', friendly: 'Vriendschappelijk', turn: 'Aan de beurt', starter: 'Begon de leg', checkout: 'Mogelijke checkout', nine: 'Negendarter mogelijk' }
     };
     const put = (id, value) => {
         const element = document.getElementById(id);
@@ -23,6 +23,8 @@
     };
     function refresh() {
         const match = typeof currentMatch !== 'undefined' ? currentMatch : null;
+        const tournament = match?.isTournament && typeof activeTournament !== 'undefined' ? activeTournament : null;
+        window.matchBroadcastTheme?.apply(tournament, match);
         panel.hidden = !match;
         if (!match) return;
         const labels = copy[typeof currentLang === 'string' ? currentLang : 'pl'] || copy.en;
@@ -34,7 +36,6 @@
         put('broadcast-sets-label', labels.sets);
         const limit = sets ? match.matchFormat.setsToWin : match.matchFormat?.legsToWin;
         put('broadcast-format', !match.vsAI ? labels.practice : `${labels.first} ${limit || 6} ${sets ? (labels.goalSets || labels.sets.toLowerCase()) : (labels.goalLegs || labels.legs.toLowerCase())}`);
-        const tournament = match.isTournament && typeof activeTournament !== 'undefined' ? activeTournament : null;
         const round = match.spectatorRound ?? (typeof tournamentRound !== 'undefined' ? tournamentRound : null);
         const event = tournament ? (typeof getTournamentDisplayName === 'function' ? getTournamentDisplayName(tournament) : tournament.name) : '';
         const roundLabel = tournament && round != null && typeof getRoundName === 'function' ? getRoundName(round) : '';
@@ -51,6 +52,7 @@
         const longestRoute = Math.max(routes.p1.length, routes.p2.length);
         panel.classList.toggle('has-checkout', longestRoute > 0);
         panel.style.setProperty('--checkout-count', String(longestRoute));
+        const legStarter = match.isTournament ? window.matchBroadcastTheme?.legStarter(match) : null;
         let anyNine = false;
         for (const side of ['p1', 'p2']) {
             const isP1 = side === 'p1';
@@ -74,7 +76,13 @@
             }
             const row = document.getElementById(`broadcast-${side}`);
             const throwing = match.turn === side;
+            const startsLeg = legStarter === side;
             row.classList.toggle('is-throwing', throwing);
+            row.classList.toggle('started-leg', startsLeg);
+            const starterDot = document.getElementById(`broadcast-starter-${side}`);
+            starterDot.hidden = !startsLeg;
+            starterDot.setAttribute('aria-hidden', String(!startsLeg));
+            starterDot.setAttribute('aria-label', labels.starter);
             const checkout = document.getElementById(`broadcast-checkout-${side}`);
             const route = routes[side];
             row.classList.toggle('has-checkout', route.length > 0);
@@ -97,7 +105,7 @@
             nineBadge.setAttribute('aria-hidden', String(!nine));
             nineBadge.setAttribute('aria-label', labels.nine);
             anyNine ||= nine;
-            row.setAttribute('aria-label', `${name || '—'}: ${match[`${side}Score`]}${throwing ? ` · ${labels.turn}` : ''}${nine ? ` · ${labels.nine}` : ''}`);
+            row.setAttribute('aria-label', `${name || '—'}: ${match[`${side}Score`]}${startsLeg ? ` · ${labels.starter}` : ''}${throwing ? ` · ${labels.turn}` : ''}${nine ? ` · ${labels.nine}` : ''}`);
         }
         panel.classList.toggle('has-nine', anyNine);
     }
