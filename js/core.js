@@ -109,6 +109,7 @@
             const seenIds = new Set();
             const assignId = (candidate, prefix) => {
                 if (!candidate || candidate.isBye) return;
+                if (typeof initializePlayerNickname === 'function') initializePlayerNickname(candidate);
                 if (typeof candidate.id !== 'string' || !candidate.id.trim() || seenIds.has(candidate.id)) {
                     candidate.id = createEntityId(prefix);
                 }
@@ -128,11 +129,11 @@
         }
 
         const AGE_DEVELOPMENT_PROFILES = Object.freeze({
-            // Młodzi reagują na wyniki nieco szybciej w obie strony. Dawne ×1,65
-            // wzrostu przy zaledwie ×0,8 spadku stale pompowało OVR całej grupy.
+            // Lekka premia za rozwój młodych AI; słabe wyniki nadal obniżają OVR.
             young: {
-                growthMultiplier: 1.15,
+                growthMultiplier: 1.3,
                 declineMultiplier: 1.15,
+                seasonGrowthMultiplier: 1.15,
                 // Zachowujemy dotychczasowe tempo kariery gracza. Ta korekta
                 // dotyczy inflacji w puli AI, a nie jego treningu i rozwoju.
                 careerGrowthMultiplier: 1.25,
@@ -153,6 +154,13 @@
             return AGE_DEVELOPMENT_PROFILES.prime;
         }
 
+        function limitLowOverallDecline(rating, change) {
+            if (!Number.isFinite(rating) || !Number.isFinite(change) || change >= 0) return change;
+            // Pełny spadek do 65 OVR; tylko część poniżej progu maleje o połowę.
+            const fullDecline = Math.min(-change, Math.max(0, rating - 65));
+            return -fullDecline - (-change - fullDecline) * 0.5;
+        }
+
         function scalePlayerDevelopmentChange(candidate, change, referenceDate = currentDate) {
             const numericChange = Number(change);
             if (!Number.isFinite(numericChange) || numericChange === 0) return 0;
@@ -167,9 +175,10 @@
             const difficultyMultiplier = isCareerPlayer && typeof getCareerDifficultyDevelopmentMultiplier === 'function'
                 ? getCareerDifficultyDevelopmentMultiplier(candidate, numericChange)
                 : 1;
-            return numericChange > 0
-                ? numericChange * growthMultiplier * difficultyMultiplier
-                : numericChange * declineMultiplier * difficultyMultiplier;
+            if (numericChange > 0) return numericChange * growthMultiplier * difficultyMultiplier;
+            const rating = Number(isCareerPlayer ? candidate?.overall ?? candidate?.ovr
+                : candidate?.baseOvr ?? candidate?.ovr ?? candidate?.overall);
+            return limitLowOverallDecline(rating, numericChange * declineMultiplier * difficultyMultiplier);
         }
 
         function samePlayer(first, second) {
@@ -433,6 +442,8 @@
             if (aimSector && aimMultiplier) {
                 const sectorButtons = document.querySelectorAll('.aim-sector-btn');
                 const multiplierButtons = document.querySelectorAll('.aim-multiplier-btn');
+                const quickThrowButtons = document.querySelectorAll('.tv-quick-throw-btn');
+                const throwButton = document.getElementById('throw-btn');
                 let wasAimingAtBull = false;
                 const updateAimButtons = () => {
                     const bullMultiplier = aimSector.value === '25' ? '1' : aimSector.value === '50' ? '2' : null;
@@ -464,6 +475,24 @@
                     });
                 });
                 aimSector.addEventListener('change', updateAimButtons);
+                quickThrowButtons.forEach(button => {
+                    button.addEventListener('click', () => {
+                        if (!currentMatch || throwButton.disabled || currentMatch.isTurnLocked
+                            || currentMatch.isDartInFlight) return;
+                        aimSector.value = button.dataset.sector;
+                        aimMultiplier.value = button.dataset.multiplier;
+                        // An explicit shortcut must retain its multiplier when leaving bull.
+                        wasAimingAtBull = false;
+                        updateAimButtons();
+                        playerThrow();
+                    });
+                });
+                const updateQuickThrowButtons = () => {
+                    quickThrowButtons.forEach(button => { button.disabled = throwButton.disabled; });
+                };
+                new MutationObserver(updateQuickThrowButtons)
+                    .observe(throwButton, { attributes: true, attributeFilter: ['disabled'] });
+                updateQuickThrowButtons();
                 updateAimButtons();
             }
 
@@ -647,7 +676,7 @@
         }
 
         function getTournamentSimulationProfile(tournament = activeTournament) {
-            const name = (tournament?.name || '').toLowerCase();
+            const name = (tournament?.sourceName || tournament?.name || '').toLowerCase();
             const profile = {
                 key: 'standard', ratingScale: 28, formSpread: 4, matchNoise: 2.2,
                 underdogHotChance: 0.09, hotRunMin: 3, hotRunRange: 4, underdogRank: 24,
@@ -671,13 +700,18 @@
                 return { ...profile, key: 'european', ratingScale: 33, formSpread: 5.3, matchNoise: 3.4, underdogHotChance: 0.14, hotRunMin: 4, hotRunRange: 5, underdogRank: 20, favoriteColdChance: 0.09, coldRunMin: 3, coldRunRange: 3, favoriteRank: 14, maxForm: 11 };
             }
             if (name.includes('uk open') || name.includes('british open') || name.includes('european championship') || name.includes('continental championship')) {
-                return { ...profile, key: 'open', ratingScale: 30, formSpread: 4.5, matchNoise: 2.6, underdogHotChance: 0.10, hotRunMin: 3, hotRunRange: 4, underdogRank: 24, favoriteColdChance: 0.07, coldRunMin: 2, coldRunRange: 3, favoriteRank: 14, maxForm: 10 };
+                return { ...profile, key: 'open', ratingScale: 40, formSpread: 5, matchNoise: 3, underdogHotChance: 0.13, hotRunMin: 4, hotRunRange: 4, underdogRank: 24, favoriteColdChance: 0.09, coldRunMin: 2, coldRunRange: 3, favoriteRank: 14, maxForm: 11 };
             }
             if (name.includes('global darts league') || name.includes('premier')) {
                 return { ...profile, key: 'league', ratingScale: 23, formSpread: 2.5, matchNoise: 1.2, underdogHotChance: 0.035, hotRunMin: 2, hotRunRange: 3, underdogRank: 18, favoriteColdChance: 0.03, coldRunMin: 2, coldRunRange: 2, favoriteRank: 8, maxForm: 5 };
             }
-            if (name.includes('world darts championship') || name.includes('global darts championship') || name.includes('matchplay') || name.includes('grand prix') || name.includes('champion\'s slam') || name.includes('grand slam') || name.includes('finals')) {
-                return { ...profile, key: 'major', ratingScale: 25.5, formSpread: 3, matchNoise: 1.6, underdogHotChance: 0.055, hotRunMin: 3, hotRunRange: 3, underdogRank: 24, favoriteColdChance: 0.045, coldRunMin: 2, coldRunRange: 2, favoriteRank: 12, maxForm: 7 };
+            const isClassicMasters = tournament?.specialType === 'classicMasters'
+                || (!tournament?.qualifierFor && !/qualifier|kwalifikac/.test(name)
+                    && /crown masters|winmau world masters/.test(name));
+            if (isClassicMasters || name.includes('world darts championship') || name.includes('global darts championship') || name.includes('matchplay') || name.includes('grand prix') || name.includes('champion\'s slam') || name.includes('grand slam') || name.includes('finals')) {
+                // Skala dobrana do około 35% wygranych słabszego o 10 OVR w meczu
+                // do 10 legów. Dłuższe mecze nadal zwiększają przewagę faworyta.
+                return { ...profile, key: 'major', ratingScale: 54, formSpread: 4.2, matchNoise: 2.3, underdogHotChance: 0.09, hotRunMin: 4, hotRunRange: 4, underdogRank: 24, favoriteColdChance: 0.065, coldRunMin: 2, coldRunRange: 3, favoriteRank: 12, maxForm: 10 };
             }
             return profile;
         }
@@ -705,14 +739,27 @@
             const chance = isElite
                 ? Math.min(0.08, 0.018 + ((overall - 88) * 0.007))
                 : Math.min(0.016, 0.003 + ((overall - 80) * 0.0015));
-            if (random() >= chance) return null;
+            const peakRoll = random();
+            if (peakRoll >= chance) return null;
+
+            // Tylko co czwarty mecz życia osiąga poziom 115–125. Górna część
+            // tego przedziału jest znacznie rzadsza niż występ blisko 115.
+            const extraordinary = peakRoll < chance * 0.25;
+            const ratingRoll = random(), accuracyRoll = random(), averageRoll = random();
+            const averageFloor = extraordinary
+                ? 115 + 10 * Math.pow(averageRoll, 2)
+                : (isElite
+                    ? Math.min(120, 105 + ((overall - 88) * 0.8) + (averageRoll * 3))
+                    : Math.min(116, 108 + ((overall - 80) * 0.35) + (averageRoll * 3)));
 
             return {
-                ratingBoost: isElite ? 3 + (random() * 2) : 5 + (random() * 2),
-                accuracyBoost: isElite ? 8 + (random() * 5) : 13 + (random() * 5),
-                averageFloor: isElite
-                    ? Math.min(120, 105 + ((overall - 88) * 0.8) + (random() * 3))
-                    : Math.min(116, 108 + ((overall - 80) * 0.35) + (random() * 3))
+                ratingBoost: (isElite ? 3 + (ratingRoll * 2) : 5 + (ratingRoll * 2))
+                    + (extraordinary ? 2 : 0),
+                accuracyBoost: extraordinary
+                    ? Math.max(0, 134 - overall) + ((averageFloor - 115) * 1.8) + (accuracyRoll * 3)
+                    : (isElite ? 8 + (accuracyRoll * 5) : 13 + (accuracyRoll * 5)),
+                averageFloor,
+                extraordinary
             };
         }
 

@@ -24,7 +24,23 @@ function getGrandSlamGroupPrizeMoney(position) {
         : position === 3 ? GRAND_SLAM_PRIZE_MONEY.groupThird : 0;
 }
 
+function getTournamentForPrizeRules(name) {
+    if (name && typeof name === 'object') return name;
+    const text = String(name || '');
+    if (typeof activeTournament !== 'undefined' && activeTournament
+        && (activeTournament.name === text || activeTournament.sourceName === text)) return activeTournament;
+    return typeof tournamentDatabase !== 'undefined' && Array.isArray(tournamentDatabase)
+        ? tournamentDatabase.find(event => event?.name === text || event?.sourceName === text) || null
+        : null;
+}
+
 function getPrizeMoney(tName, round, won) {
+    const tournament = getTournamentForPrizeRules(tName);
+    if (typeof isTournamentEditorQualifier === 'function' && isTournamentEditorQualifier(tournament)) return 0;
+    const prizeKey = won && Number(round) === 2 ? 'winner' : String(round);
+    const customPrize = tournament?.editorPrizes?.[prizeKey];
+    if (Number.isFinite(customPrize) && customPrize >= 0) return customPrize;
+    tName = String(tournament?.sourceName || tournament?.name || tName || '');
     if (typeof isUKOpenTournament === 'function' && isUKOpenTournament(tName)) {
         return getUKOpenPrizeMoney(round, won);
     } else if (typeof isCrownMastersTournament === 'function'
@@ -127,15 +143,18 @@ function payCareerTournamentPrizeMoney(candidate, amount, tournament) {
         function awardPrizeMoney(p, amount, tName, { countTowardsRankings = true } = {}) {
             if (!p || !Number.isFinite(amount) || amount <= 0) return;
             tName = String(tName || '');
+            const tournament = getTournamentForPrizeRules(tName);
+            const ruleName = String(tournament?.sourceName || tName);
             const isChallengeTourEvent = typeof isChallengeTourTournament === 'function'
-                && isChallengeTourTournament(tName);
+                && isChallengeTourTournament(tournament || tName);
             const isDevelopmentTourEvent = typeof isDevelopmentTourTournament === 'function'
-                && isDevelopmentTourTournament(tName);
+                && isDevelopmentTourTournament(tournament || tName);
             const isSecondaryTourEvent = isChallengeTourEvent || isDevelopmentTourEvent;
             payCareerTournamentPrizeMoney(p, amount, tName);
             if (typeof recordSeasonArchivePrize === 'function') {
                 recordSeasonArchivePrize(p, amount, tName, {
                     countTowardsRankings: countTowardsRankings && !isSecondaryTourEvent
+                        && tournament?.rankingOverride !== false
                 });
             }
             
@@ -144,6 +163,8 @@ function payCareerTournamentPrizeMoney(candidate, amount, tournament) {
             if (typeof p.proTourPrizeMoney !== 'number' || isNaN(p.proTourPrizeMoney)) p.proTourPrizeMoney = 0;
             if (typeof p.pcPrizeMoney !== 'number' || isNaN(p.pcPrizeMoney)) p.pcPrizeMoney = 0;
             if (typeof p.europeanTourPrizeMoney !== 'number' || isNaN(p.europeanTourPrizeMoney)) p.europeanTourPrizeMoney = 0;
+
+            if (tournament?.rankingOverride === false) return;
 
             // Rising Stars Circuit posiada własną klasyfikację finansową. Nagrody
             // nie zasilają głównego OOM, ProTour OOM, PC OOM ani European Tour OOM.
@@ -168,12 +189,14 @@ function payCareerTournamentPrizeMoney(candidate, amount, tournament) {
             }
 
             // Turnieje nierankingowe: nagroda trafia wyłącznie do budżetu gracza.
-            if (tName.includes("Global Darts League") || tName.includes("Premier")) {
+            if (tournament?.rankingOverride !== true
+                && (ruleName.includes("Global Darts League") || ruleName.includes("Premier"))) {
                 return;
             }
-            if (typeof isWorldMastersName === 'function' && isWorldMastersName(tName)
+            if (tournament?.rankingOverride !== true
+                && typeof isWorldMastersName === 'function' && isWorldMastersName(ruleName)
                 && !(typeof isCrownMastersTournament === 'function'
-                    && (isCrownMastersTournament(tName) || isCrownMastersQualifierTournament(tName)))) {
+                    && (isCrownMastersTournament(ruleName) || isCrownMastersQualifierTournament(ruleName)))) {
                 return;
             }
 
@@ -188,14 +211,14 @@ function payCareerTournamentPrizeMoney(candidate, amount, tournament) {
             if (!p.historyMain) p.historyMain = {};
 
             const isProTour = typeof isProTourRankingTournament === 'function'
-                ? isProTourRankingTournament(tName)
+                ? isProTourRankingTournament(tournament || tName)
                 : (tName.includes("European Tour") || tName.includes("Continental Tour") ||
                     ((tName.includes("Players Championship") || tName.includes("Pro Players Cup")) && !tName.includes("Final")));
             const isPC = typeof isPlayersChampionshipTournament === 'function'
-                ? isPlayersChampionshipTournament(tName)
+                ? isPlayersChampionshipTournament(tournament || tName)
                 : ((tName.includes("Players Championship") || tName.includes("Pro Players Cup")) && !tName.includes("Final"));
             const isMainRanking = typeof isMainOrderOfMeritRankingTournament === 'function'
-                ? isMainOrderOfMeritRankingTournament(tName)
+                ? isMainOrderOfMeritRankingTournament(tournament || tName)
                 : isProTour || tName.includes("World Darts Championship") || tName.includes("Global Darts Championship")
                     || tName.includes("UK Open") || tName.includes("British Open") || tName.includes("Matchplay")
                     || tName.includes("Grand Prix") || tName.includes("European Championship")

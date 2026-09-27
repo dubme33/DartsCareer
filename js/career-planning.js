@@ -125,6 +125,7 @@ function getPlanningRouteLabel(key) {
 }
 
 function getPlanningTournamentKind(tournament) {
+    if (typeof hasTournamentEditorQualification === 'function' && hasTournamentEditorQualification(tournament)) return 'editor';
     if (!tournament || String(tournament.specialType || '').toLowerCase().includes('qualifier')) return '';
     if (typeof isCrownMastersTournament === 'function' && isCrownMastersTournament(tournament)) return 'crownMasters';
     if (isWorldMastersFinalsTournament(tournament)) return 'worldSeries';
@@ -148,7 +149,17 @@ function buildQualificationPreview(tournament, candidates, referenceDate = curre
         groups.push({ key: route, places, players, confirmed, pending, eligible });
     };
     let note = '', size = 0, reservePlayers = [], withdrawals = [];
-    if (kind === 'crownMasters') {
+    if (kind === 'editor') {
+        getTournamentEditorQualificationGroups(tournament, all, referenceDate).forEach(group => {
+            add(group.key, group.places, group.players, group.confirmed, group.pending, group.eligible);
+            const qualifier = group.source === 'qualifier' ? tournamentDatabase.find(event =>
+                [event.name, event.sourceName].includes(group.qualifierKey)) : null;
+            groups[groups.length - 1].label = group.source === 'country'
+                ? `${typeof t === 'function' ? t(group.country || '') : group.country || ''} · ${trTournamentEditor(group.ranking || 'oom')}`
+                : qualifier?.name || trTournamentEditor(group.source);
+        });
+        size = tournament.editorFieldSize;
+    } else if (kind === 'crownMasters') {
         const saved = tournament.crownMastersQualification;
         const state = typeof previewCrownMastersQualification === 'function'
             ? previewCrownMastersQualification(tournament, all, referenceDate)
@@ -211,7 +222,8 @@ function buildQualificationPreview(tournament, candidates, referenceDate = curre
         const qualifier = tournamentDatabase.find(event => event.specialType === 'pdcTourCardQualifier'
             && [tournament.name, tournament.sourceName].filter(Boolean).includes(event.qualifierFor));
         const saved = tournament.pdcTourCardQualification;
-        const state = saved?.year === year && Array.isArray(saved?.automaticPlayerIds) ? saved : null;
+        const state = saved?.year === year && Array.isArray(saved?.automaticPlayerIds)
+            && isPdcTourCardQualificationLocked(qualifier, saved, referenceDate) ? saved : null;
         const projected = state ? null : buildGrandSlamAutomaticQualification(tournament, all, referenceDate);
         const qualificationCategories = state?.categories || projected?.categories || [];
         if (qualificationCategories.length) {
@@ -341,7 +353,7 @@ function renderPlanningQualification(candidates) {
         || events.find(entry => getPlanningTournamentKind(entry.tournament) === 'worlds') || events[0];
     careerPlanningTournamentIndex = selected.index;
     const preview = buildQualificationPreview(selected.tournament, candidates);
-    const label = getPlanningRouteLabel(preview.route);
+    const label = preview.groups.find(group => group.key === preview.route)?.label || getPlanningRouteLabel(preview.route);
     const reason = preview.status === 'out' ? trPlanning('outReason')
         : preview.status === 'pending' ? trPlanning('pendingReason', { route: label })
         : preview.status === 'reserve' ? trPlanning('reserveReason', { position: preview.reservePosition }) : label;
@@ -351,7 +363,7 @@ function renderPlanningQualification(candidates) {
         const own = group.players.some(p => getPdcTourCardPlayerKey(p) === ownKey);
         const rows = group.players.map(p => `<li${getPdcTourCardPlayerKey(p) === ownKey ? ' class="planning-me"' : ''}><span>${getFlagImg(p.country)} ${escapeHtml(p.name)}</span><span>OVR ${Math.round(p.ovr ?? p.overall)} · ${planningMoney(p.prizeMoney)}</span></li>`).join('');
         return `<details class="planning-route"${own || index === 0 ? ' open' : ''}>
-            <summary>${escapeHtml(getPlanningRouteLabel(group.key))}<span>${group.players.length}/${group.places}${group.confirmed ? ' ✓' : ''}</span></summary>
+            <summary>${escapeHtml(group.label || getPlanningRouteLabel(group.key))}<span>${group.players.length}/${group.places}${group.confirmed ? ' ✓' : ''}</span></summary>
             ${group.pending ? `<p class="planning-note">${escapeHtml(trPlanning('placesPending'))}</p>` : ''}
             ${rows ? `<ul>${rows}</ul>` : `<p class="planning-note">${escapeHtml(trPlanning('emptyGroup'))}</p>`}</details>`;
     }).join('');

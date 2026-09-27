@@ -1,6 +1,7 @@
 const WORLD_CHAMPIONSHIP_QUALIFICATION_VERSION = 2;
 const WORLD_CHAMPIONSHIP_FIELD_SIZE = 128;
 const WORLD_CHAMPIONSHIP_OOM_PLACES = 80;
+const WORLD_CHAMPIONSHIP_DRAW_VERSION = 1;
 
 const WORLD_CHAMPIONSHIP_COUNTRY_GROUPS = Object.freeze({
     asia: ['Bahrajn', 'Chiny', 'Filipiny', 'Hongkong', 'Indie', 'Japonia', 'Malezja', 'Mongolia', 'Singapur', 'Tajlandia', 'Tajwan'],
@@ -224,22 +225,28 @@ function shuffleWorldChampionshipPlayers(players, random = Math.random) {
     return shuffled;
 }
 
-function buildWorldChampionshipDraw(participants, random = Math.random) {
+function buildWorldChampionshipDraw(participants, random = Math.random, tournament = null) {
     const ranked = uniqueWorldChampionshipPlayers(participants).sort(compareWorldChampionshipOom);
     if (ranked.length !== WORLD_CHAMPIONSHIP_FIELD_SIZE) return shuffleWorldChampionshipPlayers(ranked, random);
 
     const seeds = ranked.slice(0, 32);
-    const unseeded = shuffleWorldChampionshipPlayers(ranked.slice(32), random);
+    const rankedUnseeded = shuffleWorldChampionshipPlayers(ranked.slice(32, 64), random);
+    const qualifiers = shuffleWorldChampionshipPlayers(ranked.slice(64), random);
     const draw = new Array(WORLD_CHAMPIONSHIP_FIELD_SIZE);
     const seedOrder = [1, 32, 16, 17, 8, 25, 9, 24, 4, 29, 13, 20, 5, 28, 12, 21, 2, 31, 15, 18, 7, 26, 10, 23, 3, 30, 14, 19, 6, 27, 11, 22];
-    let unseededIndex = 0;
+    let qualifierIndex = 0;
 
     for (let section = 0; section < 32; section++) {
         const sectionStart = section * 4;
         draw[sectionStart] = seeds[seedOrder[section] - 1];
-        draw[sectionStart + 1] = unseeded[unseededIndex++];
-        draw[sectionStart + 2] = unseeded[unseededIndex++];
-        draw[sectionStart + 3] = unseeded[unseededIndex++];
+        draw[sectionStart + 1] = qualifiers[qualifierIndex++];
+        draw[sectionStart + 2] = rankedUnseeded[section];
+        draw[sectionStart + 3] = qualifiers[qualifierIndex++];
+    }
+    if (tournament) {
+        tournament.worldChampionshipDrawVersion = WORLD_CHAMPIONSHIP_DRAW_VERSION;
+        // Preserve the draw's seed numbers when prize money changes or a save is loaded.
+        tournament.worldChampionshipSeedPlayerIds = seeds.map(getWorldChampionshipPlayerKey);
     }
     return draw;
 }

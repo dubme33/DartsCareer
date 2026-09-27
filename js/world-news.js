@@ -4,6 +4,9 @@ const WORLD_NEWS_CONFIG = Object.freeze({ limit: 180, pageSize: 20, upsetsPerEve
 const WORLD_NEWS_TEXT = {
     pl: {
         title: 'Ze świata darta', tile: 'Wyniki, sensacje i bohaterowie sezonu.',
+        settingsTitle: '📰 Wiadomości o formie', settingsIntro: 'Ukryj wpisy o wzrostach, spadkach i końcu okresów formy w „Ze świata darta”.',
+        settingsLabel: 'Wiadomości o formie zawodników', formNewsShow: 'Pokazuj (domyślne)', formNewsHide: 'Ukrywaj',
+        settingsHint: 'Informacje o kontuzjach pozostają widoczne. Ukrywanie wiadomości nie zmienia formy ani wyników zawodników.',
         scope: 'Doniesienia z tej kariery: zapisane wyniki oraz zmiany zdrowia i formy gracza i zawodników AI.',
         archive: 'Archiwum: {count}/180 · zbierane od {date}', unreadCount: 'Nieprzeczytane: {count}',
         all: 'Wszystkie', unread: 'Nieprzeczytane', upset: 'Sensacje', champion: 'Mistrzowie', youth: 'Młode talenty', ranking: 'Lider OOM',
@@ -28,6 +31,9 @@ const WORLD_NEWS_TEXT = {
     },
     en: {
         title: 'Darts world news', tile: 'Results, upsets and the season’s standout players.',
+        settingsTitle: '📰 Form news', settingsIntro: 'Hide news about rises, drops and the end of form periods in Darts world news.',
+        settingsLabel: 'Player form news', formNewsShow: 'Show (default)', formNewsHide: 'Hide',
+        settingsHint: 'Injury news remains visible. Hiding news does not change player form or match results.',
         scope: 'News from this career: recorded results and changes in health and form for you and AI players.',
         archive: 'Archive: {count}/180 · tracking since {date}', unreadCount: 'Unread: {count}',
         all: 'All', unread: 'Unread', upset: 'Upsets', champion: 'Champions', youth: 'Young talents', ranking: 'OOM leader',
@@ -51,6 +57,9 @@ const WORLD_NEWS_TEXT = {
         criteria: 'Upset: a winner with a base OVR at least 12 lower than an opponent rated 80+. At most 3 upsets per tournament. Young talents: age 23 or younger, OVR below 85, and at least a main OOM semi-final; one spotlight per player per season. Titles exclude qualifiers. Leader changes are checked after tournaments and date changes.'
     },
     de: {
+        settingsTitle: '📰 Formnachrichten', settingsIntro: 'Meldungen über Formanstiege, Formtiefs und das Ende von Formphasen in den Darts-Nachrichten ausblenden.',
+        settingsLabel: 'Nachrichten zur Spielerform', formNewsShow: 'Anzeigen (Standard)', formNewsHide: 'Ausblenden',
+        settingsHint: 'Verletzungsmeldungen bleiben sichtbar. Das Ausblenden verändert weder die Spielerform noch die Ergebnisse.',
         title: 'Nachrichten aus der Dartswelt', tile: 'Ergebnisse, Überraschungen und die Spieler der Saison.',
         scope: 'Nachrichten aus dieser Karriere: erfasste Ergebnisse sowie Gesundheit und Form des Spielers und der KI-Spieler.',
         archive: 'Archiv: {count}/180 · erfasst seit {date}', unreadCount: 'Ungelesen: {count}',
@@ -75,6 +84,9 @@ const WORLD_NEWS_TEXT = {
         criteria: 'Überraschung: Der Sieger hat mindestens 12 Basis-OVR weniger als ein Gegner mit OVR 80+. Höchstens 3 Meldungen pro Turnier. Junge Talente: bis 23 Jahre, OVR unter 85 und mindestens ein Halbfinale in einem Haupt-OOM-Turnier; eine Würdigung pro Spieler und Saison. Titel schließen Qualifikationen aus. Führungswechsel werden nach Turnieren und Datumswechseln geprüft.'
     },
     nl: {
+        settingsTitle: '📰 Vormnieuws', settingsIntro: 'Verberg nieuws over vormstijgingen, vormdalingen en het einde van vormperiodes in het dartsnieuws.',
+        settingsLabel: 'Nieuws over de vorm van spelers', formNewsShow: 'Tonen (standaard)', formNewsHide: 'Verbergen',
+        settingsHint: 'Blessurenieuws blijft zichtbaar. Verbergen verandert de vorm of wedstrijdresultaten niet.',
         title: 'Nieuws uit de dartswereld', tile: 'Uitslagen, verrassingen en de spelers van het seizoen.',
         scope: 'Nieuws uit deze carrière: vastgelegde uitslagen en veranderingen in gezondheid en vorm van jou en AI-spelers.',
         archive: 'Archief: {count}/180 · bijgehouden sinds {date}', unreadCount: 'Ongelezen: {count}',
@@ -106,6 +118,39 @@ function trWorldNews(key, values = {}) {
     const lang = typeof currentLang === 'string' ? currentLang : 'en';
     return (WORLD_NEWS_TEXT[lang]?.[key] || WORLD_NEWS_TEXT.en[key] || key)
         .replace(/\{(\w+)\}/g, (_, name) => values[name] ?? `{${name}}`);
+}
+
+function isWorldNewsEntryVisible(item) {
+    return player?.hidePlayerFormNews !== true || item.type !== 'condition'
+        || !['formUp', 'formDown', 'formEnded'].includes(item.data?.kind);
+}
+
+function getVisibleWorldNews() {
+    return initWorldNews().entries.filter(isWorldNewsEntryVisible);
+}
+
+function refreshWorldNewsSettingsUI() {
+    if (typeof document === 'undefined') return;
+    const fields = { title: 'settingsTitle', intro: 'settingsIntro', label: 'settingsLabel',
+        show: 'formNewsShow', hide: 'formNewsHide', hint: 'settingsHint' };
+    Object.entries(fields).forEach(([id, key]) => {
+        const element = document.getElementById(`world-news-settings-${id}`);
+        if (element) element.textContent = trWorldNews(key);
+    });
+    const select = document.getElementById('hub-form-news-mode');
+    if (select) select.value = player?.hidePlayerFormNews === true ? 'hide' : 'show';
+}
+
+function changePlayerFormNewsSetting(value) {
+    if (!player?.name || !['show', 'hide'].includes(value)
+        || (typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy())) return false;
+    player.hidePlayerFormNews = value === 'hide';
+    worldNewsVisibleCount = WORLD_NEWS_CONFIG.pageSize;
+    refreshWorldNewsSettingsUI();
+    updateWorldNewsBadge();
+    if (document.getElementById('screen-world-news')?.classList.contains('active')) renderWorldNews();
+    if (typeof saveGame === 'function') saveGame(true, { immediate: true });
+    return true;
 }
 
 function initWorldNews() {
@@ -327,7 +372,7 @@ function updateWorldNewsBadge() {
     if (typeof document === 'undefined') return;
     const badge = document.getElementById('world-news-badge');
     if (!badge) return;
-    const count = initWorldNews().entries.filter(item => !item.read).length;
+    const count = getVisibleWorldNews().filter(item => !item.read).length;
     badge.textContent = count > 99 ? '99+' : String(count);
     badge.style.display = count ? 'inline-block' : 'none';
 }
@@ -359,7 +404,7 @@ function worldNewsDate(timestamp) {
 }
 
 function getFilteredWorldNews() {
-    return initWorldNews().entries.filter(item => worldNewsFilter === 'all'
+    return getVisibleWorldNews().filter(item => worldNewsFilter === 'all'
         || (worldNewsFilter === 'unread' ? !item.read : item.type === worldNewsFilter));
 }
 
@@ -367,9 +412,10 @@ function renderWorldNews() {
     const list = document.getElementById('world-news-list');
     if (!list) return;
     const state = initWorldNews();
-    const unread = state.entries.filter(item => !item.read).length;
+    const visibleEntries = getVisibleWorldNews();
+    const unread = visibleEntries.filter(item => !item.read).length;
     const summary = document.getElementById('world-news-summary');
-    if (summary) summary.textContent = `${trWorldNews('archive', { count: state.entries.length, date: worldNewsDate(state.since) })} · ${trWorldNews('unreadCount', { count: unread })}`;
+    if (summary) summary.textContent = `${trWorldNews('archive', { count: visibleEntries.length, date: worldNewsDate(state.since) })} · ${trWorldNews('unreadCount', { count: unread })}`;
     const filters = document.getElementById('world-news-filters');
     if (filters) filters.innerHTML = ['all', 'unread', 'upset', 'champion', 'youth', 'ranking', 'condition'].map(filter =>
         `<button type="button" aria-pressed="${worldNewsFilter === filter}" onclick="showWorldNews('${filter}')">${escapeHtml(filter === 'condition' && typeof trPlayerEvents === 'function' ? trPlayerEvents('news') : trWorldNews(filter))}</button>`).join('');
@@ -409,6 +455,7 @@ function updateWorldNewsStrings() {
 
 function refreshWorldNewsTranslations() {
     updateWorldNewsStrings();
+    refreshWorldNewsSettingsUI();
     if (document.getElementById('screen-world-news')?.classList.contains('active')) renderWorldNews();
 }
 
@@ -433,7 +480,7 @@ function returnToWorldNews() {
 
 function markWorldNewsRead() {
     if (typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy()) return false;
-    const entries = initWorldNews().entries;
+    const entries = getVisibleWorldNews();
     if (!entries.some(item => !item.read)) return false;
     entries.forEach(item => { item.read = true; });
     renderWorldNews();

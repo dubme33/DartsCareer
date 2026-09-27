@@ -10,6 +10,17 @@ var matchBroadcastCheckout = (function () {
         { token: '25', points: 25 },
         ...finishes
     ];
+    // A perfect leg can still need two visits after its first three darts.
+    // Cache every reachable double-out total, including gaps below the maximum.
+    const nineDartFinishes = [new Set(), new Set(finishes.map(finish => finish.points))];
+    const targetPoints = new Set(targets.map(target => target.points));
+    for (let darts = 2; darts <= 6; darts++) {
+        const totals = new Set(nineDartFinishes[darts - 1]);
+        for (const total of nineDartFinishes[darts - 1]) {
+            for (const points of targetPoints) totals.add(total + points);
+        }
+        nineDartFinishes.push(totals);
+    }
     function value(token) {
         if (token === 'BULL') return 50;
         if (token === '25') return 25;
@@ -41,8 +52,9 @@ var matchBroadcastCheckout = (function () {
         return [];
     }
     function nineDartPossible(score, dartsThrownInLeg) {
-        if (!Number.isInteger(dartsThrownInLeg) || dartsThrownInLeg < 6 || dartsThrownInLeg >= 9) return false;
-        return route(score, Math.min(3, 9 - dartsThrownInLeg)).length > 0;
+        if (!Number.isInteger(score) || !Number.isInteger(dartsThrownInLeg)
+            || dartsThrownInLeg < 3 || dartsThrownInLeg >= 9) return false;
+        return nineDartFinishes[9 - dartsThrownInLeg].has(score);
     }
     return Object.freeze({ route, nineDartPossible });
 })();

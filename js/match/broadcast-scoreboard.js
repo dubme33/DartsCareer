@@ -99,7 +99,8 @@
                 checkout.setAttribute('aria-label', `${labels.checkout}: ${route.join(' ')}`);
             }
             const legDarts = Number(match.stats?.[`${side}LegDarts`]) || 0;
-            const nine = route.length > 0 && matchBroadcastCheckout.nineDartPossible(match[`${side}Score`], legDarts);
+            const nine = !match.isFinishing && typeof matchBroadcastCheckout !== 'undefined'
+                && matchBroadcastCheckout.nineDartPossible(match[`${side}Score`], legDarts);
             const nineBadge = document.getElementById(`broadcast-nine-${side}`);
             row.classList.toggle('has-nine', nine);
             nineBadge.setAttribute('aria-hidden', String(!nine));

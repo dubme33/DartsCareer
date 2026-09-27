@@ -69,7 +69,7 @@ function renderAverageRecordsRanking(list = document.getElementById('pdc-list'))
         const candidate = row.player;
         const isMe = typeof isCurrentPlayer === 'function' && isCurrentPlayer(candidate);
         const careerYear = row.careerYear === null ? '' : `<small>${row.careerYear}</small>`;
-        return `<button type="button" class="ranking-player-row average-record-row" data-player-id="${escapeHtml(candidate.id || '')}">
+        return `<button type="button" class="ranking-player-row average-record-row" data-player-id="${escapeHtml(candidate.id || '')}" data-player-name="${escapeHtml(candidate.name)}">
             <span class="average-record-player"><strong>#${index + 1}</strong> ${getFlagImg(candidate.country)} ${escapeHtml(candidate.name)}${isMe ? ` <b>${escapeHtml(t('t-average-records-you'))}</b>` : ''}</span>
             <span class="average-record-value ${seasonActive ? 'sorted' : ''}">${formatAverageRecord(row.season)}</span>
             <span class="average-record-value ${careerActive ? 'sorted' : ''}">${formatAverageRecord(row.career)}${careerYear}</span>

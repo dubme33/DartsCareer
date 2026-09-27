@@ -137,8 +137,15 @@ function settleAiSeasonDevelopment(completedYear) {
             ? Math.max(-limit, Math.min(limit, (state.wins - state.expectedWins) / (state.sensitivity + 0.6)))
             : state.inSeasonDelta;
         const seasonStart = before - state.inSeasonDelta;
+        // Wiek z rozliczanego sezonu, również przy wczytaniu zapisu w nowym roku.
+        const ageProfile = getAgeDevelopmentProfile(candidate, new Date(completedYear, 11, 31));
+        const growthMultiplier = ageProfile.seasonGrowthMultiplier || 1;
         const totalChange = state.matches >= 12
-            ? limitAiDevelopmentGrowth(seasonStart, increaseAiSeasonDevelopmentGrowth(performanceChange, limit, prestigeFactor))
+            ? performanceChange > 0
+                ? limitAiDevelopmentGrowth(seasonStart, increaseAiSeasonDevelopmentGrowth(
+                    performanceChange * growthMultiplier, limit, prestigeFactor))
+                : limitLowOverallDecline(seasonStart, performanceChange)
+            // Mała próba zachowuje już przeskalowane transfery bez drugiej korekty.
             : state.inSeasonDelta;
         const after = Math.max(45, Math.min(99, seasonStart + totalChange));
         const adjustment = after - before;

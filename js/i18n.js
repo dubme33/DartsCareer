@@ -263,6 +263,11 @@ const translations = {
         "ranking-main-group-label": "Główne rankingi i tabele",
         "ranking-secondary-group-label": "Cykle poboczne",
         "ranking-records-group-label": "Statystyki i ciekawostki",
+        "pdc-search-label": "Szukaj gracza",
+        "t-pdc-search-placeholder": "Wpisz nazwisko gracza…",
+        "pdc-search-clear": "Wyczyść",
+        "t-pdc-search-count": "Znaleziono: {shown} z {total} graczy",
+        "pdc-search-empty": "Brak graczy pasujących do wyszukiwania.",
         "btn-rank-averages": "Rekordy średnich",
         "t-average-records-title": "Najwyższe średnie meczowe",
         "t-average-records-note": "Najwyższe średnie z pojedynczych oficjalnych meczów zapisanych przez grę. Starsze, niezarejestrowane wyniki nie są odtwarzane.",
@@ -297,6 +302,7 @@ const translations = {
         "t-owned": "Posiadasz",
         "t-btn-skip-walkon": "⏩ Pomiń zapowiedzi",
         "t-aim-sector": "Sektor",
+        "t-tv-quick-throws": "Szybki rzut",
         "t-opt-single": "Pojedyncze",
         "t-opt-double": "Podwójne",
         "t-opt-treble": "Potrójne",
@@ -426,6 +432,7 @@ const translations = {
         "t-spectator-speed": "Prędkość symulacji",
         "t-spectator-pause": "Pauza",
         "t-spectator-resume": "Wznów",
+        "t-spectator-exit": "Wyjdź z meczu",
         "t-btn-next-round": "Przejdź do następnej rundy",
         "t-gdl-player": "Zawodnik",
         "t-gdl-pts": "PKT",
@@ -710,6 +717,11 @@ const translations = {
         "ranking-main-group-label": "Main rankings and tables",
         "ranking-secondary-group-label": "Secondary tours",
         "ranking-records-group-label": "Statistics and curiosities",
+        "pdc-search-label": "Find a player",
+        "t-pdc-search-placeholder": "Enter a player's surname…",
+        "pdc-search-clear": "Clear",
+        "t-pdc-search-count": "Found: {shown} of {total} players",
+        "pdc-search-empty": "No players match your search.",
         "btn-rank-averages": "Average records",
         "t-average-records-title": "Highest match averages",
         "t-average-records-note": "The highest averages from individual official matches recorded by the game. Older results that were never tracked are not reconstructed.",
@@ -753,6 +765,7 @@ const translations = {
         "Kraków": "Krakow", "Monachium": "Munich", "Bratysława": "Bratislava", "Antwerpia": "Antwerp", "Budapeszt": "Budapest", "Praga": "Prague", "Bazylea": "Basel", "Londyn": "London",
         "t-btn-skip-walkon": "⏩ Skip Walk-ons",
         "t-aim-sector": "Target sector",
+        "t-tv-quick-throws": "Quick throw",
         "t-opt-single": "Single",
         "t-opt-double": "Double",
         "t-opt-treble": "Treble",
@@ -882,6 +895,7 @@ const translations = {
         "t-spectator-speed": "Simulation speed",
         "t-spectator-pause": "Pause",
         "t-spectator-resume": "Resume",
+        "t-spectator-exit": "Leave match",
         "t-btn-next-round": "Proceed to next round",
         "t-gdl-player": "Player",
         "t-gdl-pts": "PTS",
@@ -903,6 +917,11 @@ const translations = {
         "t-followers": "📸 Instagram Followers",
     },
     de: {
+        "pdc-search-label": "Spieler suchen",
+        "t-pdc-search-placeholder": "Nachnamen eingeben…",
+        "pdc-search-clear": "Leeren",
+        "t-pdc-search-count": "Gefunden: {shown} von {total} Spielern",
+        "pdc-search-empty": "Keine Spieler entsprechen deiner Suche.",
         // NIEMIECKIE TŁUMACZENIA
         "t-create-title": "Erstelle deinen Spieler",
         "t-fname": "Vorname:",
@@ -1186,6 +1205,7 @@ const translations = {
         "Kraków": "Krakau", "Monachium": "München", "Bratysława": "Bratislava", "Antwerpia": "Antwerpen", "Budapeszt": "Budapest", "Praga": "Prag", "Bazylea": "Basel", "Londyn": "London",
         "t-btn-skip-walkon": "⏩ Walk-ons Überspringen",
         "t-aim-sector": "Zielfeld",
+        "t-tv-quick-throws": "Schnellwurf",
         "t-opt-single": "Single",
         "t-opt-double": "Double",
         "t-opt-treble": "Treble",
@@ -1315,6 +1335,7 @@ const translations = {
         "t-spectator-speed": "Simulationsgeschwindigkeit",
         "t-spectator-pause": "Pause",
         "t-spectator-resume": "Fortsetzen",
+        "t-spectator-exit": "Spiel verlassen",
         "t-btn-next-round": "Zur nächsten Runde",
         "t-gdl-player": "Spieler",
         "t-gdl-pts": "PKT",
@@ -1622,6 +1643,11 @@ const translations = {
         "ranking-main-group-label": "Hoofdranglijsten en standen",
         "ranking-secondary-group-label": "Nevencircuits",
         "ranking-records-group-label": "Statistieken en weetjes",
+        "pdc-search-label": "Speler zoeken",
+        "t-pdc-search-placeholder": "Voer de achternaam in…",
+        "pdc-search-clear": "Wissen",
+        "t-pdc-search-count": "Gevonden: {shown} van {total} spelers",
+        "pdc-search-empty": "Geen spelers komen overeen met je zoekopdracht.",
         "btn-rank-averages": "Gemiddelderecords",
         "t-average-records-title": "Hoogste wedstrijdgemiddelden",
         "t-average-records-note": "De hoogste gemiddelden uit afzonderlijke officiële wedstrijden die door het spel zijn opgeslagen. Oudere, nooit geregistreerde uitslagen worden niet gereconstrueerd.",
@@ -1665,6 +1691,7 @@ const translations = {
         "Kraków": "Krakau", "Monachium": "München", "Bratysława": "Bratislava", "Antwerpia": "Antwerpen", "Budapeszt": "Boedapest", "Praga": "Praag", "Bazylea": "Bazel", "Londyn": "Londen",
         "t-btn-skip-walkon": "⏩ Walk-ons overslaan",
         "t-aim-sector": "Vak",
+        "t-tv-quick-throws": "Snelle worp",
         "t-opt-single": "Single",
         "t-opt-double": "Double",
         "t-opt-treble": "Treble",
@@ -1794,6 +1821,7 @@ const translations = {
         "t-spectator-speed": "Simulatiesnelheid",
         "t-spectator-pause": "Pauze",
         "t-spectator-resume": "Hervatten",
+        "t-spectator-exit": "Wedstrijd verlaten",
         "t-btn-next-round": "Ga naar de volgende ronde",
         "t-gdl-player": "Speler",
         "t-gdl-pts": "PNT",
@@ -2074,12 +2102,17 @@ const translations = {
             if(typeof refreshTutorialTranslations === 'function') refreshTutorialTranslations();
             if(typeof refreshHubNavigationTranslations === 'function') refreshHubNavigationTranslations();
             if(typeof refreshPlayerEditorTranslations === 'function') refreshPlayerEditorTranslations();
+            if(typeof refreshTournamentEditorTranslations === 'function') refreshTournamentEditorTranslations();
             if(typeof refreshAverageRecordsTranslations === 'function') refreshAverageRecordsTranslations();
+            if(typeof applyPdcRankingSearch === 'function') applyPdcRankingSearch();
             if(typeof refreshPanelTopBackTranslations === 'function') refreshPanelTopBackTranslations();
             if(typeof refreshCareerDifficultyUI === 'function') refreshCareerDifficultyUI();
             if(typeof refreshWalkonSettingsUI === 'function') refreshWalkonSettingsUI();
+            if(typeof refreshPlayerNicknameUI === 'function') refreshPlayerNicknameUI();
             if(typeof refreshTournamentWatchSettingsUI === 'function') refreshTournamentWatchSettingsUI();
             if(typeof refreshBounceOutSettingsUI === 'function') refreshBounceOutSettingsUI();
+            if(typeof refreshPostMatchReportSettingsUI === 'function') refreshPostMatchReportSettingsUI();
+            if(typeof refreshTVDirectorSettingsUI === 'function') refreshTVDirectorSettingsUI();
             if(typeof refreshMatchBoardViewTranslations === 'function') refreshMatchBoardViewTranslations();
             if (typeof updateFavoriteDoubleChoices === 'function') {
                 updateFavoriteDoubleChoices();

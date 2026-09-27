@@ -223,7 +223,7 @@ async function simulateUntilCareerPlayerMatch() {
 
 function setRemainingTournamentButtonsDisabled(disabled) {
     ['t-btn-sim-tournament', 't-btn-sim-tournament-results', 't-btn-sim-to-match',
-        't-btn-sim-to-match-results', 't-btn-sim-to-match-hub'].forEach(id => {
+        't-btn-sim-to-match-results', 't-btn-sim-to-match-hub', 't-btn-skip-bracket'].forEach(id => {
         const button = document.getElementById(id);
         if (button) button.disabled = disabled;
     });
@@ -284,6 +284,11 @@ function finishFastForwardedSpecialTournament(outcome) {
     const resultsModal = document.getElementById('results-modal');
     if (resultsModal) resultsModal.style.display = 'none';
 
+    if (outcome === 'editorQualifier') {
+        concludeTournamentEditorQualifier(true);
+        showTournamentEnd();
+        return true;
+    }
     if (outcome === true) {
         concludeContinentalTourQualifierEvent(true);
         showTournamentEnd();
@@ -320,6 +325,20 @@ async function simulateRemainingTournament(options = {}) {
             && options?.withdrawCareerPlayer !== true)) return false;
 
     return runTournamentSimulation(async () => {
+        const isSecondaryTour = (typeof isChallengeTourTournament === 'function'
+            && isChallengeTourTournament(activeTournament))
+            || (typeof isDevelopmentTourTournament === 'function'
+                && isDevelopmentTourTournament(activeTournament));
+        if (options.withdrawCareerPlayer && isSecondaryTour) {
+            // Wycofanie następuje po utworzeniu punktu przywracania. W ten sposób
+            // odpuszczający gracz nie otrzymuje nagrody za przegraną walkowerem.
+            tournamentBracket = tournamentBracket.map(candidate =>
+                typeof isCurrentPlayer === 'function' && isCurrentPlayer(candidate)
+                    ? (typeof createPlayerEventBye === 'function'
+                        ? createPlayerEventBye()
+                        : { name: '(BYE)', isBye: true, country: 'Brak', ovr: 0, overall: 0 })
+                    : candidate);
+        }
         const outcome = await simulateTournamentRoundsInBatches(activeTournament);
         if (!finishFastForwardedSpecialTournament(outcome)) finishFastForwardedTournament({ announceWinner: false });
         return true;
@@ -327,6 +346,10 @@ async function simulateRemainingTournament(options = {}) {
 }
 
 function finishHeadlessTournament(specialTournamentOutcome) {
+    if (specialTournamentOutcome === 'editorQualifier') {
+        concludeTournamentEditorQualifier(false);
+        return;
+    }
     if (specialTournamentOutcome === true) {
         concludeContinentalTourQualifierEvent(false);
         return;

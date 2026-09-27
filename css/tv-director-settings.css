@@ -1,0 +1,32 @@
+.tv-director-settings-tile { cursor: default; border-color: #9a84d8; background: #303053; }
+.tv-director-settings-fields { display: grid; gap: 12px; text-align: left; }
+.tv-director-settings-fields label { display: grid; gap: 6px; color: #f3efff; font-size: 13px; font-weight: 700; }
+.tv-director-settings-fields select {
+    width: 100%; min-width: 0; min-height: 38px; padding: 8px;
+    border: 1px solid #8577a9; border-radius: 6px; background: #171c32; color: #fff; font: inherit;
+}
+.tv-director-settings-fields small { display: block; color: #d2ccea; font-size: 12px; line-height: 1.45; font-weight: 400; }
+.tv-director-settings-hint { display: block; margin-top: 12px; color: #d2ccea; font-size: 12px; line-height: 1.45; }
+.tv-director-settings-fields select:focus-visible { outline: 2px solid #f1c40f; outline-offset: 2px; }
+.tv-director-settings-menu { display: none; position: relative; }
+#screen-match.match-tv-mode .tv-director-settings-menu { display: block; }
+.tv-director-settings-menu > summary {
+    display: flex; align-items: center; justify-content: center; min-height: 38px; min-width: 38px; padding: 5px 7px; box-sizing: border-box;
+    border: 1px solid #9a84d8; border-radius: 7px; background: #24243f; color: #f3efff;
+    font-size: 0; font-weight: 700; cursor: pointer; list-style: none;
+}
+.tv-director-settings-menu > summary::after { content: '🎬'; font-size: 18px; }
+.tv-director-settings-menu > summary::-webkit-details-marker { display: none; }
+.tv-director-settings-menu > summary:focus-visible { outline: 2px solid #f1c40f; outline-offset: 2px; }
+.tv-director-settings-menu[open] > summary { border-color: #f1c40f; }
+.tv-director-settings-popover {
+    position: absolute; z-index: 10; top: calc(100% + 9px); right: 0;
+    width: min(320px, calc(100vw - 28px)); max-height: calc(100svh - 150px);
+    padding: 16px; box-sizing: border-box; overflow-y: auto;
+    border: 1px solid #9a84d8; border-radius: 9px; background: #171c32;
+    box-shadow: 0 8px 28px #000a;
+}
+@media (max-width: 680px), (max-height: 540px) {
+    .tv-director-settings-menu > summary { min-height: 32px; min-width: 32px; padding: 4px 7px; }
+    .tv-director-settings-popover { position: fixed; top: 84px; right: 10px; max-height: calc(100svh - 100px); }
+}

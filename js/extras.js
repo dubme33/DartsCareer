@@ -406,6 +406,7 @@ function initCareerChronicle() {
                     modData.tournamentDatabase.forEach(tournament => {
                         const normalized = normalizeKnownModTournamentNames(tournament);
                         const sourceName = normalized.sourceName || normalized.name;
+                        if (player?.tournamentEditorDeletedKeys?.includes(sourceName)) return;
                         const isKnownTournament = knownTournamentNames.has(sourceName)
                             || knownTournamentSignatures.has(tournamentSignature(normalized));
                         if (normalized.isCustomTournament === undefined && !isKnownTournament) normalized.isCustomTournament = true;
@@ -438,6 +439,7 @@ function initCareerChronicle() {
                             Boolean(careerSourceName) && normalizeSourceName(sourceName) === careerSourceName
                         );
                         if (isCareerPlayerEntry) {
+                            if (typeof applyModPlayerNickname === 'function') applyModPlayerNickname(player, modPlayer);
                             ['name', 'sourceName', 'birthYear', 'country', 'hasTourCard', 'favoriteDouble'].forEach(field => {
                                 if (modPlayer[field] !== undefined) player[field] = modPlayer[field];
                             });
@@ -453,6 +455,7 @@ function initCareerChronicle() {
                                 : null
                         );
                         if (candidate) {
+                            if (typeof applyModPlayerNickname === 'function') applyModPlayerNickname(candidate, modPlayer);
                             ['name', 'sourceName', 'birthYear', 'country', 'hasTourCard', 'favoriteDouble'].forEach(field => {
                                 if (modPlayer[field] !== undefined) candidate[field] = modPlayer[field];
                             });
@@ -493,8 +496,10 @@ function initCareerChronicle() {
                     modData.tournamentDatabase.forEach(rawModTournament => {
                         const modTournament = normalizeKnownModTournamentNames(rawModTournament);
                         const sourceName = modTournament.sourceName || modTournament.name;
+                        if (player?.tournamentEditorDeletedKeys?.includes(sourceName)) return;
                         const tournament = tournamentsBySourceName.get(sourceName) || tournamentsBySignature.get(tournamentSignature(modTournament));
                         if (tournament) {
+                            if (tournament.editorModified === true) return;
                             ['name', 'sourceName', 'specialType', 'qualifierFor', 'worldMastersEvent'].forEach(field => {
                                 if (modTournament[field] !== undefined) tournament[field] = modTournament[field];
                             });

@@ -81,7 +81,14 @@ function showRoundResults() {
         }
 
         function getTournamentMatchFormat(tournament, round) {
-            const name = tournament ? tournament.name : "";
+            if (tournament?.editorMatchFormat?.type === 'legs') {
+                return { type: 'legs', legsToWin: tournament.editorMatchFormat.legsToWin };
+            }
+            if (tournament?.editorMatchFormat?.type === 'sets') {
+                return { type: 'sets', setsToWin: tournament.editorMatchFormat.setsToWin,
+                    legsPerSet: tournament.editorMatchFormat.legsPerSet };
+            }
+            const name = tournament ? (tournament.sourceName || tournament.name) : "";
 
             if (name.includes("Global Darts League - Play-offs") || (name.includes("Premier") && name.includes("Play-offs"))) {
                 if (round === 4) return { type: 'legs', legsToWin: 10 }; // Semi

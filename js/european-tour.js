@@ -50,6 +50,7 @@ function isProTourRankingTournament(tournamentOrName) {
 }
 
 function isEuropeanChampionshipTournament(tournamentOrName) {
+    if (typeof hasTournamentEditorQualification === 'function' && hasTournamentEditorQualification(tournamentOrName)) return false;
     const name = getEuropeanTourTournamentName(tournamentOrName).toLocaleLowerCase();
     return name.includes('european championship') || name.includes('continental championship');
 }

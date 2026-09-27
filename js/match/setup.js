@@ -16,8 +16,8 @@ function startMatch(vsAI) {
                 p1Score: 501, p2Score: 501, p1Legs: 0, p2Legs: 0, p1Sets: 0, p2Sets: 0, totalLegsPlayed: 0, legsToWin: customLegs,
                 matchFormat: matchFormat, turn: starter, startingPlayer: starter, dartsThrown: 0, isTurnLocked: false, p1TurnStartScore: 501, p2TurnStartScore: 501, isTournament: false,
                 stats: { 
-                    p1TotalDarts: 0, p1AccumulatedScore: 0, p1First9Score: 0, p1First9Darts: 0, p1LegDarts: 0, p1HighCheckout: 0, p1DoubleAttempts: 0, p1DoubleHits: 0, p1OneEighties: 0,
-                    p2TotalDarts: 0, p2AccumulatedScore: 0, p2First9Score: 0, p2First9Darts: 0, p2LegDarts: 0, p2HighCheckout: 0, p2DoubleAttempts: 0, p2DoubleHits: 0, p2OneEighties: 0 
+                    p1TotalDarts: 0, p1AccumulatedScore: 0, p1First9Score: 0, p1First9Darts: 0, p1LegDarts: 0, p1HighCheckout: 0, p1DoubleAttempts: 0, p1DoubleHits: 0, p1OneEighties: 0, p1HundredPlus: 0, p1OneFortyPlus: 0,
+                    p2TotalDarts: 0, p2AccumulatedScore: 0, p2First9Score: 0, p2First9Darts: 0, p2LegDarts: 0, p2HighCheckout: 0, p2DoubleAttempts: 0, p2DoubleHits: 0, p2OneEighties: 0, p2HundredPlus: 0, p2OneFortyPlus: 0
                 }
             };
             currentTurnScore = 0; document.getElementById('match-log').innerHTML = "";
@@ -305,6 +305,16 @@ function startMatch(vsAI) {
                     currentMatch = null;
                     document.getElementById('bracket-modal').style.display = 'none';
                     concludeContinentalTourQualifierEvent(true);
+                    showTournamentEnd();
+                    if (typeof updateHub === 'function') updateHub();
+                    showScreen('screen-hub');
+                    saveGame(true);
+                    return;
+                }
+                if (specialTournamentOutcome === 'editorQualifier') {
+                    currentMatch = null;
+                    document.getElementById('bracket-modal').style.display = 'none';
+                    concludeTournamentEditorQualifier(true);
                     showTournamentEnd();
                     if (typeof updateHub === 'function') updateHub();
                     showScreen('screen-hub');

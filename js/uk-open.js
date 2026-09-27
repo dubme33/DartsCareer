@@ -39,6 +39,7 @@ function getUKOpenSearchableName(tournamentOrName) {
 }
 
 function isUKOpenTournament(tournamentOrName = (typeof activeTournament !== 'undefined' ? activeTournament : null)) {
+    if (typeof hasTournamentEditorQualification === 'function' && hasTournamentEditorQualification(tournamentOrName)) return false;
     if (tournamentOrName && typeof tournamentOrName === 'object'
         && tournamentOrName.specialType === UK_OPEN_TYPE) return true;
     const name = getUKOpenSearchableName(tournamentOrName);
@@ -84,7 +85,8 @@ function getUKOpenSideTourLeaders(ranked, usedKeys) {
 }
 
 function buildUKOpenQualificationState(candidates, referenceDate = (typeof currentDate !== 'undefined' ? currentDate : null)) {
-    const all = getUKOpenCandidates(candidates);
+    const all = getUKOpenCandidates(candidates)
+        .filter(candidate => typeof isPlayerAvailableForPlay !== 'function' || isPlayerAvailableForPlay(candidate));
     const date = referenceDate instanceof Date ? referenceDate : new Date(referenceDate || Date.now());
     const safeDate = Number.isNaN(date.getTime()) ? new Date(2026, 2, 6) : date;
     const cardHolders = all.filter(candidate => candidate.hasTourCard === true)
@@ -100,6 +102,17 @@ function buildUKOpenQualificationState(candidates, referenceDate = (typeof curre
             ? getDevelopmentTourOrderOfMerit(all, { includeZero: true })
             : all.filter(candidate => candidate.hasTourCard !== true).sort(compareUKOpenOom));
     const developmentPlayers = getUKOpenSideTourLeaders(developmentRanking, nonCardKeys);
+
+    // Kontuzje kartowiczów nie mogą tworzyć pustych miejsc w Last 160.
+    // Najpierw zachowujemy 32 miejsca obu cykli, potem dobieramy ich kolejnych
+    // zdrowych zawodników na zwolnione miejsca z końca stawki kartowiczów.
+    for (const candidate of [...challengeRanking, ...developmentRanking, ...all.filter(p => p.hasTourCard !== true).sort(compareUKOpenOom)]) {
+        if (cardHolders.length >= UK_OPEN_CARD_HOLDER_PLACES) break;
+        const key = getUKOpenPlayerKey(candidate);
+        if (!key || candidate.hasTourCard === true || nonCardKeys.has(key)) continue;
+        nonCardKeys.add(key);
+        cardHolders.push(candidate);
+    }
 
     return {
         version: UK_OPEN_QUALIFICATION_VERSION,
@@ -125,21 +138,42 @@ function isValidUKOpenQualificationState(state, referenceDate = (typeof currentD
 
 function ensureUKOpenQualificationState(tournament, candidates, referenceDate = (typeof currentDate !== 'undefined' ? currentDate : null)) {
     if (!tournament) return buildUKOpenQualificationState(candidates, referenceDate);
-    if (!isValidUKOpenQualificationState(tournament.ukOpenQualification, referenceDate)) {
+    const state = tournament.ukOpenQualification;
+    const valid = isValidUKOpenQualificationState(state, referenceDate);
+    const year = (referenceDate instanceof Date ? referenceDate : new Date(referenceDate || Date.now())).getFullYear();
+    const withdrawnKeys = new Set(state?.year === year && Array.isArray(state.withdrawnPlayerIds)
+        ? state.withdrawnPlayerIds : []);
+    const availableKeys = new Set(getUKOpenCandidates(candidates)
+        .filter(candidate => typeof isPlayerAvailableForPlay !== 'function' || isPlayerAvailableForPlay(candidate))
+        .map(getUKOpenPlayerKey).filter(key => !withdrawnKeys.has(key)));
+    const unavailableEntry = valid && UK_OPEN_GROUPS.some(group =>
+        state[group.stateKey].some(key => !availableKeys.has(key)));
+    const hasResults = (tournament.matchHistory?.blocks || []).some(block => block?.matches?.length)
+        || Boolean(String(tournament.historyLogs || '').trim());
+    if (!valid || (unavailableEntry && !hasResults)) {
         const availablePlayers = getUKOpenCandidates(candidates);
         if (availablePlayers.filter(candidate => candidate.hasTourCard === true).length < UK_OPEN_CARD_HOLDER_PLACES
             && typeof fillPdcTourCardVacancies === 'function') {
             fillPdcTourCardVacancies(availablePlayers, referenceDate, 'vacancy');
         }
-        tournament.ukOpenQualification = buildUKOpenQualificationState(candidates, referenceDate);
+        const eligibleCandidates = getUKOpenCandidates(candidates)
+            .filter(candidate => !withdrawnKeys.has(getUKOpenPlayerKey(candidate)));
+        tournament.ukOpenQualification = {
+            ...buildUKOpenQualificationState(eligibleCandidates, referenceDate),
+            withdrawnPlayerIds: [...withdrawnKeys]
+        };
     }
     return tournament.ukOpenQualification;
 }
 
 function previewUKOpenQualificationState(tournament, candidates, referenceDate = (typeof currentDate !== 'undefined' ? currentDate : null)) {
+    const year = (referenceDate instanceof Date ? referenceDate : new Date(referenceDate || Date.now())).getFullYear();
+    const withdrawnKeys = tournament?.ukOpenQualification?.year === year
+        ? tournament.ukOpenQualification.withdrawnPlayerIds || [] : [];
     return isValidUKOpenQualificationState(tournament?.ukOpenQualification, referenceDate)
         ? tournament.ukOpenQualification
-        : buildUKOpenQualificationState(candidates, referenceDate);
+        : buildUKOpenQualificationState(getUKOpenCandidates(candidates)
+            .filter(candidate => !withdrawnKeys.includes(getUKOpenPlayerKey(candidate))), referenceDate);
 }
 
 function resolveUKOpenPlayerIds(ids, candidates) {
@@ -224,6 +258,15 @@ function removeUKOpenParticipant(tournament, candidate, candidates) {
             removed = true;
         }
     });
+    if (removed) {
+        const withdrawnKeys = new Set([...(state.withdrawnPlayerIds || []), key]);
+        const eligibleCandidates = getUKOpenCandidates(candidates)
+            .filter(entrant => !withdrawnKeys.has(getUKOpenPlayerKey(entrant)));
+        tournament.ukOpenQualification = {
+            ...buildUKOpenQualificationState(eligibleCandidates),
+            withdrawnPlayerIds: [...withdrawnKeys]
+        };
+    }
     return removed;
 }
 

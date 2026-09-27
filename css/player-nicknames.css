@@ -1,0 +1,8 @@
+.nickname-settings-form { margin-top: 16px; padding-top: 14px; border-top: 1px solid var(--border-color, #354253); }
+.nickname-settings-form label { display: block; margin-bottom: 7px; font-weight: 700; }
+.nickname-settings-controls { display: flex; flex-wrap: wrap; gap: 8px; }
+.nickname-settings-controls input { flex: 1 1 150px; min-width: 0; width: 100%; padding: 10px; border: 1px solid #566674; border-radius: 5px; background: #101a23; color: #fff; font: inherit; }
+.nickname-settings-controls button { padding: 10px 12px; border: 1px solid #2d9b69; border-radius: 5px; background: #23714e; color: #fff; cursor: pointer; font: inherit; font-weight: 700; }
+.nickname-settings-form small { display: block; margin-top: 8px; }
+#nickname-settings-status { min-height: 1.2em; color: #89ddae; font-size: 12px; }
+.player-profile-identity .profile-nickname { margin: 6px 0 0; color: var(--accent-green, #2ecc71); font-size: 18px; font-weight: 700; font-style: italic; overflow-wrap: anywhere; }

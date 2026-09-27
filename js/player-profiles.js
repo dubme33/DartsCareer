@@ -691,6 +691,8 @@ function openPlayerProfile(playerId, rankingType = 'main') {
     const results = [...stats.results].sort((first, second) => second.timestamp - first.timestamp);
     const highlights = getSeasonHighlights(results);
     const age = getPlayerAge(selectedPlayer);
+    const nickname = typeof getPlayerNickname === 'function'
+        ? getPlayerNickname(selectedPlayer) : (selectedPlayer.nickname ?? selectedPlayer.nickName ?? '');
     const overall = Math.round(Number(selectedPlayer.ovr ?? selectedPlayer.overall) || 0);
     const tourCardExpirySeason = Number(selectedPlayer.tourCardExpiryYear) - 1;
     const tourCardMarkup = selectedPlayer.hasTourCard === true
@@ -723,6 +725,7 @@ function openPlayerProfile(playerId, rankingType = 'main') {
         <div class="player-profile-identity">
             <p class="profile-eyebrow">${trPlayerProfile('profile')}</p>
             <h2>${getFlagImg(selectedPlayer.country)} ${escapeHtml(selectedPlayer.name)}</h2>
+            ${nickname ? `<p class="profile-nickname">${escapeHtml(nickname)}</p>` : ''}
             <p class="profile-subtitle">${trPlayerProfile('age')}: <strong>${age === null ? '—' : trPlayerProfile('years', { age })}</strong> · Overall: <strong>${overall}</strong></p>
             ${tourCardMarkup}
         </div>

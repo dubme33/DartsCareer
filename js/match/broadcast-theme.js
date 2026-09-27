@@ -8,6 +8,12 @@
         'world-championship': 'world-championship',
         premier: 'premier-league', league: 'premier-league', 'premier-league': 'premier-league',
         matchplay: 'world-matchplay', 'world-matchplay': 'world-matchplay',
+        'world-cup': 'world-cup', 'uk-open': 'uk-open', 'european-tour': 'european-tour',
+        'european-championship': 'european-championship', 'players-championship': 'players-championship',
+        'players-championship-finals': 'players-championship-finals', 'world-series': 'world-series',
+        'world-grand-prix': 'world-grand-prix', 'grand-slam': 'grand-slam',
+        'crown-masters': 'crown-masters', 'challenge-tour': 'challenge-tour',
+        'development-tour': 'development-tour', 'q-school': 'q-school',
         custom: 'custom'
     });
     const paletteProperties = Object.freeze({
@@ -23,7 +29,7 @@
     }
 
     function tournamentText(tournament) {
-        return [tournament?.name, tournament?.sourceName, tournament?.specialType]
+        return [tournament?.name, tournament?.sourceName, tournament?.qualifierFor, tournament?.specialType]
             .filter(Boolean).join(' ').toLocaleLowerCase('en');
     }
 
@@ -35,6 +41,20 @@
         if (/(world|global)\s+darts\s+championship/.test(name)) return 'world-championship';
         if (/premier\s+league|global\s+darts\s+league/.test(name)) return 'premier-league';
         if (/matchplay/.test(name)) return 'world-matchplay';
+        if (/world\s+cup|puchar\s+narod[oó]w|worldcup/.test(name)) return 'world-cup';
+        if (/uk\s+open|british\s+open|ukopen/.test(name)) return 'uk-open';
+        if (/european\s+championship|continental\s+championship/.test(name)) return 'european-championship';
+        if (/players\s+championship\s+finals|pro\s+players\s+finals/.test(name)) return 'players-championship-finals';
+        if (/grand\s+prix/.test(name)) return 'world-grand-prix';
+        if (/grand\s+slam|champion['’]?s\s+slam/.test(name)) return 'grand-slam';
+        if (/crown\s+masters|classicmasters/.test(name)) return 'crown-masters';
+        if (/worldmasters|global\s+masters\s+finals|world\s+series|(?:desert|arabian|northern|atlantic|aotearoa|southern)\s+masters/.test(name)
+            || tournament?.worldMastersEvent) return 'world-series';
+        if (/european\s+tour|continental\s+tour|continentalqualifier/.test(name)) return 'european-tour';
+        if (/players\s+championship|pro\s+players\s+cup/.test(name)) return 'players-championship';
+        if (/challenge\s+tour|rising\s+stars\s+circuit/.test(name)) return 'challenge-tour';
+        if (/development\s+tour|future\s+champions\s+circuit/.test(name)) return 'development-tour';
+        if (/q[ -]?school|pro\s+card\s+trials/.test(name)) return 'q-school';
         if (tournament?.isCustomTournament || tournament?.customTournament
             || String(tournament?.specialType || '').toLocaleLowerCase('en') === 'customtournament') return 'custom';
         return 'default';

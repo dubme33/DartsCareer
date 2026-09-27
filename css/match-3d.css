@@ -42,15 +42,15 @@
     --broadcast-counter: #343a3d;
     --broadcast-score-bg: #111b1b;
     --broadcast-player-text: #171d23;
-    --broadcast-header-bg: linear-gradient(105deg, #4a4d51, #202a34 80%, #8360c1);
+    --broadcast-header-bg: linear-gradient(105deg, var(--broadcast-deep), var(--broadcast-mid) 72%, var(--broadcast-accent));
     --broadcast-player-bg: linear-gradient(#fafafa, #d7dcdf);
-    --broadcast-checkout-bg: linear-gradient(90deg, #172221c9, #172221f2);
-    --broadcast-card-bg: linear-gradient(110deg, #0a121bea, #172a3bf0);
+    --broadcast-checkout-bg: linear-gradient(90deg, var(--broadcast-deep), var(--broadcast-mid));
+    --broadcast-card-bg: linear-gradient(110deg, var(--broadcast-deep), var(--broadcast-mid));
     --broadcast-stage-bg: #07111a;
     --broadcast-stage-glow: #203541;
-    --broadcast-replay-shade: #0009;
-    --broadcast-stinger-dot: #274865;
-    --broadcast-stinger-bg: linear-gradient(135deg, #06111d 0 36%, #102b43 36% 61%, #08131f 61% 100%);
+    --broadcast-replay-shade: color-mix(in srgb, var(--broadcast-deep) 82%, transparent);
+    --broadcast-stinger-dot: var(--broadcast-mid);
+    --broadcast-stinger-bg: linear-gradient(135deg, var(--broadcast-deep) 0 36%, var(--broadcast-mid) 36% 61%, var(--broadcast-stage-bg) 61% 100%);
     max-width: 1600px;
 }
 #screen-match[data-broadcast-theme="world-championship"] {
@@ -116,6 +116,123 @@
     --broadcast-stinger-dot: #26716b;
     --broadcast-stinger-bg: linear-gradient(135deg, #07181c 0 36%, #14504d 36% 61%, #512008 61% 100%);
 }
+#screen-match[data-broadcast-theme="world-cup"] {
+    --broadcast-accent: #e23b3b; --broadcast-accent-text: #fff;
+    --broadcast-secondary: #55a8ff; --broadcast-secondary-text: #09172a;
+    --broadcast-active: #f6d365; --broadcast-active-text: #291c08;
+    --broadcast-score-idle: #f6d365;
+    --broadcast-deep: #101a33; --broadcast-mid: #1b3159;
+    --broadcast-counter: #2b4566; --broadcast-score-bg: #101d34;
+    --broadcast-stage-bg: #0b1428; --broadcast-stage-glow: #294577;
+}
+#screen-match[data-broadcast-theme="uk-open"] {
+    --broadcast-accent: #e54b54; --broadcast-accent-text: #fff;
+    --broadcast-secondary: #f2cc66; --broadcast-secondary-text: #221b12;
+    --broadcast-active: #e54b54; --broadcast-active-text: #fff;
+    --broadcast-score-idle: #f8d77b;
+    --broadcast-deep: #271116; --broadcast-mid: #4b1e28;
+    --broadcast-counter: #612d35; --broadcast-score-bg: #271519;
+    --broadcast-stage-bg: #1a0c12; --broadcast-stage-glow: #6d3138;
+}
+#screen-match[data-broadcast-theme="european-championship"] {
+    --broadcast-accent: #44c399; --broadcast-accent-text: #08231b;
+    --broadcast-secondary: #f0d570; --broadcast-secondary-text: #27200b;
+    --broadcast-active: #44c399; --broadcast-active-text: #08231b;
+    --broadcast-score-idle: #beeecb;
+    --broadcast-deep: #0b2727; --broadcast-mid: #1b4d4c;
+    --broadcast-counter: #2c6461; --broadcast-score-bg: #0e2e2c;
+    --broadcast-stage-bg: #081c1c; --broadcast-stage-glow: #27635a;
+}
+#screen-match[data-broadcast-theme="players-championship-finals"] {
+    --broadcast-accent: #50c8ef; --broadcast-accent-text: #092031;
+    --broadcast-secondary: #e9f0f5; --broadcast-secondary-text: #152436;
+    --broadcast-active: #50c8ef; --broadcast-active-text: #092031;
+    --broadcast-score-idle: #c4f3ff;
+    --broadcast-deep: #0b1a33; --broadcast-mid: #183963;
+    --broadcast-counter: #275276; --broadcast-score-bg: #102743;
+    --broadcast-stage-bg: #081425; --broadcast-stage-glow: #23547a;
+}
+#screen-match[data-broadcast-theme="world-grand-prix"] {
+    --broadcast-accent: #af69f5; --broadcast-accent-text: #fff;
+    --broadcast-secondary: #6dec99; --broadcast-secondary-text: #09241b;
+    --broadcast-active: #af69f5; --broadcast-active-text: #fff;
+    --broadcast-score-idle: #d8befa;
+    --broadcast-deep: #21142f; --broadcast-mid: #49305d;
+    --broadcast-counter: #624275; --broadcast-score-bg: #2b1b3b;
+    --broadcast-stage-bg: #180f25; --broadcast-stage-glow: #5d3671;
+}
+#screen-match[data-broadcast-theme="grand-slam"] {
+    --broadcast-accent: #efad35; --broadcast-accent-text: #2d1b09;
+    --broadcast-secondary: #df4848; --broadcast-secondary-text: #fff;
+    --broadcast-active: #efad35; --broadcast-active-text: #2d1b09;
+    --broadcast-score-idle: #f8d485;
+    --broadcast-deep: #1e1516; --broadcast-mid: #53302a;
+    --broadcast-counter: #6c3e31; --broadcast-score-bg: #2b1b19;
+    --broadcast-stage-bg: #140d0e; --broadcast-stage-glow: #60372d;
+}
+#screen-match[data-broadcast-theme="crown-masters"] {
+    --broadcast-accent: #d9b361; --broadcast-accent-text: #292032;
+    --broadcast-secondary: #ece5d8; --broadcast-secondary-text: #2a2432;
+    --broadcast-active: #d9b361; --broadcast-active-text: #292032;
+    --broadcast-score-idle: #f8e2a3;
+    --broadcast-deep: #252430; --broadcast-mid: #4c3c62;
+    --broadcast-counter: #625577; --broadcast-score-bg: #302a3c;
+    --broadcast-stage-bg: #1a1924; --broadcast-stage-glow: #524269;
+}
+#screen-match[data-broadcast-theme="world-series"] {
+    --broadcast-accent: #f25f4c; --broadcast-accent-text: #fff;
+    --broadcast-secondary: #37c4bd; --broadcast-secondary-text: #092323;
+    --broadcast-active: #37c4bd; --broadcast-active-text: #092323;
+    --broadcast-score-idle: #8aede3;
+    --broadcast-deep: #152033; --broadcast-mid: #2a405d;
+    --broadcast-counter: #3a5870; --broadcast-score-bg: #1b2b42;
+    --broadcast-stage-bg: #0d1828; --broadcast-stage-glow: #31546a;
+}
+#screen-match[data-broadcast-theme="european-tour"] {
+    --broadcast-accent: #e43d5b; --broadcast-accent-text: #fff;
+    --broadcast-secondary: #f5db4a; --broadcast-secondary-text: #252109;
+    --broadcast-active: #e43d5b; --broadcast-active-text: #fff;
+    --broadcast-score-idle: #ffe07b;
+    --broadcast-deep: #141e46; --broadcast-mid: #263b78;
+    --broadcast-counter: #374f91; --broadcast-score-bg: #1a2857;
+    --broadcast-stage-bg: #0d1535; --broadcast-stage-glow: #354d8d;
+}
+#screen-match[data-broadcast-theme="players-championship"] {
+    --broadcast-accent: #6fd47a; --broadcast-accent-text: #0a2613;
+    --broadcast-secondary: #d8e56c; --broadcast-secondary-text: #23280c;
+    --broadcast-active: #6fd47a; --broadcast-active-text: #0a2613;
+    --broadcast-score-idle: #bbf4bf;
+    --broadcast-deep: #101f20; --broadcast-mid: #234542;
+    --broadcast-counter: #345f56; --broadcast-score-bg: #182e2c;
+    --broadcast-stage-bg: #0a1818; --broadcast-stage-glow: #2d6052;
+}
+#screen-match[data-broadcast-theme="challenge-tour"] {
+    --broadcast-accent: #eb9851; --broadcast-accent-text: #291608;
+    --broadcast-secondary: #8ad2ca; --broadcast-secondary-text: #102925;
+    --broadcast-active: #eb9851; --broadcast-active-text: #291608;
+    --broadcast-score-idle: #ffd0a0;
+    --broadcast-deep: #27201c; --broadcast-mid: #514036;
+    --broadcast-counter: #6b5547; --broadcast-score-bg: #332720;
+    --broadcast-stage-bg: #1c1714; --broadcast-stage-glow: #674b35;
+}
+#screen-match[data-broadcast-theme="development-tour"] {
+    --broadcast-accent: #58cce8; --broadcast-accent-text: #0a2732;
+    --broadcast-secondary: #c589ee; --broadcast-secondary-text: #25132d;
+    --broadcast-active: #58cce8; --broadcast-active-text: #0a2732;
+    --broadcast-score-idle: #aceaf7;
+    --broadcast-deep: #142038; --broadcast-mid: #31385f;
+    --broadcast-counter: #455077; --broadcast-score-bg: #1d2a43;
+    --broadcast-stage-bg: #0e172b; --broadcast-stage-glow: #3c527b;
+}
+#screen-match[data-broadcast-theme="q-school"] {
+    --broadcast-accent: #f17c3d; --broadcast-accent-text: #2b160a;
+    --broadcast-secondary: #b5c4d3; --broadcast-secondary-text: #16222c;
+    --broadcast-active: #f17c3d; --broadcast-active-text: #2b160a;
+    --broadcast-score-idle: #ffd1a7;
+    --broadcast-deep: #1d2630; --broadcast-mid: #354958;
+    --broadcast-counter: #496174; --broadcast-score-bg: #263746;
+    --broadcast-stage-bg: #141e28; --broadcast-stage-glow: #3d586d;
+}
 #screen-match[data-broadcast-theme="custom"] {
     --broadcast-accent: #8b5cf6;
     --broadcast-accent-text: #fff;
@@ -147,6 +264,38 @@
     margin: auto;
     min-width: 0;
 }
+.match-board-view[data-view="3d"] .dartboard-surround { display: none; }
+#screen-match .match-board-view[data-view="2d"] .dartboard-surround {
+    display: grid;
+    place-items: center;
+    position: relative;
+    width: min(100%, 520px, calc(100svh - 170px));
+    aspect-ratio: 1;
+    box-sizing: border-box;
+    margin: auto;
+    border: 2px solid #222b2d;
+    border-radius: 50%;
+    background: radial-gradient(circle, #101719 0 63%, #202627 63.5%, #111719 68%, #161c1e 93%, #080d0f 100%);
+    box-shadow: 0 5px 18px #0008, inset 0 0 20px #0009;
+}
+#screen-match .match-board-view[data-view="2d"] .dartboard-surround::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 50%;
+    background: repeating-conic-gradient(from 12deg, transparent 0 14deg, #343b3d 14deg 28deg, transparent 28deg 45deg);
+    mask-image: radial-gradient(circle closest-side, transparent 0 76%, #000 78% 90%, transparent 92%);
+    pointer-events: none;
+}
+#screen-match .match-board-view[data-view="2d"] #dartboard {
+    position: relative;
+    width: 62%;
+    max-width: none;
+    height: auto;
+    margin: 0;
+    border-radius: 50%;
+    box-shadow: 0 0 0 3px #080b0c, 0 3px 13px #000a;
+}
 .match-board-view[data-view="3d"] {
     padding-bottom: 120px;
     overflow: hidden;
@@ -159,6 +308,7 @@
 #screen-match .match-board #dartboard-3d {
     width: 100%;
     aspect-ratio: 6 / 5;
+    max-height: calc(100svh - 170px);
     margin: auto;
     overflow: hidden;
     border: 0;
@@ -191,6 +341,7 @@
     text-align: left;
     font-family: Arial, sans-serif;
     font-variant-numeric: tabular-nums;
+    border-top: 2px solid var(--broadcast-accent);
     box-shadow: 0 4px 14px #0008;
     pointer-events: none;
 }
@@ -292,10 +443,15 @@
     #screen-match .match-layout { grid-template-columns: minmax(0, 1fr); }
     #screen-match .match-board { grid-template-columns: minmax(0, 1fr) 300px; }
 }
+@media (max-height: 720px) and (min-width: 601px) {
+    /* A tall sticky score card would cover the board throughout a short viewport. */
+    #screen-match:not(.match-tv-mode) .score-board { position: relative; top: auto; }
+}
 @media (max-width: 600px) {
     #screen-match .match-board { grid-template-columns: minmax(0, 1fr); }
     #screen-match .match-board #dartboard-3d { width: 100%; height: clamp(150px, calc(100svh - 370px), 330px); aspect-ratio: auto; }
     .match-board-view[data-view="3d"] { padding-bottom: 112px; }
+    #screen-match .match-board-view[data-view="2d"] .dartboard-surround { width: min(100%, calc(100svh - 300px)); }
     .broadcast-scoreboard { right: 8px; bottom: 8px; width: min(310px, calc(100% - 16px - var(--checkout-space, 0px))); }
     .broadcast-header { font-size: 11px; min-height: 22px; }
     .broadcast-header > span { padding-top: 4px; padding-bottom: 4px; }

@@ -99,7 +99,17 @@ const checkoutGuide = {
         }
 
         function getTournamentMatchFormat(tournament, round) {
-            const name = tournament ? tournament.name : "";
+            if (tournament?.editorMatchFormat?.type === 'legs') {
+                return { type: 'legs', legsToWin: tournament.editorMatchFormat.legsToWin };
+            }
+            if (tournament?.editorMatchFormat?.type === 'sets') {
+                return { type: 'sets', setsToWin: tournament.editorMatchFormat.setsToWin,
+                    legsPerSet: tournament.editorMatchFormat.legsPerSet };
+            }
+            if (typeof hasTournamentEditorQualification === 'function' && hasTournamentEditorQualification(tournament)) {
+                return { type: 'legs', legsToWin: 6 };
+            }
+            const name = tournament ? (tournament.sourceName || tournament.name) : "";
 
             if (typeof isCrownMastersTournament === 'function'
                 && (isCrownMastersTournament(tournament) || isCrownMastersQualifierTournament(tournament))) {
@@ -112,7 +122,7 @@ const checkoutGuide = {
                 return { type: 'legs', legsToWin: 5 };
             }
             if (typeof isPdcQSchoolTournament === 'function' && isPdcQSchoolTournament(tournament)) {
-                return { type: 'legs', legsToWin: 11 };
+                return { type: 'legs', legsToWin: 6 };
             }
             if (typeof isPdcTourCardQualifierTournament === 'function' && isPdcTourCardQualifierTournament(tournament)) {
                 return { type: 'legs', legsToWin: 6 };

@@ -1,5 +1,7 @@
 .world-news-tile { font: inherit; }
 .world-news-tile h3 { margin-bottom: 10px; }
+.world-news-settings-tile select { width: 100%; min-width: 0; padding: 10px; border: 1px solid #526180; border-radius: 5px; background: #17233d; color: #fff; font: inherit; }
+.world-news-settings-tile small { display: block; margin-top: 10px; color: #c5d5eb; line-height: 1.5; font-size: 12px; }
 #screen-world-news { text-align: left; }
 #world-news-scope { color: #bdc3c7; line-height: 1.6; margin: 0 0 12px; }
 #world-news-summary { color: #abbad1; font-size: 12px; line-height: 1.6; }

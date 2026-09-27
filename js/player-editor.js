@@ -19,7 +19,7 @@ const PLAYER_EDITOR_TRANSLATIONS = {
         baseOrigin: 'Baza gry', modOrigin: 'Wpis moda', customOrigin: 'Dodany w edytorze', careerOrigin: 'Twoja postać',
         photo: 'Zdjęcie zawodnika', noPhoto: 'BRAK ZDJĘCIA', photoHint: 'PNG, JPG lub WebP, maksymalnie 2 MB.',
         uploadPhoto: 'Wybierz zdjęcie', removePhoto: 'Usuń zdjęcie', photoAlt: 'Zdjęcie zawodnika',
-        personal: 'Dane zawodnika', firstName: 'Imię', lastName: 'Nazwisko', country: 'Kraj', birthYear: 'Rok urodzenia',
+        personal: 'Dane zawodnika', firstName: 'Imię', lastName: 'Nazwisko', nickname: 'Pseudonim (opcjonalnie)', country: 'Kraj', birthYear: 'Rok urodzenia',
         gender: 'Płeć', male: 'Mężczyzna', female: 'Kobieta', favoriteDouble: 'Pierwszy double (+5 p.p.)',
         secondFavoriteDouble: 'Drugi double (+3 p.p.)', thirdFavoriteDouble: 'Trzeci double (+1 p.p.)',
         invalidFavoriteDoubles: 'Ulubione double muszą być różnymi polami od D1 do D20.',
@@ -64,7 +64,7 @@ const PLAYER_EDITOR_TRANSLATIONS = {
         editKicker: 'EDIT ENTRY', addKicker: 'NEW ENTRY', choose: 'Select a player', create: 'New player',
         baseOrigin: 'Game database', modOrigin: 'Mod entry', customOrigin: 'Added in editor', careerOrigin: 'Your player', photo: 'Player photo', noPhoto: 'NO PHOTO',
         photoHint: 'PNG, JPG or WebP, up to 2 MB.', uploadPhoto: 'Choose photo', removePhoto: 'Remove photo', photoAlt: 'Player photo',
-        personal: 'Player details', firstName: 'First name', lastName: 'Last name', country: 'Country', birthYear: 'Year of birth',
+        personal: 'Player details', firstName: 'First name', lastName: 'Last name', nickname: 'Nickname (optional)', country: 'Country', birthYear: 'Year of birth',
         gender: 'Gender', male: 'Male', female: 'Female', favoriteDouble: 'First double (+5 p.p.)', ratings: 'Match ratings',
         secondFavoriteDouble: 'Second double (+3 p.p.)', thirdFavoriteDouble: 'Third double (+1 p.p.)',
         invalidFavoriteDoubles: 'Favourite doubles must be different fields from D1 to D20.',
@@ -108,7 +108,7 @@ const PLAYER_EDITOR_TRANSLATIONS = {
         editKicker: 'EINTRAG BEARBEITEN', addKicker: 'NEUER EINTRAG', choose: 'Spieler auswählen', create: 'Neuer Spieler',
         baseOrigin: 'Spieldatenbank', modOrigin: 'Mod-Eintrag', customOrigin: 'Im Editor erstellt', careerOrigin: 'Dein Spieler', photo: 'Spielerfoto', noPhoto: 'KEIN FOTO',
         photoHint: 'PNG, JPG oder WebP, maximal 2 MB.', uploadPhoto: 'Foto wählen', removePhoto: 'Foto entfernen', photoAlt: 'Spielerfoto',
-        personal: 'Spielerdaten', firstName: 'Vorname', lastName: 'Nachname', country: 'Land', birthYear: 'Geburtsjahr',
+        personal: 'Spielerdaten', firstName: 'Vorname', lastName: 'Nachname', nickname: 'Spitzname (optional)', country: 'Land', birthYear: 'Geburtsjahr',
         gender: 'Geschlecht', male: 'Männlich', female: 'Weiblich', favoriteDouble: 'Erstes Doppel (+5 Prozentpunkte)', ratings: 'Matchwerte',
         secondFavoriteDouble: 'Zweites Doppel (+3 Prozentpunkte)', thirdFavoriteDouble: 'Drittes Doppel (+1 Prozentpunkt)',
         invalidFavoriteDoubles: 'Lieblingsdoppel müssen verschiedene Felder von D1 bis D20 sein.',
@@ -152,7 +152,7 @@ const PLAYER_EDITOR_TRANSLATIONS = {
         editKicker: 'ITEM BEWERKEN', addKicker: 'NIEUW ITEM', choose: 'Kies een speler', create: 'Nieuwe speler',
         baseOrigin: 'Speldatabase', modOrigin: 'Mod-item', customOrigin: 'Toegevoegd in editor', careerOrigin: 'Jouw speler', photo: 'Spelersfoto', noPhoto: 'GEEN FOTO',
         photoHint: 'PNG, JPG of WebP, maximaal 2 MB.', uploadPhoto: 'Kies foto', removePhoto: 'Foto verwijderen', photoAlt: 'Spelersfoto',
-        personal: 'Spelersgegevens', firstName: 'Voornaam', lastName: 'Achternaam', country: 'Land', birthYear: 'Geboortejaar',
+        personal: 'Spelersgegevens', firstName: 'Voornaam', lastName: 'Achternaam', nickname: 'Bijnaam (optioneel)', country: 'Land', birthYear: 'Geboortejaar',
         gender: 'Geslacht', male: 'Man', female: 'Vrouw', favoriteDouble: 'Eerste dubbel (+5 procentpunten)', ratings: 'Wedstrijdratings',
         secondFavoriteDouble: 'Tweede dubbel (+3 procentpunten)', thirdFavoriteDouble: 'Derde dubbel (+1 procentpunt)',
         invalidFavoriteDoubles: 'Favoriete dubbels moeten verschillende vakken van D1 tot D20 zijn.',
@@ -565,6 +565,8 @@ function populatePlayerEditorForm(candidate = null) {
 
     setValue('player-editor-first-name', parts.firstName);
     setValue('player-editor-last-name', parts.lastName);
+    setValue('player-editor-nickname', typeof getPlayerNickname === 'function'
+        ? getPlayerNickname(candidate) : (candidate?.nickname ?? candidate?.nickName ?? ''));
     renderPlayerEditorCountryOptions(candidate?.country || 'Polska');
     setValue('player-editor-birth-year', Number.isInteger(candidate?.birthYear) ? candidate.birthYear : year - 24);
     const birthInput = document.getElementById('player-editor-birth-year');
@@ -724,6 +726,8 @@ function createPlayerEditorPlayer(data) {
     return {
         id,
         name: data.name,
+        nickname: data.nickname || '',
+        playerEditorNicknameOverride: true,
         sourceName: data.name,
         country: data.country,
         gender: data.gender,
@@ -796,6 +800,9 @@ function collectPlayerEditorForm(candidate) {
 
     const values = {
         name: `${firstName} ${lastName}`,
+        nickname: typeof normalizePlayerNickname === 'function'
+            ? normalizePlayerNickname(document.getElementById('player-editor-nickname')?.value ?? getPlayerNickname(candidate))
+            : String(document.getElementById('player-editor-nickname')?.value ?? candidate?.nickname ?? '').trim().slice(0, 48),
         country,
         birthYear,
         gender: document.getElementById('player-editor-gender')?.value === 'female' ? 'female' : 'male',
@@ -864,6 +871,8 @@ function savePlayerEditor(event) {
     if (existing && !candidate.sourceName) candidate.sourceName = candidate.name;
     Object.assign(candidate, {
         name: values.name,
+        nickname: values.nickname,
+        playerEditorNicknameOverride: true,
         country: values.country,
         birthYear: values.birthYear,
         gender: values.gender,
@@ -1125,6 +1134,7 @@ function refreshPlayerEditorTranslations() {
         'player-editor-walkon-upload-label': 'uploadWalkon', 'player-editor-walkon-remove': 'removeWalkon',
         'player-editor-personal-title': 'personal', 'player-editor-first-name-label': 'firstName',
         'player-editor-last-name-label': 'lastName', 'player-editor-country-label': 'country',
+        'player-editor-nickname-label': 'nickname',
         'player-editor-birth-year-label': 'birthYear', 'player-editor-gender-label': 'gender',
         'player-editor-favorite-double-label': 'favoriteDouble',
         'player-editor-favorite-double-second-label': 'secondFavoriteDouble',

@@ -238,9 +238,9 @@ function startSpectatingTournamentMatch(bracketIndex) {
         p2PeakPerformance: typeof rollAiPeakMatchPerformance === 'function' ? rollAiPeakMatchPerformance(p2) : null,
         stats: {
             p1TotalDarts: 0, p1AccumulatedScore: 0, p1First9Score: 0, p1First9Darts: 0, p1LegDarts: 0,
-            p1HighCheckout: 0, p1DoubleAttempts: 0, p1DoubleHits: 0, p1OneEighties: 0,
+            p1HighCheckout: 0, p1DoubleAttempts: 0, p1DoubleHits: 0, p1OneEighties: 0, p1HundredPlus: 0, p1OneFortyPlus: 0,
             p2TotalDarts: 0, p2AccumulatedScore: 0, p2First9Score: 0, p2First9Darts: 0, p2LegDarts: 0,
-            p2HighCheckout: 0, p2DoubleAttempts: 0, p2DoubleHits: 0, p2OneEighties: 0
+            p2HighCheckout: 0, p2DoubleAttempts: 0, p2DoubleHits: 0, p2OneEighties: 0, p2HundredPlus: 0, p2OneFortyPlus: 0
         }
     };
 
@@ -320,5 +320,26 @@ function finishSpectatedTournamentMatch() {
     showScreen('screen-hub');
     showBracket();
     if (typeof saveGame === 'function') saveGame(true);
+    return true;
+}
+
+function exitSpectatingTournamentMatch() {
+    if (!currentMatch?.isSpectator) return false;
+    const watchedMatch = currentMatch;
+    // Unieważnij mecz przed czyszczeniem animacji: spóźnione callbacki rzutu
+    // sprawdzają tożsamość meczu i nie mogą wznowić przerwanego oglądania.
+    currentMatch = null;
+    clearTimeout(spectatorPendingPlayback?.match === watchedMatch ? spectatorPendingPlayback.timerId : null);
+    clearTimeout(window.aiTimeout);
+    window.aiTimeout = null;
+    spectatorPendingPlayback = null;
+    if (typeof cancelMatchIntro === 'function') cancelMatchIntro();
+    window.matchBoard3D?.clear?.();
+    currentTurnScore = 0;
+    drawnDarts = [];
+    setSpectatorMatchControls(false);
+    if (window.matchTVMode?.getState?.().active) void window.matchTVMode.exit();
+    showScreen('screen-hub');
+    showBracket();
     return true;
 }

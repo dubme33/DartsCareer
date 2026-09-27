@@ -229,16 +229,23 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
                 (Number(second[property]) || 0) - (Number(first[property]) || 0)
                 || (Number(second.prizeMoney) || 0) - (Number(first.prizeMoney) || 0)
                 || (Number(second.ovr ?? second.overall) || 0) - (Number(first.ovr ?? first.overall) || 0));
+            const secondaryWithdrawals = new Set(tournament.secondaryTourWithdrawals || []);
+            const isSecondaryTourAttending = candidate => !secondaryWithdrawals.has(candidate.id)
+                && !secondaryWithdrawals.has(candidate.name)
+                && !secondaryWithdrawals.has(`${String(candidate.name || '').trim()}|${String(candidate.country || '').trim()}`);
 
             if (tournament.specialType === 'pdcQSchool') {
                 return rankBy('prizeMoney').filter(candidate => candidate.hasTourCard !== true);
             }
-            if (tournament.specialType === 'challengeTour') {
-                return rankBy('challengeTourPrizeMoney').filter(candidate => candidate.hasTourCard !== true);
+            if (tournament.specialType === 'challengeTour'
+                || (typeof isChallengeTourTournament === 'function' && isChallengeTourTournament(tournament))) {
+                return rankBy('challengeTourPrizeMoney').filter(candidate => candidate.hasTourCard !== true
+                    && isSecondaryTourAttending(candidate));
             }
-            if (tournament.specialType === 'developmentTour') {
+            if (tournament.specialType === 'developmentTour'
+                || (typeof isDevelopmentTourTournament === 'function' && isDevelopmentTourTournament(tournament))) {
                 return typeof getDevelopmentTourEligiblePlayers === 'function'
-                    ? getDevelopmentTourEligiblePlayers(candidates, currentDate)
+                    ? getDevelopmentTourEligiblePlayers(candidates, currentDate).filter(isSecondaryTourAttending)
                     : [];
             }
             if (tournament.specialType === 'classicMastersQualifier') {
@@ -385,8 +392,15 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
             return Number.isFinite(rating) ? rating : null;
         }
 
+        function getDefaultTemplateSlotPlayer(templateIndex) {
+            // Roster positions shift when a career player, retiree or duplicate
+            // is removed. The persisted template index identifies the slot.
+            return pdcPlayers.find(candidate => candidate?.defaultTemplateIndex === templateIndex)
+                || pdcPlayers[templateIndex];
+        }
+
         function isModReplacementForDefaultPlayer(template, templateIndex) {
-            const candidate = pdcPlayers[templateIndex];
+            const candidate = getDefaultTemplateSlotPlayer(templateIndex);
             if (!candidate || candidate.isNewgen || candidate.isBye) return false;
 
             const hasSameName = candidate.name === template.name && candidate.country === template.country;
@@ -394,7 +408,10 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
 
             // Nowe mody oznaczają pozycję zawodnika w bazie. Dla starszych zapisów
             // stosujemy bezpieczną migrację: ten sam slot, kraj i zbliżony OVR.
-            if (candidate.defaultTemplateIndex === templateIndex) return true;
+            if (Number.isInteger(candidate.defaultTemplateIndex)) return candidate.defaultTemplateIndex === templateIndex;
+            // A different default player at this array position is not a mod
+            // replacement. Keep their ID, ranking, card and tournament results.
+            if (defaultPdcPlayerTemplates.some(entry => entry.name === candidate.name && entry.country === candidate.country)) return false;
             if (candidate.country !== template.country) return false;
 
             const candidateRating = getDefaultMergeRating(candidate);
@@ -410,10 +427,11 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
             // domyślną wersję. Usuwamy wyłącznie takie później dopisane kopie.
             defaultPdcPlayerTemplates.forEach((template, templateIndex) => {
                 if (!isModReplacementForDefaultPlayer(template, templateIndex)) return;
+                const replacement = getDefaultTemplateSlotPlayer(templateIndex);
                 const defaultKey = `${template.name}|${template.country}`;
                 for (let playerIndex = pdcPlayers.length - 1; playerIndex >= 0; playerIndex--) {
-                    if (playerIndex === templateIndex) continue;
                     const candidate = pdcPlayers[playerIndex];
+                    if (candidate === replacement) continue;
                     if (`${candidate?.name}|${candidate?.country}` === defaultKey) {
                         pdcPlayers.splice(playerIndex, 1);
                     }
@@ -559,6 +577,8 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
         }
 
         function migrateWorldCupCalendar() {
+            const deletedKeys = new Set(Array.isArray(player?.tournamentEditorDeletedKeys)
+                ? player.tournamentEditorDeletedKeys : []);
             const existingWorldCup = tournamentDatabase.find(tournament => tournament.specialType === 'worldCup');
             const existingQualifier = tournamentDatabase.find(tournament => tournament.specialType === 'worldCupQualifiers');
             const nationsCupName = existingWorldCup?.name || (typeof WORLD_CUP_TOURNAMENT_NAME === 'string'
@@ -570,7 +590,8 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
             const legacyWorldCup = tournamentDatabase.find(tournament => tournament.name === 'World Cup of Darts');
             if (legacyWorldCup && !existingWorldCup) legacyWorldCup.name = nationsCupName;
 
-            if (!tournamentDatabase.some(tournament => tournament.specialType === 'worldCup' || tournament.name === nationsCupName)) {
+            if (!(typeof WORLD_CUP_TOURNAMENT_NAME === 'string' && deletedKeys.has(WORLD_CUP_TOURNAMENT_NAME)) && !deletedKeys.has(nationsCupName)
+                && !tournamentDatabase.some(tournament => tournament.specialType === 'worldCup' || tournament.name === nationsCupName)) {
                 tournamentDatabase.push({
                     name: nationsCupName, month: 5, day: 11, endDay: 14,
                     format: 'doubles', minOvr: 0, city: 'Frankfurt', country: 'Niemcy', specialType: 'worldCup',
@@ -579,6 +600,7 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
             }
 
             const qualifierEvent = existingQualifier || tournamentDatabase.find(tournament => tournament.name === qualifierName);
+            if (qualifierEvent?.editorModified === true) return;
             if (qualifierEvent) {
                 qualifierEvent.name = qualifierName;
                 qualifierEvent.month = 5;
@@ -589,7 +611,8 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
                 qualifierEvent.city = 'Frankfurt';
                 qualifierEvent.country = 'Niemcy';
                 qualifierEvent.specialType = 'worldCupQualifiers';
-            } else {
+            } else if (!(typeof WORLD_CUP_QUALIFIER_TOURNAMENT_NAME === 'string' && deletedKeys.has(WORLD_CUP_QUALIFIER_TOURNAMENT_NAME))
+                && !deletedKeys.has(qualifierName)) {
                 tournamentDatabase.push({
                     name: qualifierName, month: 5, day: 9, endDay: 10,
                     format: 'doubles', minOvr: 0, city: 'Frankfurt', country: 'Niemcy', specialType: 'worldCupQualifiers',
@@ -833,6 +856,7 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
                 currentDate = new Date(gameState.currentDate);
                 if (typeof initializeTournamentWatchSettings === 'function') initializeTournamentWatchSettings(player);
                 if (typeof initializeBounceOutSettings === 'function') initializeBounceOutSettings(player);
+                if (typeof initializePostMatchReportSetting === 'function') initializePostMatchReportSetting(player);
                 if (typeof normalizeSponsorGoals === 'function') normalizeSponsorGoals();
                 if (typeof resetSponsorOffers === 'function') resetSponsorOffers();
                 if (typeof migrateEuropeanTourOrderOfMeritFromHistory === 'function') {
@@ -1108,7 +1132,7 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
         }
 
     // --- SYSTEM SPONSORÓW ---
-        const MOD_PROTECTED_REGULAR_SPONSORS_DB = Object.freeze(["M1KEYbet"]);
+        const MOD_PROTECTED_REGULAR_SPONSORS_DB = Object.freeze(["M1KEYbet", "Veyronix Technologies"]);
         const DEFAULT_REGULAR_SPONSORS_DB = Object.freeze([
             "Dartify", "Bullseye Brews", "AeroFlights", "Precision Logistics", "Oche Energy",
             "DoubleTop Betting", "Trevs Tyres", "MaxScore Analytics", "DartKing Apparel", "Perfect9 Solutions",
@@ -1254,7 +1278,8 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
             const modLogo = typeof getModSponsorLogoAsset === 'function'
                 ? getModSponsorLogoAsset(moddedAssets, sponsorName)
                 : moddedAssets?.sponsors?.[sponsorName];
-            let imgSrc = modLogo || `sponsors/${sponsorName}.png`;
+            const localLogoName = sponsorName === 'Veyronix Technologies' ? 'Veyronix' : sponsorName;
+            let imgSrc = modLogo || `sponsors/${localLogoName}.png`;
                 
             const safeName = escapeHtml(sponsorName);
             return `<div class="sponsor-logo" style="overflow: hidden; padding: 2px;">
@@ -1431,6 +1456,8 @@ function getBoostedPlayerStats() {
         doubles: Math.min(100, Math.max(40, Math.round(player.doubles) + b.d + sPenalty)),
         favoriteDouble: player.favoriteDouble,
         favoriteDoubles: Array.isArray(player.favoriteDoubles) ? player.favoriteDoubles.slice(0, 3) : undefined,
+        doubleTraining: player.doubleTraining && typeof player.doubleTraining === 'object' && !Array.isArray(player.doubleTraining)
+            ? { ...player.doubleTraining } : undefined,
         bonusStr: b.o > 0 ? `(+${b.o} ${t('t-gear')})` : '',
         staminaPenalty: sPenalty
     };
@@ -1652,6 +1679,7 @@ async function updateProfileWalkon(event) {
         function initPlayerXP() {
             if (typeof player.scoringXP === 'undefined') player.scoringXP = 0;
             if (typeof player.doublesXP === 'undefined') player.doublesXP = 0;
+            if (typeof initializeDoubleTraining === 'function') initializeDoubleTraining(player);
         }
 
         function awardPlayerStatXP(type, amount) {
@@ -1717,18 +1745,22 @@ async function updateProfileWalkon(event) {
             });
 
             if (typeof renderPlayerTraitTraining === 'function') renderPlayerTraitTraining(sessionsRemaining);
+            if (typeof renderDoubleTraining === 'function') renderDoubleTraining(sessionsRemaining);
 
             showScreen('screen-training');
         }
 
-        function performTraining(type) {
+        function performTraining(type, sector = null) {
             if (typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy()) return false;
             if (typeof isPlayerInjured === 'function' && isPlayerInjured(player)) {
                 return typeof showPlayerInjuryBlocked === 'function' ? showPlayerInjuryBlocked() : false;
             }
             const isTrait = type === 'endurance' || type === 'consistency' || type === 'mental';
-            if (!['scoring', 'doubles', 'endurance', 'consistency', 'mental'].includes(type)
+            const isDoubleSector = type === 'double-sector';
+            if (!['scoring', 'doubles', 'endurance', 'consistency', 'mental', 'double-sector'].includes(type)
                 || (isTrait && typeof awardPlayerTraitXP !== 'function')) return false;
+            if (isDoubleSector && (typeof awardDoubleTraining !== 'function'
+                || !isDoubleTrainingSector(sector) || getDoubleTrainingValue(player, sector) >= 100)) return false;
             // Check calendar restrictions before spending energy, XP or a weekly session.
             const pending = typeof getPendingTournamentForCareerDate === 'function'
                 ? getPendingTournamentForCareerDate(currentDate, true) : null;
@@ -1755,7 +1787,7 @@ async function updateProfileWalkon(event) {
                     const unfinishedTournament = (typeof activeTournament !== 'undefined' && activeTournament && !activeTournament.completed)
                         || (typeof getPendingTournamentForCareerDate === 'function'
                             && getPendingTournamentForCareerDate(currentDate, true));
-                    return unfinishedTournament ? false : performTraining(type);
+                    return unfinishedTournament ? false : performTraining(type, sector);
                 };
                 if (simulation && typeof simulation.then === 'function') {
                     return simulation.then(completed => completed ? resumeTraining() : false);
@@ -1779,7 +1811,14 @@ async function updateProfileWalkon(event) {
             // Efektywność zależy od energii przed sesją, a nie po odjęciu jej kosztu.
             const energyMultiplier = getTrainingEnergyMultiplier();
             changePlayerStamina(player, -TRAINING_CONFIG.staminaCost);
-            if (isTrait) {
+            if (isDoubleSector) {
+                const gain = awardDoubleTraining(player, sector, getDoubleTrainingGain(sector) * energyMultiplier);
+                alert(trDoubleTraining('summary', {
+                    double: `D${sector}`, gain: formatDoubleTrainingNumber(gain),
+                    value: formatDoubleTrainingNumber(getDoubleTrainingValue(player, sector)),
+                    bonus: formatDoubleTrainingNumber(getDoubleTrainingHitBonus(sector, 2, player))
+                }));
+            } else if (isTrait) {
                 const gained = awardPlayerTraitXP(player, type, getPlayerTraitTrainingXP(type) * energyMultiplier);
                 if (gained && typeof trPlayerTraits === 'function') alert(trPlayerTraits('levelUp', { trait: trPlayerTraits(type) }));
             } else {
@@ -1819,19 +1858,21 @@ async function updateProfileWalkon(event) {
             const isDoublesMatch = Boolean(currentMatch.isDoubles && typeof getDoublesCurrentThrower === 'function');
             const pObj = isDoublesMatch
                 ? getDoublesCurrentThrower(isP1)
-                : (isP1 ? player : currentMatch.opponent);
-            const isCareerThrower = isP1 && (!isDoublesMatch || (typeof isCurrentPlayer === 'function' && isCurrentPlayer(pObj)));
+                : (currentMatch.isSpectator && isP1 ? currentMatch.spectatorP1 : (isP1 ? player : currentMatch.opponent));
+            const isCareerThrower = !currentMatch.isSpectator && isP1 && (!isDoublesMatch || (typeof isCurrentPlayer === 'function' && isCurrentPlayer(pObj)));
             let statsObj = isCareerThrower && typeof getBoostedPlayerStats === 'function' ? getBoostedPlayerStats() : pObj;
             if (currentMatch.isTournament && !currentMatch.isDoubles && typeof getWorldMastersMatchRatings === 'function') {
                 statsObj = getWorldMastersMatchRatings(pObj, statsObj);
             }
             statsObj = applyRivalryMatchModifier(statsObj, isCareerThrower);
+            if (!isCareerThrower) statsObj = applyAiPeakMatchThrowStats(statsObj, isP1);
             if (typeof applyPlayerTraitsToMatchStats === 'function') statsObj = applyPlayerTraitsToMatchStats(pObj, statsObj, isP1);
             let startScore = isP1 ? currentMatch.p1Score : currentMatch.p2Score;
             let currentScore = startScore;
             let st = currentMatch.stats;
             let turnScore = 0;
             let dartsThrown = 0;
+            let bust = false;
             let isDIDO = activeTournament && activeTournament.format === 'DIDO';
             const opponentScore = isP1 ? currentMatch.p2Score : currentMatch.p1Score;
             const scoringVisit = !isCareerThrower && typeof createAiScoringVisit === 'function'
@@ -1880,6 +1921,7 @@ async function updateProfileWalkon(event) {
 
                 // Fura (Bust)
                 if (newScore < 0 || newScore === 1 || (newScore === 0 && hitMult !== 2)) {
+                    bust = true;
                     // NOWOŚĆ: Doliczanie brakujących lotek do statystyk w symulacji
                     let missingDarts = 2 - i; // "i" to indeks obecnej lotki (0, 1 lub 2)
                     if (isP1) {
@@ -1900,6 +1942,13 @@ async function updateProfileWalkon(event) {
 
                 // Koniec lega
                 if (currentScore === 0 && hitMult === 2) {
+                    if (turnScore >= 100 && turnScore < 140) {
+                        const field = isP1 ? 'p1HundredPlus' : 'p2HundredPlus';
+                        st[field] = (Number(st[field]) || 0) + 1;
+                    } else if (turnScore >= 140 && turnScore < 180) {
+                        const field = isP1 ? 'p1OneFortyPlus' : 'p2OneFortyPlus';
+                        st[field] = (Number(st[field]) || 0) + 1;
+                    }
                     if (isP1) {
                         st.p1HighCheckout = Math.max(st.p1HighCheckout || 0, turnScore);
                         if (isCareerThrower) {
@@ -1917,6 +1966,10 @@ async function updateProfileWalkon(event) {
                 }
             }
 
+            if (!bust && turnScore >= 100 && turnScore < 180) {
+                const field = `${isP1 ? 'p1' : 'p2'}${turnScore < 140 ? 'HundredPlus' : 'OneFortyPlus'}`;
+                st[field] = (Number(st[field]) || 0) + 1;
+            }
             // Sprawdzanie 180
             if (dartsThrown === 3 && turnScore === 180) {
                 if (isP1) {
@@ -1947,6 +2000,16 @@ async function updateProfileWalkon(event) {
                 checkAchievements('9darter');
             }
             
+            const initialStarter = currentMatch.startingPlayer;
+            if (initialStarter === 'p1' || initialStarter === 'p2') {
+                const legStarter = currentMatch.totalLegsPlayed % 2 === 0
+                    ? initialStarter : (initialStarter === 'p1' ? 'p2' : 'p1');
+                const winnerSide = isP1 ? 'p1' : 'p2';
+                if (winnerSide !== legStarter) {
+                    if (!currentMatch.breaksOfThrow) currentMatch.breaksOfThrow = { p1: 0, p2: 0 };
+                    currentMatch.breaksOfThrow[winnerSide] = (Number(currentMatch.breaksOfThrow[winnerSide]) || 0) + 1;
+                }
+            }
             currentMatch.totalLegsPlayed++;
             if (isP1) currentMatch.p1Legs++; else currentMatch.p2Legs++;
             if (!Array.isArray(currentMatch.interviewLegScores)) currentMatch.interviewLegScores = [];
@@ -2035,6 +2098,7 @@ async function updateProfileWalkon(event) {
                 if (currentMatch.turn === 'p1') currentMatch.p1TurnStartScore = currentMatch.p1Score;
                 else currentMatch.p2TurnStartScore = currentMatch.p2Score;
             }
+            return safetyCounter;
         }
 
         function simulateOneLegFast() {
@@ -2042,10 +2106,11 @@ async function updateProfileWalkon(event) {
             if (isMatchFinished()) return finishMatch();
             skipWalkon(); // Wycisza muzykę, żeby uniknąć nakładania dźwięków
             clearTimeout(window.aiTimeout); // ZABEZPIECZENIE: Przerywa zaplanowane ruchy AI
-            processFastLeg();
+            const simulatedVisits = processFastLeg();
             
             updateScores(); updateMatchStatsUI(); drawnDarts = [];
             drawDartboard(); updateDartDots(); setTurnUI();
+            window.matchTVDirector?.onSimulatedLeg?.(simulatedVisits);
             
             if (isMatchFinished()) return finishMatch();
         }

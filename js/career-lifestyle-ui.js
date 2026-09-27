@@ -367,7 +367,7 @@ function showCareerEntranceVisual(candidate) {
     stage.dataset.shirt = shirt;
     stage.querySelector('#career-walkon-kicker').textContent = trCareerLifestyle('walkon');
     stage.querySelector('#career-walkon-name').textContent = candidate?.name || '';
-    stage.querySelector('#career-walkon-country').textContent = candidate?.country || '';
+    if (typeof renderWalkonPlayerCard === 'function') renderWalkonPlayerCard(candidate);
     stage.hidden = false;
     stage.classList.remove('playing');
     void stage.offsetWidth;

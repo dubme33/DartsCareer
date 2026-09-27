@@ -56,10 +56,12 @@ function isPdcQSchoolYear(yearOrDate = currentDate) {
 }
 
 function isPdcQSchoolTournament(tournament = activeTournament) {
+    if (typeof hasTournamentEditorQualification === 'function' && hasTournamentEditorQualification(tournament)) return false;
     return Boolean(tournament && tournament.specialType === PDC_QSCHOOL_TYPE);
 }
 
 function isPdcTourCardQualifierTournament(tournament = activeTournament) {
+    if (typeof hasTournamentEditorQualification === 'function' && hasTournamentEditorQualification(tournament)) return false;
     return Boolean(tournament && tournament.specialType === PDC_TOUR_CARD_QUALIFIER_TYPE);
 }
 
@@ -218,6 +220,11 @@ function getGrandSlamEventFinalists(kind, year, candidates = getPdcTourCardPlaye
             runnersUp: resolvePdcTourCardPlayerKeys(stored.runnerUpPlayerIds, candidates)
         };
     }
+    // Compact history belongs to this season. Previous seasons must use
+    // their archived finalists; unfinished events do not award places.
+    if (Number(year) !== getPdcTourCardReferenceYear() || tournament.completed !== true) {
+        return { winners: [], runnersUp: [] };
+    }
     return readGrandSlamFinalistsFromMatchHistory(tournament, candidates);
 }
 
@@ -243,7 +250,8 @@ function getGrandSlamTourWinnerRanking(kind, year, candidates) {
             const stored = tournament.grandSlamQualificationFinalists?.[year];
             const winners = stored
                 ? resolvePdcTourCardPlayerKeys(stored.winnerPlayerIds, candidates)
-                : readGrandSlamFinalistsFromMatchHistory(tournament, candidates).winners;
+                : Number(year) === getPdcTourCardReferenceYear() && tournament.completed === true
+                    ? readGrandSlamFinalistsFromMatchHistory(tournament, candidates).winners : [];
             winners.forEach(candidate => {
                 const key = getPdcTourCardPlayerKey(candidate);
                 const entry = counts.get(key) || { player: candidate, wins: 0 };
@@ -579,7 +587,7 @@ function buildPdcTourCardAutomaticField(mainTournament, candidates = getPdcTourC
         || comparePdcTourCardRanking(first, second));
     const qualified = new Set();
 
-    if (name.includes('champion\'s slam') || name.includes('grand slam')) {
+    if (isGrandSlamMainTournament(mainTournament)) {
         return buildGrandSlamAutomaticQualification(mainTournament, allPlayers).players;
     } else if (name.includes('world darts championship') || name.includes('global darts championship')) {
         oomRanked.slice(0, 32).forEach(candidate => qualified.add(candidate));
@@ -595,22 +603,38 @@ function buildPdcTourCardAutomaticField(mainTournament, candidates = getPdcTourC
     return [...qualified];
 }
 
-function ensurePdcTourCardQualificationState(qualifierTournament, candidates = getPdcTourCardPlayers()) {
+function isPdcTourCardQualificationLocked(qualifierTournament, state, referenceDate = currentDate) {
+    if (state?.year !== getPdcTourCardReferenceYear(referenceDate)) return false;
+    if (state.locked === true || qualifierTournament?.completed === true) return true;
+    // An older save could inherit last year's completed flag while its
+    // calendar still marks this year's qualifier as unplayed.
+    if (state.completed === true && qualifierTournament?.completed !== false) return true;
+    if (qualifierTournament?.matchHistory?.blocks?.some(block => block?.type === 'round' && block.matches?.length)) return true;
+    // Older saves lack the explicit flag: retain the field once a draw exists.
+    return Boolean(typeof activeTournament !== 'undefined' && activeTournament
+        && [activeTournament.name, activeTournament.sourceName].filter(Boolean)
+            .some(name => [qualifierTournament?.name, qualifierTournament?.sourceName].includes(name))
+        && typeof tournamentBracket !== 'undefined' && Array.isArray(tournamentBracket)
+        && tournamentBracket.some(candidate => candidate && !candidate.isBye));
+}
+
+function previewPdcTourCardQualificationState(qualifierTournament, candidates = getPdcTourCardPlayers(),
+    referenceDate = currentDate) {
     const mainTournament = getPdcTourCardQualifierMainTournament(qualifierTournament);
     if (!mainTournament) return null;
-    const year = getPdcTourCardReferenceYear();
+    const year = getPdcTourCardReferenceYear(referenceDate);
     const existing = mainTournament.pdcTourCardQualification;
     if (existing?.year === year && Array.isArray(existing.automaticPlayerIds)
-        && Array.isArray(existing.qualifierPlayerIds)) {
-        if (!Array.isArray(existing.qualifiedPlayerIds)) existing.qualifiedPlayerIds = [];
-        existing.qualifyingPlaces = Math.max(1, Number(existing.qualifyingPlaces)
-            || Number(qualifierTournament.qualifyingPlaces) || 8);
-        return existing;
+        && Array.isArray(existing.qualifierPlayerIds)
+        && isPdcTourCardQualificationLocked(qualifierTournament, existing, referenceDate)) {
+        return { ...existing, qualifiedPlayerIds: existing.qualifiedPlayerIds || [],
+            qualifyingPlaces: Math.max(1, Number(existing.qualifyingPlaces) || Number(qualifierTournament.qualifyingPlaces) || 8),
+            locked: true };
     }
 
     const allPlayers = uniquePdcTourCardPlayers(candidates);
     const grandSlamQualification = isGrandSlamMainTournament(mainTournament)
-        ? buildGrandSlamAutomaticQualification(mainTournament, allPlayers)
+        ? buildGrandSlamAutomaticQualification(mainTournament, allPlayers, referenceDate)
         : null;
     const automaticPlayers = grandSlamQualification?.players
         || buildPdcTourCardAutomaticField(mainTournament, allPlayers);
@@ -618,15 +642,17 @@ function ensurePdcTourCardQualificationState(qualifierTournament, candidates = g
     const qualifierPlayers = getPdcTourCardHolders(allPlayers)
         .filter(candidate => !automaticKeys.has(getPdcTourCardPlayerKey(candidate)))
         .sort(comparePdcTourCardRanking);
-    const previousQualified = existing?.year === year && Array.isArray(existing.qualifiedPlayerIds)
-        ? resolvePdcTourCardPlayerKeys(existing.qualifiedPlayerIds, allPlayers)
+    const currentSeason = existing?.year === year && (existing.completed !== true
+        || isPdcTourCardQualificationLocked(qualifierTournament, existing, referenceDate)) ? existing : null;
+    const previousQualified = Array.isArray(currentSeason?.qualifiedPlayerIds)
+        ? resolvePdcTourCardPlayerKeys(currentSeason.qualifiedPlayerIds, allPlayers)
             .filter(candidate => !automaticKeys.has(getPdcTourCardPlayerKey(candidate)))
         : [];
     const migratedQualified = uniquePdcTourCardPlayers([
         ...previousQualified,
-        ...(existing?.completed ? qualifierPlayers : [])
+        ...(currentSeason?.completed ? qualifierPlayers : [])
     ]).slice(0, Math.max(1, Number(qualifierTournament.qualifyingPlaces) || GRAND_SLAM_TOUR_CARD_QUALIFIER_PLACES));
-    const state = {
+    return {
         version: grandSlamQualification?.version || 1,
         year,
         qualifyingPlaces: Math.max(1, Number(qualifierTournament.qualifyingPlaces) || GRAND_SLAM_TOUR_CARD_QUALIFIER_PLACES),
@@ -638,12 +664,31 @@ function ensurePdcTourCardQualificationState(qualifierTournament, candidates = g
             requested: category.requested,
             playerIds: category.playerIds
         })) || [],
-        completed: existing?.completed === true,
+        completed: currentSeason?.completed === true,
+        locked: currentSeason?.completed === true,
         migratedFromQualificationVersion: existing?.year === year && existing?.version !== undefined
+            && existing.version !== (grandSlamQualification?.version || 1)
             ? existing.version
-            : undefined
+            : currentSeason?.migratedFromQualificationVersion
     };
-    mainTournament.pdcTourCardQualification = state;
+}
+
+function ensurePdcTourCardQualificationState(qualifierTournament, candidates = getPdcTourCardPlayers()) {
+    const mainTournament = getPdcTourCardQualifierMainTournament(qualifierTournament);
+    const projected = previewPdcTourCardQualificationState(qualifierTournament, candidates);
+    if (!mainTournament || !projected) return null;
+    const existing = mainTournament.pdcTourCardQualification;
+    if (existing?.year === projected.year) {
+        Object.assign(existing, projected);
+        return existing;
+    }
+    mainTournament.pdcTourCardQualification = projected;
+    return projected;
+}
+
+function lockPdcTourCardQualificationState(qualifierTournament, candidates = getPdcTourCardPlayers()) {
+    const state = ensurePdcTourCardQualificationState(qualifierTournament, candidates);
+    if (state) state.locked = true;
     return state;
 }
 
@@ -701,6 +746,7 @@ function completePdcTourCardQualifier(qualifierTournament, qualifiedPlayers) {
         .slice(0, state.qualifyingPlaces);
     state.qualifiedPlayerIds = qualifiers.map(getPdcTourCardPlayerKey);
     state.completed = true;
+    state.locked = true;
     qualifierTournament.completed = true;
     qualifierTournament.historyLogs = typeof lastTournamentResults === 'string' ? lastTournamentResults : '';
     return state;
@@ -802,7 +848,7 @@ function getPdcTourCardQualifiedMainField(mainTournament, candidates = getPdcTou
 }
 
 function isCareerPlayerAutomaticallyQualifiedForPdcCardQualifier(qualifierTournament) {
-    const state = ensurePdcTourCardQualificationState(qualifierTournament);
+    const state = previewPdcTourCardQualificationState(qualifierTournament);
     return Boolean(state?.automaticPlayerIds.includes(getPdcTourCardPlayerKey(player)));
 }
 

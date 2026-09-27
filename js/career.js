@@ -106,12 +106,14 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
                 player = {
                     ...selectedPlayer,
                     id: selectedPlayer.id,
+                    nickname: typeof getPlayerNickname === 'function' ? getPlayerNickname(selectedPlayer) : (selectedPlayer.nickname || ''),
                     // Zachowujemy powiązanie z wpisem bazowym/moda. Dzięki temu po
                     // ponownym wczytaniu baza nie odtworzy tego samego zawodnika jako AI.
                     sourceName: selectedPlayer.sourceName || selectedPlayer.name,
                     difficulty: typeof getSelectedCareerDifficulty === 'function'
                         ? getSelectedCareerDifficulty('existing') : 'normal',
                     walkonTournamentMode: 'stage',
+                    showPostMatchReports: true,
                     defaultTemplateIndex: Number.isInteger(selectedPlayer.defaultTemplateIndex)
                         ? selectedPlayer.defaultTemplateIndex
                         : selectedIndex,
@@ -185,6 +187,7 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
                 if (typeof initializePlayerEvents === 'function') initializePlayerEvents(true);
                 if (typeof initializeTournamentWatchSettings === 'function') initializeTournamentWatchSettings(player, true);
                 if (typeof initializeBounceOutSettings === 'function') initializeBounceOutSettings(player, true);
+                if (typeof initializePostMatchReportSetting === 'function') initializePostMatchReportSetting(player, true);
                 if (typeof initializeAllPlayerTraits === 'function') initializeAllPlayerTraits(true);
                 if (typeof initializeCareerInfrastructure === 'function') initializeCareerInfrastructure(true);
                 if (typeof initializeCareerLifestyle === 'function') initializeCareerLifestyle(true);
@@ -235,12 +238,16 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
             player = {
                 id: createEntityId('player'),
                 name: document.getElementById('firstName').value + " " + document.getElementById('lastName').value,
+                nickname: typeof normalizePlayerNickname === 'function'
+                    ? normalizePlayerNickname(document.getElementById('player-nickname')?.value) : '',
+                playerEditorNicknameOverride: true,
                 country: document.getElementById('nationality').value,
                 birthYear: (currentDate instanceof Date ? currentDate.getFullYear() : 2026) - parseInt(document.getElementById('age').value, 10),
                 careerDebutSeason: currentDate.getFullYear(),
                 difficulty: typeof getSelectedCareerDifficulty === 'function'
                     ? getSelectedCareerDifficulty('custom') : 'normal',
                 walkonTournamentMode: 'stage',
+                showPostMatchReports: true,
                 overall: ovr, ovr: ovr, scoring: ovr + 2, doubles: ovr - 2,
                 favoriteDouble: favoriteDoubles[0],
                 favoriteDoubles,
@@ -287,6 +294,7 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
                 if (typeof initializePlayerEvents === 'function') initializePlayerEvents(true);
                 if (typeof initializeTournamentWatchSettings === 'function') initializeTournamentWatchSettings(player, true);
                 if (typeof initializeBounceOutSettings === 'function') initializeBounceOutSettings(player, true);
+                if (typeof initializePostMatchReportSetting === 'function') initializePostMatchReportSetting(player, true);
             if (typeof initializeAllPlayerTraits === 'function') initializeAllPlayerTraits(true);
             if (typeof initializeCareerInfrastructure === 'function') initializeCareerInfrastructure(true);
             if (typeof initializeCareerLifestyle === 'function') initializeCareerLifestyle(true);
@@ -328,8 +336,12 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
             if (typeof player.stamina === 'undefined') player.stamina = 100; // Inicjalizacja dla starych zapisów
             if (typeof refreshCareerDifficultyUI === 'function') refreshCareerDifficultyUI();
             if (typeof refreshWalkonSettingsUI === 'function') refreshWalkonSettingsUI();
+            if (typeof refreshPlayerNicknameUI === 'function') refreshPlayerNicknameUI();
+            if (typeof refreshWorldNewsSettingsUI === 'function') refreshWorldNewsSettingsUI();
             if (typeof refreshTournamentWatchSettingsUI === 'function') refreshTournamentWatchSettingsUI();
             if (typeof refreshBounceOutSettingsUI === 'function') refreshBounceOutSettingsUI();
+            if (typeof refreshPostMatchReportSettingsUI === 'function') refreshPostMatchReportSettingsUI();
+            if (typeof refreshTVDirectorSettingsUI === 'function') refreshTVDirectorSettingsUI();
             if (typeof updateTournamentEntrySimulationButton === 'function') updateTournamentEntrySimulationButton('t-btn-sim-to-match-hub');
 
             document.getElementById('hub-name').innerText = player.name;
@@ -469,6 +481,9 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
             }
 
             const name = String(tournament.name || '').toLowerCase();
+            if (typeof hasTournamentEditorQualification === 'function' && hasTournamentEditorQualification(tournament)) {
+                return getTournamentEditorParticipants(tournament, undefined, currentDate).some(isCareerPlayer);
+            }
             const isLeague = name.includes('premier') || name.includes('global darts league');
             if (isLeague) {
                 const leagueTable = typeof gdlTable !== 'undefined' && Array.isArray(gdlTable) ? gdlTable : [];
@@ -531,10 +546,10 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
                     ? isCareerPlayerEligibleForCrownMastersQualifier(tournament, careerPlayer)
                     : true;
             }
-            // Wyznaczenie obsady kwalifikatora Continental Tour zapisuje jej stan.
-            // Nie robimy tego przy samym sprawdzeniu treningu — w razie braku już
-            // utworzonej drabinki zachowujemy blokadę jako bezpieczny wariant.
-            if (typeof isContinentalQualifierTournament === 'function' && isContinentalQualifierTournament(tournament)) return true;
+            if (typeof isContinentalQualifierTournament === 'function' && isContinentalQualifierTournament(tournament)) {
+                return typeof isPlayerInContinentalQualifierField === 'function'
+                    ? isPlayerInContinentalQualifierField(tournament, careerPlayer) : true;
+            }
 
             const candidates = typeof getPdcTourCardPlayers === 'function'
                 ? getPdcTourCardPlayers(true)
@@ -731,7 +746,10 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
                             tournament.completed = false;
                             tournament.historyLogs = '';
                             delete tournament.matchHistory;
+                            delete tournament.editorQualifierResults;
                             delete tournament.bracketSeedPlayerKeys;
+                            delete tournament.worldChampionshipSeedPlayerIds;
+                            delete tournament.worldChampionshipDrawVersion;
                             delete tournament.staminaChargedYear;
                             delete tournament.travelChargedYear;
                             delete tournament.travelRequestedStandard;
@@ -741,6 +759,8 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
                             delete tournament.playersChampionshipWithdrawals;
                             delete tournament.playersChampionshipReplacements;
                             delete tournament.playersChampionshipPairedWithdrawalKeys;
+                            delete tournament.secondaryTourWithdrawals;
+                            delete tournament.secondaryTourPairedWithdrawalKeys;
                             delete tournament.withdrawalReportEntries;
                             delete tournament.withdrawalReportSent;
                             delete tournament.withdrawalReportSentYear;
@@ -804,13 +824,16 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
                     if (typeof handleWorldMastersTournamentDay === 'function') handleWorldMastersTournamentDay(todayTournament);
                     let formatWarning = todayTournament.format === 'DIDO' ? t('t-alert-tour-dido') : "";
                     
-                    let subjectToday = t('t-email-tour-today-sub').replace('{tour}', tournamentDisplayName);
-                    let bodyToday = t('t-email-tour-today-body').replace('{city}', t(todayTournament.city));
-                    addEmail(t('t-sender-org'), subjectToday, bodyToday);
+                    const participatingToday = isCareerPlayerParticipatingInTournament(todayTournament);
+                    if (participatingToday) {
+                        const subjectToday = t('t-email-tour-today-sub').replace('{tour}', tournamentDisplayName);
+                        const bodyToday = t('t-email-tour-today-body').replace('{city}', t(todayTournament.city));
+                        addEmail(t('t-sender-org'), subjectToday, bodyToday);
+                    }
                     
                     const autoSimulateToday = typeof shouldAutoSimulateUnwatchedTournament === 'function'
-                        && shouldAutoSimulateUnwatchedTournament(todayTournament);
-                    if (!autoSimulateToday) alert(`${t('t-alert-tour-start')} ${tournamentDisplayName}!${formatWarning}`);
+                        && shouldAutoSimulateUnwatchedTournament(todayTournament, participatingToday);
+                    if (!autoSimulateToday && participatingToday) alert(`${t('t-alert-tour-start')} ${tournamentDisplayName}!${formatWarning}`);
 
                     if (typeof shouldAutoSimulateUnwatchedTournament === 'function') {
                         activateTournamentFromCalendar(todayTournament);
@@ -1311,13 +1334,54 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
         }
 
         function attachRankingProfileLinks(list, rankingType) {
-            if (typeof openPlayerProfile !== 'function') return;
-            list.querySelectorAll('[data-player-id]').forEach(row => {
-                row.addEventListener('click', () => openPlayerProfile(row.dataset.playerId, rankingType));
-            });
+            if (typeof openPlayerProfile === 'function') {
+                list.querySelectorAll('[data-player-id]').forEach(row => {
+                    row.addEventListener('click', () => openPlayerProfile(row.dataset.playerId, rankingType));
+                });
+            }
+            applyPdcRankingSearch();
         }
 
         let currentPdcRankingType = 'main';
+
+        function normalizePdcRankingSearch(value) {
+            return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+                .toLowerCase().replace(/ł/g, 'l').trim().replace(/\s+/g, ' ');
+        }
+
+        function applyPdcRankingSearch() {
+            const input = document.getElementById('pdc-search');
+            const list = document.getElementById('pdc-list');
+            if (!input || !list) return;
+            input.placeholder = t('t-pdc-search-placeholder');
+            const query = normalizePdcRankingSearch(input.value);
+            const rows = list.querySelectorAll('.ranking-player-row');
+            let matches = 0;
+            rows.forEach(row => {
+                row.hidden = !normalizePdcRankingSearch(row.dataset.playerName).includes(query);
+                if (!row.hidden) matches++;
+            });
+            const clear = document.getElementById('pdc-search-clear');
+            if (clear) clear.hidden = !input.value;
+            const status = document.getElementById('pdc-search-status');
+            if (status) {
+                status.hidden = !query || rows.length === 0;
+                status.textContent = query && rows.length
+                    ? t('t-pdc-search-count').replace('{shown}', matches).replace('{total}', rows.length)
+                    : '';
+            }
+            const empty = document.getElementById('pdc-search-empty');
+            if (empty) empty.hidden = !query || rows.length === 0 || matches > 0;
+            list.scrollTop = 0;
+        }
+
+        function clearPdcRankingSearch() {
+            const input = document.getElementById('pdc-search');
+            if (!input) return;
+            input.value = '';
+            applyPdcRankingSearch();
+            input.focus();
+        }
 
         function showPdcRankings(type = 'main') {
             currentPdcRankingType = type;
@@ -1397,6 +1461,7 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
                 const pointsGuide = `<div class="ranking-points-guide" role="note">ℹ️ ${escapeHtml(t('t-gdl-points-guide'))}</div>`;
                 if (typeof gdlTable === 'undefined' || gdlTable.length === 0) {
                     list.innerHTML = `${pointsGuide}<div style="text-align:center; margin-top:40px; color:#bdc3c7;">Sezon ${leagueName} jeszcze się nie rozpoczął (start 1 lutego).</div>`;
+                    applyPdcRankingSearch();
                     showScreen('screen-pdc');
                     return;
                 }
@@ -1427,7 +1492,7 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
                     let legDiff = row.legsWon - row.legsLost;
                     let sign = legDiff > 0 ? '+' : '';
                     
-                    rankingHtml += `<button type="button" class="ranking-player-row" data-player-id="${escapeHtml(row.player.id)}" style="${borderStyle} ${bgStyle}">
+                    rankingHtml += `<button type="button" class="ranking-player-row" data-player-id="${escapeHtml(row.player.id)}" data-player-name="${escapeHtml(row.player.name)}" style="${borderStyle} ${bgStyle}">
                         <div style="flex: 3;">
                             <strong>${index + 1}.</strong> ${getFlagImg(row.player.country)} ${escapeHtml(row.player.name)} ${isMe ? "<b style='color:var(--accent-green)'>(TY)</b>" : ""}
                         </div>
@@ -1473,7 +1538,7 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
                     ? `<span title="${escapeHtml(typeof getPdcTourCardLabel === 'function' ? getPdcTourCardLabel(p) : 'Posiadacz karty PDC')}" style="display:inline-block; margin-left:6px; padding:2px 6px; border-radius:10px; background:#8e44ad; color:white; font-size:10px; font-weight:bold;">PDC CARD</span>`
                     : '';
 
-                rankingHtml += `<button type="button" class="ranking-player-row" data-player-id="${escapeHtml(p.id)}" style="border-bottom: 1px solid var(--border-color); ${bgStyle}">
+                rankingHtml += `<button type="button" class="ranking-player-row" data-player-id="${escapeHtml(p.id)}" data-player-name="${escapeHtml(p.name)}" style="border-bottom: 1px solid var(--border-color); ${bgStyle}">
                     <div>
                         <strong>#${index + 1}</strong> ${getFlagImg(p.country)} ${escapeHtml(p.name)}${tourCardBadge}
                         <span style="color: #bdc3c7; font-size: 13px; margin-left: 5px;">OVR: ${displayOvr}</span> ${isMe ? "<b>(TY)</b>" : ""}

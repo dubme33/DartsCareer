@@ -148,6 +148,11 @@ function getHubDaysBetween(first, second) {
 function isHubTournamentRelevant(tournament) {
     if (!tournament || typeof player !== 'object' || !player) return Boolean(tournament);
     if (typeof isTournamentSelectedForWatching === 'function' && isTournamentSelectedForWatching(tournament)) return true;
+    const continentalQualifier = typeof isContinentalQualifierTournament === 'function'
+        ? isContinentalQualifierTournament(tournament) : tournament.specialType === 'continentalQualifier';
+    if (continentalQualifier && typeof isCareerPlayerParticipatingInTournament === 'function') {
+        return isCareerPlayerParticipatingInTournament(tournament);
+    }
     const qSchool = typeof isPdcQSchoolTournament === 'function'
         ? isPdcQSchoolTournament(tournament)
         : tournament.specialType === 'pdcQSchool';
@@ -166,7 +171,8 @@ function isHubTournamentRelevant(tournament) {
 
 function getHubUpcomingTournament() {
     if (typeof currentDate === 'undefined' || !isHubValidDate(currentDate)) return null;
-    if (typeof activeTournament === 'object' && activeTournament && activeTournament.completed !== true) {
+    if (typeof activeTournament === 'object' && activeTournament && activeTournament.completed !== true
+        && isHubTournamentRelevant(activeTournament)) {
         return { tournament: activeTournament, date: new Date(currentDate), days: 0, active: true };
     }
     if (typeof tournamentDatabase === 'undefined' || !Array.isArray(tournamentDatabase)) return null;

@@ -85,6 +85,52 @@ function trMatchReport(key, values = {}) {
         (MATCH_REPORT_TEXT[lang] || MATCH_REPORT_TEXT.pl)[key] || MATCH_REPORT_TEXT.en[key] || key);
 }
 
+const POST_MATCH_REPORT_SETTINGS_TEXT = {
+    pl: { title: '📊 Raporty pomeczowe', intro: 'Wybierz, czy po meczu mają automatycznie pojawiać się raport i plansza statystyk.', label: 'Automatyczne raporty pomeczowe', enabled: 'Włączone (domyślne)', disabled: 'Wyłączone', hint: 'Statystyki nadal są zapisywane. Raporty turniejowe można otworzyć ręcznie z historii zawodnika.' },
+    en: { title: '📊 Post-match reports', intro: 'Choose whether the report and match statistics screen appear automatically after a match.', label: 'Automatic post-match reports', enabled: 'Enabled (default)', disabled: 'Disabled', hint: 'Statistics are still saved. Tournament reports can be opened manually from player history.' },
+    de: { title: '📊 Spielberichte', intro: 'Wähle, ob Bericht und Statistikbildschirm nach einem Spiel automatisch erscheinen.', label: 'Automatische Spielberichte', enabled: 'Aktiviert (Standard)', disabled: 'Deaktiviert', hint: 'Statistiken werden weiterhin gespeichert. Turnierberichte lassen sich im Spielerverlauf manuell öffnen.' },
+    nl: { title: '📊 Wedstrijdrapporten', intro: 'Kies of het rapport en het statistiekenscherm na een wedstrijd automatisch verschijnen.', label: 'Automatische wedstrijdrapporten', enabled: 'Ingeschakeld (standaard)', disabled: 'Uitgeschakeld', hint: 'Statistieken blijven bewaard. Toernooirapporten kun je handmatig openen via de spelersgeschiedenis.' }
+};
+
+function initializePostMatchReportSetting(candidate = typeof player !== 'undefined' ? player : null, reset = false) {
+    if (!candidate) return true;
+    candidate.showPostMatchReports = reset || typeof candidate.showPostMatchReports !== 'boolean'
+        ? true : candidate.showPostMatchReports;
+    return candidate.showPostMatchReports;
+}
+
+function arePostMatchReportsEnabled(candidate = typeof player !== 'undefined' ? player : null) {
+    return candidate?.showPostMatchReports !== false;
+}
+
+function refreshPostMatchReportSettingsUI() {
+    if (typeof document === 'undefined') return;
+    const text = POST_MATCH_REPORT_SETTINGS_TEXT[typeof currentLang === 'string' ? currentLang : 'en']
+        || POST_MATCH_REPORT_SETTINGS_TEXT.en;
+    for (const key of ['title', 'intro', 'label', 'enabled', 'disabled', 'hint']) {
+        const element = document.getElementById(`match-report-settings-${key}`);
+        if (element) element.textContent = text[key];
+    }
+    const select = document.getElementById('hub-match-report-mode');
+    if (select) select.value = arePostMatchReportsEnabled() ? 'enabled' : 'disabled';
+}
+
+function changePostMatchReportSetting(value) {
+    if (typeof player === 'undefined' || !player?.name || !['enabled', 'disabled'].includes(value)
+        || (typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy())) return false;
+    const enabled = value === 'enabled';
+    if (player.showPostMatchReports === enabled) {
+        if (!enabled) closeMatchReport();
+        refreshPostMatchReportSettingsUI();
+        return true;
+    }
+    player.showPostMatchReports = enabled;
+    if (!player.showPostMatchReports) closeMatchReport();
+    refreshPostMatchReportSettingsUI();
+    if (typeof saveGame === 'function') saveGame(true);
+    return true;
+}
+
 function recordMatchReportDart(match, isP1, score, aim, result) {
     if (!match?.stats || match.isDoubles) return;
     if (!match.reportDarts) {
@@ -223,6 +269,10 @@ function openPlayerMatchReport(playerKey, matchKey) {
 function publishCompletedMatchReport(report) {
     if (!report) return;
     player.lastMatchReport = report;
-    showMatchReport(report);
+    if (arePostMatchReportsEnabled()) showMatchReport(report);
     if (typeof saveGame === 'function') saveGame(true);
+}
+
+if (typeof document !== 'undefined' && typeof document.addEventListener === 'function') {
+    document.addEventListener('DOMContentLoaded', refreshPostMatchReportSettingsUI);
 }

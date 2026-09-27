@@ -107,6 +107,9 @@ function getTournamentNetCash(entry) {
 }
 
 function isFinanceQualifier(event) {
+    if (typeof hasTournamentEditorQualification === 'function' && hasTournamentEditorQualification(event)) {
+        return isTournamentEditorQualifier(event);
+    }
     return /qualif|kwalifikac|q.?school|pro card trials/i.test(`${event.name} ${event.sourceName || ''} ${event.specialType || ''}`);
 }
 
@@ -114,6 +117,7 @@ function getTournamentPrizePreview(tournament) {
     const event = getFinanceTournament(tournament);
     if (!event) return null;
     const name = event.name, text = `${name} ${event.sourceName || ''}`.toLowerCase();
+    const editorRules = typeof hasTournamentEditorQualification === 'function' && hasTournamentEditorQualification(event);
     const qualifier = isFinanceQualifier(event);
     const crownMastersQualifier = typeof isCrownMastersQualifierTournament === 'function'
         && isCrownMastersQualifierTournament(event);
@@ -122,7 +126,7 @@ function getTournamentPrizePreview(tournament) {
     const team = !qualifier && (event.specialType === 'worldCup' || /world cup|puchar narodów/.test(text));
     const league = /global darts league|premier/.test(name.toLowerCase());
     const playoffs = league && name.includes('Play-offs');
-    const slam = !qualifier && /grand slam|champion's slam/.test(text);
+    const slam = !editorRules && !qualifier && /grand slam|champion's slam/.test(text);
     const challengeTour = typeof isChallengeTourTournament === 'function' && isChallengeTourTournament(event);
     const developmentTour = typeof isDevelopmentTourTournament === 'function' && isDevelopmentTourTournament(event);
     const rows = [];
@@ -131,7 +135,8 @@ function getTournamentPrizePreview(tournament) {
         Object.entries(WORLD_CUP_PRIZES).forEach(([stage, amount]) => rows.push({ stage, amount: amount / 2, teamAmount: amount }));
     } else {
         let openingRound = 32;
-        if (league) openingRound = playoffs ? 4 : 8;
+        if (editorRules || event.isEditorTournament) openingRound = event.editorFieldSize || 32;
+        else if (league) openingRound = playoffs ? 4 : 8;
         else if (challengeTour || developmentTour) openingRound = 256;
         else if (typeof isWorldMastersFinalsTournament === 'function' && isWorldMastersFinalsTournament(event)) openingRound = 32;
         else if (typeof isWorldMastersTournament === 'function' && isWorldMastersTournament(event)) openingRound = 16;
@@ -142,7 +147,7 @@ function getTournamentPrizePreview(tournament) {
             || (typeof isEuropeanTourTournament === 'function' && isEuropeanTourTournament(event))) openingRound = 64;
         else if (slam) openingRound = 16;
         const add = (round, won = false) => {
-            const amount = getPrizeMoney(name, round, won);
+            const amount = getPrizeMoney(event, round, won);
             rows.push({ round, won, amount: Number.isFinite(amount) ? amount : null });
         };
         if (crownMastersQualifier) {
@@ -166,15 +171,17 @@ function getTournamentPrizePreview(tournament) {
     // Match awardPrizeMoney's non-ranking branches before checking OOM helpers.
     const series = typeof isWorldMastersName === 'function' && isWorldMastersName(name)
         && !crownMasters && !crownMastersQualifier;
-    if (developmentTour) {
+    if (event.rankingOverride === false) {
+        // Explicitly non-ranking events still pay cash, but never enter an OOM.
+    } else if (developmentTour) {
         rankings.push('Future Champions OOM');
     } else if (challengeTour) {
         rankings.push('Rising Stars OOM');
-    } else if (!team && !league && !series) {
-        if (typeof isMainOrderOfMeritRankingTournament === 'function' && isMainOrderOfMeritRankingTournament(name)) rankings.push('mainOom');
-        if (typeof isProTourRankingTournament === 'function' && isProTourRankingTournament(name)) rankings.push('ProTour');
-        if (typeof isPlayersChampionshipTournament === 'function' && isPlayersChampionshipTournament(name)) rankings.push('Players Championship OOM');
-        if (typeof isEuropeanTourTournament === 'function' && isEuropeanTourTournament(name)) rankings.push('European Tour OOM');
+    } else if ((!team && !league && !series) || event.rankingOverride === true) {
+        if (event.rankingOverride !== false && typeof isMainOrderOfMeritRankingTournament === 'function' && isMainOrderOfMeritRankingTournament(event)) rankings.push('mainOom');
+        if (event.rankingOverride !== false && typeof isProTourRankingTournament === 'function' && isProTourRankingTournament(event)) rankings.push('ProTour');
+        if (event.rankingOverride !== false && typeof isPlayersChampionshipTournament === 'function' && isPlayersChampionshipTournament(event)) rankings.push('Players Championship OOM');
+        if (event.rankingOverride !== false && typeof isEuropeanTourTournament === 'function' && isEuropeanTourTournament(event)) rankings.push('European Tour OOM');
     }
     const prizeTaxRate = typeof getCareerDifficultyTournamentPrizeTaxRate === 'function'
         ? getCareerDifficultyTournamentPrizeTaxRate() : 0;

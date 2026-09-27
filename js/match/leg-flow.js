@@ -127,6 +127,16 @@ function checkAchievements(type, data = null) {
             let setWasWon = false;
             
             // 1. Zwiększenie licznika rozegranych legów
+            const initialStarter = currentMatch.startingPlayer;
+            if (initialStarter === 'p1' || initialStarter === 'p2') {
+                const legStarter = currentMatch.totalLegsPlayed % 2 === 0
+                    ? initialStarter : (initialStarter === 'p1' ? 'p2' : 'p1');
+                const winnerSide = isP1 ? 'p1' : 'p2';
+                if (winnerSide !== legStarter) {
+                    if (!currentMatch.breaksOfThrow) currentMatch.breaksOfThrow = { p1: 0, p2: 0 };
+                    currentMatch.breaksOfThrow[winnerSide] = (Number(currentMatch.breaksOfThrow[winnerSide]) || 0) + 1;
+                }
+            }
             currentMatch.totalLegsPlayed++;
 
             // 2. KLUCZOWA POPRAWKA: Dodanie wygranego lega do wyniku!
@@ -319,6 +329,9 @@ function checkAchievements(type, data = null) {
                 hitSec = result.sector; hitMult = result.mult;
             }
             const bounced = result?.bounceOut === true;
+            // Replays run after the visit: retain only darts embedded at this throw.
+            const replayBoardDarts = bounced && typeof drawnDarts !== 'undefined'
+                ? JSON.parse(JSON.stringify(drawnDarts)) : [];
             if (bounced) {
                 hitSec = 0; hitMult = 0;
                 if (typeof recordMatchBounceOut === 'function') recordMatchBounceOut(isP1, result);
@@ -450,6 +463,7 @@ function checkAchievements(type, data = null) {
                 target: { sector: targetSec, mult: targetMult },
                 hit: { sector: hitSec, mult: hitMult },
                 points: bounced ? 0 : points, bounced, bust,
+                ...(bounced ? { replayBoardDarts } : {}),
                 collision: result?.collision || null,
                 boardPoint: result?.boardPoint || null,
                 dartPose: result?.dartPose || null,
@@ -460,6 +474,15 @@ function checkAchievements(type, data = null) {
                 legCompleted
             };
             const throwingMatch = currentMatch;
+            const runAfterImpact = action => {
+                if (currentMatch !== throwingMatch || throwingMatch.isFinishing) return;
+                if (throwingMatch.isDartInFlight) {
+                    throwingMatch.pendingImpactAction = action;
+                    return;
+                }
+                if (window.matchTVDirector?.deferMatchAction?.(action)) return;
+                action();
+            };
             const revealThrowAtImpact = () => {
                 if (currentMatch !== throwingMatch) return;
                 throwingMatch.isDartInFlight = false;
@@ -477,6 +500,9 @@ function checkAchievements(type, data = null) {
                     try { window.matchCrowd.onThrow(matchThrowEvent); }
                     catch (_error) { /* Crowd audio cannot interrupt match scoring. */ }
                 }
+                const pendingAction = throwingMatch.pendingImpactAction;
+                throwingMatch.pendingImpactAction = null;
+                if (typeof pendingAction === 'function') queueMicrotask(() => runAfterImpact(pendingAction));
             };
             throwingMatch.isDartInFlight = true;
             const waitsForImpact = typeof window !== 'undefined'
@@ -485,7 +511,7 @@ function checkAchievements(type, data = null) {
 
             if (legCompleted) {
                 logThrow(`🎯 ${playerName} ${t('t-log-wins-leg')}`, 'system');
-                const completeLeg = () => handleCompletedLeg(isP1, playerName);
+                const completeLeg = () => runAfterImpact(() => handleCompletedLeg(isP1, playerName));
                 const legDelay = typeof getMatchBoardAnimationDelay === 'function' ? getMatchBoardAnimationDelay(1000) : 1000;
                 const spectatorLegDelay = typeof getMatchBoardAnimationDelay === 'function' ? getMatchBoardAnimationDelay(1300) : 1300;
                 if (typeof scheduleSpectatorPlaybackAction === 'function') {
@@ -495,21 +521,25 @@ function checkAchievements(type, data = null) {
             }
 
             if (currentMatch.dartsThrown >= 3) {
+                const advanceTurn = () => runAfterImpact(endTurn);
                 const turnDelay = typeof getMatchBoardAnimationDelay === 'function' ? getMatchBoardAnimationDelay(100) : 100;
                 const spectatorTurnDelay = typeof getMatchBoardAnimationDelay === 'function' ? getMatchBoardAnimationDelay(300) : 300;
-                if (typeof window !== 'undefined' && window.matchTVDirector?.deferMatchAction?.(endTurn)) {
+                if (typeof window !== 'undefined' && window.matchTVDirector?.deferMatchAction?.(advanceTurn)) {
                     window.aiTimeout = null;
                 } else if (typeof scheduleSpectatorPlaybackAction === 'function') {
-                    window.aiTimeout = scheduleSpectatorPlaybackAction(endTurn, turnDelay, spectatorTurnDelay);
-                } else window.aiTimeout = setTimeout(endTurn, turnDelay);
+                    window.aiTimeout = scheduleSpectatorPlaybackAction(advanceTurn, turnDelay, spectatorTurnDelay);
+                } else window.aiTimeout = setTimeout(advanceTurn, turnDelay);
             } else if (currentMatch.isSpectator || !isP1 || (currentMatch.isDoubles && !isCareerPlayerThrowing(isP1))) {
                 clearTimeout(window.aiTimeout); // Czyścimy przed kolejnym rzutem
                 const aiDelay = typeof getMatchTVAiThrowDelay === 'function' ? getMatchTVAiThrowDelay(650) : 650;
-                if (typeof window !== 'undefined' && window.matchTVDirector?.deferMatchAction?.(aiTurn)) {
+                const spectatorAiDelay = typeof getMatchBoardAnimationDelay === 'function'
+                    ? getMatchBoardAnimationDelay(650) : 650;
+                const continueAi = () => runAfterImpact(aiTurn);
+                if (typeof window !== 'undefined' && window.matchTVDirector?.deferMatchAction?.(continueAi)) {
                     window.aiTimeout = null;
                 } else if (typeof scheduleSpectatorPlaybackAction === 'function') {
-                    window.aiTimeout = scheduleSpectatorPlaybackAction(aiTurn, aiDelay, 650);
-                } else window.aiTimeout = setTimeout(aiTurn, aiDelay);
+                    window.aiTimeout = scheduleSpectatorPlaybackAction(continueAi, aiDelay, spectatorAiDelay);
+                } else window.aiTimeout = setTimeout(continueAi, aiDelay);
             }
         }
 

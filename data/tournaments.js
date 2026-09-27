@@ -253,6 +253,12 @@ function syncContinentalTourQualificationCalendar(calendar = tournamentDatabase)
             const key = `${mainName}|${path}`;
             const qualifier = reusable.get(key) || {};
             const sourceName = `${mainName} - ${label}`;
+            if (typeof player !== 'undefined' && player?.tournamentEditorDeletedKeys?.includes(sourceName)) return;
+            if (qualifier.editorModified === true) {
+                qualifier.qualifierFor = mainTournament.name;
+                calendar.push(qualifier);
+                return;
+            }
             const mainHasDisplayNameOverride = mainTournament.sourceName === mainName
                 && mainTournament.name !== mainName;
             const hasDisplayNameOverride = typeof qualifier.name === 'string'
@@ -328,6 +334,8 @@ function syncPdc2026TournamentCalendar(calendar = tournamentDatabase, referenceD
     }
 
     PDC_2026_CALENDAR_TEMPLATE.forEach(template => {
+        if (typeof player !== 'undefined' && Array.isArray(player?.tournamentEditorDeletedKeys)
+            && player.tournamentEditorDeletedKeys.includes(template.name)) return;
         let tournament = findPdc2026CalendarEntry(calendar, template);
         if (!tournament) {
             const templateTimestamp = referenceTimestamp === null ? null
@@ -344,6 +352,9 @@ function syncPdc2026TournamentCalendar(calendar = tournamentDatabase, referenceD
             calendar.push(tournament);
             return;
         }
+
+        // Career-editor changes belong to the save, not to the template migration.
+        if (tournament.editorModified === true) return;
 
         // Mod z prawdziwymi nazwami przechowuje bazową nazwę w sourceName.
         // Migracja ma poprawić daty i zasady turnieju, ale nie może cofnąć

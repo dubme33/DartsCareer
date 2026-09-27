@@ -39,35 +39,39 @@
     const translations = {
         pl: {
             matchStats: 'STATYSTYKI MECZU', visits: 'WYSOKIE KOLEJKI', checkout: 'SKUTECZNOŚĆ CHECKOUTÓW',
-            legHistory: 'HISTORIA LEGÓW', oneEighties: 'RZUCONE 180', wonIn: 'wygrywa w {darts}. lotce',
+            legHistory: 'HISTORIA LEGÓW', oneEighties: 'RZUCONE 180', dartsStat: 'LOTKI',
             replay: 'POWTÓRKA', replayOf: 'Zakończenie lega', skip: 'Pomiń powtórkę',
             moment: 'MOMENT MECZU', legWon: 'KONIEC LEGA', maximum: 'Maksimum 180', bigVisit: 'Wysoka kolejka',
             bullFinish: 'Bull na zakończenie', highCheckout: 'Wysoki checkout', bounceOut: 'Bounce-out',
-            hundred: '100+', oneForty: '140+', attempts: 'trafionych', leg: 'LEG', darts: 'lotek'
+            hundred: '100+', oneForty: '140+', averages: 'ŚREDNIE', matchAverage: 'ŚREDNIA MECZOWA', firstNineAverage: 'ŚREDNIA 9 LOTEK',
+            percentage: 'SKUTECZNOŚĆ', madeAttempts: 'TRAFIONE / PRÓBY', leg: 'LEG', darts: 'lotek'
         },
         en: {
             matchStats: 'MATCH STATS', visits: 'HIGH-SCORING VISITS', checkout: 'CHECKOUT PERCENTAGE',
-            legHistory: 'LEG HISTORY', oneEighties: '180s SCORED', wonIn: 'wins in {darts} darts',
+            legHistory: 'LEG HISTORY', oneEighties: '180s SCORED', dartsStat: 'DARTS',
             replay: 'REPLAY', replayOf: 'Leg-winning dart', skip: 'Skip replay',
             moment: 'MATCH MOMENT', legWon: 'LEG COMPLETE', maximum: 'Maximum 180', bigVisit: 'Big visit',
             bullFinish: 'Bull finish', highCheckout: 'High checkout', bounceOut: 'Bounce-out',
-            hundred: '100+', oneForty: '140+', attempts: 'made', leg: 'LEG', darts: 'darts'
+            hundred: '100+', oneForty: '140+', averages: 'AVERAGES', matchAverage: 'MATCH AVERAGE', firstNineAverage: 'FIRST 9 AVERAGE',
+            percentage: 'PERCENTAGE', madeAttempts: 'MADE / ATTEMPTS', leg: 'LEG', darts: 'darts'
         },
         de: {
             matchStats: 'MATCHSTATISTIK', visits: 'HOHE AUFNAHMEN', checkout: 'CHECKOUT-QUOTE',
-            legHistory: 'LEG-VERLAUF', oneEighties: 'GEWORFENE 180ER', wonIn: 'gewinnt mit {darts} Darts',
+            legHistory: 'LEG-VERLAUF', oneEighties: 'GEWORFENE 180ER', dartsStat: 'DARTS',
             replay: 'WIEDERHOLUNG', replayOf: 'Leg-Dart', skip: 'Wiederholung überspringen',
             moment: 'MATCHMOMENT', legWon: 'LEG BEENDET', maximum: 'Maximum 180', bigVisit: 'Hohe Aufnahme',
             bullFinish: 'Bull-Finish', highCheckout: 'Hohes Checkout', bounceOut: 'Bounce-out',
-            hundred: '100+', oneForty: '140+', attempts: 'Treffer', leg: 'LEG', darts: 'Darts'
+            hundred: '100+', oneForty: '140+', averages: 'DURCHSCHNITTE', matchAverage: 'MATCH-AVERAGE', firstNineAverage: 'ERSTE 9 DARTS',
+            percentage: 'QUOTE', madeAttempts: 'TREFFER / VERSUCHE', leg: 'LEG', darts: 'Darts'
         },
         nl: {
             matchStats: 'WEDSTRIJDSTATISTIEKEN', visits: 'HOGE BEURTEN', checkout: 'CHECKOUTPERCENTAGE',
-            legHistory: 'LEGOVERZICHT', oneEighties: 'GEGOOIDE 180-ERS', wonIn: 'wint in {darts} darts',
+            legHistory: 'LEGOVERZICHT', oneEighties: 'GEGOOIDE 180-ERS', dartsStat: 'DARTS',
             replay: 'HERHALING', replayOf: 'Winnende leg-dart', skip: 'Herhaling overslaan',
             moment: 'WEDSTRIJDMOMENT', legWon: 'LEG AFGELOPEN', maximum: 'Maximum 180', bigVisit: 'Hoge beurt',
             bullFinish: 'Bull-finish', highCheckout: 'Hoge checkout', bounceOut: 'Bounce-out',
-            hundred: '100+', oneForty: '140+', attempts: 'geraakt', leg: 'LEG', darts: 'darts'
+            hundred: '100+', oneForty: '140+', averages: 'GEMIDDELDEN', matchAverage: 'WEDSTRIJDGEMIDDELDE', firstNineAverage: 'EERSTE 9 PIJLEN',
+            percentage: 'PERCENTAGE', madeAttempts: 'RAAK / POGINGEN', leg: 'LEG', darts: 'darts'
         }
     };
 
@@ -80,17 +84,21 @@
 
     function text() { return translations[typeof currentLang === 'string' ? currentLang : 'pl'] || translations.en; }
     function tvActive() { return screen.classList.contains('match-tv-mode'); }
+    function directorSettings() {
+        return typeof getTVDirectorSettings === 'function'
+            ? getTVDirectorSettings() : { replays: 'normal', statistics: 'normal' };
+    }
     function speed() {
         return typeof currentMatch !== 'undefined' && currentMatch?.isSpectator
             && typeof getSpectatorPlaybackSpeed === 'function' ? Math.max(.5, getSpectatorPlaybackSpeed()) : 1;
     }
     function makeSession(match) {
         return {
-            match, visits: { p1: { hundred: 0, oneForty: 0 }, p2: { hundred: 0, oneForty: 0 } },
-            visitHits: { p1: [], p2: [] }, completedVisits: 0, legs: [], replayRunning: false,
+            match, visitHits: { p1: [], p2: [] }, completedVisits: 0, legs: [], replayRunning: false,
             presentationPending: false, pendingReplayKind: null, deferredActions: [],
             queuedBounceReplay: { p1: null, p2: null }, awaitingCallerReplay: null, waitingForCaller: false,
-            replayPhase: 'idle', replayShot: null, focused: null, lastCard: null
+            replayPhase: 'idle', replayShot: null, focused: null, lastCard: null,
+            replayCandidates: 0, statisticsCandidates: 0, statisticsAccepted: 0
         };
     }
     function ensureSession() {
@@ -153,11 +161,31 @@
         });
     }
     function stats() { return (typeof currentMatch !== 'undefined' && currentMatch?.stats) || {}; }
-    function checkoutLine(side) {
+    function checkoutStats(side) {
         const data = stats(), hits = Number(data[`${side}DoubleHits`]) || 0, attempts = Number(data[`${side}DoubleAttempts`]) || 0;
-        return `${attempts ? Math.round(hits / attempts * 100) : 0}%  ·  ${hits}/${attempts} ${text().attempts}`;
+        return { rate: `${attempts ? Math.round(hits / attempts * 100) : 0}%`, hits: `${hits}/${attempts}` };
     }
     function oneEighties(side) { return Number(stats()[`${side}OneEighties`]) || 0; }
+    function visitCounts() {
+        const data = stats(), counts = {};
+        for (const side of ['p1', 'p2']) counts[side] = {
+            hundred: Number(data[`${side}HundredPlus`]) || 0,
+            oneForty: Number(data[`${side}OneFortyPlus`]) || 0
+        };
+        return counts;
+    }
+    function threeDartAverage(points, darts) {
+        return darts > 0 ? (points / darts * 3).toFixed(2) : '0.00';
+    }
+    function averageStats(side) {
+        const data = stats(), match = typeof currentMatch !== 'undefined' ? currentMatch : null;
+        const remaining = Number(match?.[`${side}Score`]);
+        const scored = (Number(data[`${side}AccumulatedScore`]) || 0) + (501 - (Number.isFinite(remaining) ? remaining : 501));
+        return {
+            match: threeDartAverage(scored, Number(data[`${side}TotalDarts`]) || 0),
+            firstNine: threeDartAverage(Number(data[`${side}First9Score`]) || 0, Number(data[`${side}First9Darts`]) || 0)
+        };
+    }
     function field(target) {
         const sector = Number(target?.sector) || 0, mult = Number(target?.mult) || 0;
         if (sector === 25) return mult === 2 ? 'Bull' : '25';
@@ -191,8 +219,10 @@
         const clean = { sector: Number(target.sector), mult: Number(target.mult) || 1 };
         if (!Number.isFinite(clean.sector)) return false;
         const point = cameraPercent(clean), zoom = clean.mult === 2 ? 1.78 : 1.68;
-        boardView.style.setProperty('--tv-focus-shift-x', `${(50 - point.x) * zoom}%`);
-        boardView.style.setProperty('--tv-focus-shift-y', `${(50 - point.y) * zoom}%`);
+        // The 2D board occupies 62% of its surround; translate the whole assembly.
+        boardView.style.setProperty('--tv-focus-shift-x', `${(50 - point.x) * zoom * .62}%`);
+        boardView.style.setProperty('--tv-focus-shift-y', `${(50 - point.y) * zoom * .62}%`);
+        boardView.style.setProperty('--tv-focus-scale', zoom);
         boardView.classList.add('tv-camera-focus');
         window.matchBoard3D?.focusTarget(clean.sector, clean.mult);
         ensureSession().focused = clean;
@@ -203,6 +233,7 @@
         boardView.classList.remove('tv-camera-focus');
         boardView.style.removeProperty('--tv-focus-shift-x');
         boardView.style.removeProperty('--tv-focus-shift-y');
+        boardView.style.removeProperty('--tv-focus-scale');
         window.matchBoard3D?.clearFocus();
         if (session) session.focused = null;
     }
@@ -229,22 +260,30 @@
 
     function renderRows(rows) {
         statBody.replaceChildren();
-        rows.forEach(([label, value, accent]) => {
+        rows.forEach(({ label, p1, p2, accentP1, accentP2 }) => {
             const row = document.createElement('div'); row.className = 'tv-stat-row';
-            const name = document.createElement('span'); name.textContent = label;
-            const result = document.createElement('strong'); result.textContent = value;
-            if (accent) result.classList.add('is-accent');
-            row.append(name, result); statBody.appendChild(row);
+            const left = document.createElement('strong'); left.className = 'tv-stat-value'; left.textContent = p1;
+            const name = document.createElement('span'); name.className = 'tv-stat-label'; name.textContent = label;
+            const right = document.createElement('strong'); right.className = 'tv-stat-value'; right.textContent = p2;
+            if (accentP1) left.classList.add('is-accent');
+            if (accentP2) right.classList.add('is-accent');
+            row.append(left, name, right); statBody.appendChild(row);
         });
     }
-    function queueCard(card, priority = false) {
-        if (!tvActive()) return;
+    function queueCard(card, priority = false, manual = false) {
+        if (!tvActive() || directorSettings().statistics === 'off') return;
+        const state = ensureSession();
+        if (!manual) {
+            state.statisticsCandidates++;
+            if (directorSettings().statistics === 'rare' && state.statisticsCandidates % 4 !== 0) return;
+        }
+        state.statisticsAccepted++;
         if (priority) cardQueue.unshift(card); else cardQueue.push(card);
         if (cardQueue.length > 5) cardQueue.splice(1, cardQueue.length - 5);
         pumpCards();
     }
     function pumpCards() {
-        if (!tvActive() || !session || session.presentationPending || session.replayRunning || cardTimer || !cardQueue.length) return;
+        if (!tvActive() || directorSettings().statistics === 'off' || !session || session.presentationPending || session.replayRunning || cardTimer || !cardQueue.length) return;
         const card = cardQueue.shift();
         statKicker.textContent = card.kicker;
         statTitle.textContent = card.title;
@@ -261,21 +300,34 @@
     }
     function overviewCard(kind = '180') {
         const copy = text();
-        if (kind === 'checkout') return {
-            kind, kicker: copy.matchStats, title: copy.checkout,
-            rows: [['P1 · ' + sideName('p1'), checkoutLine('p1')], ['P2 · ' + sideName('p2'), checkoutLine('p2')]]
-        };
+        if (kind === 'checkout') {
+            const p1 = checkoutStats('p1'), p2 = checkoutStats('p2');
+            return { kind, kicker: copy.matchStats, title: copy.checkout,
+                rows: [{ label: copy.percentage, p1: p1.rate, p2: p2.rate },
+                    { label: copy.madeAttempts, p1: p1.hits, p2: p2.hits }] };
+        }
         if (kind === 'visits') {
-            const state = ensureSession();
-            return { kind, kicker: copy.matchStats, title: copy.visits, rows: ['p1', 'p2'].map(side => [sideName(side), `${copy.hundred}  ${state.visits[side].hundred}   ·   ${copy.oneForty}  ${state.visits[side].oneForty}`]) };
+            const visits = visitCounts();
+            return { kind, kicker: copy.matchStats, title: copy.visits,
+                rows: [{ label: copy.hundred, p1: String(visits.p1.hundred), p2: String(visits.p2.hundred) },
+                    { label: copy.oneForty, p1: String(visits.p1.oneForty), p2: String(visits.p2.oneForty) }] };
+        }
+        if (kind === 'averages') {
+            const p1 = averageStats('p1'), p2 = averageStats('p2');
+            return { kind, kicker: copy.matchStats, title: copy.averages,
+                rows: [{ label: copy.matchAverage, p1: p1.match, p2: p2.match },
+                    { label: copy.firstNineAverage, p1: p1.firstNine, p2: p2.firstNine }] };
         }
         return { kind: '180', kicker: copy.matchStats, title: copy.oneEighties,
-            rows: [[sideName('p1'), String(oneEighties('p1')), oneEighties('p1') > 0], [sideName('p2'), String(oneEighties('p2')), oneEighties('p2') > 0]] };
+            rows: [{ label: '180', p1: String(oneEighties('p1')), p2: String(oneEighties('p2')),
+                accentP1: oneEighties('p1') > 0, accentP2: oneEighties('p2') > 0 }] };
     }
     function legCard() {
         const copy = text(), legs = ensureSession().legs.slice(-4).reverse();
-        return { kind: 'legs', kicker: copy.matchStats, title: copy.legHistory, duration: 6500,
-            rows: legs.map(leg => [`${copy.leg} ${leg.number} · ${leg.winner}`, copy.wonIn.replace('{darts}', leg.darts), leg.number === ensureSession().legs.length]) };
+        return { kind: 'legs', kicker: copy.matchStats, title: `${copy.legHistory} · ${copy.dartsStat}`, duration: 6500,
+            rows: legs.map(leg => ({ label: `${copy.leg} ${leg.number}`, p1: leg.side === 'p1' ? String(leg.darts) : '–',
+                p2: leg.side === 'p2' ? String(leg.darts) : '–',
+                accentP1: leg.side === 'p1', accentP2: leg.side === 'p2' })) };
     }
 
     function captureFrame() {
@@ -294,13 +346,17 @@
         }
         if (event.visitComplete && total === 180) return { ...event, replayKind: '180' };
         if (event.visitComplete && (total === 170 || total === 171)) return { ...event, replayKind: String(total) };
-        if (event.bounced) return { ...event, replayKind: 'bounce' };
+        if (event.visitComplete && total >= 140 && directorSettings().replays === 'often') {
+            return { ...event, replayKind: 'big-visit' };
+        }
+        if (event.bounced) return { ...event, replayKind: 'bounce', replayFrame: captureFrame() };
         return null;
     }
     function replayHeadline(payload) {
         const copy = text();
         if (payload.replayKind === '180') return copy.maximum;
         if (payload.replayKind === '170' || payload.replayKind === '171') return `${copy.bigVisit} ${payload.replayKind}`;
+        if (payload.replayKind === 'big-visit') return `${copy.bigVisit} ${Number(payload.visitScore) || ''}`;
         if (payload.replayKind === 'bull-finish') return copy.bullFinish;
         if (payload.replayKind === 'high-checkout') return `${copy.highCheckout} ${Number(payload.visitScore) || ''}`.trim();
         if (payload.replayKind === 'bounce') return copy.bounceOut;
@@ -405,10 +461,10 @@
         }
         if (session.replayPhase === 'outro') return;
         session.replayPhase = 'outro';
-        window.matchBoard3D?.stopReplay?.();
         watermark.classList.remove('is-replay-cue', 'is-replay');
         watermark.classList.add('is-replay-outro');
         coverWithStinger(true, () => {
+            window.matchBoard3D?.stopReplay?.();
             replay.classList.remove('is-visible', 'is-live-3d');
             replay.hidden = true;
             replay.removeAttribute('data-shot');
@@ -430,7 +486,7 @@
     }
     function setupReplay(payload) {
         if (!tvActive() || !session || session.match !== currentMatch) return null;
-        const image = captureFrame();
+        const image = payload.replayFrame || captureFrame();
         const boardState = window.matchBoard3D?.getState?.();
         const live3D = Boolean(boardState?.mode === '3d' && !boardState.failed
             && (boardState.darts > 0 || payload.bounced && payload.boardPoint));
@@ -492,7 +548,7 @@
         });
     }
     function scheduleReplayCue(payload, state, callerFinished) {
-        if (!tvActive() || session !== state || currentMatch !== state.match || !state.presentationPending) {
+        if (!tvActive() || directorSettings().replays === 'off' || session !== state || currentMatch !== state.match || !state.presentationPending) {
             releasePresentation(state);
             return;
         }
@@ -571,7 +627,6 @@
         const state = ensureSession();
         if (!enabled) { clearPresentation(); clearFocus(); return; }
         replaySkip.textContent = text().skip;
-        setTimeout(() => { if (tvActive() && session === state) queueCard(overviewCard('180')); }, 650);
         const match = state.match;
         if (match) {
             const side = match.turn === 'p2' ? 'p2' : 'p1';
@@ -595,21 +650,26 @@
 
         if (event.visitComplete) {
             const total = Number(event.visitScore) || 0;
-            if (!event.bust && total >= 100 && total < 140) state.visits[side].hundred++;
-            else if (!event.bust && total >= 140 && total < 180) state.visits[side].oneForty++;
+            const data = stats();
+            const field = !event.bust && total >= 100 && total < 140 ? `${side}HundredPlus`
+                : !event.bust && total >= 140 && total < 180 ? `${side}OneFortyPlus` : null;
+            if (field) data[field] = (Number(data[field]) || 0) + 1;
             state.completedVisits++;
         }
 
-        const highlight = tvActive() ? replayPayload(event) : null;
+        let highlight = tvActive() && directorSettings().replays !== 'off' ? replayPayload(event) : null;
+        if (highlight) {
+            state.replayCandidates++;
+            if (directorSettings().replays === 'rare' && state.replayCandidates % 3 !== 0) highlight = null;
+        }
         let callerQueued = false;
         if (tvActive() && highlight?.replayKind === 'bounce' && !event.visitComplete) {
             state.queuedBounceReplay[side] = highlight;
             state.pendingReplayKind = 'bounce';
         } else if (tvActive() && !event.legCompleted
-            && ((highlight && (highlight.replayKind === '180' || highlight.replayKind === 'bounce'))
+            && (highlight
                 || (event.visitComplete && state.queuedBounceReplay[side]))) {
-            state.awaitingCallerReplay = highlight?.replayKind === '180' || highlight?.replayKind === 'bounce'
-                ? highlight : state.queuedBounceReplay[side];
+            state.awaitingCallerReplay = highlight || state.queuedBounceReplay[side];
             state.queuedBounceReplay[side] = null;
             state.pendingReplayKind = state.awaitingCallerReplay.replayKind;
             callerQueued = true;
@@ -621,7 +681,7 @@
         if (event.legCompleted) {
             const number = Math.max(state.legs.length + 1, (Number(currentMatch?.totalLegsPlayed) || 0) + 1);
             const winner = currentMatch?.isDoubles ? sideName(side) : (event.playerName || sideName(side));
-            state.legs.push({ number, winner, darts: Number(event.legDarts) || 0 });
+            state.legs.push({ number, winner, side, darts: Number(event.legDarts) || 0 });
             state.visitHits[side] = [];
             if (tvActive()) {
                 if (state.legs.length % 2 === 0) queueCard(legCard());
@@ -633,6 +693,8 @@
         if (tvActive() && event.visitComplete) {
             if (state.completedVisits % 8 === 0) queueCard(overviewCard('checkout'));
             else if (state.completedVisits % 4 === 0) queueCard(overviewCard('visits'));
+            else if (state.completedVisits % 2 === 0) queueCard(overviewCard('averages'));
+            else if (directorSettings().statistics === 'often') queueCard(overviewCard('averages'));
         }
 
         if (!tvActive()) return;
@@ -670,11 +732,38 @@
 
     window.matchTVDirector = Object.freeze({
         onMode, onAim, onThrow, onCaller, focusTarget, clearFocus, deferMatchAction,
-        showOverview(kind = '180') { if (tvActive()) queueCard(overviewCard(kind), true); },
+        onSettingsChange(settings, previous) {
+            const state = ensureSession();
+            if (settings.statistics !== previous.statistics) {
+                clearTimeout(cardTimer); clearTimeout(cardHideTimer); cardTimer = cardHideTimer = null;
+                cardQueue.length = 0; statCard.classList.remove('is-visible'); statCard.hidden = true;
+                state.statisticsCandidates = 0;
+            }
+            if (settings.replays !== previous.replays) {
+                state.replayCandidates = 0;
+                state.queuedBounceReplay.p1 = null; state.queuedBounceReplay.p2 = null;
+                if (settings.replays === 'off') {
+                    state.awaitingCallerReplay = null;
+                    // A waiting caller still owns the turn. Its completion
+                    // releases the hold through scheduleReplayCue, without replay.
+                    if (!state.waitingForCaller && (state.presentationPending || state.replayRunning)) finishReplay(true);
+                    else if (!state.presentationPending) state.pendingReplayKind = null;
+                }
+            }
+        },
+        onSimulatedLeg(visits = 0) {
+            const state = ensureSession();
+            state.completedVisits += Math.max(0, Number(visits) || 0);
+            if (tvActive()) {
+                queueCard(overviewCard('averages'));
+                queueCard(overviewCard('visits'));
+            }
+        },
+        showOverview(kind = '180') { if (tvActive()) queueCard(overviewCard(kind), true, true); },
         skipReplay() { if (session?.presentationPending || session?.replayRunning) finishReplay(true); },
         getState() {
             const state = ensureSession();
-            return { active: tvActive(), visits: JSON.parse(JSON.stringify(state.visits)), completedVisits: state.completedVisits,
+            return { active: tvActive(), visits: visitCounts(), completedVisits: state.completedVisits,
                 legs: state.legs.map(leg => ({ ...leg })), replay: state.replayRunning,
                 presentationPending: state.presentationPending, pendingReplayKind: state.pendingReplayKind,
                 waitingForCaller: state.waitingForCaller, awaitingCallerReplay: state.awaitingCallerReplay?.replayKind || null,
@@ -682,7 +771,9 @@
                 replayPhase: state.replayPhase, replayShot: state.replayShot, replaySlowMotion,
                 stinger: replayStinger.hidden ? 'hidden' : replayStinger.classList.contains('is-covering') ? 'covering' : 'opening',
                 focused: state.focused ? { ...state.focused } : null,
-                card: state.lastCard, queuedCards: cardQueue.length };
+                card: state.lastCard, queuedCards: cardQueue.length,
+                settings: directorSettings(), replayCandidates: state.replayCandidates,
+                statisticsCandidates: state.statisticsCandidates, statisticsAccepted: state.statisticsAccepted };
         }
     });
 })();

@@ -142,6 +142,14 @@
             line-height: 1.4;
         }
         .walkon-settings-tile select:focus-visible { outline: 3px solid #f1c40f; outline-offset: 2px; }
+        .match-report-settings-tile { cursor: default; border-color: #4ea6d8; background-color: #173d58; }
+        .match-report-settings-tile select {
+            width: 100%; box-sizing: border-box; margin: 13px 0 9px; padding: 10px;
+            border: 1px solid #6cb8de; border-radius: 6px; background: #102b40;
+            color: #fff; font: inherit; font-weight: 700;
+        }
+        .match-report-settings-tile small { display: block; min-height: 34px; color: #cce9f8; font-size: 12px; line-height: 1.4; }
+        .match-report-settings-tile select:focus-visible { outline: 3px solid #f1c40f; outline-offset: 2px; }
         .tiktok-tile { display: block; min-width: 0; background-color: #101010; border-color: #25f4ee; color: white; text-decoration: none; }
         .tiktok-tile p { color: #ecf0f1; overflow-wrap: anywhere; }
         .tiktok-tile:hover { background-color: #161616; border-color: #fe2c55; }
@@ -239,7 +247,8 @@
         .spectator-speed-label { color: #bdc3c7; font-size: 13px; font-weight: bold; }
         .spectator-speed-buttons { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
         .spectator-pause-btn,
-        .spectator-speed-btn {
+        .spectator-speed-btn,
+        .spectator-exit-btn {
             min-width: 44px;
             padding: 7px 10px;
             border: 1px solid #34495e;
@@ -255,6 +264,8 @@
         .spectator-pause-btn.paused { border-color: #2ecc71; background: var(--accent-green); }
         .spectator-speed-btn:hover { border-color: var(--accent-green); transform: translateY(-1px); }
         .spectator-speed-btn.active { background: var(--accent-green); border-color: #2ecc71; box-shadow: 0 0 8px rgba(39, 174, 96, 0.45); }
+        .spectator-exit-btn { border-color: #e57373; background: #7b2530; }
+        .spectator-exit-btn:hover { border-color: #ffabab; transform: translateY(-1px); }
         
         .score-board { position: sticky; top: 0; z-index: 30; display: flex; margin-bottom: 12px; background: #1a1a2e; padding: 6px; border-radius: 12px; gap: 10px; box-shadow: 0 6px 12px rgba(0,0,0,.3); }
         .score-col { display: flex; align-items: center; flex: 1; min-width: 0; gap: 14px; background: #0f3460; border-radius: 10px; padding: 10px 14px; box-sizing: border-box; transition: border-color .2s, box-shadow .2s; border: 2px solid transparent; }
@@ -852,6 +863,48 @@
             }
             .ranking-navigation-group-records { grid-column: 1 / -1; }
         }
+
+        .ranking-search { margin: 0 0 12px; text-align: left; }
+        .ranking-search label {
+            display: block;
+            margin-bottom: 6px;
+            color: #bdc3c7;
+            font-size: 13px;
+        }
+        .ranking-search-controls { display: flex; gap: 8px; }
+        .ranking-search-controls input {
+            flex: 1;
+            min-width: 0;
+            margin: 0;
+            padding: 11px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 7px;
+            background: #0f3460;
+            color: #ecf0f1;
+            font: inherit;
+            font-size: 16px;
+        }
+        .ranking-search-controls input::placeholder { color: #bdc3c7; }
+        .ranking-search-controls input:focus-visible {
+            outline: 2px solid var(--accent-green);
+            outline-offset: 2px;
+        }
+        .ranking-search-controls button {
+            margin: 0;
+            padding: 10px 12px;
+            border: 1px solid var(--border-color);
+            border-radius: 7px;
+            background: #34495e;
+            color: #ecf0f1;
+            font: inherit;
+            font-size: 13px;
+            cursor: pointer;
+        }
+        .ranking-search-status { margin: 8px 0 0; color: #bdc3c7; font-size: 12px; }
+        .ranking-search-empty { color: #bdc3c7; text-align: center; }
+        .ranking-player-row[hidden],
+        .ranking-search [hidden],
+        .ranking-search-empty[hidden] { display: none; }
 
         .ranking-player-row {
             width: 100%;

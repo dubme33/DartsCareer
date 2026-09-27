@@ -22,18 +22,19 @@
     const status = document.getElementById('board-view-status');
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
     const resources = new Set();
-    const dartMaterials = new Map();
     const dartModels = [];
     const spiderMeshes = [];
     const spiderDetail = Object.freeze({ wireRadius: .00145, faceZ: .0054, bladeWidth: .003, bladeDepth: .004 });
+    const embeddedPointLengthMm = 7;
     let mode = readPreference('dartsCareer.boardView', '3d');
     if (mode !== '2d' && mode !== '3d') mode = '3d';
     let cameraView = readPreference('dartsCareer.boardCamera', 'side') === 'front' ? 'front' : 'side';
-    let THREE, renderer, scene, camera, modelParts;
+    let THREE, renderer, scene, camera, dartFactory;
     let boardFace, defaultBoardTexture, modBoardTexture = null, skinSource = null;
     let loading = false, failed = false, initialization = null;
     let failureReason = null;
     let seenDarts = [], animations = [], queueUntil = 0, frameId = null;
+    let replayBoard = null;
     let cameraFocus = null, cameraMotion = null, cameraLookAt = null, replayShot = null;
     let restorePending = true, suspendedAt = null, frameCount = 0;
 
@@ -159,6 +160,7 @@
         renderer.domElement.addEventListener('webglcontextlost', event => { event.preventDefault(); fallback('context'); });
         stage.appendChild(renderer.domElement);
         scene = new THREE.Scene();
+        scene.environment = track(window.dartModel.studioEnvironment(THREE));
         camera = new THREE.PerspectiveCamera(30, 1, .1, 30);
         scene.add(new THREE.HemisphereLight(0xe8f4ff, 0x526051, 1.8));
         const key = new THREE.DirectionalLight(0xfff4e5, 3.1);
@@ -170,9 +172,19 @@
         const fill = new THREE.DirectionalLight(0xc9e2ff, 1.4);
         fill.position.set(3, -.5, 3); scene.add(fill);
 
-        const rubber = material({ color: 0x182a33, roughness: .96 });
-        const surround = addMesh(track(new THREE.CylinderGeometry(1.43, 1.43, .14, 96)), rubber);
+        // A standard surround is roughly 1.6 times the board diameter.
+        const rubber = material({ color: 0x111718, roughness: .98 });
+        const surround = addMesh(track(new THREE.CylinderGeometry(2.1, 2.1, .14, 128)), rubber);
         surround.rotation.x = Math.PI / 2; surround.position.z = -.13; surround.receiveShadow = true;
+        const surroundPanel = material({ color: 0x303638, roughness: .98 });
+        for (let i = 0; i < 8; i++) {
+            const panel = addMesh(track(new THREE.RingGeometry(1.65, 1.91, 8, 1,
+                i * Math.PI / 4 + .18, .38)), surroundPanel);
+            panel.position.z = -.049;
+        }
+        const surroundRim = addMesh(track(new THREE.TorusGeometry(2.07, .014, 6, 128)),
+            material({ color: 0x262c2e, roughness: .95 }));
+        surroundRim.position.z = -.05;
         const boardBody = addMesh(track(new THREE.CylinderGeometry(170 / 130, 170 / 130, .16, 96)), material({ color: 0x111415, roughness: .87 }));
         boardBody.rotation.x = Math.PI / 2; boardBody.position.z = -.08; boardBody.castShadow = true;
         const { texture, bump } = boardTextures();
@@ -196,7 +208,7 @@
             const middle = (130 + outerBull) / 2;
             blade.position.set(middle / 130 * Math.cos(angle), middle / 130 * Math.sin(angle), spiderDetail.faceZ);
         }
-        createModelParts();
+        dartFactory = window.dartModel.createFactory(THREE);
         updateCamera();
     }
 
@@ -220,95 +232,11 @@
         refreshUI(); requestRender();
     }
 
-    function createModelParts() {
-        const cylinder = (top, bottom, length) => {
-            const geometry = track(new THREE.CylinderGeometry(top, bottom, length, 24));
-            geometry.rotateX(Math.PI / 2); return geometry;
-        };
-        const barrel = points => {
-            const geometry = track(new THREE.LatheGeometry(points.map(([radius, z]) => new THREE.Vector2(radius, z)), 32));
-            geometry.rotateX(Math.PI / 2); return geometry;
-        };
-        const wing = points => {
-            const shape = new THREE.Shape();
-            shape.moveTo(points[0][0], points[0][1]);
-            points.slice(1).forEach(point => shape.lineTo(point[0], point[1]));
-            shape.closePath();
-            const geometry = track(new THREE.ExtrudeGeometry(shape, { depth: .0018, bevelEnabled: false }));
-            geometry.rotateX(Math.PI / 2); return geometry;
-        };
-        const flights = {
-            standard: wing([[0, 0], [.034, .006], [.078, .036], [.080, .142], [.050, .180], [0, .170]]),
-            kite: wing([[0, 0], [.032, .008], [.072, .050], [.078, .095], [.044, .178], [0, .164]]),
-            pear: wing([[0, 0], [.030, .006], [.061, .030], [.075, .078], [.068, .132], [.041, .177], [0, .164]])
-        };
-        const stripe = new THREE.Shape();
-        stripe.moveTo(0, .078); stripe.lineTo(.071, .078); stripe.lineTo(.071, .092);
-        stripe.lineTo(0, .092); stripe.closePath();
-        const stripeGeometry = track(new THREE.ShapeGeometry(stripe));
-        stripeGeometry.rotateX(Math.PI / 2);
-        modelParts = {
-            tip: cylinder(.006, .0007, .21),
-            barrels: {
-                straight: barrel([[.0165, -.1025], [.0195, -.088], [.020, .072], [.017, .1025]]),
-                torpedo: barrel([[.0135, -.1025], [.0185, -.078], [.022, -.025], [.022, .025], [.0185, .078], [.014, .1025]]),
-                scallop: barrel([[.0155, -.1025], [.0205, -.073], [.020, -.042], [.0168, -.014], [.0168, .018], [.0205, .068], [.016, .1025]])
-            },
-            neck: cylinder(.017, .0155, .04), shaft: cylinder(.0155, .016, .13),
-            flights, stripe: stripeGeometry,
-            flightEdges: Object.fromEntries(Object.entries(flights).map(([key, geometry]) => [key, track(new THREE.EdgesGeometry(geometry))])),
-            patternRing: track(new THREE.TorusGeometry(.0201, .0008, 6, 28)),
-            patternMicro: track(new THREE.TorusGeometry(.0199, .00045, 5, 24)),
-            patternShark: track(new THREE.TorusGeometry(.0204, .00135, 7, 28))
-        };
-    }
-
     function createDart(data, presentation = null) {
-        const group = new THREE.Group();
         const side = data.dartSide || (typeof currentMatch !== 'undefined' && currentMatch?.turn === 'p2' ? 'p2' : 'p1');
-        const appearance = data.dartStyle || (typeof window.getMatchDartLoadout === 'function'
-            ? window.getMatchDartLoadout(side) : null) || {
-            shaftColor: '#263640', flightColor: data.color || '#f1c40f', barrelColor: '#c7cdd1',
-            tipColor: '#d9e0e4', barrelShape: 'straight', flightShape: 'standard', barrelPattern: 'rings', patternAccent: '#111820'
-        };
-        const cachedMaterial = (kind, color, options, line = false) => {
-            const key = `${kind}:${color}`;
-            if (!dartMaterials.has(key)) dartMaterials.set(key, line
-                ? track(new THREE.LineBasicMaterial({ color, ...options }))
-                : material({ color, ...options }));
-            return dartMaterials.get(key);
-        };
-        const tipPaint = cachedMaterial('tip', appearance.tipColor, { metalness: .72, roughness: .2 });
-        const barrelPaint = cachedMaterial('barrel', appearance.barrelColor, { metalness: .65, roughness: .24 });
-        const shaftPaint = cachedMaterial('shaft', appearance.shaftColor, { metalness: .12, roughness: .4 });
-        const flightPaint = cachedMaterial('flight', appearance.flightColor, {
-            roughness: .48, metalness: .02, side: THREE.DoubleSide, transparent: true, opacity: .94
-        });
-        const detailPaint = cachedMaterial('detail', appearance.patternAccent, { metalness: .48, roughness: .28, side: THREE.DoubleSide });
-        const edgePaint = cachedMaterial('edge', appearance.patternAccent, { transparent: true, opacity: .78 }, true);
-        const part = (geometry, appearance, z) => {
-            const mesh = addMesh(geometry, appearance, group); mesh.position.z = z; mesh.castShadow = true; return mesh;
-        };
-        // The tip stays anchored to the scored hit; length is added towards the tail.
-        part(modelParts.tip, tipPaint, .100);
-        part(modelParts.barrels[appearance.barrelShape] || modelParts.barrels.straight, barrelPaint, .306);
-        part(modelParts.neck, shaftPaint, .426);
-        part(modelParts.shaft, shaftPaint, .507);
-        const pattern = appearance.barrelPattern;
-        const positions = pattern === 'rings' ? Array.from({ length: 9 }, (_, i) => .226 + i * .020)
-            : pattern === 'micro' ? Array.from({ length: 15 }, (_, i) => .216 + i * .0125)
-                : pattern === 'shark' ? Array.from({ length: 5 }, (_, i) => .238 + i * .034) : [];
-        const patternGeometry = pattern === 'micro' ? modelParts.patternMicro
-            : pattern === 'shark' ? modelParts.patternShark : modelParts.patternRing;
-        positions.forEach(z => part(patternGeometry, detailPaint, z));
-        const flightShape = modelParts.flights[appearance.flightShape] ? appearance.flightShape : 'standard';
-        for (let i = 0; i < 4; i++) {
-            const angle = i * Math.PI / 2;
-            part(modelParts.flights[flightShape], flightPaint, .548).rotation.z = angle;
-            part(modelParts.stripe, detailPaint, .548).rotation.z = angle;
-            const edge = new THREE.LineSegments(modelParts.flightEdges[flightShape], edgePaint);
-            edge.position.z = .548; edge.rotation.z = angle; group.add(edge);
-        }
+        const appearance = window.dartModel.normalize(data.dartStyle || (typeof window.getMatchDartLoadout === 'function'
+            ? window.getMatchDartLoadout(side) : null) || { flightColor: data.color || '#f1c40f' });
+        const group = dartFactory.create(appearance);
         const display = presentation?.point || matchBoardLayout.toDisplayPoint(data);
         const x = (display.x - 170) / 130, y = (170 - display.y) / 130;
         // Tilt varies deterministically, so changing the view cannot affect a future throw.
@@ -316,6 +244,13 @@
         group.position.set(x, y, .008);
         const pose = presentation?.pose || data.dartPose || { x: -.34 - tilt * .045, y: .08 + tilt * .025, z: tilt * .22 };
         group.rotation.set(pose.x, pose.y, pose.z);
+        // Slide the whole dart along its axis: 7 mm of point sits inside the sisal.
+        // Both generated and photographic boards use this same physical face.
+        // Compensate for the anchor's clearance without moving the scored point or pose.
+        const axis = new THREE.Vector3(0, 0, 1).applyEuler(group.rotation);
+        const pointInset = embeddedPointLengthMm * window.dartModel.scale
+            + (group.position.z - boardFace.position.z) / Math.max(.1, axis.z);
+        group.children.forEach(part => { part.position.z -= pointInset; });
         scene.add(group);
         const dart = { group, data, appearance, x, y, rotation: group.rotation.clone() };
         dartModels.push(dart); return dart;
@@ -323,7 +258,7 @@
 
     function enqueue(dart, bouncing = false, durationScale = 1, replay = false) {
         if (reducedMotion.matches) {
-            if (bouncing) { scene.remove(dart.group); dartModels.splice(dartModels.indexOf(dart), 1); }
+            if (bouncing) { scene.remove(dart.group); dartFactory.release(dart.group); dartModels.splice(dartModels.indexOf(dart), 1); }
             requestRender(); return;
         }
         const speed = spectatorSpeed();
@@ -355,8 +290,8 @@
         const narrow = Math.min(1, camera.aspect || 1);
         if (!target) {
             return cameraView === 'front'
-                ? { position: new THREE.Vector3(.12 / narrow, .08 / narrow, 5.85 / narrow), look: new THREE.Vector3(0, 0, .08) }
-                : { position: new THREE.Vector3(-2.65 / narrow, .75 / narrow, 5.25 / narrow), look: new THREE.Vector3(0, 0, .08) };
+                ? { position: new THREE.Vector3(.12 / narrow, .08 / narrow, 8.55 / narrow), look: new THREE.Vector3(0, 0, .08) }
+                : { position: new THREE.Vector3(-3.65 / narrow, .92 / narrow, 7.55 / narrow), look: new THREE.Vector3(0, 0, .08) };
         }
         const look = focusPoint(target);
         return cameraView === 'front'
@@ -530,7 +465,7 @@
                 dart.group.rotation.z = dart.rotation.z + t * 5;
                 if (earlyBounce) shakeContactedDart(dart, Math.sin(Math.PI * t) * .045 * (1 - t));
                 if (t === 1) {
-                    scene.remove(dart.group); dartModels.splice(dartModels.indexOf(dart), 1); return false;
+                    scene.remove(dart.group); dartFactory.release(dart.group); dartModels.splice(dartModels.indexOf(dart), 1); return false;
                 }
             } else {
                 completeImpact(animation);
@@ -543,6 +478,7 @@
             }
             return true;
         });
+        if (replayBoard) replayBoard.liveVisibility.forEach((_visible, group) => { group.visible = false; });
         try { renderer.render(scene, camera); frameCount++; }
         catch (_error) { fallback(); return; }
         if (animations.length || cameraMotion) requestRender();
@@ -550,15 +486,17 @@
 
     function shakeContactedDart(incoming, amount) {
         const index = incoming.data.collision?.obstacle;
-        const previous = dartModels.filter(dart => dart !== incoming && seenDarts.includes(dart.data));
+        const previous = replayBoard ? replayBoard.darts
+            : dartModels.filter(dart => dart !== incoming && seenDarts.includes(dart.data));
         const contacted = previous[index];
         if (contacted) contacted.group.rotation.z += amount;
     }
 
     function clear() {
         animations.forEach(completeImpact);
-        if (scene) dartModels.forEach(dart => scene.remove(dart.group));
+        if (scene) dartModels.forEach(dart => { scene.remove(dart.group); dartFactory.release(dart.group); });
         dartModels.length = 0; seenDarts = []; animations = []; queueUntil = 0;
+        replayBoard = null;
         requestRender();
     }
 
@@ -573,29 +511,14 @@
             try { renderer.dispose(); } catch (_error) { /* The context may already be lost. */ }
         }
         resources.forEach(resource => resource.dispose()); resources.clear();
-        dartMaterials.clear(); renderer = null; scene = null; camera = null;
+        dartFactory?.dispose(); dartFactory = null; renderer = null; scene = null; camera = null;
         boardFace = null; defaultBoardTexture = null; modBoardTexture = null; skinSource = null; spiderMeshes.length = 0; replayShot = null;
         stage.replaceChildren(); refreshUI(); drawDartboard();
     }
 
     // Classic scripts work for both file:// launches and HTTP hosting.
     function loadLibrary() {
-        if (window.DartsThree?.WebGLRenderer) return Promise.resolve(window.DartsThree);
-        return new Promise((resolve, reject) => {
-            const script = document.createElement('script');
-            script.src = libraryUrl; script.async = true;
-            const rejectLibrary = () => {
-                script.remove();
-                const error = new Error('Unable to load the local 3D library');
-                error.boardViewReason = 'library'; reject(error);
-            };
-            script.onerror = rejectLibrary;
-            script.onload = () => {
-                if (window.DartsThree?.WebGLRenderer) resolve(window.DartsThree);
-                else rejectLibrary();
-            };
-            document.head.appendChild(script);
-        });
+        return window.dartModel.loadThree(libraryUrl).catch(error => { error.boardViewReason = 'library'; throw error; });
     }
 
     function ensureScene() {
@@ -648,6 +571,7 @@
 
     function replayLastDart(slowMotion = 2.1) {
         if (!active() || !visible() || !dartModels.length) return false;
+        stopReplay();
         const dart = [...dartModels].reverse().find(model => seenDarts.includes(model.data));
         if (!dart) return false;
         animations = animations.filter(animation => animation.dart !== dart);
@@ -660,6 +584,13 @@
         const point = data?.boardPoint;
         if (!active() || !visible() || !point || !Number.isFinite(Number(point.x)) || !Number.isFinite(Number(point.y))) return false;
         stopReplay();
+        if (Array.isArray(data.replayBoardDarts)) {
+            const snapshot = data.replayBoardDarts;
+            const presentations = matchBoardLayout.presentDarts(snapshot);
+            const liveVisibility = new Map(dartModels.map(dart => [dart.group, dart.group.visible]));
+            liveVisibility.forEach((_visible, group) => { group.visible = false; });
+            replayBoard = { liveVisibility, darts: snapshot.map((entry, index) => createDart(entry, presentations[index])) };
+        }
         const side = data.side === 'p2' ? 'p2' : 'p1';
         const color = side === 'p2' ? '#ecf0f1' : '#f1c40f';
         const dartStyle = typeof window.getMatchDartLoadout === 'function' ? window.getMatchDartLoadout(side) : null;
@@ -676,6 +607,7 @@
             if (!animation.replay) return true;
             if (animation.bouncing || !seenDarts.includes(animation.dart.data)) {
                 scene.remove(animation.dart.group);
+                dartFactory.release(animation.dart.group);
                 const index = dartModels.indexOf(animation.dart);
                 if (index >= 0) dartModels.splice(index, 1);
             } else {
@@ -685,6 +617,15 @@
             }
             stopped = true; return false;
         });
+        if (replayBoard) {
+            replayBoard.darts.forEach(dart => {
+                scene.remove(dart.group); dartFactory.release(dart.group);
+                const index = dartModels.indexOf(dart);
+                if (index >= 0) dartModels.splice(index, 1);
+            });
+            replayBoard.liveVisibility.forEach((wasVisible, group) => { group.visible = wasVisible; });
+            replayBoard = null; stopped = true;
+        }
         if (stopped) { queueUntil = performance.now(); requestRender(); }
         return stopped;
     }
@@ -717,19 +658,25 @@
                 replayCamera: replayShot ? { name: replayShot.name, target: { ...replayShot.target } } : null,
                 cameraMoving: Boolean(cameraMotion), rings: matchBoardLayout.radii,
                 darts: seenDarts.length, animations: animations.length, transientDarts: dartModels.length - seenDarts.length,
+                replayBoard: replayBoard ? replayBoard.darts.map(dart => ({
+                    point: { x: dart.data.x, y: dart.data.y }, visible: dart.group.visible,
+                    renderedPosition: dart.group.position.toArray(), renderedPose: dart.group.rotation.toArray().slice(0, 3)
+                })) : null,
                 frames: frameCount, pixelRatio: renderer?.getPixelRatio(), drawCalls: renderer?.info.render.calls,
                 geometries: renderer?.info.memory.geometries, textures: renderer?.info.memory.textures,
-                boardSkin: skinSource ? window.matchBoardSkin.getState().name : null,
+                boardSkin: skinSource ? window.matchBoardSkin.getState().name : null, boardSurfaceZ: boardFace?.position.z,
                 spider: { source: skinSource ? 'photographic' : 'generated', generated: spiderMeshes.length,
                     generatedVisible: spiderMeshes.filter(mesh => mesh.visible).length, ...spiderDetail },
                 viewport: renderer ? renderer.getSize(new THREE.Vector2()).toArray() : null,
                 dartDetails: dartModels.filter(dart => seenDarts.includes(dart.data)).map(dart => ({
-                    tipLength: modelParts.tip.parameters.height, tilt: dart.rotation.x, point: { x: dart.data.x, y: dart.data.y },
+                    tipLength: dart.group.userData.dimensions.tipLength * window.dartModel.scale, tilt: dart.rotation.x, point: { x: dart.data.x, y: dart.data.y },
                     appearance: { ...dart.appearance },
-                    geometry: { shaftRadius: .016, barrelRadius: .020, flightWings: 4, wingAngleDegrees: 90 },
+                    geometry: { ...dart.group.userData.dimensions, shaftRadius: dart.group.userData.dimensions.shaftRadius * window.dartModel.scale, barrelRadius: dart.group.userData.dimensions.barrelRadius * window.dartModel.scale },
                     displayPoint: { x: 170 + dart.x * 130, y: 170 - dart.y * 130 },
+                    visible: dart.group.visible,
                     pose: { x: dart.rotation.x, y: dart.rotation.y, z: dart.rotation.z }, collision: dart.data.collision || null,
                     renderedPosition: dart.group.position.toArray(), renderedPose: dart.group.rotation.toArray().slice(0, 3),
+                    renderedTipPosition: dart.group.children[0].getWorldPosition(new THREE.Vector3()).toArray(),
                     tailDirection: new THREE.Vector3(0, 0, 1).applyEuler(dart.rotation).toArray()
                 })) };
         }

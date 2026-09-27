@@ -80,7 +80,11 @@ function playerThrow() {
 
         function aiTurn() {
             if (!currentMatch || currentMatch.isFinishing || currentMatch.isTurnLocked
-                || currentMatch.isDartInFlight || currentMatch.dartsThrown >= 3) return;
+                || currentMatch.dartsThrown >= 3) return;
+            if (currentMatch.isDartInFlight) {
+                currentMatch.pendingImpactAction = aiTurn;
+                return;
+            }
             if (currentMatch.isSpectator && currentMatch.spectatorPaused) return;
             const isP1 = currentMatch.turn === 'p1';
             if (!isP1 && currentMatch.turn !== 'p2') return;
@@ -111,13 +115,7 @@ function playerThrow() {
                 : 0;
             aiStats.scoring = (Number(aiStats.scoring) || 0) + tournamentForm;
             aiStats.doubles = (Number(aiStats.doubles) || 0) + tournamentForm;
-            const peakPerformance = currentMatch.isSpectator
-                ? (isP1 ? currentMatch.p1PeakPerformance : currentMatch.p2PeakPerformance)
-                : currentMatch.opponentPeakPerformance;
-            const peakAccuracyBoost = !currentMatch.isDoubles
-                ? (peakPerformance?.accuracyBoost || 0)
-                : 0;
-            aiStats.peakMatchAccuracyBoost = peakAccuracyBoost;
+            aiStats = applyAiPeakMatchThrowStats(aiStats, isP1);
             const momentum = isP1 ? currentMatch.p1Momentum : currentMatch.p2Momentum;
             if (currentMatch && momentum !== undefined) {
                 aiStats.scoring = Math.min(100, aiStats.scoring + (momentum * 2.5));
@@ -221,17 +219,38 @@ function playerThrow() {
             return [5, 3, 1][index] || 0;
         }
 
+        function applyAiPeakMatchThrowStats(stats, isP1, match = currentMatch) {
+            const peak = !match?.isDoubles && (match?.isSpectator
+                ? (isP1 ? match.p1PeakPerformance : match.p2PeakPerformance)
+                : (!isP1 ? match?.opponentPeakPerformance : null));
+            return { ...stats, peakMatchAccuracyBoost: Number(peak?.accuracyBoost) || 0,
+                peakMatchIsExtraordinary: Boolean(peak?.extraordinary) };
+        }
+
+        function getDoubleTargetHitChance(targetSector, stats, groupingVisit = null) {
+            // Wyższe limity dotyczą wyłącznie wylosowanego wybitnego meczu AI.
+            const extraordinary = stats.peakMatchIsExtraordinary === true;
+            const hitLimit = extraordinary ? 75 : 57;
+            const stat = clamp(stats.doubles + (Number(stats.peakMatchAccuracyBoost) || 0), 25, extraordinary ? 150 : 110);
+            const base = clamp(stat * 0.45 + getFavoriteDoubleHitBonus(targetSector, 2, stats), 12, hitLimit);
+            const training = typeof getDoubleTrainingHitBonus === 'function'
+                ? getDoubleTrainingHitBonus(targetSector, 2, stats) : 0;
+            return Math.min(hitLimit, base + getThrowGroupingBonus(groupingVisit, targetSector, 2)) + training;
+        }
+
         function calculateThrow(targetSector, targetMult, stats, groupingVisit = null) {
+            const extraordinary = stats.peakMatchIsExtraordinary === true;
             // Dedykowana logika dla środka tarczy (Outer / Inner Bull)
             if (targetSector === 25) {
                 let stat = targetMult === 2 ? stats.doubles : stats.scoring;
-                stat = clamp(stat - 10, 20, 95);
+                stat = clamp(stat - 10 + (extraordinary ? (Number(stats.peakMatchAccuracyBoost) || 0) : 0), 20, extraordinary ? 140 : 95);
                 let roll = Math.random() * 100;
 
                 if (targetMult === 2) {
                     // Celowanie w 50 (Inner Bull)
-                    const baseBullHitChance = clamp(stat * 0.35, 10, 45);
-                    const bullHitChance = Math.min(45, baseBullHitChance + getThrowGroupingBonus(groupingVisit, targetSector, targetMult));
+                    const bullHitLimit = extraordinary ? 65 : 45;
+                    const baseBullHitChance = clamp(stat * 0.35, 10, bullHitLimit);
+                    const bullHitChance = Math.min(bullHitLimit, baseBullHitChance + getThrowGroupingBonus(groupingVisit, targetSector, targetMult));
                     // Celność czerwonego środka pozostaje bez zmian. Większa
                     // część jego pudeł trafia jednak w bezpośrednio otaczający
                     // Outer Bull, zamiast przeskakiwać od razu do dużego singla.
@@ -247,7 +266,7 @@ function playerThrow() {
                     }
                 } else {
                     // Celowanie w 25 (Outer Bull)
-                    const outerHitChance = clamp(stat * 0.55, 20, 65);
+                    const outerHitChance = clamp(stat * 0.55, 20, extraordinary ? 80 : 65);
                     const incidentalBullChance = 12;
                     if (roll <= outerHitChance) {
                         return { sector: 25, mult: 1 };
@@ -261,14 +280,15 @@ function playerThrow() {
 
             // Standardowe sektory 1-20
             let stat = targetMult === 2 ? stats.doubles : stats.scoring;
-            stat = clamp(stat + (Number(stats.peakMatchAccuracyBoost) || 0), 25, 110);
+            stat = clamp(stat + (Number(stats.peakMatchAccuracyBoost) || 0), 25, extraordinary ? 150 : 110);
             let hitMult = targetMult, hitSector = targetSector, roll = Math.random() * 100;
             const favoriteDoubleBonus = getFavoriteDoubleHitBonus(targetSector, targetMult, stats);
 
             if (targetMult === 3) {
-                const baseTripleHitChance = clamp(stat * 0.42, 12, 54);
+                const tripleHitLimit = extraordinary ? 74 : 54;
+                const baseTripleHitChance = clamp(stat * 0.42, 12, tripleHitLimit);
                 const groupingBonus = getThrowGroupingBonus(groupingVisit, targetSector, targetMult);
-                const tripleHitChance = Math.min(54, baseTripleHitChance + groupingBonus);
+                const tripleHitChance = Math.min(tripleHitLimit, baseTripleHitChance + groupingBonus);
                 // Marker zamienia część singli w celowane triple, bez zmiany
                 // szansy na sąsiednie sektory ani bazowych ocen zawodnika.
                 const targetSingleChance = Math.min(98, baseTripleHitChance + 65);
@@ -282,8 +302,8 @@ function playerThrow() {
                     hitMult = Math.random() < 0.10 ? 3 : 1; 
                 }
             } else if (targetMult === 2) {
-                const baseDoubleHitChance = clamp(stat * 0.45 + favoriteDoubleBonus, 12, 57);
-                const doubleHitChance = Math.min(57, baseDoubleHitChance + getThrowGroupingBonus(groupingVisit, targetSector, targetMult));
+                const baseDoubleHitChance = clamp(stat * 0.45 + favoriteDoubleBonus, 12, extraordinary ? 75 : 57);
+                const doubleHitChance = getDoubleTargetHitChance(targetSector, stats, groupingVisit);
                 
                 // Bonus zamienia część singli w double, bez zmiany szansy na dalsze pudła.
                 const targetSingleChance = Math.min(90, baseDoubleHitChance + 25);

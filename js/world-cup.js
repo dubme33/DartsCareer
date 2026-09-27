@@ -156,11 +156,13 @@ const WORLD_CUP_KNOCKOUT_SEED_ORDER = [
 ];
 
 function isWorldCupTournament(tournament = activeTournament) {
+    if (typeof hasTournamentEditorQualification === 'function' && hasTournamentEditorQualification(tournament)) return false;
     return Boolean(tournament && (tournament.specialType === 'worldCup' ||
         tournament.name === WORLD_CUP_TOURNAMENT_NAME || tournament.name === WORLD_CUP_LEGACY_NAME));
 }
 
 function isWorldCupQualifierTournament(tournament = activeTournament) {
+    if (typeof hasTournamentEditorQualification === 'function' && hasTournamentEditorQualification(tournament)) return false;
     return Boolean(tournament && (tournament.specialType === 'worldCupQualifiers' ||
         tournament.name === WORLD_CUP_QUALIFIER_TOURNAMENT_NAME));
 }
@@ -1282,9 +1284,6 @@ function startWorldCupTournament() {
         worldCupState.skipPlayerMatches = true;
         isSkippingTournament = false;
     }
-    if (!worldCupState.skipPlayerMatches && worldCupState.teams.some(teamContainsCareerPlayer) && typeof chargeTournamentParticipationStamina === 'function') {
-        chargeTournamentParticipationStamina(activeTournament);
-    }
     if (!worldCupState.skipPlayerMatches && !worldCupState.qualificationsAcknowledged) {
         worldCupState.qualificationsAcknowledged = true;
         showWorldCupOverview();
@@ -1309,9 +1308,6 @@ function startWorldCupQualifiers() {
         && shouldAutoSimulateUnwatchedTournament(activeTournament, worldCupState.teams.some(teamContainsCareerPlayer)))) {
         worldCupState.skipPlayerMatches = true;
         isSkippingTournament = false;
-    }
-    if (!worldCupState.skipPlayerMatches && worldCupState.teams.some(teamContainsCareerPlayer) && typeof chargeTournamentParticipationStamina === 'function') {
-        chargeTournamentParticipationStamina(activeTournament);
     }
     if (!worldCupState.skipPlayerMatches && !worldCupState.qualificationsAcknowledged) {
         worldCupState.qualificationsAcknowledged = true;
@@ -1366,6 +1362,10 @@ function startWorldCupMatch(match) {
     const opponentTeam = playerTeam === team1 ? team2 : team1;
     const format = getWorldCupMatchFormat(match.stage);
     const starter = Math.random() < 0.5 ? 'p1' : 'p2';
+    // Rozlicz podróż dopiero, gdy zawodnik naprawdę rozpoczyna mecz reprezentacji.
+    if (typeof chargeTournamentParticipationStamina === 'function') {
+        chargeTournamentParticipationStamina(activeTournament);
+    }
 
     currentMatch = {
         vsAI: true,
@@ -1382,8 +1382,8 @@ function startWorldCupMatch(match) {
         legsToWin: format.legsToWin, matchFormat: format, turn: starter, startingPlayer: starter, dartsThrown: 0, isTurnLocked: false,
         p1TurnStartScore: 501, p2TurnStartScore: 501,
         stats: {
-            p1TotalDarts: 0, p1AccumulatedScore: 0, p1First9Score: 0, p1First9Darts: 0, p1LegDarts: 0, p1HighCheckout: 0, p1DoubleAttempts: 0, p1DoubleHits: 0, p1OneEighties: 0,
-            p2TotalDarts: 0, p2AccumulatedScore: 0, p2First9Score: 0, p2First9Darts: 0, p2LegDarts: 0, p2HighCheckout: 0, p2DoubleAttempts: 0, p2DoubleHits: 0, p2OneEighties: 0
+            p1TotalDarts: 0, p1AccumulatedScore: 0, p1First9Score: 0, p1First9Darts: 0, p1LegDarts: 0, p1HighCheckout: 0, p1DoubleAttempts: 0, p1DoubleHits: 0, p1OneEighties: 0, p1HundredPlus: 0, p1OneFortyPlus: 0,
+            p2TotalDarts: 0, p2AccumulatedScore: 0, p2First9Score: 0, p2First9Darts: 0, p2LegDarts: 0, p2HighCheckout: 0, p2DoubleAttempts: 0, p2DoubleHits: 0, p2OneEighties: 0, p2HundredPlus: 0, p2OneFortyPlus: 0
         }
     };
     if (currentMatch.doublesThrower.p1 < 0) currentMatch.doublesThrower.p1 = 0;

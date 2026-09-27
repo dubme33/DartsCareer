@@ -109,6 +109,11 @@ function getMainOomTournamentSourceName(tournamentOrName) {
 }
 
 function isMainOrderOfMeritRankingTournament(tournamentOrName) {
+    const editorTournament = typeof tournamentOrName === 'object' ? tournamentOrName
+        : (typeof tournamentDatabase !== 'undefined' && Array.isArray(tournamentDatabase)
+            ? tournamentDatabase.find(candidate => candidate?.name === tournamentOrName
+                || candidate?.sourceName === tournamentOrName) : null);
+    if (typeof editorTournament?.rankingOverride === 'boolean') return editorTournament.rankingOverride;
     const displayName = getMainOomTournamentName(tournamentOrName).toLocaleLowerCase();
     const sourceName = getMainOomTournamentSourceName(tournamentOrName).toLocaleLowerCase();
     const searchableName = `${displayName} ${sourceName}`;

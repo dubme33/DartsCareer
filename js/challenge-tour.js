@@ -164,7 +164,7 @@ function renderChallengeTourRanking(list) {
     let html = `${guide}<div style="border-bottom:2px solid var(--accent-green); padding:5px 10px; display:flex; font-size:12px; color:#bdc3c7; font-weight:bold; background:#0f3460;"><div style="flex:3;">${escapeHtml(trChallengeTour('player'))}</div><div style="flex:1; text-align:right;">${escapeHtml(trChallengeTour('money'))}</div></div>`;
     rows.forEach((candidate, index) => {
         const isMe = typeof isCurrentPlayer === 'function' && isCurrentPlayer(candidate);
-        html += `<button type="button" class="ranking-player-row" data-player-id="${escapeHtml(candidate.id || '')}" style="border-bottom:1px solid var(--border-color); ${isMe ? 'background:rgba(39,174,96,.2);' : ''}"><div style="flex:3;"><strong>#${index + 1}</strong> ${getFlagImg(candidate.country)} ${escapeHtml(candidate.name)} ${isMe ? '<b style="color:var(--accent-green)">(TY)</b>' : ''}</div><div style="flex:1; text-align:right; color:#f1c40f; font-weight:bold;">£${getChallengeTourPrizeMoney(candidate).toLocaleString('en-GB')}</div></button>`;
+        html += `<button type="button" class="ranking-player-row" data-player-id="${escapeHtml(candidate.id || '')}" data-player-name="${escapeHtml(candidate.name)}" style="border-bottom:1px solid var(--border-color); ${isMe ? 'background:rgba(39,174,96,.2);' : ''}"><div style="flex:3;"><strong>#${index + 1}</strong> ${getFlagImg(candidate.country)} ${escapeHtml(candidate.name)} ${isMe ? '<b style="color:var(--accent-green)">(TY)</b>' : ''}</div><div style="flex:1; text-align:right; color:#f1c40f; font-weight:bold;">£${getChallengeTourPrizeMoney(candidate).toLocaleString('en-GB')}</div></button>`;
     });
     list.innerHTML = html;
 }

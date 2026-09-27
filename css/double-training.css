@@ -1,0 +1,42 @@
+#train-double-sectors {
+    margin-top: 28px;
+    padding: 22px;
+    background: #0f3460;
+    border: 1px solid var(--accent-green);
+    border-radius: 12px;
+}
+#train-double-sectors h3 { margin-top: 0; color: white; }
+.double-training-note { color: #bdc3c7; font-size: 14px; line-height: 1.6; }
+#train-double-sectors label { display: block; margin-bottom: 6px; }
+#train-double-sector { width: 100%; max-width: 240px; margin-bottom: 16px; }
+.double-training-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
+.double-training-sector {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 12px 8px;
+    background: #16213e;
+    border: 2px solid #405574;
+    border-radius: 8px;
+    color: #ecf0f1;
+    cursor: pointer;
+}
+.double-training-sector strong { font-size: 19px; }
+.double-training-sector span { font-size: 12px; color: #bdc3c7; }
+.double-training-sector[aria-pressed="true"] { border-color: var(--accent-green); background: #16473c; }
+.double-training-sector:hover { border-color: var(--accent-green); }
+.double-training-sector:focus-visible { outline: 3px solid var(--accent-yellow); outline-offset: 2px; }
+.double-training-sector progress { width: 100%; height: 6px; accent-color: var(--accent-green); }
+.double-training-detail { margin-top: 18px; padding: 18px; border-radius: 8px; background: #16213e; }
+.double-training-target { font-size: 28px; color: var(--accent-green); }
+.double-training-detail dl { display: flex; flex-wrap: wrap; gap: 16px 30px; margin: 12px 0; }
+.double-training-detail dt { color: #bdc3c7; font-size: 13px; }
+.double-training-detail dd { margin: 5px 0 0; font-size: 20px; font-weight: bold; }
+#train-double-sector-btn { width: 100%; white-space: normal; }
+@media (max-width: 520px) {
+    #train-double-sectors { padding: 16px 12px; }
+    .double-training-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 7px; }
+    .double-training-sector { padding: 10px 4px; }
+    .double-training-detail { padding: 14px; }
+}

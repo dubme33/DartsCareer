@@ -90,14 +90,17 @@ function getWorldMastersSeasonYear() {
 }
 
 function isWorldMastersTournament(tournament = activeTournament) {
+    if (typeof hasTournamentEditorQualification === 'function' && hasTournamentEditorQualification(tournament)) return false;
     return Boolean(tournament && tournament.specialType === 'worldMasters');
 }
 
 function isWorldMastersFinalsTournament(tournament = activeTournament) {
+    if (typeof hasTournamentEditorQualification === 'function' && hasTournamentEditorQualification(tournament)) return false;
     return Boolean(tournament && tournament.specialType === 'worldMastersFinals');
 }
 
 function isWorldMastersFinalsQualifierTournament(tournament = activeTournament) {
+    if (typeof hasTournamentEditorQualification === 'function' && hasTournamentEditorQualification(tournament)) return false;
     return Boolean(tournament && tournament.specialType === 'worldMastersFinalsQualifier');
 }
 
@@ -287,7 +290,10 @@ function isWorldMastersEventFieldPlayable(field) {
     if (!field) return false;
     const { invited, locals } = getWorldMastersEventFieldPlayers(field);
     const playerKeys = [...invited, ...locals].map(getWorldMastersPlayerKey);
-    return invited.length === 8 && locals.length === 8 && new Set(playerKeys).size === 16;
+    return invited.length === 8 && locals.length === 8 && new Set(playerKeys).size === 16
+        && [...invited, ...locals].every(candidate =>
+            (typeof isPlayerAvailableForPlay !== 'function' || isPlayerAvailableForPlay(candidate))
+            && (typeof isRetiredPlayer !== 'function' || !isRetiredPlayer(candidate)));
 }
 
 function getWorldMastersInvitationCounts(candidates) {
@@ -304,8 +310,10 @@ function getWorldMastersInvitationCounts(candidates) {
 }
 
 function createWorldMastersEventField(event) {
-    const allPlayers = getWorldMastersAllPlayers();
-    const tourCardPlayers = getWorldMastersTourCardPlayers();
+    const allPlayers = getWorldMastersAllPlayers().filter(candidate =>
+        (typeof isPlayerAvailableForPlay !== 'function' || isPlayerAvailableForPlay(candidate))
+        && (typeof isRetiredPlayer !== 'function' || !isRetiredPlayer(candidate)));
+    const tourCardPlayers = getWorldMastersTourCardPlayers(allPlayers);
     const invited = [];
     const selectedKeys = new Set();
     const addCandidate = (list, candidate) => {
@@ -605,14 +613,23 @@ function getWorldMastersFinalsField() {
     if (state.finals?.participantKeys && state.finals.completed) {
         return { ...state.finals, participants: resolveWorldMastersPlayers(state.finals.participantKeys) };
     }
-    if (state.finals?.participantKeys && resolveWorldMastersPlayers(state.finals.participantKeys).length === 32) {
+    const availableCandidates = getWorldMastersAllPlayers().filter(candidate =>
+        (typeof isPlayerAvailableForPlay !== 'function' || isPlayerAvailableForPlay(candidate))
+        && (typeof isRetiredPlayer !== 'function' || !isRetiredPlayer(candidate)));
+    const availableKeys = new Set(availableCandidates.map(getWorldMastersPlayerKey));
+    const finalsStarted = typeof tournamentDatabase !== 'undefined' && Array.isArray(tournamentDatabase)
+        && tournamentDatabase.some(tournament =>
+        isWorldMastersFinalsTournament(tournament) && (tournament.matchHistory?.blocks || [])
+            .some(block => block?.matches?.length));
+    if (state.finals?.participantKeys && resolveWorldMastersPlayers(state.finals.participantKeys).length === 32
+        && (finalsStarted || state.finals.participantKeys.every(key => availableKeys.has(key)))) {
         return { ...state.finals, participants: resolveWorldMastersPlayers(state.finals.participantKeys) };
     }
 
     const automatic = getWorldMastersAutomaticFinalistKeys();
-    const worldSeriesKeys = completeWorldMastersFieldKeys(automatic.worldSeriesKeys, 24);
+    const worldSeriesKeys = completeWorldMastersFieldKeys(automatic.worldSeriesKeys, 24, [], availableCandidates);
     const selected = new Set(worldSeriesKeys);
-    const oomKeys = completeWorldMastersFieldKeys(automatic.oomKeys, 4, selected);
+    const oomKeys = completeWorldMastersFieldKeys(automatic.oomKeys, 4, selected, availableCandidates);
     oomKeys.forEach(key => selected.add(key));
 
     const preferredQualifierKeys = state.finalsQualifier?.completed
@@ -621,7 +638,7 @@ function getWorldMastersFinalsField() {
     const qualifierKeys = [];
     const addTourCardQualifier = candidate => {
         const key = getWorldMastersPlayerKey(candidate);
-        if (!candidate || candidate.hasTourCard !== true || !key || selected.has(key)
+        if (!candidate || candidate.hasTourCard !== true || !availableKeys.has(key) || !key || selected.has(key)
             || qualifierKeys.includes(key) || qualifierKeys.length >= WORLD_MASTERS_FINALS_QUALIFIER_PLACES) return;
         qualifierKeys.push(key);
     };
@@ -631,7 +648,7 @@ function getWorldMastersFinalsField() {
 
     const participantKeys = completeWorldMastersFieldKeys(
         [...worldSeriesKeys, ...oomKeys, ...qualifierKeys, ...getWorldMastersTourCardPlayers().map(getWorldMastersPlayerKey)],
-        32
+        32, [], availableCandidates
     );
     state.finals = { worldSeriesKeys, oomKeys, qualifierKeys, participantKeys, completed: false };
     return { ...state.finals, participants: resolveWorldMastersPlayers(participantKeys) };
@@ -782,6 +799,7 @@ function concludeWorldMastersFinalsQualifierEvent(showOutcome = true) {
 function migrateWorldMastersCalendar() {
     if (!Array.isArray(tournamentDatabase)) return;
     WORLD_MASTERS_CALENDAR.forEach(template => {
+        if (typeof player !== 'undefined' && player?.tournamentEditorDeletedKeys?.includes(template.name)) return;
         // Zapisy sprzed przebudowy cyklu nazywały amerykański event „US Masters”.
         // Najpierw odnajdujemy taki historyczny wpis, aby nie dodać drugiego turnieju
         // na ten sam dzień i zachować jego historię oraz stan aktywnej drabinki.
@@ -789,6 +807,7 @@ function migrateWorldMastersCalendar() {
         const existing = tournamentDatabase.find(tournament => legacyNames.includes(tournament.name))
             || tournamentDatabase.find(tournament => tournament.specialType === template.specialType && (template.worldMastersEvent ? tournament.worldMastersEvent === template.worldMastersEvent : true))
             || tournamentDatabase.find(tournament => tournament.name === template.name);
+        if (existing?.editorModified === true) return;
         if (existing) {
             Object.assign(existing, { ...template, name: existing.name || template.name, completed: Boolean(existing.completed), historyLogs: existing.historyLogs || '' });
         } else {
@@ -809,7 +828,7 @@ function renderWorldMastersRanking(list) {
         const candidate = row.player || row;
         const isMe = candidate && typeof isCurrentPlayer === 'function' && isCurrentPlayer(candidate);
         const qualified = index < 24;
-        rankingHtml += `<button type="button" class="ranking-player-row" data-player-id="${escapeHtml(candidate?.id || '')}" style="border-bottom:1px solid var(--border-color); ${isMe ? 'background:rgba(39,174,96,.2);' : qualified ? 'background:rgba(41,128,185,.1);' : ''}"><div style="flex:3;"><strong>${index + 1}.</strong> ${getFlagImg(row.country)} ${escapeHtml(row.name)} ${isMe ? '<b style="color:var(--accent-green)">(TY)</b>' : ''}${qualified ? ` <small style="color:#f1c40f;">${trWorldMasters('qualified')}</small>` : ''}</div><div style="flex:1; text-align:center; color:#f1c40f; font-weight:bold;">${row.points}</div><div style="flex:2; text-align:center; color:#bdc3c7;">${row.legsWon}-${row.legsLost}</div><div style="flex:1; text-align:right; color:#bdc3c7;">${row.average ? row.average.toFixed(2) : '—'}</div></button>`;
+        rankingHtml += `<button type="button" class="ranking-player-row" data-player-id="${escapeHtml(candidate?.id || '')}" data-player-name="${escapeHtml(row.name)}" style="border-bottom:1px solid var(--border-color); ${isMe ? 'background:rgba(39,174,96,.2);' : qualified ? 'background:rgba(41,128,185,.1);' : ''}"><div style="flex:3;"><strong>${index + 1}.</strong> ${getFlagImg(row.country)} ${escapeHtml(row.name)} ${isMe ? '<b style="color:var(--accent-green)">(TY)</b>' : ''}${qualified ? ` <small style="color:#f1c40f;">${trWorldMasters('qualified')}</small>` : ''}</div><div style="flex:1; text-align:center; color:#f1c40f; font-weight:bold;">${row.points}</div><div style="flex:2; text-align:center; color:#bdc3c7;">${row.legsWon}-${row.legsLost}</div><div style="flex:1; text-align:right; color:#bdc3c7;">${row.average ? row.average.toFixed(2) : '—'}</div></button>`;
     });
     list.innerHTML = rankingHtml;
 }

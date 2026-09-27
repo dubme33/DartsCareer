@@ -39,10 +39,12 @@ function trContinentalQualifier(key, values = {}) {
 }
 
 function isContinentalQualifierTournament(tournament = activeTournament) {
+    if (typeof hasTournamentEditorQualification === 'function' && hasTournamentEditorQualification(tournament)) return false;
     return Boolean(tournament && tournament.specialType === CONTINENTAL_QUALIFIER_TYPE);
 }
 
 function isContinentalTourTournament(tournament) {
+    if (typeof hasTournamentEditorQualification === 'function' && hasTournamentEditorQualification(tournament)) return false;
     if (!tournament || isContinentalQualifierTournament(tournament)) return false;
     const name = typeof tournament === 'string' ? tournament : tournament.name;
     const sourceName = typeof tournament === 'object' ? tournament.sourceName : '';
@@ -70,7 +72,6 @@ function getContinentalQualificationPlayerKey(candidate) {
 
 function isContinentalQualificationPlayerEligible(candidate) {
     if (!candidate || candidate.isBye || candidate.isWorldCupGuest || !candidate.name) return false;
-    if (typeof isPlayerInjured === 'function' && isPlayerInjured(candidate)) return false;
     return !(typeof isRetiredPlayer === 'function' && isRetiredPlayer(candidate));
 }
 
@@ -258,6 +259,9 @@ function getCompletedContinentalQualifierKeys(state, exceptPath = '') {
 
 function isContinentalQualifierPathEligible(candidate, mainTournament, path) {
     if (!isContinentalQualificationPlayerEligible(candidate)) return false;
+    // Automatyczne miejsca OOM i ProTour wynikają z rankingu, nawet gdy gracz
+    // jest chwilowo kontuzjowany. Kontuzja wyklucza dopiero udział w kwalifikatorze.
+    if (typeof isPlayerInjured === 'function' && isPlayerInjured(candidate)) return false;
     if (path === 'card') return candidate.hasTourCard === true;
     if (candidate.hasTourCard === true) return false;
     if (path === 'host') return Boolean(mainTournament?.country && candidate.country === mainTournament.country);
@@ -323,6 +327,35 @@ function getContinentalTourQualifierParticipants(qualifierTournament) {
     return resolveContinentalQualificationPlayers(pathState.participantIds, candidates)
         .filter(candidate => !excludedKeys.has(getContinentalQualificationPlayerKey(candidate)))
         .filter(candidate => isContinentalQualifierPathEligible(candidate, mainTournament, path));
+}
+
+// Project the same field as the draw without freezing rankings or initializing
+// qualification paths while refreshing the hub or checking training access.
+function isPlayerInContinentalQualifierField(qualifierTournament, candidate = player) {
+    const mainTournament = getLinkedContinentalTour(qualifierTournament);
+    if (!mainTournament || !candidate) return false;
+    const path = getContinentalQualifierPath(qualifierTournament);
+    if (!isContinentalQualifierPathEligible(candidate, mainTournament, path)) return false;
+    const candidates = getContinentalQualificationPlayers();
+    const existing = mainTournament.continentalQualification;
+    let state;
+    if (existing?.version === CONTINENTAL_QUALIFICATION_VERSION && existing.year === getContinentalQualificationSeason()
+        && Array.isArray(existing.oomPlayerIds) && Array.isArray(existing.proTourPlayerIds)) {
+        state = JSON.parse(JSON.stringify(existing));
+        repairMigratedContinentalCardQualification(mainTournament, state);
+    } else {
+        const automatic = buildContinentalAutomaticField(candidates);
+        state = { oomPlayerIds: automatic.oomPlayers.map(getContinentalQualificationPlayerKey),
+            proTourPlayerIds: automatic.proTourPlayers.map(getContinentalQualificationPlayerKey), paths: {} };
+    }
+    const pathState = getContinentalQualificationPathState(state, path);
+    if (pathState.completed) return false;
+    const excluded = getCompletedContinentalQualifierKeys(state, path);
+    const pool = pathState.initialized && Array.isArray(pathState.participantIds)
+        ? resolveContinentalQualificationPlayers(pathState.participantIds, candidates)
+        : buildContinentalQualifierPool(mainTournament, path, state, candidates);
+    const key = getContinentalQualificationPlayerKey(candidate);
+    return !excluded.has(key) && pool.some(participant => getContinentalQualificationPlayerKey(participant) === key);
 }
 
 function shouldRefreshEmptyContinentalQualifierDraw(qualifierTournament, bracket) {
@@ -482,9 +515,27 @@ function prepareContinentalTourWithdrawals(main, { skipCareerPlayer = false, ran
             .map(getContinentalQualificationPlayerKey);
     }
     state.withdrawals = [];
-    const replace = (candidate, entryRound, forced = false) => {
-        if (!reserves.length && !forced) return;
-        const replacement = reserves.shift();
+    const fieldKeys = new Set([...field.oomPlayers, ...field.proTourPlayers, ...field.qualifiedPlayers]
+        .map(getContinentalQualificationPlayerKey));
+    const usedReplacementKeys = new Set();
+    const pathReserves = path => resolveContinentalQualificationPlayers(
+        getContinentalQualificationPathState(state, path).participantIds, candidates)
+        .filter(candidate => isContinentalQualifierPathEligible(candidate, main, path)
+            && !fieldKeys.has(getContinentalQualificationPlayerKey(candidate))
+            && (!skipCareerPlayer || !own(candidate)))
+        .sort((first, second) => sortContinentalQualificationRank(first, second, 'prizeMoney'));
+    const cardInjuryReserves = [...reserves, ...pathReserves('card')];
+    const replace = (candidate, entryRound, forced = false, pool = reserves) => {
+        let replacement;
+        while (pool.length && !replacement) {
+            const next = pool.shift();
+            const key = getContinentalQualificationPlayerKey(next);
+            if (key && !usedReplacementKeys.has(key)) {
+                replacement = next;
+                usedReplacementKeys.add(key);
+            }
+        }
+        if (!replacement && !forced) return;
         state.withdrawals.push({ withdrawnPlayerId: getContinentalQualificationPlayerKey(candidate),
             replacementPlayerId: replacement ? getContinentalQualificationPlayerKey(replacement) : null,
             withdrawnPlayerName: candidate.name, replacementPlayerName: replacement?.name || '',
@@ -493,13 +544,25 @@ function prepareContinentalTourWithdrawals(main, { skipCareerPlayer = false, ran
             withdrawnPlayerPrizeMoney: Number(candidate.prizeMoney) || 0,
             entryRound });
     };
+    const injured = candidate => candidate && !candidate.isBye
+        && typeof isPlayerInjured === 'function' && isPlayerInjured(candidate);
+    field.oomPlayers.filter(injured).forEach(candidate => replace(candidate, 32, true, cardInjuryReserves));
+    field.proTourPlayers.filter(injured).forEach(candidate => replace(candidate, 64, true, cardInjuryReserves));
+    Object.entries(field.qualifierPaths).forEach(([path, entrants]) => {
+        const pool = path === 'card' ? cardInjuryReserves : pathReserves(path);
+        entrants.filter(injured).forEach(candidate => replace(candidate, 64, true, pool));
+    });
     // A deliberate career-player withdrawal uses the same queue, never a random outsider.
     if (skipCareerPlayer) {
         const careerEntrant = [...field.oomPlayers, ...field.proTourPlayers, ...field.qualifiedPlayers].find(own);
-        if (careerEntrant) replace(careerEntrant, field.oomPlayers.includes(careerEntrant) ? 32 : 64, true);
+        if (careerEntrant && !state.withdrawals.some(entry => entry.withdrawnPlayerId === getContinentalQualificationPlayerKey(careerEntrant))) {
+            replace(careerEntrant, field.oomPlayers.includes(careerEntrant) ? 32 : 64, true);
+        }
     }
     field.oomPlayers.forEach(candidate => {
-        if (candidate && !candidate.isBye && !own(candidate) && reserves.length
+        if (candidate && !candidate.isBye && !own(candidate) && !injured(candidate)
+            && !state.withdrawals.some(entry => entry.withdrawnPlayerId === getContinentalQualificationPlayerKey(candidate))
+            && reserves.length
             && random() < CONTINENTAL_TOP_16_WITHDRAWAL_CHANCE) replace(candidate, 32);
     });
     state.withdrawalsProcessed = true;
