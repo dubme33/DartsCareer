@@ -286,8 +286,56 @@ function initCareerChronicle() {
         let activeModPackage = null;
 
         // --- SYSTEM MODÓW (IMPORT PACZEK .ZIP) ---
+        const MOD_IMPORT_ERRORS = {
+            pl: {
+                missingManifest: 'Ten ZIP nie zawiera pliku mod.json. Wybierz oryginalną paczkę moda, a nie folder lub ponownie spakowane pliki.',
+                multipleManifests: 'Ten ZIP zawiera kilka plików mod.json. Wybierz paczkę z jednym modem.',
+                emptyMod: 'Plik mod.json nie zawiera danych obsługiwanych przez grę, więc nic nie zostałoby zmienione.'
+            },
+            en: {
+                missingManifest: 'This ZIP does not contain mod.json. Select the original mod pack, not a folder or repackaged files.',
+                multipleManifests: 'This ZIP contains multiple mod.json files. Select a pack with one mod.',
+                emptyMod: 'mod.json contains no supported game data, so the mod would change nothing.'
+            },
+            de: {
+                missingManifest: 'Diese ZIP-Datei enthält keine mod.json. Wähle das ursprüngliche Mod-Paket statt eines Ordners oder neu gepackter Dateien.',
+                multipleManifests: 'Diese ZIP-Datei enthält mehrere mod.json-Dateien. Wähle ein Paket mit nur einem Mod.',
+                emptyMod: 'mod.json enthält keine unterstützten Spieldaten; der Mod würde nichts ändern.'
+            },
+            nl: {
+                missingManifest: 'Deze ZIP bevat geen mod.json. Kies het originele modpakket in plaats van een map of opnieuw ingepakte bestanden.',
+                multipleManifests: 'Deze ZIP bevat meerdere mod.json-bestanden. Kies een pakket met één mod.',
+                emptyMod: 'mod.json bevat geen ondersteunde spelgegevens; de mod zou niets wijzigen.'
+            }
+        };
+
+        function modImportError(code) {
+            const language = typeof currentLang === 'string' && MOD_IMPORT_ERRORS[currentLang] ? currentLang : 'pl';
+            const error = new Error(MOD_IMPORT_ERRORS[language][code]);
+            error.isModImportError = true;
+            return error;
+        }
+
+        function findModManifest(zipContent) {
+            const rootEntry = zipContent.file('mod.json');
+            if (rootEntry) return { entry: rootEntry, prefix: '' };
+            const nested = [];
+            zipContent.forEach((path, entry) => {
+                if (!entry.dir && !path.startsWith('__MACOSX/') && /(?:^|\/)mod\.json$/.test(path)) {
+                    nested.push({ entry, prefix: path.slice(0, -'mod.json'.length) });
+                }
+            });
+            if (nested.length > 1) throw modImportError('multipleManifests');
+            if (!nested.length) throw modImportError('missingManifest');
+            return nested[0];
+        }
+
         function validateModData(modData) {
             if (!isPlainObject(modData)) throw new Error('mod.json musi zawierać obiekt JSON.');
+
+            if (!['pdcPlayers', 'tournamentDatabase', 'regularSponsorsDB', 'techSponsorsDB',
+                'historicalChampions', 'sponsorTiers', 'shopDatabase', 'dartboard']
+                .some(field => modData[field] !== undefined)) throw modImportError('emptyMod');
 
             const arrayFields = ['pdcPlayers', 'tournamentDatabase', 'regularSponsorsDB', 'techSponsorsDB', 'historicalChampions'];
             arrayFields.forEach(field => {
@@ -603,13 +651,20 @@ function initCareerChronicle() {
                 throw new Error('Biblioteka JSZip nie jest dostępna.');
             }
             const zipContent = await JSZip.loadAsync(modPackage);
-            const configEntry = zipContent.file('mod.json');
-            const modData = configEntry ? JSON.parse(await configEntry.async('string')) : {};
+            const { entry: configEntry, prefix } = findModManifest(zipContent);
+            const modData = JSON.parse(await configEntry.async('string'));
             validateModData(modData);
             // Stare ZIP-y pozostają zgodne, ale nie przywracają wycofanych treści losowych.
             delete modData.randomEventsDatabase;
             delete modData.randomEmailsDB;
-            const loadedAssets = await readModAssets(zipContent);
+            const modZip = prefix ? {
+                forEach(callback) {
+                    zipContent.forEach((path, entry) => {
+                        if (path.startsWith(prefix)) callback(path.slice(prefix.length), entry);
+                    });
+                }
+            } : zipContent;
+            const loadedAssets = await readModAssets(modZip);
             if (modData.dartboard && !loadedAssets.dartboards[modData.dartboard.image]) {
                 disposeModMediaAssets(loadedAssets);
                 throw new Error(`Brak obrazu tarczy dartboards/${modData.dartboard.image} w paczce moda.`);
@@ -620,13 +675,16 @@ function initCareerChronicle() {
         async function mergeDartboardModPackage(basePackage, skinZip, skinConfig) {
             // Reuse the original ZIP entries, including compressed walk-on tracks.
             const combined = await JSZip.loadAsync(basePackage);
-            const configEntry = combined.file('mod.json');
-            const config = configEntry ? JSON.parse(await configEntry.async('string')) : {};
+            const { entry: configEntry, prefix: basePrefix } = findModManifest(combined);
+            const { prefix: skinPrefix } = findModManifest(skinZip);
+            const config = JSON.parse(await configEntry.async('string'));
             config.dartboard = skinConfig;
             if (config.type === 'dartboard-skin') delete config.type;
-            combined.file('mod.json', JSON.stringify(config));
+            combined.file(`${basePrefix}mod.json`, JSON.stringify(config));
             skinZip.forEach((relativePath, entry) => {
-                if (!entry.dir && relativePath.startsWith('dartboards/')) combined.file(relativePath, entry.async('blob'));
+                if (!entry.dir && relativePath.startsWith(`${skinPrefix}dartboards/`)) {
+                    combined.file(`${basePrefix}${relativePath.slice(skinPrefix.length)}`, entry.async('blob'));
+                }
             });
             const blob = await combined.generateAsync({ type: 'blob', compression: 'DEFLATE', streamFiles: true });
             const name = String(basePackage.name || 'mod').replace(/\.zip$/i, '').replace(/-winmau-blade-x$/i, '') + '-winmau-blade-x.zip';
@@ -760,7 +818,7 @@ function initCareerChronicle() {
                 if (!result.persisted) alert(t('t-alert-mod-persist-err'));
             } catch (error) {
                 console.error('Nie udało się wczytać moda.', error);
-                alert(t('t-alert-mod-err'));
+                alert(error?.isModImportError ? error.message : t('t-alert-mod-err'));
             } finally {
                 input.value = '';
             }
