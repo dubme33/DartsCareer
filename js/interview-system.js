@@ -70,6 +70,7 @@ function buildPostMatchInterviewContext(match, tournament, round) {
         trailScore: comebackScore ? `${comebackScore.p1}:${comebackScore.p2}` : '',
         tournament: tournament?.name || '',
         round: Number.isFinite(playedRound) ? playedRound : null,
+        matchStoryId: match.matchIncidents?.storyId ?? null,
         flags: {}
     };
     context.flags = {

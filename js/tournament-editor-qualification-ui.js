@@ -46,6 +46,18 @@ const TOURNAMENT_EDITOR_QUALIFICATION_TEXT = {
     notQualified: ['Nie wywalczono awansu do turnieju głównego.', 'Did not qualify for the main event.', 'Nicht für das Hauptturnier qualifiziert.', 'Niet geplaatst voor het hoofdtoernooi.'],
     teamRules: ['Turnieje drużynowe i liga korzystają z wbudowanych zasad uczestnictwa.', 'Team events and the league use built-in entry rules.', 'Teamturniere und Liga nutzen integrierte Teilnahmeregeln.', 'Teamtoernooien en de competitie gebruiken ingebouwde deelnameregels.']
 };
+TOURNAMENT_EDITOR_QUALIFICATION_TEXT.qualifierHint = [
+    'Wybierz istniejący lub własny turniej. Kwalifikator musi zakończyć się przed nim. Przy wbudowanych zasadach awansujący zastępują najniżej sklasyfikowanych uczestników (maksymalnie 4 miejsca); w European Tour zajmują miejsca ścieżki gospodarzy.',
+    'Select a built-in or custom event. The qualifier must finish first. With built-in rules, winners replace the lowest-ranked entrants (up to 4 places); in European Tour they take host-nation places.',
+    'Wähle ein bestehendes oder eigenes Turnier. Die Qualifikation muss vorher enden. Bei integrierten Regeln ersetzen die Sieger bis zu vier der am niedrigsten platzierten Teilnehmer; bei der European Tour belegen sie Gastgeberplätze.',
+    'Kies een bestaand of eigen toernooi. De kwalificatie moet eerder eindigen. Bij ingebouwde regels vervangen winnaars maximaal vier van de laagst gerangschikte deelnemers; in de European Tour bezetten zij gastlandplaatsen.'
+];
+TOURNAMENT_EDITOR_QUALIFICATION_TEXT.invalidQualifier = [
+    'Wybierz turniej docelowy, który jeszcze się nie rozpoczął. Kwalifikator musi skończyć się wcześniej, a liczba awansujących musi być potęgą 2 mniejszą od jego pola. Limit: 4 miejsca w turnieju wbudowanym.',
+    'Select a target event that has not started. The qualifier must finish earlier, and advancing places must be a power of two smaller than its field. Limit: 4 places in a built-in event.',
+    'Wähle ein noch nicht begonnenes Zielturnier. Die Qualifikation muss vorher enden; die Aufstiegsplätze müssen eine Zweierpotenz unter der Feldgröße sein. Limit: 4 Plätze bei integrierten Turnieren.',
+    'Kies een doeltoernooi dat nog niet is begonnen. De kwalificatie moet eerder eindigen; het aantal plaatsen moet een macht van twee kleiner dan het deelnemersveld zijn. Limiet: 4 plaatsen bij ingebouwde toernooien.'
+];
 Object.entries(TOURNAMENT_EDITOR_QUALIFICATION_TEXT).forEach(([key, texts]) =>
     ['pl', 'en', 'de', 'nl'].forEach((language, index) => { TOURNAMENT_EDITOR_TEXT[language][key] = texts[index]; }));
 
@@ -159,8 +171,9 @@ function populateTournamentEditorQualification(tournament) {
     const target = tournamentEditorElement('te-target');
     target.replaceChildren();
     appendTournamentEditorOption(target, '', trTournamentEditor('selectTarget'));
-    tournamentDatabase.filter(event => event !== tournament && hasTournamentEditorQualification(event)
-        && !isTournamentEditorQualifier(event)).forEach(event =>
+    tournamentDatabase.filter(event => event !== tournament
+        && ((hasTournamentEditorQualification(event) && !isTournamentEditorQualifier(event))
+            || isTournamentEditorNativeTarget(event))).forEach(event =>
         appendTournamentEditorOption(target, tournamentEditorKey(event), event.name));
     target.value = rules?.targetKey || '';
     tournamentEditorElement('te-routes').replaceChildren();
@@ -243,7 +256,8 @@ function prepareTournamentEditorQualificationUpdate(tournament, values) {
     const rules = values.editorQualification;
     const linked = tournamentDatabase.filter(event => isTournamentEditorQualifier(event)
         && event.editorQualification.targetKey === tournamentEditorKey(tournament));
-    if (linked.length && (!rules || rules.kind !== 'main')) throw new Error(trTournamentEditor('linkedRules'));
+    if (linked.length && hasTournamentEditorQualification(tournament)
+        && (!rules || rules.kind !== 'main')) throw new Error(trTournamentEditor('linkedRules'));
     const rulesChanged = JSON.stringify(tournament?.editorQualification || null) !== JSON.stringify(rules)
         || (hasTournamentEditorQualification(tournament) && (tournament.editorFieldSize !== values.editorFieldSize || tournament.minOvr !== values.minOvr));
     if (rulesChanged && ((isTournamentEditorQualifier(tournament) && tournament.completed) || linked.some(event => event.completed))) {
@@ -264,8 +278,17 @@ function prepareTournamentEditorQualificationUpdate(tournament, values) {
     if (isTournamentEditorQualifier(proposed)) {
         const end = new Date(2027, values.endMonth ?? values.month, values.endDay ?? values.day);
         if (!nextMain || nextMain === tournament || nextMain.completed || isTournamentEditorActive(nextMain)
-            || !hasTournamentEditorQualification(nextMain) || isTournamentEditorQualifier(nextMain)
+            || (!hasTournamentEditorQualification(nextMain) && !isTournamentEditorNativeTarget(nextMain))
+            || isTournamentEditorQualifier(nextMain)
             || end >= new Date(2027, nextMain.month, nextMain.day)) throw new Error(trTournamentEditor('invalidQualifier'));
+        if (isTournamentEditorNativeTarget(nextMain)) {
+            const linkedPlaces = tournamentDatabase.filter(event => event !== tournament
+                && isTournamentEditorQualifier(event)
+                && event.editorQualification.targetKey === tournamentEditorKey(nextMain))
+                .reduce((total, event) => total + event.editorQualification.qualifyingPlaces, 0);
+            const limit = 4;
+            if (linkedPlaces + rules.qualifyingPlaces > limit) throw new Error(trTournamentEditor('invalidQualifier'));
+        }
     }
     linked.forEach(event => {
         const end = new Date(2027, event.endMonth ?? event.month, event.endDay ?? event.day);
@@ -273,6 +296,7 @@ function prepareTournamentEditorQualificationUpdate(tournament, values) {
     });
     for (const main of new Set([previousMain, nextMain].filter(Boolean))) {
         if (isTournamentEditorActive(main)) throw new Error(trTournamentEditor('inUse'));
+        if (!hasTournamentEditorQualification(main)) continue;
         const updated = structuredClone(main.editorQualification);
         const qualifierKey = tournamentEditorKey(tournament) || values.name;
         const oldRoute = updated.routes.find(route => route.source === 'qualifier' && route.qualifierKey === qualifierKey);

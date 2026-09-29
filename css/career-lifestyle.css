@@ -61,6 +61,16 @@
 .career-lifestyle-empty { padding: 24px; color: #9baac0; text-align: center; border: 1px dashed #53647a; border-radius: 8px; }
 .career-lifestyle-no-bonus { padding: 12px 15px; color: #b8f1df; line-height: 1.5; border-left: 4px solid #57bba1; background: #152e36; }
 #career-lifestyle-feedback { min-height: 1.5em; color: #f4d37d; font-weight: 800; }
+.rival-history-final { margin: 11px 0 4px; color: #f2d48b; font-size: 12px; line-height: 1.45; }
+.rival-history { margin-top: 10px; color: #dbe8ef; font-size: 12px; }
+.rival-history summary { width: fit-content; cursor: pointer; font-weight: 700; }
+.rival-history ol { margin: 8px 0 0; padding: 0; list-style: none; }
+.rival-history li { display: flex; flex-wrap: wrap; align-items: baseline; gap: 6px 10px; padding: 7px 0; border-top: 1px solid #ffffff1a; line-height: 1.4; }
+.rival-history li span:nth-child(2) { flex: 1 1 190px; overflow-wrap: anywhere; }
+.rival-history time { color: #aebdc8; }
+.rival-history-result { font-weight: 800; }
+.rival-history-result.won { color: #83e4a8; }
+.rival-history-result.lost { color: #f5a4a4; }
 
 /* Active homes are cosmetic themes applied to the career hub and Trophy Room. */
 #screen-hub.lifestyle-property-cityApartment, #screen-trophy.lifestyle-property-cityApartment { background-image: linear-gradient(rgba(15,28,48,.94),rgba(15,28,48,.94)),linear-gradient(135deg,#8ab7cc,#19283d); border-color: #6f9eb3; }

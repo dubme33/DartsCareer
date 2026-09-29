@@ -1219,6 +1219,8 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
             resetSponsorOffers();
             
             let baseValue = calculateBaseSponsorValue();
+            const matchStorySponsorPercent = typeof takeMatchStorySponsorAssessment === 'function'
+                ? takeMatchStorySponsorAssessment() : 0;
             const difficultySponsorMultiplier = typeof getCareerDifficultySponsorMultiplier === 'function'
                 ? getCareerDifficultySponsorMultiplier(player) : 1;
             const goalBonusPercent = typeof getSponsorOfferBonusPercent === 'function' ? getSponsorOfferBonusPercent() : 0;
@@ -1228,7 +1230,8 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
             shuffledRegular.forEach(name => {
                 // Skrajne rozbieżności: od 50% do aż 250% bazowej wartości!
                 let valueMultiplier = Math.random() * 2.0 + 0.5; 
-                const difficultyBaseMonthlyValue = Math.round(baseValue * valueMultiplier * (1 + goalBonusPercent / 100));
+                const difficultyBaseMonthlyValue = Math.round(baseValue * valueMultiplier
+                    * (1 + goalBonusPercent / 100) * (1 + matchStorySponsorPercent / 100));
                 let monthlyVal = Math.round(difficultyBaseMonthlyValue * difficultySponsorMultiplier);
                 
                 // Zwykle najwyższe stawki są na krótszy okres czasu (dylemat ryzyka)
@@ -1242,6 +1245,7 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
                     monthlyValue: monthlyVal,
                     difficultyBaseMonthlyValue,
                     goalBonusPercent,
+                    matchStorySponsorPercent,
                     months: months
                 });
             });
@@ -1344,6 +1348,7 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
                         <p class="sponsor-name">${escapeHtml(s.name)}</p>
                         <p class="sponsor-details">${t('t-payout')} £${s.monthlyValue}/mc<br>${t('t-contract')} ${s.months} ${t('t-months')}</p>
                         ${s.goalBonusPercent && typeof trSponsorGoal === 'function' ? `<p class="sponsor-goal-note">${escapeHtml(trSponsorGoal('monthlyBoost', { percent: s.goalBonusPercent }))}</p>` : ''}
+                        ${s.matchStorySponsorPercent && typeof formatMatchStorySponsorAssessment === 'function' ? `<p class="sponsor-goal-note">${escapeHtml(formatMatchStorySponsorAssessment(s.matchStorySponsorPercent))}</p>` : ''}
                         ${typeof renderSponsorGoalOffer === 'function' ? renderSponsorGoalOffer(s) : ''}
                     </div>
                     ${btn}
@@ -1446,9 +1451,11 @@ function getBoostedPlayerStats() {
 
     // --- SYSTEM ZMĘCZENIA ---
     let sPenalty = 0;
-    if (player.stamina < 20) sPenalty = -6;
-    else if (player.stamina < 40) sPenalty = -3;
-    else if (player.stamina < 70) sPenalty = -1;
+    const effectiveStamina = typeof getCareerEffectiveStamina === 'function'
+        ? getCareerEffectiveStamina(player) : player.stamina;
+    if (effectiveStamina < 20) sPenalty = -6;
+    else if (effectiveStamina < 40) sPenalty = -3;
+    else if (effectiveStamina < 70) sPenalty = -1;
 
     return {
         overall: Math.min(100, Math.max(40, Math.round(player.overall) + b.o + sPenalty)),
@@ -1635,7 +1642,8 @@ async function updateProfileWalkon(event) {
         });
 
         function getTrainingEnergyMultiplier(candidate = player) {
-            const stamina = Number(candidate?.stamina);
+            const stamina = Number(typeof getCareerEffectiveStamina === 'function'
+                ? getCareerEffectiveStamina(candidate) : candidate?.stamina);
             return Number.isFinite(stamina) ? Math.max(0, Math.min(100, stamina)) / 100 : 1;
         }
 
@@ -1740,7 +1748,8 @@ async function updateProfileWalkon(event) {
 
             ['t-train-sc-btn', 't-train-db-btn'].forEach(buttonId => {
                 const button = document.getElementById(buttonId);
-                if (button) button.disabled = sessionsRemaining <= 0 || player.stamina < TRAINING_CONFIG.staminaCost
+                if (button) button.disabled = sessionsRemaining <= 0 || (typeof getCareerEffectiveStamina === 'function'
+                    ? getCareerEffectiveStamina(player) : player.stamina) < TRAINING_CONFIG.staminaCost
                     || (typeof isPlayerInjured === 'function' && isPlayerInjured(player));
             });
 
@@ -1803,7 +1812,8 @@ async function updateProfileWalkon(event) {
                 alert(t('t-alert-training-limit'));
                 return;
             }
-            if (player.stamina < TRAINING_CONFIG.staminaCost) {
+            if ((typeof getCareerEffectiveStamina === 'function'
+                ? getCareerEffectiveStamina(player) : player.stamina) < TRAINING_CONFIG.staminaCost) {
                 alert(t('t-alert-exhausted'));
                 return;
             }
@@ -2117,6 +2127,7 @@ async function updateProfileWalkon(event) {
 
         function canSimulateCurrentMatch() {
             if (!currentMatch || currentMatch.isFinishing
+                || currentMatch.matchIncidents?.pending
                 || (typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy())) return false;
             // Ręczny checkout ma jeszcze zaplanowane naliczenie lega / zmianę
             // seta. Nie anulujemy tego timera ani nie symulujemy od wyniku zero.

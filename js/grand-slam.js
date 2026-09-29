@@ -308,6 +308,22 @@ function startGrandSlamCareerGroupMatch() {
     }
 }
 
+function startSpectatingGrandSlamGroupMatch(groupIndex, matchIndex) {
+    if (typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy()) return false;
+    if (!isGrandSlamGroupStageActive() || currentMatch) return false;
+    const group = grandSlamState.groups[groupIndex];
+    const match = group?.matches?.[matchIndex];
+    if (!match || match.played) return false;
+    const p1 = group.members[match.p1Index];
+    const p2 = group.members[match.p2Index];
+    if (!p1 || !p2 || p1.isBye || p2.isBye || isCurrentPlayer(p1) || isCurrentPlayer(p2)) return false;
+    if (typeof isPlayerInjured === 'function' && (isPlayerInjured(p1) || isPlayerInjured(p2))) return false;
+    const groupLabel = ({ pl: 'Grupa', en: 'Group', de: 'Gruppe', nl: 'Groep' })[typeof currentLang === 'string' ? currentLang : 'en'] || 'Group';
+    return beginSpectatingAiMatch(p1, p2, getGrandSlamGroupMatchFormat(), {
+        spectatorGrandSlamGroupMatch: { groupIndex, matchIndex }
+    }, `${activeTournament.name} · ${groupLabel} ${group.label}`);
+}
+
 function isGrandSlamCareerGroupMatch(match = currentMatch) {
     return Boolean(match?.grandSlamGroupMatch && grandSlamState?.phase === 'groups');
 }
@@ -327,7 +343,6 @@ function finishGrandSlamCareerGroupMatch(playerWon, match = currentMatch) {
         originalP1IsCareerPlayer ? match.p2Legs : match.p1Legs
     );
     tournamentBracket = [];
-    simulateGrandSlamAiGroupMatches(false);
 
     if (!areGrandSlamGroupsComplete()) return { phase: 'groups' };
 
@@ -340,7 +355,7 @@ function finishGrandSlamCareerGroupMatch(playerWon, match = currentMatch) {
     };
 }
 
-function renderGrandSlamGroup(group) {
+function renderGrandSlamGroup(group, groupIndex) {
     const standings = getGrandSlamGroupStandings(group);
     const rows = standings.map((row, index) => {
         const candidate = group.members[row.memberIndex];
@@ -349,13 +364,15 @@ function renderGrandSlamGroup(group) {
             <span>${index + 1}.</span><span>${getFlagImg(candidate.country)} ${escapeHtml(candidate.name)}</span><span>${row.wins}W</span><span>${row.legsWon}-${row.legsLost}</span>
         </div>`;
     }).join('');
-    const matches = group.matches.map(match => {
+    const matches = group.matches.map((match, matchIndex) => {
         const p1 = group.members[match.p1Index];
         const p2 = group.members[match.p2Index];
         const score = match.played ? `${match.score1}:${match.score2}` : '—';
         const p1Flag = typeof getTournamentResultFlag === 'function' ? getTournamentResultFlag(p1) : '';
         const p2Flag = typeof getTournamentResultFlag === 'function' ? getTournamentResultFlag(p2) : '';
-        return `<div style="font-size:11px; color:#bdc3c7;">${escapeHtml(p1.name)}${p1Flag ? ` ${p1Flag}` : ''} <strong>${score}</strong> ${p2Flag ? `${p2Flag} ` : ''}${escapeHtml(p2.name)}</div>`;
+        const canWatch = !match.played && !p1.isBye && !p2.isBye && !isCurrentPlayer(p1) && !isCurrentPlayer(p2);
+        return `<div class="grand-slam-group-match">${escapeHtml(p1.name)}${p1Flag ? ` ${p1Flag}` : ''} <strong>${score}</strong> ${p2Flag ? `${p2Flag} ` : ''}${escapeHtml(p2.name)}
+            ${canWatch ? `<button type="button" class="btn-sign grand-slam-watch-btn" onclick="startSpectatingGrandSlamGroupMatch(${groupIndex}, ${matchIndex})">👁 ${t('t-btn-watch-match')}</button>` : ''}</div>`;
     }).join('');
     return `<section style="background:#16213e; border:1px solid #2c3e50; border-radius:6px; padding:9px; margin:6px 0;">
         <h4 style="margin:0 0 5px; color:var(--accent-yellow);">Grupa ${group.label}</h4>${rows}<div style="border-top:1px solid #2c3e50; margin-top:5px; padding-top:4px;">${matches}</div>

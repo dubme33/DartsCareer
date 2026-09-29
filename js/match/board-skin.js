@@ -21,7 +21,8 @@ function traceDartboardSkinWires(frame, size) {
         return pixels[(py * size + px) * 4 + c];
     }
     function edgeOffset(x, y, nx, ny) {
-        let best = -Infinity, offset = 0;
+        let strongest = 0;
+        const samples = [];
         // The calibrated photo can differ from an ideal circle by a fraction of
         // a board pixel. Find the colour transition, not a second theoretical wire.
         for (let step = -24; step <= 24; step++) {
@@ -36,16 +37,24 @@ function traceDartboardSkinWires(frame, size) {
                 }
                 contrast += difference * difference;
             }
-            // Prefer the nearest edge only when colour contrasts are equivalent.
-            const score = contrast - distance * distance;
-            if (score > best) { best = score; offset = distance; }
+            samples.push({ distance, contrast });
+            strongest = Math.max(strongest, contrast);
         }
-        return offset;
+        if (strongest < 2500) return 0;
+        // Centre the transition, including its antialiasing; selecting the first
+        // equally strong gradient would bias a wire towards one side of the field.
+        let weightedOffset = 0, totalWeight = 0;
+        for (const sample of samples) {
+            const weight = Math.max(0, sample.contrast - strongest * .6);
+            weightedOffset += sample.distance * weight;
+            totalWeight += weight;
+        }
+        return totalWeight ? weightedOffset / totalWeight : 0;
     }
     const rings = [innerBull, outerBull, trebleInner, trebleOuter, doubleInner, doubleOuter].map(radius => {
         const offsets = Array.from({ length: 40 }, (_, i) => {
             // Sample inside sectors, away from crossings with radial wires.
-            const angle = -Math.PI / 2 + (i + (i % 2 ? -.25 : .25)) * Math.PI / 20;
+            const angle = -Math.PI / 2 + Math.floor(i / 2) * Math.PI / 10 + (i % 2 ? 1 : -1) * Math.PI / 40;
             return { angle, offset: edgeOffset(170 + radius * Math.cos(angle), 170 + radius * Math.sin(angle), Math.cos(angle), Math.sin(angle)) };
         });
         // A smooth fitted circle/ellipse follows photographic perspective without
@@ -73,7 +82,15 @@ function traceDartboardSkinWires(frame, size) {
             const offset = meanOffset + slope * (radius - meanRadius);
             return { x: 170 + radius * dx - offset * dy, y: 170 + radius * dy + offset * dx };
         };
-        return { angle, at, start: rings[1].at(angle), end: rings[5].at(angle) };
+        function intersection(ring) {
+            let radius = ring.at(angle);
+            for (let step = 0; step < 4; step++) {
+                const point = at(radius), x = point.x - 170, y = point.y - 170;
+                radius += ring.at(Math.atan2(y, x)) - Math.hypot(x, y);
+            }
+            return radius;
+        }
+        return { angle, at, start: intersection(rings[1]), end: intersection(rings[5]) };
     });
     return { rings, spokes };
 }

@@ -6,6 +6,11 @@
     const aiSpeedControl = document.getElementById('match-tv-ai-speed-control');
     const aiSpeedSelect = document.getElementById('match-tv-ai-speed');
     if (!screen || !button) return;
+    const toolbar = screen.querySelector('.board-view-controls');
+    const actions = screen.querySelector('.match-actions');
+    const scoreboard = document.getElementById('broadcast-scoreboard');
+    const statCard = document.getElementById('tv-stat-card');
+    let layoutFrame = null;
     const aiSpeeds = Object.freeze([.5, .75, 1]);
     const aiSpeedKey = 'dartsCareer.tvAiSpeed';
     const copy = {
@@ -40,6 +45,35 @@
         if (!active() || currentMatch?.isSpectator) return delay;
         return Math.max(25, Math.round(delay / aiSpeed));
     }
+    function layoutSidebar() {
+        layoutFrame = null;
+        // Portrait phones have their own stacked layout. In the side rail,
+        // measure real heights: translations, zoom and stat rows can all grow.
+        if (!active() || innerWidth <= 600 || !toolbar || !actions || !scoreboard || !statCard) return;
+        const setSize = (name, value) => {
+            const size = `${Math.max(0, value).toFixed(2)}px`;
+            if (screen.style.getPropertyValue(name) !== size) screen.style.setProperty(name, size);
+        };
+        const gap = innerHeight <= 480 ? 4 : innerHeight <= 680 ? 8 : 12;
+        const top = toolbar.getBoundingClientRect().bottom + gap;
+        const scoreTop = scoreboard.getBoundingClientRect().top;
+        const spectator = screen.classList.contains('tv-spectator');
+        const actionsTop = scoreTop - gap - (spectator ? 0 : actions.offsetHeight);
+        setSize('--tv-actions-bottom', innerHeight - scoreTop + gap);
+        const cardBottom = spectator ? scoreTop - gap : actionsTop - gap;
+        const available = Math.max(0, cardBottom - top);
+        // Keep aiming usable even on a very short landscape screen. Only an
+        // exceptionally tall card needs to scroll inside its own space.
+        const aimingReserve = spectator ? 0 : Math.min(160, available * .55);
+        setSize('--tv-stat-max-height', available - aimingReserve - (spectator ? 0 : gap));
+        setSize('--tv-stat-bottom', innerHeight - cardBottom);
+        const aimBottom = statCard.hidden ? actionsTop : cardBottom - statCard.offsetHeight;
+        setSize('--tv-aim-top', top);
+        setSize('--tv-aim-height', aimBottom - gap - top);
+    }
+    function scheduleSidebarLayout() {
+        if (layoutFrame === null) layoutFrame = requestAnimationFrame(layoutSidebar);
+    }
     function refresh() {
         const text = labels(), enabled = active();
         button.textContent = enabled ? `✕ ${text.close}` : `📺 ${text.open}`;
@@ -55,6 +89,7 @@
             aiSpeedSelect.value = String(aiSpeed);
             aiSpeedSelect.setAttribute('aria-label', text.aiSpeed);
         }
+        scheduleSidebarLayout();
     }
     function resizeBoard() {
         window.dispatchEvent(new Event('resize'));
@@ -88,6 +123,7 @@
     button.addEventListener('click', toggle);
     aiSpeedSelect?.addEventListener('change', () => setAiSpeed(aiSpeedSelect.value));
     document.addEventListener('fullscreenchange', () => {
+        if (window.walkonFullscreen?.handlesNative()) return;
         if (document.fullscreenElement === screen) {
             nativeSession = true;
             if (!active()) setActive(true);
@@ -96,10 +132,21 @@
         }
     });
     document.addEventListener('keydown', event => {
+        if (window.walkonFullscreen?.handlesNative()) return;
         if (event.key === 'Escape' && active() && document.fullscreenElement !== screen) exit();
     });
-    new MutationObserver(() => { if (!screen.classList.contains('active') && active()) exit(); })
+    new MutationObserver(() => {
+        if (!screen.classList.contains('active') && active()) exit();
+        scheduleSidebarLayout();
+    })
         .observe(screen, { attributes: true, attributeFilter: ['class'] });
+    if (typeof ResizeObserver === 'function') {
+        const sidebarObserver = new ResizeObserver(scheduleSidebarLayout);
+        [toolbar, actions, scoreboard, statCard].filter(Boolean).forEach(node => sidebarObserver.observe(node));
+    }
+    if (statCard) new MutationObserver(scheduleSidebarLayout)
+        .observe(statCard, { attributes: true, attributeFilter: ['hidden'] });
+    window.addEventListener('resize', scheduleSidebarLayout);
     const refreshBoardLabels = window.refreshMatchBoardViewTranslations;
     window.refreshMatchBoardViewTranslations = function () {
         if (typeof refreshBoardLabels === 'function') refreshBoardLabels();

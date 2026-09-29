@@ -2,7 +2,8 @@ function playerThrow() {
             // Kliknięcia mogą już czekać w kolejce zdarzeń, gdy trzecia lotka
             // kończy podejście. Nie pozwalamy im wejść do logiki punktacji.
             if (!currentMatch || currentMatch.isFinishing || currentMatch.isSpectator || currentMatch.turn !== 'p1'
-                || currentMatch.dartsThrown >= 3 || currentMatch.isTurnLocked || currentMatch.isDartInFlight) return;
+                || currentMatch.dartsThrown >= 3 || currentMatch.isTurnLocked || currentMatch.isDartInFlight
+                || currentMatch.matchIncidents?.pending) return;
             if (currentMatch.isDoubles && !isCareerPlayerThrowing(true)) return;
 
             let tSec = parseInt(document.getElementById('aim-sector').value); 
@@ -30,12 +31,16 @@ function playerThrow() {
             if (typeof applyMentalPressureToStats === 'function') {
                 boostedPlayer = applyMentalPressureToStats(player, boostedPlayer, true, aim, score);
             }
+            if (typeof applyMatchIncidentToStats === 'function') {
+                boostedPlayer = applyMatchIncidentToStats(currentMatch, boostedPlayer);
+            }
             return boostedPlayer;
         }
 
         function throwCareerDart(targetSector, targetMultiplier) {
             if (!currentMatch || currentMatch.isFinishing || currentMatch.turn !== 'p1'
-                || currentMatch.dartsThrown >= 3 || currentMatch.isTurnLocked || currentMatch.isDartInFlight) return false;
+                || currentMatch.dartsThrown >= 3 || currentMatch.isTurnLocked || currentMatch.isDartInFlight
+                || currentMatch.matchIncidents?.pending) return false;
             const score = currentMatch.p1Score;
             const aim = { sector: targetSector, mult: targetMultiplier };
             if (typeof window !== 'undefined') {
@@ -51,7 +56,7 @@ function playerThrow() {
         function simulateOneVisit() {
             if (!currentMatch || currentMatch.isFinishing || currentMatch.isSpectator
                 || currentMatch.turn !== 'p1' || currentMatch.dartsThrown >= 3 || currentMatch.isTurnLocked
-                || currentMatch.isDartInFlight
+                || currentMatch.isDartInFlight || currentMatch.matchIncidents?.pending
                 || (currentMatch.isDoubles && !isCareerPlayerThrowing(true))
                 || (typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy())) return false;
 

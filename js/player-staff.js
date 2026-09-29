@@ -107,7 +107,8 @@ function getPlayerStaffBonus(role) {
 // stack the bonuses. Dismissal or an unpaid salary removes support immediately.
 function getPlayerProfessionalism() {
     const base = Number(player?.prof);
-    return Math.max(0, Math.min(100, (Number.isFinite(base) ? base : 50) + getPlayerStaffBonus('careerManager')));
+    const workPenalty = typeof getCareerWorkMode === 'function' && getCareerWorkMode(player) === 'job' ? 20 : 0;
+    return Math.max(0, Math.min(100, (Number.isFinite(base) ? base : 50) + getPlayerStaffBonus('careerManager') - workPenalty));
 }
 
 function getPlayerMediaPresence() {

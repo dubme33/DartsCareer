@@ -204,11 +204,19 @@ function buildQualificationPreview(tournament, candidates, referenceDate = curre
         const effective = ids => resolve(getContinentalEffectivePlayerIds(ids, state));
         add('oom16', 16, effective(state.oomPlayerIds), locked);
         add('pt16', 16, effective(state.proTourPlayerIds), locked);
+        const customHostWinners = typeof getTournamentEditorNativeQualifierWinners === 'function'
+            ? getTournamentEditorNativeQualifierWinners(tournament, all, referenceDate) : [];
+        const customHostKeys = new Set(customHostWinners.map(key));
         Object.entries(CONTINENTAL_QUALIFIER_PATHS).forEach(([path, config]) => {
             const pathState = state.paths?.[path];
-            const complete = pathState?.completed === true;
-            const selected = effective(pathState?.qualifiedPlayerIds || [])
+            const complete = pathState?.completed === true || path === 'host' && customHostWinners.length >= config.places;
+            const ids = path === 'host' && customHostWinners.length
+                ? [...new Set([...customHostWinners.map(key),
+                    ...(pathState?.editorNativeOriginalQualifiedPlayerIds || pathState?.qualifiedPlayerIds || [])])].slice(0, config.places)
+                : pathState?.qualifiedPlayerIds || [];
+            const selected = effective(ids)
                 .filter(p => (state.withdrawals || []).some(entry => entry.replacementPlayerId === key(p))
+                    || path === 'host' && customHostKeys.has(key(p))
                     || isContinentalQualifierPathEligible(p, tournament, path)).slice(0, config.places);
             add(path, config.places, selected, complete, !complete,
                 complete ? [] : buildContinentalQualifierPool(tournament, path, state, all));
@@ -265,6 +273,39 @@ function buildQualificationPreview(tournament, candidates, referenceDate = curre
         add('card', 4, qualified, locked || qualifier?.completed === true, !locked && !qualifier?.completed,
             all.filter(p => p.hasTourCard === true && !direct.has(wsKey(p))));
         size = 32;
+    }
+
+    if (kind && kind !== 'editor' && kind !== 'continental'
+        && typeof getTournamentEditorNativeQualifierWinners === 'function') {
+        const winners = getTournamentEditorNativeQualifierWinners(tournament, all, referenceDate);
+        const allSelected = groups.flatMap(group => group.players);
+        const existingKeys = new Set(allSelected.map(key));
+        const protectedKeys = new Set(getTournamentEditorRanking(allSelected, 'oom')
+            .slice(0, Math.min(16, Math.floor(size / 2))).map(key));
+        const winnerKeys = new Set(winners.map(key));
+        const added = [];
+        winners.forEach(winner => {
+            if (existingKeys.has(key(winner))) return;
+            if (allSelected.length >= size) {
+                const replaceable = groups.flatMap(group => group.players.map(candidate => ({ group, candidate })))
+                    .filter(entry => !protectedKeys.has(key(entry.candidate)) && !winnerKeys.has(key(entry.candidate)))
+                    .sort((first, second) => (Number(first.candidate.prizeMoney) || 0)
+                        - (Number(second.candidate.prizeMoney) || 0));
+                const removed = replaceable[0];
+                if (!removed) return;
+                removed.group.players.splice(removed.group.players.indexOf(removed.candidate), 1);
+                existingKeys.delete(key(removed.candidate));
+                allSelected.splice(allSelected.indexOf(removed.candidate), 1);
+            }
+            added.push(winner);
+            allSelected.push(winner);
+            existingKeys.add(key(winner));
+        });
+        if (added.length) {
+            add('editorNativeQualifier', added.length, added, true);
+            groups[groups.length - 1].label = typeof trTournamentEditor === 'function'
+                ? trTournamentEditor('qualifier') : 'Qualifier';
+        }
     }
 
     // W otwartej drabince liczą się faktycznie zapisane nazwiska, nie nowa prognoza.

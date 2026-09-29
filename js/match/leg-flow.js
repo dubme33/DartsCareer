@@ -262,6 +262,7 @@ function checkAchievements(type, data = null) {
 
             const startNextLeg = () => {
                 if (!currentMatch) return;
+                if (typeof clearMatchIncidentVisit === 'function') clearMatchIncidentVisit(currentMatch);
                 
                 // Dodajemy resztkę z 501 do ogólnej sumy punktów (do średniej)
                 st.p1AccumulatedScore += (501 - currentMatch.p1Score);
@@ -310,6 +311,7 @@ function checkAchievements(type, data = null) {
 
         function processThrow(isP1, targetSec, targetMult, hitSec, hitMult, result = null) {
             if (!currentMatch || currentMatch.isFinishing) return;
+            if (isP1 && !currentMatch.isSpectator && currentMatch.matchIncidents?.pending) return;
 
             // To jest ostateczna granica bezpieczeństwa dla wszystkich źródeł
             // rzutu (przycisk gracza, AI i ewentualne wywołania programowe).
@@ -554,8 +556,10 @@ function checkAchievements(type, data = null) {
             }
 
             const announcedScore = currentTurnScore;
+            if (!wasP1) currentMatch.lastOpponentVisitScore = announcedScore;
             const finishTurn = () => {
                 if (!currentMatch || currentMatch.isFinishing) return;
+                if (wasP1 && typeof clearMatchIncidentVisit === 'function') clearMatchIncidentVisit(currentMatch);
                 currentMatch.dartsThrown = 0; currentMatch.isTurnLocked = false; currentMatch.isDartInFlight = false;
                 currentTurnScore = 0; updateDartDots(); drawnDarts = [];
                 if (typeof window !== 'undefined') window.matchBoard3D?.clear();

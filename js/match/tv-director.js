@@ -686,6 +686,9 @@
             if (tvActive()) {
                 if (state.legs.length % 2 === 0) queueCard(legCard());
                 else queueCard(overviewCard('checkout'));
+                // A replay clears the close-up when it ends. Without one, the
+                // winning dart is the last chance to restore the wide camera.
+                if (!highlight) afterDartImpact(state, clearFocus);
             }
             return;
         }

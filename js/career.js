@@ -112,6 +112,8 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
                     sourceName: selectedPlayer.sourceName || selectedPlayer.name,
                     difficulty: typeof getSelectedCareerDifficulty === 'function'
                         ? getSelectedCareerDifficulty('existing') : 'normal',
+                    careerWorkMode: typeof normalizeCareerWorkMode === 'function'
+                        ? normalizeCareerWorkMode(document.getElementById('existing-career-work-mode')?.value) : 'darts',
                     walkonTournamentMode: 'stage',
                     showPostMatchReports: true,
                     defaultTemplateIndex: Number.isInteger(selectedPlayer.defaultTemplateIndex)
@@ -246,6 +248,8 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
                 careerDebutSeason: currentDate.getFullYear(),
                 difficulty: typeof getSelectedCareerDifficulty === 'function'
                     ? getSelectedCareerDifficulty('custom') : 'normal',
+                careerWorkMode: typeof normalizeCareerWorkMode === 'function'
+                    ? normalizeCareerWorkMode(document.getElementById('career-work-mode')?.value) : 'darts',
                 walkonTournamentMode: 'stage',
                 showPostMatchReports: true,
                 overall: ovr, ovr: ovr, scoring: ovr + 2, doubles: ovr - 2,
@@ -335,11 +339,14 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
         function updateHub() {
             if (typeof player.stamina === 'undefined') player.stamina = 100; // Inicjalizacja dla starych zapisów
             if (typeof refreshCareerDifficultyUI === 'function') refreshCareerDifficultyUI();
+            if (typeof refreshCareerWorkUI === 'function') refreshCareerWorkUI();
             if (typeof refreshWalkonSettingsUI === 'function') refreshWalkonSettingsUI();
             if (typeof refreshPlayerNicknameUI === 'function') refreshPlayerNicknameUI();
             if (typeof refreshWorldNewsSettingsUI === 'function') refreshWorldNewsSettingsUI();
             if (typeof refreshTournamentWatchSettingsUI === 'function') refreshTournamentWatchSettingsUI();
             if (typeof refreshBounceOutSettingsUI === 'function') refreshBounceOutSettingsUI();
+            if (typeof refreshDartFlightMotionUI === 'function') refreshDartFlightMotionUI();
+            if (typeof refreshMatchLayoutSettingsUI === 'function') refreshMatchLayoutSettingsUI();
             if (typeof refreshPostMatchReportSettingsUI === 'function') refreshPostMatchReportSettingsUI();
             if (typeof refreshTVDirectorSettingsUI === 'function') refreshTVDirectorSettingsUI();
             if (typeof updateTournamentEntrySimulationButton === 'function') updateTournamentEntrySimulationButton('t-btn-sim-to-match-hub');
@@ -364,8 +371,10 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
 
             // Wyświetlanie energii
             if(document.getElementById('hub-stamina')) {
-                document.getElementById('hub-stamina').innerText = `${Math.round(player.stamina)}%`;
-                let stamColor = player.stamina > 70 ? '#27ae60' : (player.stamina > 40 ? '#f39c12' : '#c0392b');
+                const stamina = typeof getCareerEffectiveStamina === 'function'
+                    ? getCareerEffectiveStamina(player) : player.stamina;
+                document.getElementById('hub-stamina').innerText = `${Math.round(stamina)}%`;
+                let stamColor = stamina > 70 ? '#27ae60' : (stamina > 40 ? '#f39c12' : '#c0392b');
                 document.getElementById('hub-stamina').style.color = stamColor;
             }
             
@@ -556,6 +565,10 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
                 : [careerPlayer, ...(Array.isArray(pdcPlayers) ? pdcPlayers : [])]
                     .filter(candidate => candidate && candidate.hasTourCard !== false);
 
+            if (typeof getTournamentEditorNativeQualifierWinners === 'function'
+                && getTournamentEditorNativeQualifierWinners(tournament,
+                    [...(Array.isArray(pdcPlayers) ? pdcPlayers : []), careerPlayer], currentDate).some(isCareerPlayer)) return true;
+
             // Turnieje z podglądem kwalifikacji (m.in. Continental Tour,
             // Matchplay, Grand Prix, Masters i MŚ) używają dokładnie tych samych
             // grup, co ich późniejsza drabinka. "pending" nie jest wpisem do
@@ -702,6 +715,9 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
                     }
                     addEmail(t('t-sender-acc'), subSpon, bodySpon);
                     generateOffers(); updateHub();
+                }
+                if (typeof processCareerWorkMonth === 'function' && processCareerWorkMonth(player, currentDate)) {
+                    updateHub();
                 }
 
                 // 2. Reset rankingów liczonych w roku kalendarzowym (1 stycznia)
@@ -1150,19 +1166,23 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
                 : null);
             if (!context) return false;
 
+            const matchStory = typeof getMatchStoryForInterview === 'function'
+                ? getMatchStoryForInterview(context.matchStoryId) : null;
             const validInterviews = typeof getVerifiedPostMatchInterviews === 'function'
                 ? getVerifiedPostMatchInterviews(interviewsDB, context)
                 : interviewsDB.filter(interview => interview?.trigger
                     && interview.trigger !== 'unverified'
                     && context.flags?.[interview.trigger] === true);
-            if (validInterviews.length === 0) return false;
+            if (validInterviews.length === 0 && !matchStory) return false;
 
             const priorityInterviews = validInterviews.filter(interview => interview.trigger !== 'verified_summary');
             const fallbackInterviews = validInterviews.filter(interview => interview.trigger === 'verified_summary');
             const chosenPool = priorityInterviews.length > 0 && Math.random() < 0.75
                 ? priorityInterviews
                 : (fallbackInterviews.length > 0 ? fallbackInterviews : validInterviews);
-            const interview = chosenPool[Math.floor(Math.random() * chosenPool.length)];
+            const interview = matchStory && typeof createMatchStoryInterview === 'function'
+                ? createMatchStoryInterview(matchStory)
+                : chosenPool[Math.floor(Math.random() * chosenPool.length)];
             const langSuffix = `_${currentLang}`;
             const renderText = template => typeof formatPostMatchInterviewText === 'function'
                 ? formatPostMatchInterviewText(template, context)
@@ -1182,11 +1202,15 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
                 button.onclick = function() {
                     player.prof = clamp((player.prof || 50) + choice.effect.prof, 0, 100);
                     player.pop = clamp((player.pop || 20) + choice.effect.pop, 0, 100);
+                    if (matchStory && typeof resolveMatchStoryInterview === 'function') {
+                        resolveMatchStoryInterview(matchStory, interview.choices.indexOf(choice));
+                    }
 
                     alert(renderText(choice[`outcome${langSuffix}`] || choice.outcome_pl));
 
                     updateHub();
                     document.getElementById('event-modal').style.display = 'none';
+                    if (typeof saveGame === 'function') saveGame(true);
                 };
                 choicesDiv.appendChild(button);
             });
@@ -1251,6 +1275,15 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
             record.lastDate = currentDate.getTime();
             record.lastScore = playerScore;
             record.lastResult = playerWon ? 'win' : 'loss';
+            const meeting = {
+                date: record.lastDate, tournament: tournament?.name || '',
+                sourceTournament: tournament?.sourceName || tournament?.name || '',
+                round: Number(round) || 0, score: playerScore,
+                scoreType: currentMatch?.matchFormat?.type === 'sets' ? 'sets' : 'legs',
+                won: playerWon
+            };
+            record.recentMeetings = [meeting, ...(Array.isArray(record.recentMeetings) ? record.recentMeetings : [])].slice(0, 5);
+            if (round === 2) record.lastFinal = meeting;
             player.rivalries[opponent.id] = record;
 
             refreshActiveRivals();
@@ -1316,6 +1349,17 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
                         : record.currentStreak < 0 ? trRival('streakLoss', { count: Math.abs(record.currentStreak) }) : '';
                     const lastDate = record.lastDate ? new Date(record.lastDate).toLocaleDateString(currentLang) : '—';
                     const scoreText = record.lastScore ? ` · ${escapeHtml(record.lastScore)}` : '';
+                    const meetingLabel = meeting => typeof getTournamentDisplayName === 'function'
+                        ? getTournamentDisplayName({ name: meeting.tournament, sourceName: meeting.sourceTournament })
+                        : meeting.tournament;
+                    const meetingText = meeting => `${escapeHtml(meetingLabel(meeting))} · ${escapeHtml(meeting.score || '—')}`;
+                    const recentMeetings = Array.isArray(record.recentMeetings) ? record.recentMeetings : [];
+                    const finalNote = record.lastFinal
+                        ? `<p class="rival-history-final">${escapeHtml(trRival('lastFinal'))}: ${meetingText(record.lastFinal)} · ${escapeHtml(trRival(record.lastFinal.won ? 'won' : 'lost'))}</p>` : '';
+                    const meetingsList = recentMeetings.length
+                        ? `<details class="rival-history"><summary>${escapeHtml(trRival('recentDuels'))}</summary><ol>${recentMeetings.map(meeting => `
+                            <li><span class="rival-history-result ${meeting.won ? 'won' : 'lost'}">${escapeHtml(trRival(meeting.won ? 'won' : 'lost'))}</span>
+                            <span>${meetingText(meeting)}</span><time>${Number.isFinite(meeting.date) ? new Date(meeting.date).toLocaleDateString(currentLang) : ''}</time></li>`).join('')}</ol></details>` : '';
 
                     list.innerHTML += `<div style="background:#0f3460; border-left:4px solid ${status.color}; padding:14px; margin-bottom:12px; border-radius:6px;">
                         <div style="display:flex; justify-content:space-between; gap:10px; align-items:center;">
@@ -1327,6 +1371,7 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
                             <span>${record.importantMatches} ${trRival('important')} · ${record.finals} ${trRival('finals')} · ${streakText || '—'}</span>
                         </div>
                         <div style="margin-top:8px; font-size:12px; color:#95a5a6;">${trRival('last')}: ${lastDate} · ${escapeHtml(record.lastTournament || '—')}${scoreText}</div>
+                        ${finalNote}${meetingsList}
                     </div>`;
                 });
             }

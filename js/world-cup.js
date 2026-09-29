@@ -562,7 +562,7 @@ function finishWorldCupStateMatch(match, winnerId, score1, score2) {
     match.winnerId = winnerId;
     match.score1 = score1;
     match.score2 = score2;
-    worldCupState.pendingMatchId = null;
+    if (worldCupState.pendingMatchId === match.id) worldCupState.pendingMatchId = null;
 }
 
 function getWorldCupGroupStandings(group) {
@@ -1125,11 +1125,25 @@ function getWorldCupRoundLabel() {
     return key ? trWorldCup(key) : trWorldCup('knockoutStage');
 }
 
-function renderWorldCupMiniMatch(firstCountry, score, secondCountry) {
-    return `<div class="world-cup-mini-match">
+function canSpectateWorldCupMatch(match) {
+    if (!match || match.played || !worldCupState || !activeTournament) return false;
+    const team1 = getWorldCupTeam(match.team1Id);
+    const team2 = getWorldCupTeam(match.team2Id);
+    return Boolean(team1 && team2 && !teamContainsCareerPlayer(team1) && !teamContainsCareerPlayer(team2));
+}
+
+function renderWorldCupWatchControl(match) {
+    if (!canSpectateWorldCupMatch(match)) return '';
+    const index = getCurrentWorldCupStageMatches().indexOf(match);
+    return index < 0 ? '' : `<button type="button" class="btn-sign world-cup-watch-btn" onclick="startSpectatingWorldCupMatch(${index})">👁 ${t('t-btn-watch-match')}</button>`;
+}
+
+function renderWorldCupMiniMatch(firstCountry, score, secondCountry, match = null) {
+    return `<div class="world-cup-mini-match ${canSpectateWorldCupMatch(match) ? 'world-cup-mini-match-watchable' : ''}">
         <span class="world-cup-mini-home">${escapeHtml(getWorldCupCountryName(firstCountry))}</span>
         <strong>${score}</strong>
         <span class="world-cup-mini-away">${escapeHtml(getWorldCupCountryName(secondCountry))}</span>
+        ${renderWorldCupWatchControl(match)}
     </div>`;
 }
 
@@ -1145,7 +1159,7 @@ function renderWorldCupGroup(group) {
         const team1 = getWorldCupTeam(match.team1Id);
         const team2 = getWorldCupTeam(match.team2Id);
         const score = match.played ? `${match.score1}:${match.score2}` : '—';
-        return renderWorldCupMiniMatch(team1.country, score, team2.country);
+        return renderWorldCupMiniMatch(team1.country, score, team2.country, match);
     }).join('');
     return `<section class="world-cup-group"><h4>${trWorldCup('group', { label: group.label })}</h4>${rows}<div class="world-cup-mini-matches">${matches}</div></section>`;
 }
@@ -1169,7 +1183,7 @@ function renderWorldCupQualifications() {
                 const matches = group.matches.map(match => renderWorldCupMiniMatch(
                     getCountry(match.team1Id),
                     match.played ? `${match.score1}:${match.score2}` : '—',
-                    getCountry(match.team2Id)
+                    getCountry(match.team2Id), match
                 )).join('');
                 return `<div class="world-cup-qualifier-group"><h5>${trWorldCup('group', { label: group.label })}</h5><ol>${rows}</ol><div class="world-cup-mini-matches">${matches}</div></div>`;
             }).join('');
@@ -1211,6 +1225,7 @@ function showWorldCupOverview() {
                 <div style="flex:1;text-align:right;">${getFlagImg(team1.country)} ${escapeHtml(getWorldCupTeamLabel(team1))}</div>
                 <div class="bracket-vs">${score}</div>
                 <div style="flex:1;text-align:left;">${getFlagImg(team2.country)} ${escapeHtml(getWorldCupTeamLabel(team2))}</div>
+                ${renderWorldCupWatchControl(match)}
             </div>`;
         }).join('');
         const archivedRounds = [...(worldCupState.knockoutHistory || [])]
@@ -1323,6 +1338,27 @@ function startWorldCupPendingMatch() {
     if (!match) return;
     document.getElementById('bracket-modal').style.display = 'none';
     startWorldCupMatch(match);
+}
+
+function startSpectatingWorldCupMatch(index) {
+    if (typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy()) return false;
+    if (currentMatch || !Number.isInteger(index)) return false;
+    const match = getCurrentWorldCupStageMatches()[index];
+    if (!canSpectateWorldCupMatch(match)) return false;
+    repairWorldCupTeamRosters();
+    const team1 = getWorldCupTeam(match.team1Id);
+    const team2 = getWorldCupTeam(match.team2Id);
+    if (!team1?.players?.[0] || !team2?.players?.[0]) return false;
+    return beginSpectatingAiMatch(team1.players[0], team2.players[0], getWorldCupMatchFormat(match.stage), {
+        isWorldCup: true,
+        isDoubles: true,
+        worldCupMatchId: match.id,
+        spectatorWorldCupMatchId: match.id,
+        worldCupStage: match.stage,
+        worldCupTeamP1: team1,
+        worldCupTeamP2: team2,
+        doublesThrower: { p1: 0, p2: 0 }
+    }, getWorldCupRoundLabel());
 }
 
 function getDoublesCurrentThrower(isP1) {

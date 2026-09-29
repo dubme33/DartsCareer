@@ -36,7 +36,9 @@
     let seenDarts = [], animations = [], queueUntil = 0, frameId = null;
     let replayBoard = null;
     let cameraFocus = null, cameraMotion = null, cameraLookAt = null, replayShot = null;
+    let cameraTvLayout = matchScreen.classList.contains('match-tv-mode');
     let restorePending = true, suspendedAt = null, frameCount = 0;
+    let previousMotionFrame = null, motionFrameMs = null;
 
     function readPreference(key, fallback) {
         try { return localStorage.getItem(key) || fallback; } catch (_error) { return fallback; }
@@ -148,7 +150,7 @@
     }
 
     function createScene() {
-        renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, powerPreference: 'default' });
+        renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, powerPreference: 'high-performance' });
         renderer.setPixelRatio(Math.min(Math.max(window.devicePixelRatio || 1, 1.5), 2));
         renderer.setClearColor(0x000000, 0);
         renderer.outputColorSpace = THREE.SRGBColorSpace;
@@ -256,8 +258,31 @@
         dartModels.push(dart); return dart;
     }
 
+    function createFlightPath(dart, bouncing) {
+        const collision = dart.data.collision;
+        const planned = matchBoardLayout.toDisplayPoint(collision?.plannedPoint || dart.data);
+        const plannedRotation = collision
+            ? new THREE.Euler(collision.plannedPose.x, collision.plannedPose.y, collision.plannedPose.z)
+            : dart.rotation;
+        const incomingAxis = new THREE.Vector3(0, 0, 1).applyEuler(plannedRotation);
+        const startPoint = new THREE.Vector3((planned.x - 170) / 130, (170 - planned.y) / 130, .008)
+            .addScaledVector(incomingAxis, 2.7 / incomingAxis.z);
+        const impact = collision ? new THREE.Vector3(...matchBoardLayout.toDisplayWorld(collision.contact)) : null;
+        const earlyBounce = bouncing && collision?.bounced;
+        const contactAt = impact && !earlyBounce
+            ? Math.max(.55, Math.min(.95, 1 - (impact.z - .008) / 2.7)) : 1;
+        const end = new THREE.Vector3(dart.x, dart.y, .008);
+        const finalAxis = impact ? new THREE.Vector3(0, 0, 1).applyEuler(dart.rotation) : null;
+        return {
+            collision, plannedRotation, startPoint, impact, earlyBounce, contactAt, end,
+            controlA: impact ? impact.clone().addScaledVector(new THREE.Vector3(...collision.normal), .16) : null,
+            controlB: impact ? end.clone().addScaledVector(finalAxis, .25) : null,
+            bounceOrigin: earlyBounce ? impact : end
+        };
+    }
+
     function enqueue(dart, bouncing = false, durationScale = 1, replay = false) {
-        if (reducedMotion.matches) {
+        if (typeof shouldAnimateDartFlight === 'function' && !shouldAnimateDartFlight(reducedMotion.matches)) {
             if (bouncing) { scene.remove(dart.group); dartFactory.release(dart.group); dartModels.splice(dartModels.indexOf(dart), 1); }
             requestRender(); return;
         }
@@ -266,11 +291,12 @@
         const earlyBounce = bouncing && dart.data.collision?.bounced;
         const impactProgress = earlyBounce ? Math.max(.55, 1 - (dart.data.collision.contact[2] - .008) / 2.7) : 1;
         // Live darts travel more briskly; replays retain the original timing so slow-motion stays readable.
-        const baseFlight = replay ? (dart.data.collision ? 480 : 340) : (dart.data.collision ? 405 : 285);
+        const baseFlight = replay ? (dart.data.collision ? 480 : 340) : (dart.data.collision ? 450 : 370);
         const flight = Math.max(45, baseFlight * impactProgress * durationScale / speed);
         const start = Math.max(now, queueUntil);
         const settle = bouncing ? Math.max(80, 420 * durationScale / speed) : Math.max(35, 180 * durationScale / speed);
         animations.push({ dart, bouncing, replay, start, flight, settle, end: start + flight + settle,
+            path: createFlightPath(dart, bouncing),
             impacted: false, impactCallbacks: [] });
         queueUntil = start + flight + (bouncing ? settle : 0);
         dart.group.visible = false;
@@ -289,9 +315,16 @@
     function cameraPose(target = cameraFocus) {
         const narrow = Math.min(1, camera.aspect || 1);
         if (!target) {
+            // Regular play needs the scoring fields and numbers to fill the
+            // board window. The wider TV establishing shot includes the surround.
+            const television = matchScreen.classList.contains('match-tv-mode');
+            const boardScale = typeof getMatchBoardSizeScale === 'function' ? getMatchBoardSizeScale() : 1;
             return cameraView === 'front'
-                ? { position: new THREE.Vector3(.12 / narrow, .08 / narrow, 8.55 / narrow), look: new THREE.Vector3(0, 0, .08) }
-                : { position: new THREE.Vector3(-3.65 / narrow, .92 / narrow, 7.55 / narrow), look: new THREE.Vector3(0, 0, .08) };
+                ? { position: new THREE.Vector3(.12 / narrow / boardScale, .08 / narrow / boardScale,
+                    (television ? 8.55 : 5.85) / narrow / boardScale), look: new THREE.Vector3(0, 0, .08) }
+                : { position: new THREE.Vector3((television ? -3.65 : -2.65) / narrow / boardScale,
+                    (television ? .92 : .75) / narrow / boardScale,
+                    (television ? 7.55 : 5.25) / narrow / boardScale), look: new THREE.Vector3(0, 0, .08) };
         }
         const look = focusPoint(target);
         return cameraView === 'front'
@@ -390,6 +423,7 @@
         const running = active() && visible() && !paused();
         if (!running) {
             if (suspendedAt === null) suspendedAt = performance.now();
+            previousMotionFrame = null;
             if (frameId !== null) cancelAnimationFrame(frameId);
             frameId = null; return;
         }
@@ -419,6 +453,14 @@
     function renderFrame(now) {
         frameId = null;
         if (!active() || !visible() || paused()) { updateVisibility(); return; }
+        const moving = animations.length > 0 || Boolean(cameraMotion);
+        if (moving && previousMotionFrame !== null) {
+            const interval = now - previousMotionFrame;
+            if (interval > 0 && interval < 100) {
+                motionFrameMs = motionFrameMs === null ? interval : motionFrameMs * .8 + interval * .2;
+            }
+        }
+        previousMotionFrame = moving ? now : null;
         updateCameraMotion(now);
         dartModels.forEach(dart => dart.group.rotation.copy(dart.rotation));
         animations = animations.filter(animation => {
@@ -426,23 +468,12 @@
             const age = now - start;
             if (age < 0) return true;
             dart.group.visible = true;
-            const collision = dart.data.collision;
-            const planned = matchBoardLayout.toDisplayPoint(collision?.plannedPoint || dart.data);
-            const plannedRotation = collision ? new THREE.Euler(collision.plannedPose.x, collision.plannedPose.y, collision.plannedPose.z) : dart.rotation;
-            const incomingAxis = new THREE.Vector3(0, 0, 1).applyEuler(plannedRotation);
-            const origin = new THREE.Vector3((planned.x - 170) / 130, (170 - planned.y) / 130, .008);
-            const startPoint = origin.clone().addScaledVector(incomingAxis, 2.7 / incomingAxis.z);
-            const impact = collision ? new THREE.Vector3(...matchBoardLayout.toDisplayWorld(collision.contact)) : null;
-            const earlyBounce = bouncing && collision?.bounced;
+            const { collision, plannedRotation, startPoint, impact, earlyBounce, contactAt,
+                end, controlA, controlB, bounceOrigin } = animation.path;
             if (age < flight) {
                 const t = age / flight;
-                const contactAt = impact && !earlyBounce ? Math.max(.55, Math.min(.95, 1 - (impact.z - .008) / 2.7)) : 1;
                 if (impact && t >= contactAt) {
                     const after = (t - contactAt) / (1 - contactAt);
-                    const end = new THREE.Vector3(dart.x, dart.y, .008);
-                    const finalAxis = new THREE.Vector3(0, 0, 1).applyEuler(dart.rotation);
-                    const controlA = impact.clone().addScaledVector(new THREE.Vector3(...collision.normal), .16);
-                    const controlB = end.clone().addScaledVector(finalAxis, .25);
                     const rest = 1 - after;
                     dart.group.position.copy(impact).multiplyScalar(rest ** 3)
                         .addScaledVector(controlA, 3 * rest * rest * after)
@@ -453,13 +484,12 @@
                         plannedRotation.z + (dart.rotation.z - plannedRotation.z) * turn);
                     shakeContactedDart(dart, Math.sin(Math.PI * after) * .035);
                 } else {
-                    dart.group.position.copy(startPoint).lerp(impact || new THREE.Vector3(dart.x, dart.y, .008), t / contactAt);
+                    dart.group.position.copy(startPoint).lerp(impact || end, t / contactAt);
                     dart.group.rotation.copy(plannedRotation);
                 }
             } else if (bouncing) {
                 completeImpact(animation);
                 const t = Math.min(1, (age - flight) / settle);
-                const bounceOrigin = earlyBounce ? impact : new THREE.Vector3(dart.x, dart.y, .008);
                 const side = collision ? collision.normal[0] : .42;
                 dart.group.position.set(bounceOrigin.x + side * .5 * t, bounceOrigin.y + .15 * t - 2.1 * t * t, bounceOrigin.z + .65 * t);
                 dart.group.rotation.z = dart.rotation.z + t * 5;
@@ -469,7 +499,7 @@
                 }
             } else {
                 completeImpact(animation);
-                dart.group.position.set(dart.x, dart.y, .008);
+                dart.group.position.copy(end);
                 dart.group.rotation.copy(dart.rotation);
                 const t = Math.min(1, (age - flight) / settle);
                 dart.group.rotation.x += Math.sin(t * Math.PI * 5) * .07 * (1 - t);
@@ -648,12 +678,15 @@
             const speed = spectatorSpeed();
             const now = suspendedAt ?? performance.now();
             const remaining = Math.max(0, ...animations.map(animation => animation.end - now));
-            const hold = reducedMotion.matches ? 0 : 350 / speed;
+            const hold = typeof shouldAnimateDartFlight === 'function' && !shouldAnimateDartFlight(reducedMotion.matches)
+                ? 0 : 350 / speed;
             // The spectator scheduler subsequently divides the base delay by its speed.
             return Math.max(baseDelay, Math.ceil((remaining + hold) * speed));
         },
         getState() {
             return { mode: active() ? '3d' : '2d', camera: cameraView, loading, failed, failureReason,
+                dartFlightMotion: typeof getDartFlightMotionPreference === 'function' ? getDartFlightMotionPreference() : 'enabled',
+                systemReducedMotion: reducedMotion.matches,
                 cameraPosition: camera?.position.toArray(), cameraFocus: cameraFocus ? { ...cameraFocus } : null,
                 replayCamera: replayShot ? { name: replayShot.name, target: { ...replayShot.target } } : null,
                 cameraMoving: Boolean(cameraMotion), rings: matchBoardLayout.radii,
@@ -662,7 +695,8 @@
                     point: { x: dart.data.x, y: dart.data.y }, visible: dart.group.visible,
                     renderedPosition: dart.group.position.toArray(), renderedPose: dart.group.rotation.toArray().slice(0, 3)
                 })) : null,
-                frames: frameCount, pixelRatio: renderer?.getPixelRatio(), drawCalls: renderer?.info.render.calls,
+                frames: frameCount, animationFps: motionFrameMs ? Math.round(1000 / motionFrameMs) : null,
+                pixelRatio: renderer?.getPixelRatio(), drawCalls: renderer?.info.render.calls,
                 geometries: renderer?.info.memory.geometries, textures: renderer?.info.memory.textures,
                 boardSkin: skinSource ? window.matchBoardSkin.getState().name : null, boardSurfaceZ: boardFace?.position.z,
                 spider: { source: skinSource ? 'photographic' : 'generated', generated: spiderMeshes.length,
@@ -691,6 +725,11 @@
         writePreference('dartsCareer.boardCamera', cameraView); updateCamera(); refreshUI();
     });
     new MutationObserver(() => {
+        const television = matchScreen.classList.contains('match-tv-mode');
+        if (cameraTvLayout !== television) {
+            cameraTvLayout = television;
+            updateCamera();
+        }
         updateVisibility();
         if (visible()) drawDartboard();
     }).observe(matchScreen, { attributes: true, attributeFilter: ['class'] });
@@ -700,5 +739,6 @@
         if (event.target.closest('.spectator-speed-controls')) updateVisibility();
     });
     window.addEventListener('resize', resize);
+    window.addEventListener('match-layout-settings-change', () => { resize(); updateCamera(); });
     refreshUI();
 })();

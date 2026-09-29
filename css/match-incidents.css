@@ -1,0 +1,79 @@
+.match-incident[hidden] { display: none !important; }
+.match-incident {
+    position: fixed;
+    inset: 0;
+    z-index: 5010;
+    display: grid;
+    place-items: center;
+    padding: 18px;
+    background: rgba(4, 10, 22, .76);
+    backdrop-filter: blur(6px);
+}
+.match-incident-card {
+    width: min(100%, 560px);
+    max-height: calc(100svh - 36px);
+    overflow: auto;
+    padding: clamp(20px, 4vw, 32px);
+    border: 1px solid #54c6a6;
+    border-top: 5px solid #54c6a6;
+    border-radius: 16px;
+    background: linear-gradient(145deg, #173044, #101928 72%);
+    color: #f4f8fb;
+    box-shadow: 0 28px 90px #000b;
+    text-align: left;
+}
+.match-incident-kicker {
+    color: #70e2bd;
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: .18em;
+}
+.match-incident h3 { margin: 12px 0 8px; color: #fff; font-size: clamp(22px, 4vw, 30px); }
+.match-incident p { margin: 0 0 22px; color: #cedde8; line-height: 1.5; }
+.match-incident-choices { display: grid; gap: 10px; }
+.match-incident-choices button {
+    width: 100%;
+    min-height: 58px;
+    padding: 12px 16px;
+    border: 1px solid #598198;
+    border-radius: 10px;
+    background: #244357;
+    color: #fff;
+    font: inherit;
+    font-weight: 700;
+    line-height: 1.35;
+    text-align: left;
+    cursor: pointer;
+    transition: background .15s, border-color .15s, transform .15s;
+}
+.match-incident-choices button:hover,
+.match-incident-choices button:focus-visible {
+    background: #236657;
+    border-color: #77e7bf;
+    transform: translateY(-1px);
+    outline: none;
+}
+.match-incident-card > small { display: block; margin-top: 14px; color: #a6c1cc; line-height: 1.4; text-align: left; }
+.match-incident-result[hidden] { display: none !important; }
+.match-incident-result {
+    position: fixed;
+    z-index: 5005;
+    top: max(70px, calc(env(safe-area-inset-top) + 16px));
+    left: 50%;
+    transform: translateX(-50%);
+    width: max-content;
+    max-width: min(90vw, 620px);
+    padding: 10px 16px;
+    border: 1px solid #70e2bd;
+    border-radius: 9px;
+    background: #10283de8;
+    color: #f4f8fb;
+    box-shadow: 0 12px 30px #0008;
+    font-weight: 700;
+    text-align: center;
+    pointer-events: none;
+}
+@media (max-width: 600px) {
+    .match-incident { padding: 12px; }
+    .match-incident-card { max-height: calc(100svh - 24px); }
+}

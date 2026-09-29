@@ -101,6 +101,11 @@ const TOURNAMENT_EDITOR_TEXT = {
 let tournamentEditorSelected = null;
 let tournamentEditorCreating = false;
 
+TOURNAMENT_EDITOR_TEXT.pl.etHostHint = 'Kraj European Tour określa też kraj kwalifikacji gospodarzy. Zmień kraj tutaj i zapisz — nie trzeba zmieniać zasad ani całego turnieju.';
+TOURNAMENT_EDITOR_TEXT.en.etHostHint = 'The European Tour country also determines host-nation qualifier eligibility. Change the country here and save; no need to replace the event rules.';
+TOURNAMENT_EDITOR_TEXT.de.etHostHint = 'Das Land der European Tour bestimmt auch die Teilnahme an der Gastgeberqualifikation. Ändere hier das Land und speichere, ohne die Turnierregeln zu ersetzen.';
+TOURNAMENT_EDITOR_TEXT.nl.etHostHint = 'Het land van de European Tour bepaalt ook wie aan de gastlandkwalificatie mag deelnemen. Wijzig het land hier en sla op; de toernooiregels blijven behouden.';
+
 function trTournamentEditor(key, params = {}) {
     const language = typeof currentLang === 'string' && TOURNAMENT_EDITOR_TEXT[currentLang] ? currentLang : 'pl';
     return String(TOURNAMENT_EDITOR_TEXT[language][key] || TOURNAMENT_EDITOR_TEXT.en[key] || key)
@@ -237,7 +242,9 @@ function refreshTournamentEditorFormText() {
             ? trTournamentEditor('mod') : trTournamentEditor('base');
     tournamentEditorElement('tournament-editor-system-hint').textContent = tournamentEditorCreating || tournament?.isEditorTournament
         ? trTournamentEditor('ownHint') : hasTournamentEditorQualification(tournament)
-            ? trTournamentEditor('qualificationHint') : trTournamentEditor('specialHint');
+            ? trTournamentEditor('qualificationHint')
+            : typeof isContinentalTourTournament === 'function' && isContinentalTourTournament(tournament)
+                ? trTournamentEditor('etHostHint') : trTournamentEditor('specialHint');
     tournamentEditorElement('tournament-editor-save').textContent = trTournamentEditor(tournamentEditorCreating ? 'create' : 'save');
     tournamentEditorElement('tournament-editor-delete').hidden = tournamentEditorCreating || !tournament;
 }
@@ -330,10 +337,19 @@ async function saveTournamentEditor(event) {
     const tournament = creating ? { completed: false, historyLogs: '', isEditorTournament: true,
         isCustomTournament: true, sourceName: values.name } : tournamentEditorSelected;
     if (!tournament) return false;
+    if (!creating && values.country !== tournament.country && !tournament.completed
+        && typeof isContinentalTourTournament === 'function' && isContinentalTourTournament(tournament)
+        && tournamentDatabase.some(candidate => candidate.specialType === 'continentalQualifier'
+            && candidate.qualifierPath === 'host' && candidate.completed
+            && [tournament.name, tournament.sourceName].filter(Boolean).includes(candidate.qualifierFor))) {
+        setTournamentEditorStatus(trTournamentEditor('completedRules'), true); return false;
+    }
     let qualificationUpdates;
     try { qualificationUpdates = prepareTournamentEditorQualificationUpdate(tournament, values); }
     catch (error) { setTournamentEditorStatus(error.message, true); return false; }
     const previousName = tournament.name;
+    const previousCountry = tournament.country;
+    const previousCity = tournament.city;
     if (!creating && !tournament.sourceName) tournament.sourceName = tournament.name;
     Object.assign(tournament, values, { editorModified: true });
     if (!values.editorQualification) delete tournament.editorQualification;
@@ -343,6 +359,27 @@ async function saveTournamentEditor(event) {
     if (previousName) tournamentDatabase.forEach(candidate => {
         if (candidate.qualifierFor === previousName) candidate.qualifierFor = tournament.name;
     });
+    if (typeof isContinentalTourTournament === 'function' && isContinentalTourTournament(tournament)) {
+        if (previousCountry !== tournament.country) {
+            const host = tournament.continentalQualification?.paths?.host;
+            if (host) {
+                host.participantIds = [];
+                host.qualifiedPlayerIds = [];
+                host.initialized = false;
+                host.completed = false;
+                delete host.editorNativeOriginalQualifiedPlayerIds;
+                if (typeof refreshContinentalQualificationAggregate === 'function') {
+                    refreshContinentalQualificationAggregate(tournament.continentalQualification);
+                }
+            }
+        }
+        tournamentDatabase.filter(candidate => candidate.specialType === 'continentalQualifier'
+            && candidate.qualifierPath === 'host'
+            && [tournament.name, tournament.sourceName].filter(Boolean).includes(candidate.qualifierFor)).forEach(candidate => {
+            candidate.country = tournament.country;
+            if (candidate.city === previousCity) candidate.city = tournament.city;
+        });
+    }
     if (!values.editorMatchFormat) delete tournament.editorMatchFormat;
     if (values.endMonth === values.month) delete tournament.endMonth;
     if (values.endDay === values.day && !Object.hasOwn(tournament, 'endMonth')) delete tournament.endDay;
@@ -359,8 +396,10 @@ async function deleteTournamentEditorCandidate() {
     const tournament = tournamentEditorSelected;
     if (!tournament) return false;
     if (isTournamentEditorActive(tournament)) { setTournamentEditorStatus(trTournamentEditor('inUse'), true); return false; }
+    const linkedNames = new Set([tournament.name, tournament.sourceName].filter(name => typeof name === 'string' && name.trim()));
     const dependents = tournamentDatabase.filter(candidate => candidate !== tournament
-        && [tournament.name, tournament.sourceName].includes(candidate.qualifierFor));
+        && typeof candidate.qualifierFor === 'string' && candidate.qualifierFor.trim()
+        && linkedNames.has(candidate.qualifierFor));
     if (dependents.some(isTournamentEditorActive)) { setTournamentEditorStatus(trTournamentEditor('inUse'), true); return false; }
     if (!confirm(trTournamentEditor('deleteConfirm', { name: tournament.name, count: dependents.length }))) return false;
     const removed = [tournament, ...dependents];
@@ -369,7 +408,7 @@ async function deleteTournamentEditorCandidate() {
         if (main && (isTournamentEditorActive(main) || main.completed)) {
             setTournamentEditorStatus(trTournamentEditor('inUse'), true); return false;
         }
-        if (main) {
+        if (main && hasTournamentEditorQualification(main)) {
             const key = tournamentEditorKey(tournament);
             const freed = main.editorQualification.routes.filter(route => route.source === 'qualifier' && route.qualifierKey === key)
                 .reduce((sum, route) => sum + route.places, 0);

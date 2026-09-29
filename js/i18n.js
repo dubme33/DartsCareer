@@ -1858,6 +1858,7 @@ const translations = {
                 h2h: 'Bilans H2H', matches: 'meczów', wins: 'wygrane', losses: 'porażki',
                 last: 'Ostatnio', important: 'ważnych meczów', finals: 'finały', ahead: 'Prowadzisz', behind: 'Tracisz', even: 'Remis',
                 streakWin: 'Seria zwycięstw: {count}', streakLoss: 'Seria porażek: {count}',
+                recentDuels: 'Ostatnie bezpośrednie mecze', lastFinal: 'Ostatni wspólny finał', won: 'Wygrana', lost: 'Porażka',
                 rivalMailSender: 'Darts Media', rivalMailSubject: 'Nowy rywal: {name}',
                 rivalMailBody: 'Twoje pojedynki z {name} zaczynają elektryzować kibiców. Bilans H2H: {wins}:{losses}. Kolejne spotkanie będzie miało wyjątkową atmosferę.',
                 mentalBoost: 'Mentalna przewaga: +{value} do punktacji i dubli.', mentalPressure: 'Presja rywalizacji: -{value} do punktacji i dubli.'
@@ -1870,6 +1871,7 @@ const translations = {
                 h2h: 'H2H record', matches: 'matches', wins: 'wins', losses: 'losses',
                 last: 'Last match', important: 'important matches', finals: 'finals', ahead: 'You lead', behind: 'You trail', even: 'Level',
                 streakWin: 'Win streak: {count}', streakLoss: 'Loss streak: {count}',
+                recentDuels: 'Recent head-to-head matches', lastFinal: 'Last final together', won: 'Win', lost: 'Loss',
                 rivalMailSender: 'Darts Media', rivalMailSubject: 'New rival: {name}',
                 rivalMailBody: 'Your matches with {name} are starting to excite the fans. H2H record: {wins}:{losses}. The next meeting will have a special atmosphere.',
                 mentalBoost: 'Mental edge: +{value} to scoring and doubles.', mentalPressure: 'Rivalry pressure: -{value} to scoring and doubles.'
@@ -1882,6 +1884,7 @@ const translations = {
                 h2h: 'Direkter Vergleich', matches: 'Spiele', wins: 'Siege', losses: 'Niederlagen',
                 last: 'Zuletzt', important: 'wichtige Spiele', finals: 'Finals', ahead: 'Du führst', behind: 'Du liegst zurück', even: 'Ausgeglichen',
                 streakWin: 'Siegesserie: {count}', streakLoss: 'Niederlagenserie: {count}',
+                recentDuels: 'Letzte direkte Duelle', lastFinal: 'Letztes gemeinsames Finale', won: 'Sieg', lost: 'Niederlage',
                 rivalMailSender: 'Darts Media', rivalMailSubject: 'Neuer Rivale: {name}',
                 rivalMailBody: 'Deine Duelle mit {name} begeistern die Fans. Direkter Vergleich: {wins}:{losses}. Das nächste Treffen wird besonders sein.',
                 mentalBoost: 'Mentaler Vorteil: +{value} auf Scoring und Doppel.', mentalPressure: 'Rivalitätsdruck: -{value} auf Scoring und Doppel.'
@@ -1894,6 +1897,7 @@ const translations = {
                 h2h: 'Onderling record', matches: 'wedstrijden', wins: 'zeges', losses: 'nederlagen',
                 last: 'Laatst', important: 'belangrijke wedstrijden', finals: 'finales', ahead: 'Je leidt', behind: 'Je staat achter', even: 'Gelijk',
                 streakWin: 'Zegereeks: {count}', streakLoss: 'Verliesreeks: {count}',
+                recentDuels: 'Laatste onderlinge duels', lastFinal: 'Laatste onderlinge finale', won: 'Winst', lost: 'Verlies',
                 rivalMailSender: 'Darts Media', rivalMailSubject: 'Nieuwe rivaal: {name}',
                 rivalMailBody: 'Je wedstrijden met {name} beginnen de fans te boeien. H2H-record: {wins}:{losses}. De volgende ontmoeting krijgt een bijzondere sfeer.',
                 mentalBoost: 'Mentaal voordeel: +{value} voor scoring en dubbels.', mentalPressure: 'Rivaliteitsdruk: -{value} voor scoring en dubbels.'
@@ -2107,10 +2111,13 @@ const translations = {
             if(typeof applyPdcRankingSearch === 'function') applyPdcRankingSearch();
             if(typeof refreshPanelTopBackTranslations === 'function') refreshPanelTopBackTranslations();
             if(typeof refreshCareerDifficultyUI === 'function') refreshCareerDifficultyUI();
+            if(typeof refreshCareerWorkUI === 'function') refreshCareerWorkUI();
             if(typeof refreshWalkonSettingsUI === 'function') refreshWalkonSettingsUI();
             if(typeof refreshPlayerNicknameUI === 'function') refreshPlayerNicknameUI();
             if(typeof refreshTournamentWatchSettingsUI === 'function') refreshTournamentWatchSettingsUI();
             if(typeof refreshBounceOutSettingsUI === 'function') refreshBounceOutSettingsUI();
+            if(typeof refreshDartFlightMotionUI === 'function') refreshDartFlightMotionUI();
+            if(typeof refreshMatchLayoutSettingsUI === 'function') refreshMatchLayoutSettingsUI();
             if(typeof refreshPostMatchReportSettingsUI === 'function') refreshPostMatchReportSettingsUI();
             if(typeof refreshTVDirectorSettingsUI === 'function') refreshTVDirectorSettingsUI();
             if(typeof refreshMatchBoardViewTranslations === 'function') refreshMatchBoardViewTranslations();

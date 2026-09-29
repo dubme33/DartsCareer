@@ -1,0 +1,85 @@
+.match-layout-settings-tile .match-layout-setting-fields {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+    margin: 10px 0;
+}
+.match-layout-setting-fields label { display: grid; gap: 5px; min-width: 0; font-size: 13px; font-weight: 700; }
+.match-layout-setting-fields select { width: 100%; min-width: 0; }
+.match-layout-preview {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 20px;
+    min-height: 128px;
+    margin: 8px 0;
+    padding: 10px;
+    overflow: hidden;
+    border: 1px solid #49667d;
+    border-radius: 9px;
+    background: radial-gradient(ellipse at 42% 50%, #203b46, #0c1d30 75%);
+}
+.match-layout-preview-board {
+    flex: none;
+    width: calc(88px * var(--preview-board-scale, 1));
+    height: calc(88px * var(--preview-board-scale, 1));
+    border: 9px solid #24282b;
+    border-radius: 50%;
+    background: radial-gradient(circle, #c63035 0 5%, #32a75f 6% 11%, transparent 12%),
+        repeating-conic-gradient(#e9e8dd 0deg 18deg, #222527 18deg 36deg);
+    box-shadow: 0 0 0 4px #5c6265, 0 6px 18px #0009;
+}
+.match-layout-preview-controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 5px; width: 100px; }
+.match-layout-preview-controls span {
+    display: grid;
+    place-items: center;
+    min-width: 0;
+    min-height: calc(25px * var(--preview-ui-scale, 1));
+    border: 1px solid #527c98;
+    border-radius: 4px;
+    background: #15354f;
+    color: #fff;
+    font-size: calc(11px * var(--preview-ui-scale, 1));
+    font-weight: 800;
+}
+.match-layout-preview-controls span:last-child { grid-column: 1 / -1; background: #1ca764; }
+#screen-match:not(.match-tv-mode) .match-board-view[data-view="2d"] .dartboard-surround {
+    width: min(100%, calc(520px * var(--match-board-scale, 1)), calc(100svh - 170px));
+}
+#screen-match:not(.match-tv-mode) .match-board { grid-template-columns: minmax(0, 1fr) calc(280px * var(--match-ui-scale, 1)); }
+#screen-match:not(.match-tv-mode) .aim-sector-btn,
+#screen-match:not(.match-tv-mode) .aim-multiplier-btn { min-height: calc(44px * var(--match-ui-scale, 1)); font-size: calc(14px * var(--match-ui-scale, 1)); }
+#screen-match:not(.match-tv-mode) .aim-sector-btn { font-size: calc(16px * var(--match-ui-scale, 1)); }
+#screen-match:not(.match-tv-mode) .match-actions .action-btn { min-height: calc(44px * var(--match-ui-scale, 1)); }
+#screen-match:not(.match-tv-mode) .score-info h4 { font-size: calc(18px * var(--match-ui-scale, 1)); }
+#screen-match:not(.match-tv-mode) .score-display { font-size: calc(54px * var(--match-ui-scale, 1)); }
+#screen-match.match-tv-mode .match-board-view[data-view="2d"] .dartboard-surround {
+    width: min(92%, calc((100svh - 24px) * var(--match-board-scale, 1)), calc(720px * var(--match-board-scale, 1)));
+}
+#screen-match.match-tv-mode .tv-quick-throw-btn,
+#screen-match.match-tv-mode .aim-sector-btn,
+#screen-match.match-tv-mode .aim-multiplier-btn {
+    min-height: calc(37px * var(--match-ui-scale, 1));
+    font-size: calc(13px * var(--match-ui-scale, 1));
+}
+#screen-match.match-tv-mode .match-actions #throw-btn { font-size: calc(18px * var(--match-ui-scale, 1)); }
+#screen-match.match-tv-mode .match-actions #t-btn-sim-visit { font-size: calc(14px * var(--match-ui-scale, 1)); }
+@media (max-width: 1200px) {
+    #screen-match:not(.match-tv-mode) .match-board { grid-template-columns: minmax(0, 1fr) calc(300px * var(--match-ui-scale, 1)); }
+}
+@media (max-width: 600px) {
+    #screen-match:not(.match-tv-mode) .match-board { grid-template-columns: minmax(0, 1fr); }
+    #screen-match:not(.match-tv-mode) .score-info h4 { font-size: calc(12px * var(--match-ui-scale, 1)); }
+    #screen-match:not(.match-tv-mode) .score-display { font-size: calc(32px * var(--match-ui-scale, 1)); }
+    #screen-match.match-tv-mode .match-board-view[data-view="2d"] .dartboard-surround {
+        width: min(94vw, calc((44svh - 90px) * var(--match-board-scale, 1)));
+    }
+}
+@media (min-width: 601px) and (max-height: 900px) {
+    #screen-match.match-tv-mode .tv-quick-throw-btn,
+    #screen-match.match-tv-mode .aim-sector-btn,
+    #screen-match.match-tv-mode .aim-multiplier-btn {
+        min-height: clamp(26px, calc(28px * var(--match-ui-scale, 1)), 35px);
+        font-size: calc(12px * var(--match-ui-scale, 1));
+    }
+}

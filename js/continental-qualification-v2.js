@@ -597,6 +597,27 @@ function getContinentalTourMainField(mainTournament) {
     const state = ensureContinentalQualificationState(mainTournament, candidates);
     if (!state) return null;
     Object.keys(CONTINENTAL_QUALIFIER_PATHS).forEach(path => automaticallyCompleteContinentalQualifierPath(mainTournament, path, candidates));
+    if (typeof getTournamentEditorNativeQualifierWinners === 'function') {
+        const host = getContinentalQualificationPathState(state, 'host');
+        const winners = getTournamentEditorNativeQualifierWinners(mainTournament, candidates);
+        if (winners.length) {
+            const protectedKeys = new Set([...state.oomPlayerIds, ...state.proTourPlayerIds,
+                ...Object.entries(state.paths).filter(([path]) => path !== 'host')
+                    .flatMap(([, path]) => path.qualifiedPlayerIds || [])]);
+            if (!Array.isArray(host.editorNativeOriginalQualifiedPlayerIds)) {
+                host.editorNativeOriginalQualifiedPlayerIds = [...(host.qualifiedPlayerIds || [])];
+            }
+            host.qualifiedPlayerIds = [...new Set([
+                ...winners.map(getContinentalQualificationPlayerKey), ...host.editorNativeOriginalQualifiedPlayerIds
+            ])].filter(key => !protectedKeys.has(key)).slice(0, CONTINENTAL_QUALIFIER_PATHS.host.places);
+            host.completed = true;
+            refreshContinentalQualificationAggregate(state);
+        } else if (Array.isArray(host.editorNativeOriginalQualifiedPlayerIds)) {
+            host.qualifiedPlayerIds = host.editorNativeOriginalQualifiedPlayerIds;
+            delete host.editorNativeOriginalQualifiedPlayerIds;
+            refreshContinentalQualificationAggregate(state);
+        }
+    }
     const byKey = new Map(candidates.map(candidate => [getContinentalQualificationPlayerKey(candidate), candidate]));
     const resolveField = ids => getContinentalEffectivePlayerIds(ids, state).flatMap(key => key === null
         ? [createContinentalQualifierBye()] : byKey.has(key) ? [byKey.get(key)] : []);

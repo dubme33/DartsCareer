@@ -206,6 +206,16 @@ function startSpectatingTournamentMatch(bracketIndex) {
     if (existingResult) return false;
 
     const matchFormat = getTournamentMatchFormat(activeTournament, tournamentRound);
+    return beginSpectatingAiMatch(p1, p2, matchFormat,
+        { spectatorRound: tournamentRound, spectatorMatchIndex: bracketIndex }, getRoundName(tournamentRound));
+}
+
+function beginSpectatingAiMatch(p1, p2, matchFormat, matchFields = {}, roundLabel = '') {
+    if (!activeTournament || currentMatch || !p1 || !p2 || p1.isBye || p2.isBye) return false;
+    const team1 = matchFields.worldCupTeamP1;
+    const team2 = matchFields.worldCupTeamP2;
+    const firstName = team1 ? getWorldCupCountryName(team1.country) : p1.name;
+    const secondName = team2 ? getWorldCupCountryName(team2.country) : p2.name;
     const starter = Math.random() < 0.5 ? 'p1' : 'p2';
     currentMatch = {
         vsAI: true,
@@ -215,8 +225,6 @@ function startSpectatingTournamentMatch(bracketIndex) {
         opponent: p2,
         spectatorPlaybackSpeed: 1,
         spectatorPaused: false,
-        spectatorRound: tournamentRound,
-        spectatorMatchIndex: bracketIndex,
         p1Score: 501,
         p2Score: 501,
         p1Legs: 0,
@@ -241,7 +249,8 @@ function startSpectatingTournamentMatch(bracketIndex) {
             p1HighCheckout: 0, p1DoubleAttempts: 0, p1DoubleHits: 0, p1OneEighties: 0, p1HundredPlus: 0, p1OneFortyPlus: 0,
             p2TotalDarts: 0, p2AccumulatedScore: 0, p2First9Score: 0, p2First9Darts: 0, p2LegDarts: 0,
             p2HighCheckout: 0, p2DoubleAttempts: 0, p2DoubleHits: 0, p2OneEighties: 0, p2HundredPlus: 0, p2OneFortyPlus: 0
-        }
+        },
+        ...matchFields
     };
 
     currentTurnScore = 0;
@@ -249,11 +258,23 @@ function startSpectatingTournamentMatch(bracketIndex) {
     document.getElementById('bracket-modal').style.display = 'none';
     document.getElementById('match-log').innerHTML = '';
     document.getElementById('score-col-ai').style.display = 'flex';
-    document.getElementById('match-p1-name').innerHTML = `${getFlagImg(p1.country)} ${escapeHtml(p1.name)}`;
-    document.getElementById('match-p2-name').innerHTML = `${getFlagImg(p2.country)} ${escapeHtml(p2.name)}`;
-    document.getElementById('match-title').innerText = `👁 ${t('t-spectator-title')}: ${getRoundName(tournamentRound)} (${getMatchFormatLabel(matchFormat)})`;
-    setSpectatorPlayerPhoto('score-photo-p1', p1, 'P1');
-    setSpectatorPlayerPhoto('score-photo-p2', p2, 'P2');
+    document.getElementById('match-p1-name').innerHTML = team1
+        ? `${getFlagImg(team1.country)} <strong>${escapeHtml(firstName)}</strong><br><small>${escapeHtml(team1.players.map(candidate => candidate.name).join(' / '))}</small>`
+        : `${getFlagImg(p1.country)} ${escapeHtml(p1.name)}`;
+    document.getElementById('match-p2-name').innerHTML = team2
+        ? `${getFlagImg(team2.country)} <strong>${escapeHtml(secondName)}</strong><br><small>${escapeHtml(team2.players.map(candidate => candidate.name).join(' / '))}</small>`
+        : `${getFlagImg(p2.country)} ${escapeHtml(p2.name)}`;
+    document.getElementById('match-title').innerText = `👁 ${t('t-spectator-title')}: ${roundLabel} (${getMatchFormatLabel(matchFormat)})`;
+    if (team1 && team2) {
+        for (const [side, team] of [['p1', team1], ['p2', team2]]) {
+            const photo = document.getElementById(`score-photo-${side}`);
+            photo.src = getWorldCupFlagUrl(team.country);
+            photo.classList.add('world-cup-flag-photo');
+        }
+    } else {
+        setSpectatorPlayerPhoto('score-photo-p1', p1, 'P1');
+        setSpectatorPlayerPhoto('score-photo-p2', p2, 'P2');
+    }
     if (typeof applyMatchPlayerPresentationThemes === 'function') {
         applyMatchPlayerPresentationThemes(p1, p2);
     }
@@ -264,8 +285,8 @@ function startSpectatingTournamentMatch(bracketIndex) {
     updateScores();
     updateMatchStatsUI();
     showScreen('screen-match');
-    logThrow(`👁 ${t('t-spectator-watching')}: ${escapeHtml(p1.name)} vs ${escapeHtml(p2.name)}`, 'system');
-    if (typeof playMatchIntro === 'function') playMatchIntro(p1.name, p2.name);
+    logThrow(`👁 ${t('t-spectator-watching')}: ${escapeHtml(firstName)} vs ${escapeHtml(secondName)}`, 'system');
+    if (typeof playMatchIntro === 'function') playMatchIntro(firstName, secondName);
     else setTurnUI();
     return true;
 }
@@ -286,30 +307,47 @@ function finishSpectatedTournamentMatch() {
     const p2Points = watchedMatch.stats.p2AccumulatedScore + (501 - watchedMatch.p2Score);
     const p1Average = formatStat(p1Points, watchedMatch.stats.p1TotalDarts);
     const p2Average = formatStat(p2Points, watchedMatch.stats.p2TotalDarts);
-    const key = getTournamentSpectatorMatchKey(p1, p2, watchedMatch.spectatorRound);
-
-    if (!activeTournament.spectatedMatchResults || typeof activeTournament.spectatedMatchResults !== 'object') {
-        activeTournament.spectatedMatchResults = {};
+    let completeGrandSlamGroups = false;
+    if (watchedMatch.spectatorWorldCupMatchId) {
+        const match = getCurrentWorldCupStageMatches().find(candidate => candidate.id === watchedMatch.spectatorWorldCupMatchId);
+        if (!match || match.played) return false;
+        recordWorldCupTeamAverage(watchedMatch.worldCupTeamP1, Number(p1Average));
+        recordWorldCupTeamAverage(watchedMatch.worldCupTeamP2, Number(p2Average));
+        finishWorldCupStateMatch(match, p1Won ? match.team1Id : match.team2Id, p1Score, p2Score);
+    } else {
+        if (watchedMatch.spectatorGrandSlamGroupMatch) {
+            const { groupIndex, matchIndex } = watchedMatch.spectatorGrandSlamGroupMatch;
+            if (!recordGrandSlamGroupMatch(groupIndex, matchIndex, p1Won, p1Score, p2Score)) return false;
+            completeGrandSlamGroups = areGrandSlamGroupsComplete();
+        } else {
+            const key = getTournamentSpectatorMatchKey(p1, p2, watchedMatch.spectatorRound);
+            if (!activeTournament.spectatedMatchResults || typeof activeTournament.spectatedMatchResults !== 'object') {
+                activeTournament.spectatedMatchResults = {};
+            }
+            activeTournament.spectatedMatchResults[key] = {
+                round: watchedMatch.spectatorRound,
+                p1Key: getTournamentSpectatorPlayerKey(p1),
+                p2Key: getTournamentSpectatorPlayerKey(p2),
+                winnerKey: getTournamentSpectatorPlayerKey(winner),
+                scoreStr: `${winnerScore}:${loserScore}`,
+                p1Score,
+                p2Score,
+                p1Avg: p1Average,
+                p2Avg: p2Average,
+                p1BounceOuts: watchedMatch.stats.p1BounceOuts || 0,
+                p2BounceOuts: watchedMatch.stats.p2BounceOuts || 0
+            };
+        }
+        if (typeof recordSeasonHighestAverage === 'function') {
+            recordSeasonHighestAverage(p1, Number(p1Average));
+            recordSeasonHighestAverage(p2, Number(p2Average));
+        }
+        if (typeof recordCompletedSinglesMatch === 'function') recordCompletedSinglesMatch(watchedMatch);
+        if (completeGrandSlamGroups) {
+            completeGrandSlamGroupStage();
+            appendGrandSlamGroupResultsToHistory();
+        }
     }
-    activeTournament.spectatedMatchResults[key] = {
-        round: watchedMatch.spectatorRound,
-        p1Key: getTournamentSpectatorPlayerKey(p1),
-        p2Key: getTournamentSpectatorPlayerKey(p2),
-        winnerKey: getTournamentSpectatorPlayerKey(winner),
-        scoreStr: `${winnerScore}:${loserScore}`,
-        p1Score,
-        p2Score,
-        p1Avg: p1Average,
-        p2Avg: p2Average,
-        p1BounceOuts: watchedMatch.stats.p1BounceOuts || 0,
-        p2BounceOuts: watchedMatch.stats.p2BounceOuts || 0
-    };
-
-    if (typeof recordSeasonHighestAverage === 'function') {
-        recordSeasonHighestAverage(p1, Number(p1Average));
-        recordSeasonHighestAverage(p2, Number(p2Average));
-    }
-    if (typeof recordCompletedSinglesMatch === 'function') recordCompletedSinglesMatch(watchedMatch);
 
     clearTimeout(window.aiTimeout);
     if (spectatorPendingPlayback?.match === watchedMatch) spectatorPendingPlayback = null;
@@ -318,7 +356,7 @@ function finishSpectatedTournamentMatch() {
     drawnDarts = [];
     setSpectatorMatchControls(false);
     showScreen('screen-hub');
-    showBracket();
+    returnToSpectatedTournamentOverview(watchedMatch);
     if (typeof saveGame === 'function') saveGame(true);
     return true;
 }
@@ -340,6 +378,12 @@ function exitSpectatingTournamentMatch() {
     setSpectatorMatchControls(false);
     if (window.matchTVMode?.getState?.().active) void window.matchTVMode.exit();
     showScreen('screen-hub');
-    showBracket();
+    returnToSpectatedTournamentOverview(watchedMatch);
     return true;
+}
+
+function returnToSpectatedTournamentOverview(watchedMatch) {
+    if (watchedMatch.spectatorWorldCupMatchId) showWorldCupOverview();
+    else if (watchedMatch.spectatorGrandSlamGroupMatch && isGrandSlamGroupStageActive()) showGrandSlamGroups();
+    else showBracket();
 }

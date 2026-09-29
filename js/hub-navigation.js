@@ -113,6 +113,14 @@ function getHubNavigationText() {
     return HUB_NAVIGATION_TEXT[language];
 }
 
+function getHubCareerPreparation() {
+    if (typeof player !== 'object' || !player) return 70;
+    const value = typeof getCareerPreparation === 'function'
+        ? getCareerPreparation(player)
+        : player.careerInfrastructure?.preparation ?? player.preparation ?? 70;
+    return Math.round(Number(value) || 0);
+}
+
 function hubNavigationFormat(template, values = {}) {
     return String(template || '').replace(/\{(\w+)\}/g, (_, key) => values[key] ?? '');
 }
@@ -232,8 +240,9 @@ function getHubRecommendation(upcoming, qualification) {
     const text = getHubNavigationText();
     const tutorialState = typeof ensureTutorialState === 'function' ? ensureTutorialState() : null;
     const tutorialProgress = typeof getTutorialProgress === 'function' ? getTutorialProgress() : { done: 0, total: 0 };
-    const stamina = Math.round(Number(typeof player === 'object' && player ? player.stamina : 0) || 0);
-    const preparation = Math.round(Number(typeof player === 'object' && player ? player.preparation : 70) || 0);
+    const stamina = Math.round(Number(typeof getCareerEffectiveStamina === 'function'
+        ? getCareerEffectiveStamina(player) : (typeof player === 'object' && player ? player.stamina : 0)) || 0);
+    const preparation = getHubCareerPreparation();
     const trainingUsed = Number(typeof player === 'object' && player ? player.trainingSessionsThisWeek : 0) || 0;
     const unread = Number(typeof unreadMailsCount !== 'undefined' ? unreadMailsCount : 0) || 0;
 
@@ -264,8 +273,9 @@ function updateHubOverview() {
     const upcoming = getHubUpcomingTournament();
     const qualification = getHubQualificationOverview();
     const sponsor = getHubSponsorGoalOverview();
-    const stamina = Math.round(Number(player.stamina) || 0);
-    const preparation = Math.round(Number(player.preparation ?? 70) || 0);
+    const stamina = Math.round(Number(typeof getCareerEffectiveStamina === 'function'
+        ? getCareerEffectiveStamina(player) : player.stamina) || 0);
+    const preparation = getHubCareerPreparation();
 
     setHubNavigationText('hub-now-eyebrow', text.eyebrow);
     setHubNavigationText('hub-now-title', text.title);

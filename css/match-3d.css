@@ -8,6 +8,8 @@
     color: #c5d5e4;
     font-size: 12px;
 }
+.dart-flight-settings-tile select { width: 100%; padding: 10px; margin: 10px 0; background: #102c4b; color: #fff; border: 1px solid #527a9d; border-radius: 6px; }
+.dart-flight-settings-tile small { display: block; color: #adc3d8; line-height: 1.5; }
 .board-view-controls > span { margin-right: 3px; }
 .board-view-controls button {
     min-height: 32px;

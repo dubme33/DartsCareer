@@ -135,6 +135,7 @@ function startMatch(vsAI) {
             if (!currentMatch?.isDartInFlight && typeof refreshMatchBroadcastScoreboard === 'function') {
                 refreshMatchBroadcastScoreboard();
             }
+            if (typeof renderMatchIncident === 'function') renderMatchIncident(currentMatch);
             // Intro/UI refreshes must not cancel the pending end of a visit or checkout.
             if (currentMatch?.isTurnLocked) {
                 const careerThrowStillFlying = currentMatch.isDartInFlight && currentMatch.turn === 'p1'
@@ -159,6 +160,10 @@ function startMatch(vsAI) {
                 document.getElementById('score-col-player').classList.add('active-turn'); document.getElementById('score-col-ai').classList.remove('active-turn');
                 document.getElementById('player-controls').style.opacity = "1"; document.getElementById('throw-btn').disabled = false;
                 if (visitButton) visitButton.disabled = currentMatch.dartsThrown >= 3 || currentMatch.isTurnLocked;
+                if (typeof maybeOfferMatchIncident === 'function' && maybeOfferMatchIncident(currentMatch)) {
+                    document.getElementById('throw-btn').disabled = true;
+                    if (visitButton) visitButton.disabled = true;
+                }
             } else {
                 document.getElementById('score-col-player').classList.toggle('active-turn', currentMatch.turn === 'p1'); document.getElementById('score-col-ai').classList.toggle('active-turn', currentMatch.turn === 'p2');
                 document.getElementById('player-controls').style.opacity = "0.5"; document.getElementById('throw-btn').disabled = true;
@@ -441,7 +446,10 @@ function startMatch(vsAI) {
                     let isFinals = activeTournament.name.includes("Finals"); // Finały PC to już turniej TV!
 
                     // Wywiad: Szansa 40%, od ćwierćfinału w górę, TYLKO w turniejach TV/Scenicznych
-                    if (tournamentRound <= 8 && (!isFloorTournament || isFinals) && Math.random() < 0.40) {
+                    const hasMatchStory = typeof getMatchStoryForInterview === 'function'
+                        && postMatchInterviewContext?.matchStoryId != null
+                        && getMatchStoryForInterview(postMatchInterviewContext.matchStoryId)?.id === postMatchInterviewContext.matchStoryId;
+                    if (tournamentRound <= 8 && (!isFloorTournament || isFinals) && (hasMatchStory || Math.random() < 0.40)) {
                         triggerInterview(postMatchInterviewContext);
                     }
 

@@ -1057,9 +1057,7 @@ function skipActiveTournament() {
                 if (isGrandSlamEvent && typeof initializeGrandSlamTournament === 'function') {
                     const grandSlamStage = isHeadlessSim
                         ? yield* iterateGrandSlamInitialization(participants, true)
-                        : initializeGrandSlamTournament(participants, false, !playerInTournament
-                            && typeof isTournamentSelectedForWatching === 'function'
-                            && isTournamentSelectedForWatching(activeTournament));
+                        : initializeGrandSlamTournament(participants, false, true);
                     if (!grandSlamStage) return;
                     if (grandSlamStage.phase === 'groups') {
                         if (typeof saveGame === 'function') saveGame(true);
@@ -1221,6 +1219,10 @@ function skipActiveTournament() {
                     participants = draw;
                 }
 
+                if (!editorRules && typeof applyTournamentEditorNativeQualifierDraw === 'function') {
+                    participants = applyTournamentEditorNativeQualifierDraw(activeTournament, participants,
+                        [...pdcPlayers, player], currentDate);
+                }
                 tournamentBracket = typeof repairInjuredTournamentBracket === 'function'
                     ? repairInjuredTournamentBracket(participants) : participants;
 

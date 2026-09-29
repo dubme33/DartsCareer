@@ -5,7 +5,10 @@
     --walkon-ink: #081d1a;
     width: min(100%, 960px);
     box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
     min-height: 0;
+    overflow: hidden;
     border: 0;
     border-radius: 3px;
     background: #14151c;
@@ -13,8 +16,10 @@
     text-align: left;
     font-family: 'Segoe UI', Arial, sans-serif;
 }
+#career-walkon-stage[hidden] { display: none !important; }
 #career-walkon-stage.ai-player-walkon { border: 0; background: #14151c; box-shadow: 0 18px 56px #0007; }
 #career-walkon-stage::before { content: ''; position: absolute; z-index: 5; inset: 0 auto 0 0; width: 5px; background: var(--walkon-accent); }
+.walkon-stage-content { flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin; scrollbar-color: #67bfa5 #14212d; }
 .walkon-player-card { position: relative; z-index: 4; display: grid; grid-template-columns: 30% minmax(0, 1fr); }
 .walkon-portrait { grid-column: 1; grid-row: 1 / 3; position: relative; min-height: 380px; overflow: hidden;
     background: radial-gradient(ellipse at 45% 42%, #24584f 0, #142e2d 45%, #101e21 80%); }
@@ -46,19 +51,47 @@
 .walkon-results dd { min-width: 0; margin: 0; color: #fff; font-size: 19px; font-weight: 800; text-align: right; text-transform: uppercase; overflow-wrap: anywhere; }
 #walkon-title-years { display: block; max-width: 300px; margin-top: 3px; color: var(--walkon-accent); font-size: 10px; font-weight: 500; line-height: 1.45; }
 #walkon-title-years:empty { display: none; }
-.walkon-card-footer { position: sticky; bottom: 0; z-index: 5; display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 10px 18px; background: #090d12; }
+.walkon-match-story { position: relative; z-index: 4; display: flex; flex-wrap: wrap; gap: 1px; background: #385163; border-top: 1px solid #ffffff26; }
+.walkon-match-story[hidden], .walkon-story-card[hidden] { display: none !important; }
+.walkon-story-card { flex: 1 1 330px; min-width: 0; padding: 13px 18px 14px; background: #14212d; }
+.walkon-story-card h3 { margin: 0 0 7px; color: var(--walkon-accent); font-size: 10px; font-weight: 900; text-transform: uppercase; letter-spacing: .13em; }
+.walkon-story-card strong { display: block; color: #f6fbff; font-size: 17px; line-height: 1.3; overflow-wrap: anywhere; }
+.walkon-story-card p { margin: 6px 0 0; color: #c5d5df; font-size: 12px; line-height: 1.4; overflow-wrap: anywhere; }
+.walkon-story-card small { display: block; margin-top: 6px; color: #f1d88a; font-size: 11px; line-height: 1.4; overflow-wrap: anywhere; }
+.walkon-story-card p:empty, .walkon-story-card small:empty, .walkon-story-card strong:empty { display: none; }
+.walkon-league-standings { position: relative; z-index: 4; padding: 12px 18px 15px; background: #111a25; border-top: 1px solid #5fb7cc55; }
+.walkon-league-standings[hidden] { display: none !important; }
+.walkon-league-heading { display: flex; align-items: baseline; justify-content: space-between; flex-wrap: wrap; gap: 3px 15px; margin-bottom: 8px; }
+.walkon-league-heading h3 { margin: 0; color: #f4f8fb; font-size: 15px; font-weight: 900; text-transform: uppercase; letter-spacing: .06em; }
+#walkon-league-key { color: #b7cbd2; font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+.walkon-league-rows { display: grid; grid-template-rows: repeat(4, minmax(31px, auto)); grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 3px 12px; margin: 0; padding: 0; list-style: none; }
+.walkon-league-row { display: grid; grid-template-columns: 27px minmax(0, 1fr) 35px 43px; align-items: center; gap: 6px; min-width: 0; padding: 4px 8px; background: #ffffff07; border-left: 3px solid transparent; color: #e5edf2; font-size: 12px; line-height: 1.25; }
+.walkon-league-row.playoff { background: #278eb02a; border-left-color: #52b6d5; }
+.walkon-league-row.current { background: color-mix(in srgb, var(--walkon-accent) 25%, #152532); border-left-color: var(--walkon-accent); color: #fff; }
+.walkon-league-rank, .walkon-league-difference { color: #aabcc7; font-variant-numeric: tabular-nums; }
+.walkon-league-name { min-width: 0; overflow-wrap: anywhere; font-weight: 700; }
+.walkon-league-points, .walkon-league-difference { text-align: right; font-variant-numeric: tabular-nums; }
+.walkon-league-points { color: #f3d66a; font-size: 14px; }
+.walkon-league-row.current .walkon-league-rank, .walkon-league-row.current .walkon-league-difference { color: #e2f9f1; }
+.walkon-card-footer { position: relative; z-index: 5; flex: none; display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 10px 18px; background: #090d12; }
+.walkon-card-actions { display: flex; justify-content: flex-end; align-items: stretch; gap: 8px; flex-wrap: wrap; }
 #walkon-season { color: #788c91; font-size: 10px; text-transform: uppercase; letter-spacing: .16em; }
-#walkon-card-skip { appearance: none; border: 1px solid #526268; border-radius: 3px; padding: 7px 12px; background: #1d292d; color: #edf9f5; font: inherit; font-size: 11px; font-weight: 700; cursor: pointer; }
-#walkon-card-skip:hover { background: #2d4e46; border-color: var(--walkon-accent); }
-#walkon-card-skip:focus-visible { outline: 2px solid var(--walkon-accent); outline-offset: 3px; }
+#walkon-card-skip, #walkon-fullscreen-toggle { appearance: none; border: 1px solid #526268; border-radius: 3px; padding: 7px 12px; background: #1d292d; color: #edf9f5; font: inherit; font-size: 11px; font-weight: 700; cursor: pointer; }
+#walkon-card-skip:hover, #walkon-fullscreen-toggle:hover { background: #2d4e46; border-color: var(--walkon-accent); }
+#walkon-card-skip:focus-visible, #walkon-fullscreen-toggle:focus-visible { outline: 2px solid var(--walkon-accent); outline-offset: 3px; }
+#walkon-fullscreen-toggle[aria-pressed="true"] { border-color: var(--walkon-accent); background: #244039; }
+#walkon-fullscreen-toggle:disabled { opacity: .65; cursor: wait; }
 #career-walkon-stage.playing .walkon-player-card { animation: walkon-card-enter .45s ease-out both; }
 #career-walkon-stage.playing .career-walkon-copy { animation: none; }
 @keyframes walkon-card-enter { from { opacity: 0; transform: translateX(-20px); } to { opacity: 1; transform: translateX(0); } }
-#screen-match.match-tv-mode > #career-walkon-stage:not([hidden]) {
-    display: block !important; position: absolute; z-index: 5014;
+#screen-match:is(.match-tv-mode, .walkon-fullscreen) > #career-walkon-stage:not([hidden]) {
+    display: flex !important; position: absolute; z-index: 5014;
     top: 50%; left: 50%; transform: translate(-50%, -50%);
     width: min(920px, calc(100% - 64px)); max-height: calc(100svh - 90px); margin: 0;
-    overflow-y: auto; overscroll-behavior: contain;
+    overflow: hidden;
+}
+#screen-match:not(.match-tv-mode):not(.walkon-fullscreen) > #career-walkon-stage:has(.walkon-match-story:not([hidden]), .walkon-league-standings:not([hidden])) {
+    max-height: calc(100svh - 70px);
 }
 @media (max-width: 640px) {
     .walkon-player-card { grid-template-columns: 32% minmax(0, 1fr); }
@@ -77,10 +110,41 @@
     .walkon-results dt { font-size: 10px; }
     .walkon-results dd { font-size: 17px; }
     #walkon-title-years { max-width: 185px; }
-    #screen-match.match-tv-mode > #career-walkon-stage:not([hidden]) { width: calc(100% - 24px); max-height: calc(100svh - 40px); }
+    .walkon-story-card { flex-basis: 100%; padding: 11px 13px 12px; }
+    .walkon-story-card strong { font-size: 15px; }
+    .walkon-league-standings { padding: 11px 12px 14px; }
+    .walkon-league-rows { display: block; }
+    .walkon-league-row + .walkon-league-row { margin-top: 3px; }
+    .walkon-league-row { grid-template-columns: 23px minmax(0, 1fr) 32px 39px; gap: 4px; padding: 5px 6px; font-size: 11px; }
+    #screen-match:is(.match-tv-mode, .walkon-fullscreen) > #career-walkon-stage:not([hidden]) { width: calc(100% - 24px); max-height: calc(100svh - 40px); }
+    .walkon-card-footer { flex-direction: column; align-items: stretch; gap: 7px; }
+    .walkon-card-actions { justify-content: stretch; }
+    .walkon-card-actions button { flex: 1 1 auto; }
+    #screen-match:not(.match-tv-mode):not(.walkon-fullscreen) > #career-walkon-stage:has(.walkon-match-story:not([hidden])) { margin-top: 35px; max-height: calc(100svh - 47px); }
+    #career-walkon-stage:has(.walkon-match-story:not([hidden])) .walkon-portrait { min-height: 165px; }
+    #career-walkon-stage:has(.walkon-match-story:not([hidden])) .career-walkon-copy { padding: 12px 15px; }
+    #career-walkon-stage:has(.walkon-match-story:not([hidden])) #career-walkon-name { margin-top: 5px; line-height: 1.2; }
+    #career-walkon-stage:has(.walkon-match-story:not([hidden])) .walkon-facts { margin-top: 10px; }
+    #career-walkon-stage:has(.walkon-match-story:not([hidden])) .walkon-results > div { padding-block: 8px; }
+}
+@media (min-width: 460px) and (max-width: 640px) {
+    #career-walkon-stage:has(.walkon-match-story:not([hidden])) .walkon-story-card { flex: 1 1 200px; padding: 10px 11px; }
+    #career-walkon-stage:has(.walkon-match-story:not([hidden])) .walkon-story-card strong { font-size: 13px; }
+    #career-walkon-stage:has(.walkon-match-story:not([hidden])) .walkon-story-card p,
+    #career-walkon-stage:has(.walkon-match-story:not([hidden])) .walkon-story-card small { font-size: 10px; }
+}
+@media (min-width: 641px) and (max-height: 850px) {
+    #career-walkon-stage:has(.walkon-match-story:not([hidden])) .walkon-portrait { min-height: 305px; }
+    #career-walkon-stage:has(.walkon-match-story:not([hidden])) .career-walkon-copy { padding: 13px 23px 10px; }
+    #career-walkon-stage:has(.walkon-match-story:not([hidden])) #career-walkon-name { margin-top: 5px; font-size: clamp(24px, 3vw, 36px); line-height: 1.2; }
+    #career-walkon-stage:has(.walkon-match-story:not([hidden])) .walkon-facts { margin-top: 10px; }
+    #career-walkon-stage:has(.walkon-match-story:not([hidden])) #walkon-event-name { padding: 8px 23px; }
+    #career-walkon-stage:has(.walkon-match-story:not([hidden])) .walkon-results > div { padding: 7px 23px; }
+    #career-walkon-stage:has(.walkon-match-story:not([hidden])) .walkon-story-card { padding-block: 9px; }
+    #career-walkon-stage:has(.walkon-match-story:not([hidden])) .walkon-league-rows { grid-template-rows: repeat(4, minmax(28px, auto)); }
 }
 @media (max-height: 540px) and (min-width: 641px) {
-    #screen-match.match-tv-mode > #career-walkon-stage:not([hidden]) { max-height: calc(100svh - 24px); width: min(760px, calc(100% - 60px)); }
+    #screen-match:is(.match-tv-mode, .walkon-fullscreen) > #career-walkon-stage:not([hidden]) { max-height: calc(100svh - 24px); width: min(760px, calc(100% - 60px)); }
     #career-walkon-stage .career-walkon-copy { padding: 10px 22px; }
     #career-walkon-stage #career-walkon-name { font-size: 26px; margin-top: 4px; }
     #walkon-player-flag img { width: 28px !important; height: 21px !important; }
