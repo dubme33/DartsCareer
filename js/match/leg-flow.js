@@ -207,6 +207,8 @@ function checkAchievements(type, data = null) {
 
            // 5. Sprawdzanie czy mecz się zakończył
             if (isMatchFinished()) {
+                currentMatch.matchEnding = true;
+                if (typeof clearMatchIncidentAfterMatch === 'function') clearMatchIncidentAfterMatch(currentMatch);
                 document.getElementById('throw-btn').disabled = true;
                 const visitButton = document.getElementById('t-btn-sim-visit');
                 if (visitButton) visitButton.disabled = true;

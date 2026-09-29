@@ -351,7 +351,9 @@ function renderMatchIncident(match) {
     const panel = document.getElementById('match-incident');
     if (!panel) return;
     const wasHidden = panel.hidden;
-    const pending = match?.matchIncidents?.pending;
+    const pending = match && !match.matchEnding && !match.isFinishing
+        && Number(match.p1Score) > 0 && Number(match.p2Score) > 0
+        ? match.matchIncidents?.pending : null;
     panel.hidden = !pending;
     if (!pending) return;
     const copy = getMatchIncidentCopy();
@@ -366,6 +368,22 @@ function renderMatchIncident(match) {
         if (button) button.textContent = entry[index + 2];
     }
     if (wasHidden) document.getElementById('match-incident-choice-0')?.focus?.();
+}
+
+function clearMatchIncidentAfterMatch(match) {
+    if (match?.matchIncidents) {
+        match.matchIncidents.pending = null;
+        match.matchIncidents.effect = null;
+    }
+    if (matchIncidentResultTimer !== null && typeof clearTimeout === 'function') {
+        clearTimeout(matchIncidentResultTimer);
+        matchIncidentResultTimer = null;
+    }
+    if (typeof document === 'undefined') return;
+    const panel = document.getElementById('match-incident');
+    if (panel) panel.hidden = true;
+    const result = document.getElementById('match-incident-result');
+    if (result) result.hidden = true;
 }
 
 function showMatchIncidentResult(message) {
@@ -384,7 +402,8 @@ function showMatchIncidentResult(message) {
 }
 
 function mayShowMatchIncident(match) {
-    return Boolean(match && match.vsAI && !match.isSpectator && !match.isFinishing
+    return Boolean(match && match.vsAI && !match.isSpectator && !match.isFinishing && !match.matchEnding
+        && Number(match.p1Score) > 0 && Number(match.p2Score) > 0
         && !match.introInProgress && !match.isTurnLocked && !match.isDartInFlight
         && match.turn === 'p1' && match.dartsThrown === 0
         && (!match.isDoubles || typeof isCareerPlayerThrowing === 'function' && isCareerPlayerThrowing(true))
@@ -446,6 +465,11 @@ function applyMatchIncidentCareerEffect(effect) {
 
 function resolveMatchIncident(choiceIndex) {
     const match = typeof currentMatch !== 'undefined' ? currentMatch : null;
+    if (!match || match.matchEnding || match.isFinishing
+        || Number(match.p1Score) <= 0 || Number(match.p2Score) <= 0) {
+        clearMatchIncidentAfterMatch(match);
+        return false;
+    }
     const state = match?.matchIncidents;
     const type = state?.pending?.type;
     const index = Number(choiceIndex);

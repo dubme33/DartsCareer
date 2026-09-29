@@ -189,6 +189,7 @@ function startMatch(vsAI) {
         function finishMatch() {
             if (!currentMatch || currentMatch.isFinishing
                 || (typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy())) return false;
+            if (typeof clearMatchIncidentAfterMatch === 'function') clearMatchIncidentAfterMatch(currentMatch);
             clearTimeout(window.aiTimeout);
             const match = currentMatch;
             const postMatchReport = !match.isSpectator && typeof createCompletedMatchReport === 'function'
