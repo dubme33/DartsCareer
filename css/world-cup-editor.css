@@ -1,0 +1,61 @@
+#screen-player-editor .player-editor-shortcuts { display: flex; flex-wrap: wrap; align-self: center; gap: 8px; }
+#screen-tournament-editor .tournament-editor-shortcuts { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+#screen-world-cup-editor.world-cup-editor-screen {
+    width: min(1120px, calc(100% - 24px)); max-width: 1120px; padding: 0; overflow: hidden;
+    background: #101b2e; border-color: #285683; color: #fff;
+}
+#screen-world-cup-editor .world-cup-editor-header {
+    display: flex; justify-content: space-between; align-items: center; gap: 20px;
+    padding: 24px 28px; background: linear-gradient(135deg, #102d4d, #0e243e);
+    border-bottom: 1px solid #2f638f;
+}
+#screen-world-cup-editor .world-cup-editor-header h2 { margin: 5px 0 6px; color: #fff; font-size: 27px; }
+#screen-world-cup-editor .world-cup-editor-header p { margin: 0; color: #b8cee1; line-height: 1.45; }
+#screen-world-cup-editor #world-cup-editor-eyebrow { color: #6bc2ee; font-size: 11px; font-weight: 800; letter-spacing: .12em; }
+#screen-world-cup-editor button { border: 1px solid #4d7b97; border-radius: 7px; padding: 10px 13px;
+    background: #173b5a; color: #fff; font: inherit; font-weight: 700; cursor: pointer; }
+#screen-world-cup-editor button:hover { background: #20516f; }
+#screen-world-cup-editor button:disabled { opacity: .55; cursor: not-allowed; }
+#screen-world-cup-editor .world-cup-editor-layout { display: grid; grid-template-columns: minmax(300px, .8fr) minmax(0, 1.2fr); min-height: 620px; }
+#screen-world-cup-editor .world-cup-editor-list-panel { min-width: 0; padding: 20px; background: #0c1728; border-right: 1px solid #29435e; }
+#screen-world-cup-editor .world-cup-editor-list-heading { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+#screen-world-cup-editor .world-cup-editor-list-heading strong { font-size: 18px; }
+#screen-world-cup-editor #world-cup-editor-new { background: #1d7549; border-color: #50d18c; }
+#screen-world-cup-editor .world-cup-editor-search-label,
+#screen-world-cup-editor .world-cup-editor-form label { display: grid; gap: 7px; color: #c9d8e7; font-weight: 700; }
+#screen-world-cup-editor .world-cup-editor-search-label { margin: 17px 0 10px; }
+#screen-world-cup-editor input,
+#screen-world-cup-editor select { width: 100%; box-sizing: border-box; padding: 11px; border: 1px solid #355577;
+    border-radius: 7px; background: #132a45; color: #fff; font: inherit; }
+#screen-world-cup-editor input:focus,
+#screen-world-cup-editor select:focus { outline: 2px solid #5bc7f3; outline-offset: 1px; }
+#screen-world-cup-editor #world-cup-editor-count { color: #9db5ca; }
+#screen-world-cup-editor .world-cup-editor-list { display: grid; gap: 6px; max-height: 580px; overflow-y: auto; margin-top: 12px; }
+#screen-world-cup-editor .world-cup-editor-list-item { display: grid; gap: 4px; width: 100%; text-align: left; }
+#screen-world-cup-editor .world-cup-editor-list-item small { color: #a9c4da; line-height: 1.35; }
+#screen-world-cup-editor .world-cup-editor-list-item.is-selected { background: #226850; border-color: #58d5a0; }
+#screen-world-cup-editor .world-cup-editor-form { display: grid; align-content: start; gap: 18px; padding: 26px; min-width: 0; }
+#screen-world-cup-editor .world-cup-editor-form h3 { margin: 0; font-size: 24px; }
+#screen-world-cup-editor #world-cup-editor-rule { margin: 0; color: #b8cee1; line-height: 1.5; }
+#screen-world-cup-editor #world-cup-editor-active-hint { margin: 0; padding: 11px 13px; border: 1px solid #9a7731;
+    border-radius: 7px; color: #f4dca4; background: #392d1b; }
+#screen-world-cup-editor #world-cup-editor-status { min-height: 1.4em; margin: 0; color: #71dda7; }
+#screen-world-cup-editor #world-cup-editor-status.is-error { color: #ffadad; }
+#screen-world-cup-editor .world-cup-editor-actions { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 10px; }
+#screen-world-cup-editor #world-cup-editor-reset { border-color: #d39965; }
+#screen-world-cup-editor #world-cup-editor-save { background: #1d7549; border-color: #50d18c; }
+#screen-world-cup-editor [hidden] { display: none !important; }
+@media (max-width: 800px) {
+    #screen-player-editor .player-editor-shortcuts { margin-top: 13px; }
+    #screen-tournament-editor .tournament-editor-shortcuts { justify-content: flex-start; margin-top: 13px; }
+    #screen-world-cup-editor .world-cup-editor-header { display: block; padding: 20px; }
+    #screen-world-cup-editor #world-cup-editor-back { margin-top: 14px; }
+    #screen-world-cup-editor .world-cup-editor-layout { display: block; }
+    #screen-world-cup-editor .world-cup-editor-list-panel { border-right: 0; border-bottom: 1px solid #29435e; }
+    #screen-world-cup-editor .world-cup-editor-list { max-height: 280px; }
+}
+@media (max-width: 520px) {
+    #screen-world-cup-editor .world-cup-editor-header h2 { font-size: 23px; }
+    #screen-world-cup-editor .world-cup-editor-form { padding: 20px; }
+    #screen-world-cup-editor .world-cup-editor-actions button { width: 100%; }
+}

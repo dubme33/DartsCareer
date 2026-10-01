@@ -264,6 +264,11 @@ function restoreActiveTournamentMatchHistory(savedHistory, fallbackLastHtml = ''
 }
 
 function showRoundResults() {
+            // A bye can finish a round while its bracket is still open. Close it
+            // before opening results, otherwise it stays above this modal and
+            // reappears after the player starts the next match.
+            const bracketModal = document.getElementById('bracket-modal');
+            if (bracketModal) bracketModal.style.display = 'none';
             if (typeof updateTournamentEntrySimulationButton === 'function') {
                 updateTournamentEntrySimulationButton('t-btn-sim-to-match-results');
             }

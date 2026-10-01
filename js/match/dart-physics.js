@@ -52,7 +52,8 @@
         return a.some(first => b.some(second => segmentDistance(first, second) < first.radius + second.radius + .001));
     }
     function obstacles(darts) {
-        return darts.slice(-2).map((dart, index) => ({ index, dart, shapes: shapes(dart, dart.dartPose || basePose(dart)) }));
+        return darts.slice(-2).map((dart, index) => ({ index, dart, shapes: shapes(dart, dart.dartPose || basePose(dart)) }))
+            .filter(obstacle => !obstacle.dart.robinHood);
     }
     function separated(point, pose, previous) {
         const model = shapes(point, pose);
@@ -80,15 +81,25 @@
         const tail = add(origin, mul(axis, .635)), otherTail = add(anchor(obstacle.dart), mul(direction(obstacle.dart.dartPose || basePose(obstacle.dart)), .635));
         return { obstacle: obstacle.index, contact: add(origin, mul(axis, .30)), normal: unit(sub(tail, otherTail)), part: 'flight', severity: .18 };
     }
-    function resolve(result, point, darts = [], random = Math.random, allowBounce = true) {
+    function resolve(result, point, darts = [], random = Math.random, allowBounce = true, dartStyle = null) {
         const pose = basePose(point), previous = obstacles(darts);
-        const initial = { ...result, boardPoint: { ...point }, dartPose: pose, physicsResolved: true };
+        const initial = { ...result, boardPoint: { ...point }, dartPose: pose, physicsResolved: true,
+            ...(dartStyle ? { dartStyle } : {}) };
         if (result.bounceOut || !previous.length) return initial;
         const impact = contact(point, pose, previous);
         if (!impact) return initial;
         const roll = random();
         const collision = { ...impact, originalSector: result.sector, originalMult: result.mult,
             plannedPoint: { ...point }, plannedPose: { ...pose }, deflected: false };
+        // Only a point entering a separate, replaceable flight can lodge there.
+        // The second chance is conditional on an actual flight contact, not every throw.
+        if (impact.part === 'flight' && dartStyle?.flightSystem === 'separate'
+            && previous.find(obstacle => obstacle.index === impact.obstacle)?.dart.dartStyle?.flightSystem === 'separate'
+            && roll < .001) {
+            const boardPoint = { x: 170 + impact.contact[0] * 130, y: 170 - impact.contact[1] * 130 };
+            return { ...initial, sector: 0, mult: 0, robinHood: true, boardPoint,
+                collision: { ...collision, robinHood: true } };
+        }
         const probability = impact.severity > .6 ? .012 + .028 * impact.severity ** 3 : 0;
         if (allowBounce && roll < probability) {
             return { ...initial, sector: 0, mult: 0, bounceOut: true, bouncedSector: result.sector, bouncedMult: result.mult, collision: { ...collision, bounced: true } };
@@ -116,7 +127,8 @@
     }
     function register(visit, result) {
         if (!visit || result.bounceOut || !result.boardPoint) return;
-        visit.physicsDarts = [...(visit.physicsDarts || []), { ...result.boardPoint, dartPose: result.dartPose }].slice(-3);
+        visit.physicsDarts = [...(visit.physicsDarts || []), { ...result.boardPoint, dartPose: result.dartPose,
+            ...(result.dartStyle ? { dartStyle: result.dartStyle } : {}), ...(result.robinHood ? { robinHood: true } : {}) }].slice(-3);
     }
     root.dartPhysics = { basePose, direction, field, resolve, register,
         separated: (point, pose, darts) => separated(point, pose, obstacles(darts)) };

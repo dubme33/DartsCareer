@@ -2,6 +2,7 @@ function playerThrow() {
             // Kliknięcia mogą już czekać w kolejce zdarzeń, gdy trzecia lotka
             // kończy podejście. Nie pozwalamy im wejść do logiki punktacji.
             if (!currentMatch || currentMatch.isFinishing || currentMatch.isSpectator || currentMatch.turn !== 'p1'
+                || (typeof isMatchBullOffPending === 'function' && isMatchBullOffPending(currentMatch))
                 || currentMatch.dartsThrown >= 3 || currentMatch.isTurnLocked || currentMatch.isDartInFlight
                 || currentMatch.matchIncidents?.pending) return;
             if (currentMatch.isDoubles && !isCareerPlayerThrowing(true)) return;
@@ -39,6 +40,7 @@ function playerThrow() {
 
         function throwCareerDart(targetSector, targetMultiplier) {
             if (!currentMatch || currentMatch.isFinishing || currentMatch.turn !== 'p1'
+                || (typeof isMatchBullOffPending === 'function' && isMatchBullOffPending(currentMatch))
                 || currentMatch.dartsThrown >= 3 || currentMatch.isTurnLocked || currentMatch.isDartInFlight
                 || currentMatch.matchIncidents?.pending) return false;
             const score = currentMatch.p1Score;
@@ -55,6 +57,7 @@ function playerThrow() {
 
         function simulateOneVisit() {
             if (!currentMatch || currentMatch.isFinishing || currentMatch.isSpectator
+                || (typeof isMatchBullOffPending === 'function' && isMatchBullOffPending(currentMatch))
                 || currentMatch.turn !== 'p1' || currentMatch.dartsThrown >= 3 || currentMatch.isTurnLocked
                 || currentMatch.isDartInFlight || currentMatch.matchIncidents?.pending
                 || (currentMatch.isDoubles && !isCareerPlayerThrowing(true))
@@ -85,6 +88,7 @@ function playerThrow() {
 
         function aiTurn() {
             if (!currentMatch || currentMatch.isFinishing || currentMatch.isTurnLocked
+                || (typeof isMatchBullOffPending === 'function' && isMatchBullOffPending(currentMatch))
                 || currentMatch.dartsThrown >= 3) return;
             if (currentMatch.isDartInFlight) {
                 currentMatch.pendingImpactAction = aiTurn;
@@ -167,7 +171,10 @@ function playerThrow() {
                 visit = match.throwGroupingVisit = {
                     ...createThrowGroupingVisit(), dartsThrown: match.dartsThrown || 0, side, throwerIndex, leg
                 };
-                if (typeof drawnDarts !== 'undefined') visit.physicsDarts = drawnDarts.map(dart => ({ x: dart.x, y: dart.y, dartPose: dart.dartPose }));
+                if (typeof drawnDarts !== 'undefined') visit.physicsDarts = drawnDarts.map(dart => ({
+                    x: dart.x, y: dart.y, dartPose: dart.dartPose, dartStyle: dart.dartStyle,
+                    robinHood: dart.robinHood === true
+                }));
             }
             return visit;
         }
@@ -189,8 +196,11 @@ function playerThrow() {
             let result = calculateThrow(targetSector, targetMult, stats, visit);
             if (typeof dartPhysics !== 'undefined' && typeof getDartboardHitPoint === 'function') {
                 const point = getDartboardHitPoint(result.sector, result.mult, targetSector, targetMult);
+                const side = visit?.side || (typeof currentMatch !== 'undefined' ? currentMatch?.turn : 'p1');
+                const dartStyle = typeof window !== 'undefined' && typeof window.getMatchDartLoadout === 'function'
+                    ? window.getMatchDartLoadout(side) : null;
                 result = dartPhysics.resolve(result, point, visit?.physicsDarts || [], Math.random,
-                    typeof areBounceOutsEnabled !== 'function' || areBounceOutsEnabled());
+                    typeof areBounceOutsEnabled !== 'function' || areBounceOutsEnabled(), dartStyle);
             }
             if (typeof applyBounceOutToThrow === 'function') result = applyBounceOutToThrow(result, visit);
             if (typeof dartPhysics !== 'undefined') dartPhysics.register(visit, result);

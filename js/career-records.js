@@ -123,23 +123,40 @@ function packCareerHeadToHead(headToHead) {
 function unpackCareerHeadToHead(packed) {
     if (!isPackedCareerHeadToHead(packed)) return packed && typeof packed === 'object' ? packed : {};
     const restored = {};
-    packed.rows.forEach(row => {
-        if (!Array.isArray(row) || row.length !== 12) return;
+    const rowByPairKey = new Map();
+    let reusablePackedState = true;
+    packed.rows.forEach((row, rowIndex) => {
+        if (!Array.isArray(row) || row.length !== 12) { reusablePackedState = false; return; }
         const pair = [packed.players[row[0]], packed.players[row[1]]];
         const lastPlayers = [packed.players[row[10]], packed.players[row[11]]];
         const tournament = packed.tournaments[row[6]], round = packed.rounds[row[9]];
         if (!pair.every(value => typeof value === 'string')
             || !lastPlayers.every(value => typeof value === 'string')
             || typeof tournament !== 'string' || typeof round !== 'string'
-            || ![row[2], row[3], row[4], row[5], row[7], row[8]].every(Number.isFinite)) return;
-        restored[JSON.stringify(pair)] = {
+            || ![row[2], row[3], row[4], row[5], row[7], row[8]].every(Number.isFinite)) {
+            reusablePackedState = false;
+            return;
+        }
+        const pairKey = JSON.stringify(pair);
+        if (rowByPairKey.has(pairKey)) reusablePackedState = false;
+        rowByPairKey.set(pairKey, rowIndex);
+        restored[pairKey] = {
             wins: [row[2], row[3]],
             lastKey: JSON.stringify([row[5], tournament, row[7], row[8], round, lastPlayers]),
             since: row[4]
         };
     });
     Object.entries(packed.fallback && typeof packed.fallback === 'object' ? packed.fallback : {})
-        .forEach(([key, entry]) => { restored[key] = entry; });
+        .forEach(([key, entry]) => {
+            if (rowByPairKey.has(key)) reusablePackedState = false;
+            restored[key] = entry;
+        });
+    // The packed rows have already been validated while restoring the save.
+    // Reuse them until a result changes, instead of repacking the whole career
+    // on the first autosave after every load.
+    if (reusablePackedState) careerHeadToHeadPackCache.set(restored, {
+        revision: careerHeadToHeadRevision, packed, rowByPairKey
+    });
     return restored;
 }
 

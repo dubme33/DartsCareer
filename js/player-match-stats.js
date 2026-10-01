@@ -63,6 +63,67 @@ function getOptionalMatchStat(value) {
     return Number.isFinite(number) && number >= 0 ? number : null;
 }
 
+// A match key is normally stored on both participants. Keep the live arrays
+// unchanged and share repeated strings only in the serialized career state.
+function packSeasonMatchKeysForSave(state) {
+    const candidates = [state?.player, ...(Array.isArray(state?.pdcPlayers) ? state.pdcPlayers : [])];
+    const keyCount = candidates.reduce((total, candidate) =>
+        total + (Array.isArray(candidate?.seasonStats?.matchStats?.recordedKeys)
+            ? candidate.seasonStats.matchStats.recordedKeys.length : 0), 0);
+    if (keyCount < 512) return state;
+
+    const keyPool = [];
+    const keyIndexes = new Map();
+    const packCandidate = candidate => {
+        const stats = candidate?.seasonStats?.matchStats;
+        const keys = stats?.recordedKeys;
+        if (!Array.isArray(keys) || !keys.length || !keys.every(key => typeof key === 'string')) return candidate;
+        const indexes = keys.map(key => {
+            let index = keyIndexes.get(key);
+            if (index === undefined) {
+                index = keyPool.length;
+                keyIndexes.set(key, index);
+                keyPool.push(key);
+            }
+            return index;
+        });
+        const packedStats = { ...stats, recordedKeyIndexes: indexes };
+        delete packedStats.recordedKeys;
+        return { ...candidate, seasonStats: { ...candidate.seasonStats, matchStats: packedStats } };
+    };
+    const packedPlayer = packCandidate(state.player);
+    const packedAi = state.pdcPlayers.map(packCandidate);
+    // A mostly unique log would grow because of the extra index table.
+    if (keyPool.length >= keyCount * .8) return state;
+    state.player = packedPlayer;
+    state.pdcPlayers = packedAi;
+    state.recordedMatchKeyPool = keyPool;
+    return state;
+}
+
+function restoreSeasonMatchKeysFromSave(state) {
+    if (!Object.prototype.hasOwnProperty.call(state, 'recordedMatchKeyPool')) return;
+    const pool = state.recordedMatchKeyPool;
+    if (!Array.isArray(pool) || pool.some(key => typeof key !== 'string')) {
+        throw new Error('Invalid recorded match key pool.');
+    }
+    const patches = [];
+    for (const candidate of [state.player, ...state.pdcPlayers]) {
+        const stats = candidate?.seasonStats?.matchStats;
+        if (!stats || !Object.prototype.hasOwnProperty.call(stats, 'recordedKeyIndexes')) continue;
+        const indexes = stats.recordedKeyIndexes;
+        if (!Array.isArray(indexes) || indexes.some(index => !Number.isInteger(index) || index < 0 || index >= pool.length)) {
+            throw new Error('Invalid recorded match key indexes.');
+        }
+        patches.push([stats, indexes.map(index => pool[index])]);
+    }
+    patches.forEach(([stats, keys]) => {
+        stats.recordedKeys = keys;
+        delete stats.recordedKeyIndexes;
+    });
+    delete state.recordedMatchKeyPool;
+}
+
 function getPlayerMatchStatsKey(candidate) {
     return String(candidate?.id || `${candidate?.sourceName || candidate?.name}|${candidate?.country}`);
 }

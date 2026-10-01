@@ -66,6 +66,18 @@ function getPrefix(m) { return m === 1 ? "" : (m === 2 ? "D" : "T"); }
             const presentations = matchBoardLayout.presentDarts(drawnDarts);
             drawnDarts.forEach((d, index) => { 
                 const display = presentations[index].point;
+                if (d.robinHood) {
+                    // In 2D show the unscored dart protruding from the first flight.
+                    ctx.save();
+                    ctx.lineCap = 'round'; ctx.lineWidth = 3; ctx.strokeStyle = '#c4ccd2';
+                    ctx.beginPath(); ctx.moveTo(display.x, display.y); ctx.lineTo(display.x + 22, display.y - 18); ctx.stroke();
+                    ctx.fillStyle = d.dartStyle?.flightColor || d.color;
+                    ctx.beginPath(); ctx.moveTo(display.x + 18, display.y - 17);
+                    ctx.lineTo(display.x + 31, display.y - 30); ctx.lineTo(display.x + 29, display.y - 14);
+                    ctx.closePath(); ctx.fill();
+                    ctx.restore();
+                    return;
+                }
                 ctx.beginPath(); 
                 ctx.arc(display.x, display.y, 5, 0, 2*Math.PI); 
                 ctx.fillStyle = d.dartStyle?.flightColor || d.color; 
@@ -141,12 +153,33 @@ function getPrefix(m) { return m === 1 ? "" : (m === 2 ? "D" : "T"); }
             return `${labels[1]}: ${field(result.collision.originalSector, result.collision.originalMult)} → ${field(result.sector, result.mult)}`;
         }
 
+        function getRobinHoodText() {
+            return ({ pl: 'Robin Hood — grot w piórku (0 pkt)',
+                en: 'Robin Hood — point in the flight (0 points)',
+                de: 'Robin Hood — Spitze im Flight (0 Punkte)',
+                nl: 'Robin Hood — punt in de flight (0 punten)' })[
+                    typeof currentLang === 'string' ? currentLang : 'pl'] || 'Robin Hood — point in the flight (0 points)';
+        }
+
+        function showRobinHoodFeedback() {
+            const banner = document.getElementById('match-bounce-out');
+            if (!banner) return;
+            clearTimeout(banner._hideTimer);
+            banner.textContent = `🎯 ${getRobinHoodText()}`;
+            banner.hidden = false;
+            banner.classList.remove('bounce-out-active', 'robin-hood-active');
+            void banner.offsetWidth;
+            banner.classList.add('robin-hood-active');
+            banner._hideTimer = setTimeout(() => { banner.hidden = true; }, 1600);
+        }
+
         function addDartToCanvas(hitSec, hitMult, color, targetSec, targetMult, result = null, side = null) {
             const dartSide = side || (typeof currentMatch !== 'undefined' && currentMatch?.turn === 'p2' ? 'p2' : 'p1');
-            const dartStyle = typeof window !== 'undefined' && typeof window.getMatchDartLoadout === 'function'
-                ? window.getMatchDartLoadout(dartSide) : null;
+            const dartStyle = result?.dartStyle || (typeof window !== 'undefined' && typeof window.getMatchDartLoadout === 'function'
+                ? window.getMatchDartLoadout(dartSide) : null);
             drawnDarts.push({ ...(result?.boardPoint || getDartboardHitPoint(hitSec, hitMult, targetSec, targetMult)),
                 color, dartSide, ...(dartStyle ? { dartStyle } : {}),
+                ...(result?.robinHood ? { robinHood: true } : {}),
                 ...(result?.dartPose ? { dartPose: result.dartPose } : {}), ...(result?.collision ? { collision: result.collision } : {}) });
             drawDartboard();
         }

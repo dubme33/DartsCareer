@@ -269,6 +269,7 @@ function refreshTournamentEditorTranslations() {
         [...tournamentEditorElement(id).options].forEach((option, index) => { option.textContent = trTournamentEditor(keys[index]); });
     });
     refreshTournamentEditorQualificationTranslations();
+    if (typeof refreshTournamentPackTranslations === 'function') refreshTournamentPackTranslations();
     refreshTournamentEditorFormText();
     renderTournamentEditorList();
 }

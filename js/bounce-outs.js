@@ -139,18 +139,17 @@ function playBounceOutSound() {
     } catch (_error) { /* Audio is optional; scoring remains synchronous. */ }
 }
 
-let bounceOutVisualTimer = null;
 function showBounceOutFeedback(result) {
     if (typeof document === 'undefined') return;
     const banner = document.getElementById('match-bounce-out');
     if (banner) {
-        clearTimeout(bounceOutVisualTimer);
+        clearTimeout(banner._hideTimer);
         banner.textContent = `↘ ${getBounceOutText().log}`;
         banner.hidden = false;
-        banner.classList.remove('bounce-out-active');
+        banner.classList.remove('bounce-out-active', 'robin-hood-active');
         void banner.offsetWidth;
         banner.classList.add('bounce-out-active');
-        bounceOutVisualTimer = setTimeout(() => { banner.hidden = true; }, 900);
+        banner._hideTimer = setTimeout(() => { banner.hidden = true; }, 900);
     }
     if (typeof animateBounceOutDart === 'function') animateBounceOutDart(result);
     playBounceOutSound();

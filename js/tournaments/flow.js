@@ -774,6 +774,8 @@ function skipActiveTournament() {
                 && isCrownMastersQualifierTournament(activeTournament);
             const isUKOpenEvent = typeof isUKOpenTournament === 'function'
                 && isUKOpenTournament(activeTournament);
+            const leagueNight = typeof getPremierLeagueNightNumber === 'function'
+                ? getPremierLeagueNightNumber(activeTournament) : 0;
 
             let participants = [];
 
@@ -865,7 +867,7 @@ function skipActiveTournament() {
                 tournamentRound = 4;
 
             // Zwykła noc ligowa (Night 1-16)
-            } else if (tNameLow.includes("premier") || tNameLow.includes("global darts league")) {
+            } else if (leagueNight || tNameLow.includes("premier") || tNameLow.includes("global darts league")) {
                 // Zabezpieczenie: jeśli tabela jest pusta, twórz stawkę natychmiast
                 if (!gdlTable || gdlTable.length === 0) {
                     gdlTable = [];
@@ -1106,8 +1108,10 @@ function skipActiveTournament() {
                     activeTournament.qSchoolDrawVersion = typeof PDC_QSCHOOL_DRAW_VERSION === 'number'
                         ? PDC_QSCHOOL_DRAW_VERSION
                         : 2;
-                } else if ((tNameLow.includes("premier") || tNameLow.includes("global darts league")) && !tNameLow.includes("play-off")) {
-                    participants = shuffle(participants);
+                } else if (leagueNight || (tNameLow.includes("premier") || tNameLow.includes("global darts league")) && !tNameLow.includes("play-off")) {
+                    participants = leagueNight && typeof buildPremierLeagueNightDraw === 'function'
+                        ? buildPremierLeagueNightDraw(activeTournament, participants, tournamentDatabase) || shuffle(participants)
+                        : shuffle(participants);
                 } else if ((tNameLow.includes("premier") || tNameLow.includes("global darts league")) && tNameLow.includes("play-off")) {
                     // Drabinka play-off już ustalona (1 vs 4, 2 vs 3)
                 } else if (tNameLow.includes("uk open") || tNameLow.includes("british open")) {
@@ -1479,7 +1483,7 @@ function skipActiveTournament() {
             }
             
             if (opponent && opponent.isBye) {
-                alert("Otrzymujesz wolny los (BYE) jako zawodnik rozstawiony! Awansujesz do kolejnej fazy bez gry.");
+                alert(t('t-alert-bye'));
                 advanceTournament(true);
                 showRoundResults(); // Pokaże symulację rywali
                 return;
@@ -1532,7 +1536,8 @@ function skipActiveTournament() {
     });
     const accumulatedScores = [0, 0];
     const totalDarts = [0, 0];
-    const firstLegStarter = Math.random() < 0.5 ? 0 : 1;
+    const firstLegStarter = typeof resolveMatchBullAutomatically === 'function'
+        ? (resolveMatchBullAutomatically(p1, p2) === 'p1' ? 0 : 1) : (Math.random() < 0.5 ? 0 : 1);
     let p1Legs = 0, p2Legs = 0, p1Sets = 0, p2Sets = 0;
     let p1LegsWon = 0, p2LegsWon = 0;
 
@@ -1679,6 +1684,35 @@ function skipActiveTournament() {
 
         // Oba tryby korzystają z identycznego rozliczenia meczu. Generator oddaje
         // sterowanie dopiero po komplecie wyniku, nagród, OVR i wpisów historii.
+        function recordPremierLeagueStandingsMatch(tournament, round, winner, loser, winnerLegs, loserLegs) {
+            const names = `${tournament?.name || ''} ${tournament?.sourceName || ''}`;
+            const stage = typeof getPlayerCareerTitlePremierLeagueStage === 'function'
+                ? getPlayerCareerTitlePremierLeagueStage(tournament) : null;
+            const isRegularLeague = stage === 'night' || (stage === null
+                && /premier\s+league|global\s+darts\s+league/i.test(names)
+                && !/\bfinals?\b|\bplay[\s-]*offs?\b|qualif|kwalifikac/i.test(names));
+            if (!isRegularLeague || typeof gdlTable === 'undefined' || !Array.isArray(gdlTable)) return false;
+            const winningRow = gdlTable.find(row => samePlayer(row.player, winner));
+            const losingRow = gdlTable.find(row => samePlayer(row.player, loser));
+            if (winningRow) {
+                winningRow.legsWon += winnerLegs;
+                winningRow.legsLost += loserLegs;
+            }
+            if (losingRow) {
+                losingRow.legsWon += loserLegs;
+                losingRow.legsLost += winnerLegs;
+            }
+            if (round === 4 && losingRow) losingRow.points += 2;
+            if (round === 2) {
+                if (losingRow) losingRow.points += 3;
+                if (winningRow) {
+                    winningRow.points += 5;
+                    winningRow.nightsWon += 1;
+                }
+            }
+            return Boolean(winningRow || losingRow);
+        }
+
         function* iterateTournamentRound(playerAdvancing = true) {
             if (typeof repairInjuredTournamentBracket === 'function') {
                 const repaired = repairInjuredTournamentBracket(tournamentBracket);
@@ -1747,7 +1781,8 @@ function skipActiveTournament() {
                 let countPrizeTowardsRankings = !isSecondaryTourEvent;
                 
                 // ZMIANA: Deklaracja wyników na samej górze pętli, aby były widoczne dla tabeli GDL!
-                let matchWScore = 6, matchLScore = 0; 
+                let matchWScore = 6, matchLScore = 0;
+                let leagueResultAlreadyCounted = false;
 
                 if (p1.isBye) { nextRoundBracket.push(p2); yield; continue; }
                 if (p2.isBye) { nextRoundBracket.push(p1); yield; continue; }
@@ -1840,6 +1875,7 @@ function skipActiveTournament() {
                     let matchRes = typeof resolveTournamentAiMatch === 'function'
                         ? resolveTournamentAiMatch(p1, p2, format, tournamentRound)
                         : simulateAImatch(p1, p2, format);
+                    leagueResultAlreadyCounted = matchRes.leagueCounted === true;
                     
                     winner = matchRes.winner; 
                     loser = matchRes.loser;
@@ -1914,22 +1950,9 @@ function skipActiveTournament() {
                 }
 
                 // --- NOWOŚĆ: Punkty i legi do tabeli Ligi ---
-                if ((activeTournament.name.includes("Global Darts League") || activeTournament.name.includes("Premier")) && !activeTournament.name.includes("Play-offs")) {
-                    let wGdl = gdlTable.find(g => samePlayer(g.player, winner));
-                    let lGdl = gdlTable.find(g => samePlayer(g.player, loser));
-                    
-                    // Używamy bezpiecznie przekazanych zmiennych matchWScore i matchLScore
-                    if(wGdl) { wGdl.legsWon += matchWScore; wGdl.legsLost += matchLScore; }
-                    if(lGdl) { lGdl.legsWon += matchLScore; lGdl.legsLost += matchWScore; }
-
-                    if (tournamentRound === 4) { 
-                        // Ktoś przegrał w Półfinale GDL
-                        if (lGdl) lGdl.points += 2;
-                    } else if (tournamentRound === 2) { 
-                        // Finał! Zwycięzca i przegrany dostają punkty
-                        if (lGdl) lGdl.points += 3;
-                        if (wGdl) { wGdl.points += 5; wGdl.nightsWon += 1; }
-                    }
+                if (!leagueResultAlreadyCounted) {
+                    recordPremierLeagueStandingsMatch(activeTournament, tournamentRound,
+                        winner, loser, matchWScore, matchLScore);
                 }
                 yield;
             } // Koniec pętli for
@@ -2002,6 +2025,8 @@ function skipActiveTournament() {
             const matchFormat = getTournamentMatchFormat(activeTournament, tournamentRound);
             if (!opponent) return false;
             if (opponent.isBye) return closeBracketAndPlay();
+            if (typeof maybeBeginPreTournamentPressConference === 'function'
+                && maybeBeginPreTournamentPressConference(activeTournament, opponent, () => startTournamentMatch())) return true;
             initRivalries();
             const rivalryRecord = opponent && opponent.id ? player.rivalries[opponent.id] : null;
             const isRivalryMatch = Boolean(rivalryRecord && player.activeRivalIds.includes(opponent.id));
@@ -2026,6 +2051,7 @@ function skipActiveTournament() {
                 }
             };
             
+            if (typeof prepareMatchBullOff === 'function') prepareMatchBullOff(currentMatch, player, opponent);
             currentTurnScore = 0; document.getElementById('match-log').innerHTML = "";
             if (isRivalryMatch) {
                 logThrow(`🔥 ${trRival('h2h')}: ${rivalryRecord.wins}-${rivalryRecord.losses}`, 'system');
@@ -2065,7 +2091,8 @@ function skipActiveTournament() {
             }
 
             updateScores(); updateMatchStatsUI(); setTurnUI(); showScreen('screen-match');
-            playMatchIntro(player.name, currentMatch.opponent.name);
+            if (typeof showMatchBullOff === 'function') showMatchBullOff();
+            else playMatchIntro(player.name, currentMatch.opponent.name);
         }
 
         

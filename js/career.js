@@ -64,6 +64,9 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
             if (screenId === 'screen-hub' && typeof initializeHubNavigation === 'function') {
                 initializeHubNavigation();
             }
+            if (screenId === 'screen-hub' && typeof showPendingPressConference === 'function') {
+                setTimeout(showPendingPressConference, 0);
+            }
         }
 
         let existingPlayerCareerStarting = false;
@@ -189,6 +192,7 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
                 if (typeof initializePlayerEvents === 'function') initializePlayerEvents(true);
                 if (typeof initializeTournamentWatchSettings === 'function') initializeTournamentWatchSettings(player, true);
                 if (typeof initializeBounceOutSettings === 'function') initializeBounceOutSettings(player, true);
+                if (typeof initializeMatchIncidentSettings === 'function') initializeMatchIncidentSettings(player, true);
                 if (typeof initializePostMatchReportSetting === 'function') initializePostMatchReportSetting(player, true);
                 if (typeof initializeAllPlayerTraits === 'function') initializeAllPlayerTraits(true);
                 if (typeof initializeCareerInfrastructure === 'function') initializeCareerInfrastructure(true);
@@ -298,6 +302,7 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
                 if (typeof initializePlayerEvents === 'function') initializePlayerEvents(true);
                 if (typeof initializeTournamentWatchSettings === 'function') initializeTournamentWatchSettings(player, true);
                 if (typeof initializeBounceOutSettings === 'function') initializeBounceOutSettings(player, true);
+                if (typeof initializeMatchIncidentSettings === 'function') initializeMatchIncidentSettings(player, true);
                 if (typeof initializePostMatchReportSetting === 'function') initializePostMatchReportSetting(player, true);
             if (typeof initializeAllPlayerTraits === 'function') initializeAllPlayerTraits(true);
             if (typeof initializeCareerInfrastructure === 'function') initializeCareerInfrastructure(true);
@@ -345,6 +350,7 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
             if (typeof refreshWorldNewsSettingsUI === 'function') refreshWorldNewsSettingsUI();
             if (typeof refreshTournamentWatchSettingsUI === 'function') refreshTournamentWatchSettingsUI();
             if (typeof refreshBounceOutSettingsUI === 'function') refreshBounceOutSettingsUI();
+            if (typeof refreshMatchIncidentSettingsUI === 'function') refreshMatchIncidentSettingsUI();
             if (typeof refreshDartFlightMotionUI === 'function') refreshDartFlightMotionUI();
             if (typeof refreshMatchLayoutSettingsUI === 'function') refreshMatchLayoutSettingsUI();
             if (typeof refreshPostMatchReportSettingsUI === 'function') refreshPostMatchReportSettingsUI();
@@ -688,8 +694,6 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
                 }
                 if (typeof recoverCareerPreparation === 'function') recoverCareerPreparation(player);
             }
-            updateHub();
-
             // --- Wypłaty i reset na początku miesiąca/roku ---
             if (currentDate.getDate() === 1) {
                 
@@ -714,11 +718,9 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
                         bodySpon += `<p>${escapeHtml(trPlayerStaff('managerIncome', { amount: playerStaffMoney(staffSponsorBonus) }))}</p>`;
                     }
                     addEmail(t('t-sender-acc'), subSpon, bodySpon);
-                    generateOffers(); updateHub();
+                    generateOffers();
                 }
-                if (typeof processCareerWorkMonth === 'function' && processCareerWorkMonth(player, currentDate)) {
-                    updateHub();
-                }
+                if (typeof processCareerWorkMonth === 'function') processCareerWorkMonth(player, currentDate);
 
                 // 2. Reset rankingów liczonych w roku kalendarzowym (1 stycznia)
                 if (currentDate.getMonth() === 0) {
@@ -762,6 +764,7 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
                             tournament.completed = false;
                             tournament.historyLogs = '';
                             delete tournament.matchHistory;
+                            delete tournament.premierLeagueOpeningPairs;
                             delete tournament.editorQualifierResults;
                             delete tournament.bracketSeedPlayerKeys;
                             delete tournament.worldChampionshipSeedPlayerIds;
@@ -789,12 +792,13 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
                     
                     // Powiadomienie e-mail o nowym sezonie
                     addEmail(t('t-sender-league'), t('t-email-newyear-sub'), t('t-email-newyear-body'));
-                    updateHub();
                 }
             }
             const playerEvents = typeof processDailyPlayerEvents === 'function' ? processDailyPlayerEvents() : null;
-            if (playerEvents?.changed) updateHub();
             if (typeof recordWorldNewsRankingChange === 'function') recordWorldNewsRankingChange();
+            // All daily changes are synchronous. Refresh the hub once with the
+            // final state, including monthly payouts and the season reset.
+            updateHub();
             const shouldAutoSaveToday = currentDate.getDate() === 1 || currentDate.getDate() === 15
                 || staffPayroll?.changed === true || infrastructureMaintenance?.changed === true || investmentIncome?.changed === true
                 || equipmentWear?.changed === true || playerEvents?.changed === true;
@@ -1017,6 +1021,14 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
     function removeRetiredRandomEmails(legacyUnreadCount = unreadMailsCount) {
         // Najpierw odtwarzamy stan przeczytania, dopiero potem usuwamy losowe maile.
         // Ich usunięcie nie może przesunąć granicy nieprzeczytanych wiadomości w starym zapisie.
+        // Zwykły autosave ma już znormalizowaną skrzynkę. Nie twórz na nowo
+        // tysięcy obiektów wiadomości przy każdym zapisie długiej kariery.
+        if (Array.isArray(emails) && emails.every(email => email && typeof email === 'object'
+            && email.kind === 'system' && typeof email.createdAt === 'number' && Number.isFinite(email.createdAt)
+            && typeof email.read === 'boolean')) {
+            unreadMailsCount = emails.reduce((count, email) => count + (email.read ? 0 : 1), 0);
+            return emails;
+        }
         emails = normalizeStoredEmails(emails, legacyUnreadCount).filter(email => email.kind !== 'random');
         unreadMailsCount = emails.reduce((count, email) => count + (email.read === true ? 0 : 1), 0);
         return emails;
@@ -1047,16 +1059,38 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
             }
         }
 
-        function showMailbox() {
+        const MAILBOX_PAGE_SIZE = 50;
+        let mailboxRenderedCount = 0;
+
+        function renderMailboxEmails() {
     const list = document.getElementById('email-list');
-    removeRetiredRandomEmails();
-    const mailboxHtml = emails.map(e => `<div style="background:#0f3460; padding:10px; margin-bottom:10px; border-radius:5px; border-left:4px solid var(--accent-green);">
+    const nextEmails = emails.slice(mailboxRenderedCount, mailboxRenderedCount + MAILBOX_PAGE_SIZE);
+    const mailboxHtml = nextEmails.map(e => `<div style="background:#0f3460; padding:10px; margin-bottom:10px; border-radius:5px; border-left:4px solid var(--accent-green);">
             <small style="color:#bdc3c7;">${escapeHtml(e.date)} | ${t('t-from')}: <strong>${escapeHtml(e.sender)}</strong></small>
             <h4 style="margin:5px 0;">${escapeHtml(e.subject)}</h4>
             <p style="margin:0; font-size:13px;">${sanitizeEmailHtml(e.body)}</p>
             ${typeof getTutorialEmailActionHtml === 'function' ? getTutorialEmailActionHtml(e) : ''}
         </div>`).join('');
-    list.innerHTML = mailboxHtml || `<p style='text-align:center;'>${t('t-no-mails')}</p>`;
+    if (mailboxHtml) list.insertAdjacentHTML('beforeend', mailboxHtml);
+    mailboxRenderedCount += nextEmails.length;
+    const moreButton = document.getElementById('email-show-more');
+    if (moreButton) {
+        const remaining = emails.length - mailboxRenderedCount;
+        moreButton.style.display = remaining > 0 ? '' : 'none';
+        moreButton.textContent = t('t-more-mails').replace('{count}', remaining);
+    }
+}
+
+        function showMoreMailboxEmails() {
+    renderMailboxEmails();
+}
+
+        function showMailbox() {
+    const list = document.getElementById('email-list');
+    removeRetiredRandomEmails();
+    mailboxRenderedCount = 0;
+    list.innerHTML = emails.length ? '' : `<p style='text-align:center;'>${t('t-no-mails')}</p>`;
+    renderMailboxEmails();
     emails.forEach(email => { email.read = true; });
     unreadMailsCount = 0; 
     updateMailBadge();
@@ -1210,6 +1244,7 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
 
                     updateHub();
                     document.getElementById('event-modal').style.display = 'none';
+                    if (typeof showPendingPressConference === 'function') showPendingPressConference();
                     if (typeof saveGame === 'function') saveGame(true);
                 };
                 choicesDiv.appendChild(button);

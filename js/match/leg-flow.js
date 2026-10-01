@@ -328,13 +328,15 @@ function checkAchievements(type, data = null) {
             if (typeof dartPhysics !== 'undefined' && !result?.physicsResolved && typeof getDartboardHitPoint === 'function') {
                 const point = result?.boardPoint || getDartboardHitPoint(result?.bouncedSector ?? hitSec,
                     result?.bouncedMult ?? hitMult, targetSec, targetMult);
+                const dartStyle = typeof window !== 'undefined' && typeof window.getMatchDartLoadout === 'function'
+                    ? window.getMatchDartLoadout(throwingSide) : null;
                 result = dartPhysics.resolve({ ...(result || {}), sector: hitSec, mult: hitMult }, point, drawnDarts,
-                    Math.random, typeof areBounceOutsEnabled !== 'function' || areBounceOutsEnabled());
+                    Math.random, typeof areBounceOutsEnabled !== 'function' || areBounceOutsEnabled(), dartStyle);
                 hitSec = result.sector; hitMult = result.mult;
             }
             const bounced = result?.bounceOut === true;
             // Replays run after the visit: retain only darts embedded at this throw.
-            const replayBoardDarts = bounced && typeof drawnDarts !== 'undefined'
+            const replayBoardDarts = (bounced || result?.robinHood) && typeof drawnDarts !== 'undefined'
                 ? JSON.parse(JSON.stringify(drawnDarts)) : [];
             if (bounced) {
                 hitSec = 0; hitMult = 0;
@@ -362,7 +364,9 @@ function checkAchievements(type, data = null) {
 
             currentTurnScore += points;
             if (!bounced && typeof addDartToCanvas === 'function') addDartToCanvas(hitSec, hitMult, isP1 ? '#f1c40f' : '#ecf0f1', targetSec, targetMult, result, isP1 ? 'p1' : 'p2');
-            if (result?.collision && typeof getDartCollisionText === 'function') logThrow(`↗ ${playerName}: ${getDartCollisionText(result)}`, logType);
+            if (result?.robinHood && typeof showRobinHoodFeedback === 'function') showRobinHoodFeedback();
+            if (result?.collision && !result?.robinHood && typeof getDartCollisionText === 'function')
+                logThrow(`↗ ${playerName}: ${getDartCollisionText(result)}`, logType);
 
             let st = currentMatch.stats; let newScore = currentScore - points;
             const actualResult = { ...(result || {}), sector: hitSec, mult: hitMult };
@@ -415,7 +419,9 @@ function checkAchievements(type, data = null) {
                 let multStr = hitMult === 3 ? 'T' : (hitMult === 2 ? 'D' : '');
                 let secStr = hitSec === 25 ? (hitMult === 2 ? 'Bull' : '25') : hitSec;
                 if (points > 0) logThrow(`${playerName} ${t('t-log-throws')}: ${multStr}${secStr} (${points})`, logType);
-                else logThrow(bounced ? `${playerName}: ${getBounceOutText().log}` : `${playerName} ${t('t-log-throws')}: ${t('t-log-miss-0')}`, logType);
+                else logThrow(bounced ? `${playerName}: ${getBounceOutText().log}`
+                    : result?.robinHood ? `${playerName}: ${getRobinHoodText()}`
+                        : `${playerName} ${t('t-log-throws')}: ${t('t-log-miss-0')}`, logType);
 
                 if (currentScore <= 50 && targetMult === 2 && hitMult !== 2) adjustMomentum(isP1, -1);
             }
@@ -466,8 +472,8 @@ function checkAchievements(type, data = null) {
                 scoreBefore: currentScore, scoreAfter: newScore,
                 target: { sector: targetSec, mult: targetMult },
                 hit: { sector: hitSec, mult: hitMult },
-                points: bounced ? 0 : points, bounced, bust,
-                ...(bounced ? { replayBoardDarts } : {}),
+                points: bounced ? 0 : points, bounced, robinHood: result?.robinHood === true, bust,
+                ...(bounced || result?.robinHood ? { replayBoardDarts } : {}),
                 collision: result?.collision || null,
                 boardPoint: result?.boardPoint || null,
                 dartPose: result?.dartPose || null,

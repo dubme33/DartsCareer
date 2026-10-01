@@ -24,6 +24,7 @@ function getSpectatedTournamentMatchResult(p1, p2, round = tournamentRound, cons
         p2Avg: stored.p2Avg,
         p1Score: stored.p1Score,
         p2Score: stored.p2Score,
+        leagueCounted: stored.leagueCounted === true,
         spectated: true
     };
 
@@ -252,6 +253,10 @@ function beginSpectatingAiMatch(p1, p2, matchFormat, matchFields = {}, roundLabe
         },
         ...matchFields
     };
+    if (typeof prepareMatchBullOff === 'function') {
+        prepareMatchBullOff(currentMatch, team1?.players?.[0] || p1, team2?.players?.[0] || p2,
+            { p1: firstName, p2: secondName });
+    }
 
     currentTurnScore = 0;
     drawnDarts = [];
@@ -286,7 +291,8 @@ function beginSpectatingAiMatch(p1, p2, matchFormat, matchFields = {}, roundLabe
     updateMatchStatsUI();
     showScreen('screen-match');
     logThrow(`👁 ${t('t-spectator-watching')}: ${escapeHtml(firstName)} vs ${escapeHtml(secondName)}`, 'system');
-    if (typeof playMatchIntro === 'function') playMatchIntro(firstName, secondName);
+    if (typeof showMatchBullOff === 'function') showMatchBullOff();
+    else if (typeof playMatchIntro === 'function') playMatchIntro(firstName, secondName);
     else setTurnUI();
     return true;
 }
@@ -324,6 +330,9 @@ function finishSpectatedTournamentMatch() {
             if (!activeTournament.spectatedMatchResults || typeof activeTournament.spectatedMatchResults !== 'object') {
                 activeTournament.spectatedMatchResults = {};
             }
+            const leagueCounted = typeof recordPremierLeagueStandingsMatch === 'function'
+                && recordPremierLeagueStandingsMatch(activeTournament, watchedMatch.spectatorRound,
+                    winner, p1Won ? p2 : p1, winnerScore, loserScore);
             activeTournament.spectatedMatchResults[key] = {
                 round: watchedMatch.spectatorRound,
                 p1Key: getTournamentSpectatorPlayerKey(p1),
@@ -335,7 +344,8 @@ function finishSpectatedTournamentMatch() {
                 p1Avg: p1Average,
                 p2Avg: p2Average,
                 p1BounceOuts: watchedMatch.stats.p1BounceOuts || 0,
-                p2BounceOuts: watchedMatch.stats.p2BounceOuts || 0
+                p2BounceOuts: watchedMatch.stats.p2BounceOuts || 0,
+                leagueCounted
             };
         }
         if (typeof recordSeasonHighestAverage === 'function') {

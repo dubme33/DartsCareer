@@ -20,6 +20,9 @@ function startMatch(vsAI) {
                     p2TotalDarts: 0, p2AccumulatedScore: 0, p2First9Score: 0, p2First9Darts: 0, p2LegDarts: 0, p2HighCheckout: 0, p2DoubleAttempts: 0, p2DoubleHits: 0, p2OneEighties: 0, p2HundredPlus: 0, p2OneFortyPlus: 0
                 }
             };
+            if (vsAI && typeof prepareMatchBullOff === 'function') {
+                prepareMatchBullOff(currentMatch, player, currentMatch.opponent);
+            }
             currentTurnScore = 0; document.getElementById('match-log').innerHTML = "";
             drawnDarts = []; drawDartboard(); updateDartDots();
 
@@ -54,7 +57,10 @@ function startMatch(vsAI) {
             }
             updateScores(); updateMatchStatsUI(); setTurnUI(); showScreen('screen-match');
             
-            if (vsAI) { playMatchIntro(player.name, currentMatch.opponent.name); }
+            if (vsAI) {
+                if (typeof showMatchBullOff === 'function') showMatchBullOff();
+                else playMatchIntro(player.name, currentMatch.opponent.name);
+            }
         }
 
         function updateScores() {
@@ -86,6 +92,14 @@ function startMatch(vsAI) {
             return ((num / dem) * 3).toFixed(2);
         }
 
+        function updateMatchStatsTitle(side, name, country, isTeam) {
+            const title = document.getElementById(`stat-${side}-title`);
+            const identity = `${isTeam ? 'team' : 'player'}\u0000${country}\u0000${name}`;
+            if (title._matchStatsIdentity === identity) return;
+            title.innerHTML = `${getFlagImg(country)} ${escapeHtml(name)}`;
+            title._matchStatsIdentity = identity;
+        }
+
         function updateMatchStatsUI() {
             if (!currentMatch.stats) return;
             if (typeof refreshMatchBounceOutStats === 'function') refreshMatchBounceOutStats();
@@ -111,8 +125,8 @@ function startMatch(vsAI) {
 
             // Czysty tekst bez małych, zagnieżdżonych obrazków w statystykach
             if (currentMatch.isDoubles) {
-                document.getElementById('stat-p1-title').innerHTML = `${getFlagImg(currentMatch.worldCupTeamP1.country)} ${escapeHtml(currentMatch.worldCupTeamP1.country)}`;
-                document.getElementById('stat-p2-title').innerHTML = `${getFlagImg(currentMatch.worldCupTeamP2.country)} ${escapeHtml(currentMatch.worldCupTeamP2.country)}`;
+                updateMatchStatsTitle('p1', currentMatch.worldCupTeamP1.country, currentMatch.worldCupTeamP1.country, true);
+                updateMatchStatsTitle('p2', currentMatch.worldCupTeamP2.country, currentMatch.worldCupTeamP2.country, true);
             } else {
                 const p1Candidate = typeof getCurrentSinglesMatchPlayer === 'function'
                     ? getCurrentSinglesMatchPlayer(true)
@@ -121,10 +135,10 @@ function startMatch(vsAI) {
                     ? getCurrentSinglesMatchPlayer(false)
                     : currentMatch.opponent;
                 if (p1Candidate) {
-                    document.getElementById('stat-p1-title').innerHTML = `${getFlagImg(p1Candidate.country)} ${escapeHtml(p1Candidate.name)}`;
+                    updateMatchStatsTitle('p1', p1Candidate.name, p1Candidate.country, false);
                 }
                 if (p2Candidate) {
-                    document.getElementById('stat-p2-title').innerHTML = `${getFlagImg(p2Candidate.country)} ${escapeHtml(p2Candidate.name)}`;
+                    updateMatchStatsTitle('p2', p2Candidate.name, p2Candidate.country, false);
                 }
             }
             
@@ -148,7 +162,13 @@ function startMatch(vsAI) {
             }
             clearTimeout(window.aiTimeout); // Usuwamy stare opóźnienia
             const visitButton = document.getElementById('t-btn-sim-visit');
-            if (!currentMatch || currentMatch.isFinishing) {
+            if (typeof isMatchBullOffPending === 'function' && isMatchBullOffPending(currentMatch)) {
+                document.getElementById('throw-btn').disabled = true;
+                if (visitButton) visitButton.disabled = true;
+                return;
+            }
+            if (!currentMatch || currentMatch.isFinishing
+                || (typeof isMatchFinished === 'function' && isMatchFinished(currentMatch))) {
                 document.getElementById('throw-btn').disabled = true;
                 if (visitButton) visitButton.disabled = true;
                 return;
@@ -194,9 +214,16 @@ function startMatch(vsAI) {
             const match = currentMatch;
             const postMatchReport = !match.isSpectator && typeof createCompletedMatchReport === 'function'
                 ? createCompletedMatchReport(match, true, player, match.isTournament ? activeTournament : null) : null;
+            const postPressContext = match.isTournament && !match.isSpectator
+                && typeof buildPostMatchPressConferenceContext === 'function'
+                ? buildPostMatchPressConferenceContext(match, activeTournament, tournamentRound) : null;
             const presentReport = result => {
                 if (result !== false && currentMatch !== match && typeof publishCompletedMatchReport === 'function') {
                     publishCompletedMatchReport(postMatchReport);
+                }
+                if (result !== false && currentMatch !== match && postPressContext
+                    && !match.pressConferenceQueued && typeof queuePostMatchPressConference === 'function') {
+                    match.pressConferenceQueued = queuePostMatchPressConference(postPressContext);
                 }
                 return result;
             };

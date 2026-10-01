@@ -243,14 +243,15 @@
         const x = (display.x - 170) / 130, y = (170 - display.y) / 130;
         // Tilt varies deterministically, so changing the view cannot affect a future throw.
         const tilt = Math.sin(data.x * .37 + data.y * .23);
-        group.position.set(x, y, .008);
+        const robinHoodContact = data.robinHood && data.collision?.contact;
+        group.position.set(x, y, robinHoodContact ? robinHoodContact[2] : .008);
         const pose = presentation?.pose || data.dartPose || { x: -.34 - tilt * .045, y: .08 + tilt * .025, z: tilt * .22 };
         group.rotation.set(pose.x, pose.y, pose.z);
         // Slide the whole dart along its axis: 7 mm of point sits inside the sisal.
         // Both generated and photographic boards use this same physical face.
         // Compensate for the anchor's clearance without moving the scored point or pose.
         const axis = new THREE.Vector3(0, 0, 1).applyEuler(group.rotation);
-        const pointInset = embeddedPointLengthMm * window.dartModel.scale
+        const pointInset = robinHoodContact ? 0 : embeddedPointLengthMm * window.dartModel.scale
             + (group.position.z - boardFace.position.z) / Math.max(.1, axis.z);
         group.children.forEach(part => { part.position.z -= pointInset; });
         scene.add(group);
@@ -271,7 +272,7 @@
         const earlyBounce = bouncing && collision?.bounced;
         const contactAt = impact && !earlyBounce
             ? Math.max(.55, Math.min(.95, 1 - (impact.z - .008) / 2.7)) : 1;
-        const end = new THREE.Vector3(dart.x, dart.y, .008);
+        const end = dart.group.position.clone();
         const finalAxis = impact ? new THREE.Vector3(0, 0, 1).applyEuler(dart.rotation) : null;
         return {
             collision, plannedRotation, startPoint, impact, earlyBounce, contactAt, end,
@@ -290,11 +291,12 @@
         const now = suspendedAt ?? performance.now();
         const earlyBounce = bouncing && dart.data.collision?.bounced;
         const impactProgress = earlyBounce ? Math.max(.55, 1 - (dart.data.collision.contact[2] - .008) / 2.7) : 1;
-        // Live darts travel more briskly; replays retain the original timing so slow-motion stays readable.
-        const baseFlight = replay ? (dart.data.collision ? 480 : 340) : (dart.data.collision ? 450 : 370);
+        // The standard throw lasts about 0.3 s; replay timing stays slower for readable close-ups.
+        const baseFlight = replay ? (dart.data.collision ? 480 : 340) : (dart.data.collision ? 300 : 260);
         const flight = Math.max(45, baseFlight * impactProgress * durationScale / speed);
         const start = Math.max(now, queueUntil);
-        const settle = bouncing ? Math.max(80, 420 * durationScale / speed) : Math.max(35, 180 * durationScale / speed);
+        const settle = bouncing ? Math.max(80, 420 * durationScale / speed)
+            : Math.max(35, (replay ? 180 : 120) * durationScale / speed);
         animations.push({ dart, bouncing, replay, start, flight, settle, end: start + flight + settle,
             path: createFlightPath(dart, bouncing),
             impacted: false, impactCallbacks: [] });
@@ -314,17 +316,21 @@
 
     function cameraPose(target = cameraFocus) {
         const narrow = Math.min(1, camera.aspect || 1);
+        const bullOff = document.getElementById('match-bull-off');
+        if (bullOff && !bullOff.hidden && bullOff.contains(stage)) {
+            return { position: new THREE.Vector3(0, 0, 5.65 / narrow), look: new THREE.Vector3(0, 0, .08) };
+        }
         if (!target) {
-            // Regular play needs the scoring fields and numbers to fill the
-            // board window. The wider TV establishing shot includes the surround.
+            // Keep the TV board readable while leaving room for its surround;
+            // regular play uses the closer framing chosen for the match panel.
             const television = matchScreen.classList.contains('match-tv-mode');
             const boardScale = typeof getMatchBoardSizeScale === 'function' ? getMatchBoardSizeScale() : 1;
             return cameraView === 'front'
                 ? { position: new THREE.Vector3(.12 / narrow / boardScale, .08 / narrow / boardScale,
-                    (television ? 8.55 : 5.85) / narrow / boardScale), look: new THREE.Vector3(0, 0, .08) }
-                : { position: new THREE.Vector3((television ? -3.65 : -2.65) / narrow / boardScale,
-                    (television ? .92 : .75) / narrow / boardScale,
-                    (television ? 7.55 : 5.25) / narrow / boardScale), look: new THREE.Vector3(0, 0, .08) };
+                    (television ? 7.75 : 5.85) / narrow / boardScale), look: new THREE.Vector3(0, 0, .08) }
+                : { position: new THREE.Vector3((television ? -3.32 : -2.65) / narrow / boardScale,
+                    (television ? .84 : .75) / narrow / boardScale,
+                    (television ? 6.87 : 5.25) / narrow / boardScale), look: new THREE.Vector3(0, 0, .08) };
         }
         const look = focusPoint(target);
         return cameraView === 'front'
@@ -571,7 +577,9 @@
             if (!restorePending) enqueue(dart);
         }
         seenDarts = currentDarts.slice(); restorePending = false;
-        refreshUI(); requestRender(); return true;
+        // Scores are refreshed at impact; rebuilding the full scoreboard here
+        // would do the same DOM work once more before the dart has landed.
+        requestRender(); return true;
     }
 
     function bounceOut(result) {
@@ -626,7 +634,8 @@
         const dartStyle = typeof window.getMatchDartLoadout === 'function' ? window.getMatchDartLoadout(side) : null;
         const dart = createDart({ x: Number(point.x), y: Number(point.y), color, dartSide: side,
             ...(dartStyle ? { dartStyle } : {}), ...(data.dartPose ? { dartPose: data.dartPose } : {}),
-            ...(data.collision ? { collision: data.collision } : {}) });
+            ...(data.collision ? { collision: data.collision } : {}),
+            ...(data.robinHood ? { robinHood: true } : {}) });
         enqueue(dart, Boolean(data.bounced), Math.max(1, Number(slowMotion) || 1), true);
         return true;
     }
@@ -662,6 +671,7 @@
 
     window.matchBoard3D = {
         sync, clear, bounceOut, setView,
+        refreshLayout() { resize(); updateCamera(); },
         focusTarget(sector, mult = 1) { return active() && animateCamera({ sector, mult }); },
         clearFocus() { return active() && animateCamera(null, 620); },
         capture, replayLastDart, replayThrow, stopReplay, setReplayShot, endReplayCamera,

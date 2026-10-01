@@ -24,7 +24,28 @@
 .dart-part-tabs button[aria-pressed=true] { background: #234a65; border-color: #5c9ac45c; color: #edf8ff; }
 .dart-customizer-categories { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; align-items: start; }
 .dart-customizer-category { min-width: 0; }
+.dart-barrel-controls { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; padding: 14px; border: 1px solid #67819c55; border-radius: 9px; background: #102a3e; }
+.dart-dimension { display: grid; gap: 7px; color: #dcebf4; font-size: 12px; font-weight: 700; }
+.dart-dimension-input { display: flex; align-items: center; gap: 10px; }
+.dart-dimension-input input { min-width: 0; width: 100%; accent-color: #38bd81; }
+.dart-dimension-input output { flex: none; min-width: 45px; color: #d7f5e5; text-align: right; font-variant-numeric: tabular-nums; }
+.dart-grip-zones { grid-column: 1 / -1; border-top: 1px solid #ffffff20; padding-top: 12px; }
+.dart-grip-zones h5 { margin: 0 0 5px; color: #e4f2fd; font-size: 13px; }
+.dart-grip-zones p { margin: 0 0 10px; color: #a9bfd0; font-size: 11px; line-height: 1.5; }
+.dart-grip-zone-fields { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+.dart-grip-zone-fields label { display: grid; gap: 5px; min-width: 0; color: #c7d9e7; font-size: 11px; font-weight: 700; }
+.dart-grip-zone-fields select { min-width: 0; width: 100%; min-height: 35px; padding: 5px 7px; color: #f0f8fc; background: #1b3f58; border: 1px solid #6896b560; border-radius: 6px; font: inherit; }
 .dart-integrated-hint { grid-column: 1 / -1; margin: 0; padding: 10px 12px; border-left: 2px solid #71bbd1; background: #173647; color: #c4dfeb; font-size: 12px; line-height: 1.6; }
+.dart-artwork { grid-column: 1 / -1; padding: 12px; border: 1px solid #67819c55; border-radius: 8px; background: #102a3e; }
+.dart-artwork h5 { margin: 0 0 5px; color: #e4f2fd; font-size: 13px; }
+.dart-artwork p { margin: 0 0 10px; color: #a9bfd0; font-size: 11px; line-height: 1.5; }
+.dart-artwork-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 9px; }
+.dart-artwork-thumb { width: 42px; height: 42px; object-fit: cover; border: 1px solid #ffffff66; border-radius: 5px; }
+.dart-artwork-name { max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #dcebf4; font-size: 11px; }
+.dart-artwork-upload, .dart-artwork-actions button { display: inline-flex; align-items: center; min-height: 34px; padding: 7px 10px; border: 1px solid #5998be80; border-radius: 6px; background: #25597a; color: #f2f9ff; font: inherit; font-size: 11px; font-weight: 700; cursor: pointer; }
+.dart-artwork-actions button { background: #344351; }
+.dart-artwork-upload:focus-within { outline: 2px solid #a9dcff; outline-offset: 3px; }
+.dart-artwork-upload input { position: absolute; width: 1px; height: 1px; opacity: 0; }
 .dart-print-sample { border-radius: 4px; border: 1px solid #ffffff33; object-fit: cover; }
 .dart-customizer-category h5 { margin: 0 0 8px; color: #bfccd7; font-size: 12px; font-weight: 700; }
 .dart-customizer-options { display: grid; gap: 5px; }
@@ -49,6 +70,8 @@
 }
 @media (max-width: 600px) {
     .dart-customizer-categories { grid-template-columns: 1fr; }
+    .dart-barrel-controls { grid-template-columns: 1fr; }
+    .dart-grip-zone-fields { grid-template-columns: 1fr; }
     .dart-customizer-preview { padding: 12px; }
     .dart-kit-preview { height: 200px; }
     .dart-customizer-workbench { gap: 14px; }

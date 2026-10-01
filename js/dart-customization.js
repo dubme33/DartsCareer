@@ -9,14 +9,20 @@
             confirm: 'Kupić „{item}” za £{price}?', purchased: 'Kupiono i założono: {item}.',
             shaftColor: 'Kolor shafta', flightColor: 'Kolor piórek', barrelColor: 'Kolor barrela',
             tipColor: 'Kolor grota', barrelShape: 'Kształt barrela', flightShape: 'Kształt piórek',
-            barrelPattern: 'Rodzaj gripu', barrelAccentColor: 'Drugi kolor barrela', barrelAccentStyle: 'Rozmieszczenie koloru',
+            barrelPattern: 'Grip na całym barrelu', barrelAccentColor: 'Drugi kolor barrela', barrelAccentStyle: 'Rozmieszczenie koloru',
             flightAccentColor: 'Drugi kolor piórek', flightPattern: 'Nadruk piórek', tipLength: 'Długość grota',
             tipStyle: 'Wykończenie grota', shaftLength: 'Długość shafta', shaftStyle: 'Materiał shafta',
             flightSystem: 'System shafta i piórka', integratedColor: 'Kolor zintegrowanego systemu',
             integratedHint: 'Shaft i piórko tworzą jedną część we wspólnym kolorze. Kształt i nadruk wybierzesz w zakładce Piórka.',
             barrel: 'Barrel', flights: 'Piórka', shaft: 'Shaft', point: 'Grot', tryOn: 'Przymierz',
             trying: 'Przymierzasz: {item}', reset: 'Wróć do zestawu', rotate: 'Przeciągnij, aby obrócić · strzałki na klawiaturze',
-            resetView: 'Reset widoku', fallback: 'Podgląd 2D', measurements: 'Grot {tip} mm · barrel 50 mm · shaft {shaft} mm'
+            resetView: 'Reset widoku', fallback: 'Podgląd 2D', measurements: 'Grot {tip} mm · barrel {barrel} mm · shaft {shaft} mm · {weight} g',
+            weightLabel: 'Waga lotki', lengthLabel: 'Długość barrela', gripZonesTitle: 'Grip w poszczególnych strefach',
+            gripZonesHint: 'Na liście są wszystkie gripy. Niekupione mają podaną cenę i można je kupić przy wyborze. Przód jest przy grocie, tył przy shafcie.',
+            gripFront: 'Przód', gripMiddle: 'Środek', gripRear: 'Tył',
+            artworkTitle: 'Własna grafika piórka', artworkHint: 'PNG, JPG lub WebP (do 5 MB). Grafika zastępuje nadruk na piórkach i działa także z systemami zintegrowanymi.',
+            artworkAdd: 'Wybierz grafikę', artworkChange: 'Zmień grafikę', artworkRemove: 'Usuń grafikę',
+            artworkInvalid: 'Nie udało się wczytać obrazu. Wybierz plik PNG, JPG lub WebP do 5 MB.'
         },
         en: {
             title: 'Dart customisation', subtitle: 'Build your own set. Its appearance does not change accuracy or attributes.',
@@ -24,14 +30,20 @@
             noFunds: 'You do not have enough money.', confirm: 'Buy “{item}” for £{price}?',
             purchased: 'Purchased and equipped: {item}.', shaftColor: 'Shaft colour', flightColor: 'Flight colour',
             barrelColor: 'Barrel colour', tipColor: 'Point colour', barrelShape: 'Barrel shape',
-            flightShape: 'Flight shape', barrelPattern: 'Grip type', barrelAccentColor: 'Barrel accent colour', barrelAccentStyle: 'Colour placement',
+            flightShape: 'Flight shape', barrelPattern: 'Grip on the whole barrel', barrelAccentColor: 'Barrel accent colour', barrelAccentStyle: 'Colour placement',
             flightAccentColor: 'Flight accent colour', flightPattern: 'Flight print', tipLength: 'Point length',
             tipStyle: 'Point finish', shaftLength: 'Shaft length', shaftStyle: 'Shaft material',
             flightSystem: 'Shaft and flight system', integratedColor: 'Integrated system colour',
             integratedHint: 'Shaft and flight form one piece in a shared colour. Choose the shape and print in the Flights tab.',
             barrel: 'Barrel', flights: 'Flights', shaft: 'Shaft', point: 'Point', tryOn: 'Try on',
             trying: 'Trying on: {item}', reset: 'Back to equipped set', rotate: 'Drag to rotate · keyboard arrows',
-            resetView: 'Reset view', fallback: '2D preview', measurements: 'Point {tip} mm · barrel 50 mm · shaft {shaft} mm'
+            resetView: 'Reset view', fallback: '2D preview', measurements: 'Point {tip} mm · barrel {barrel} mm · shaft {shaft} mm · {weight} g',
+            weightLabel: 'Dart weight', lengthLabel: 'Barrel length', gripZonesTitle: 'Grip by barrel section',
+            gripZonesHint: 'All grips are listed. Unowned grips show their price and can be bought when selected. Front is near the point; rear is near the shaft.',
+            gripFront: 'Front', gripMiddle: 'Middle', gripRear: 'Rear',
+            artworkTitle: 'Custom flight artwork', artworkHint: 'PNG, JPG or WebP (up to 5 MB). The image replaces the flight print and works with integrated systems too.',
+            artworkAdd: 'Choose an image', artworkChange: 'Change image', artworkRemove: 'Remove image',
+            artworkInvalid: 'Could not load the image. Choose a PNG, JPG or WebP file up to 5 MB.'
         },
         de: {
             title: 'Dart-Anpassung', subtitle: 'Stelle dein eigenes Set zusammen. Das Aussehen ändert weder Präzision noch Werte.',
@@ -39,14 +51,20 @@
             noFunds: 'Du hast nicht genug Geld.', confirm: '„{item}“ für £{price} kaufen?',
             purchased: 'Gekauft und ausgerüstet: {item}.', shaftColor: 'Schaftfarbe', flightColor: 'Flight-Farbe',
             barrelColor: 'Barrel-Farbe', tipColor: 'Spitzenfarbe', barrelShape: 'Barrel-Form',
-            flightShape: 'Flight-Form', barrelPattern: 'Grip-Typ', barrelAccentColor: 'Zweite Barrel-Farbe', barrelAccentStyle: 'Farbverteilung',
+            flightShape: 'Flight-Form', barrelPattern: 'Grip auf dem ganzen Barrel', barrelAccentColor: 'Zweite Barrel-Farbe', barrelAccentStyle: 'Farbverteilung',
             flightAccentColor: 'Zweite Flight-Farbe', flightPattern: 'Flight-Druck', tipLength: 'Spitzenlänge',
             tipStyle: 'Spitzenoberfläche', shaftLength: 'Schaftlänge', shaftStyle: 'Schaftmaterial',
             flightSystem: 'Schaft- und Flight-System', integratedColor: 'Farbe des integrierten Systems',
             integratedHint: 'Schaft und Flight bilden ein Teil in derselben Farbe. Form und Druck findest du unter Flights.',
             barrel: 'Barrel', flights: 'Flights', shaft: 'Schaft', point: 'Spitze', tryOn: 'Anprobieren',
             trying: 'Vorschau: {item}', reset: 'Zum aktuellen Set', rotate: 'Ziehen zum Drehen · Pfeiltasten',
-            resetView: 'Ansicht zurücksetzen', fallback: '2D-Vorschau', measurements: 'Spitze {tip} mm · Barrel 50 mm · Schaft {shaft} mm'
+            resetView: 'Ansicht zurücksetzen', fallback: '2D-Vorschau', measurements: 'Spitze {tip} mm · Barrel {barrel} mm · Schaft {shaft} mm · {weight} g',
+            weightLabel: 'Dartgewicht', lengthLabel: 'Barrel-Länge', gripZonesTitle: 'Grip nach Barrel-Bereich',
+            gripZonesHint: 'Alle Grips stehen zur Wahl. Noch nicht gekaufte Grips zeigen ihren Preis und können direkt gekauft werden. Vorn liegt an der Spitze, hinten am Schaft.',
+            gripFront: 'Vorn', gripMiddle: 'Mitte', gripRear: 'Hinten',
+            artworkTitle: 'Eigenes Flight-Motiv', artworkHint: 'PNG, JPG oder WebP (bis 5 MB). Das Bild ersetzt den Flight-Druck und funktioniert auch mit integrierten Systemen.',
+            artworkAdd: 'Bild auswählen', artworkChange: 'Bild ändern', artworkRemove: 'Bild entfernen',
+            artworkInvalid: 'Bild konnte nicht geladen werden. Wähle eine PNG-, JPG- oder WebP-Datei bis 5 MB.'
         },
         nl: {
             title: 'Darts personaliseren', subtitle: 'Stel je eigen set samen. Het uiterlijk verandert de nauwkeurigheid of eigenschappen niet.',
@@ -54,14 +72,20 @@
             noFunds: 'Je hebt niet genoeg geld.', confirm: '„{item}” kopen voor £{price}?',
             purchased: 'Gekocht en geselecteerd: {item}.', shaftColor: 'Shaftkleur', flightColor: 'Flightkleur',
             barrelColor: 'Barrelkleur', tipColor: 'Puntkleur', barrelShape: 'Barrelvorm',
-            flightShape: 'Flightvorm', barrelPattern: 'Griptype', barrelAccentColor: 'Tweede barrelkleur', barrelAccentStyle: 'Kleurverdeling',
+            flightShape: 'Flightvorm', barrelPattern: 'Grip op de hele barrel', barrelAccentColor: 'Tweede barrelkleur', barrelAccentStyle: 'Kleurverdeling',
             flightAccentColor: 'Tweede flightkleur', flightPattern: 'Flightopdruk', tipLength: 'Puntlengte',
             tipStyle: 'Puntafwerking', shaftLength: 'Shaftlengte', shaftStyle: 'Shaftmateriaal',
             flightSystem: 'Shaft- en flightsysteem', integratedColor: 'Kleur geïntegreerd systeem',
             integratedHint: 'Shaft en flight vormen één onderdeel in dezelfde kleur. Kies de vorm en opdruk onder Flights.',
             barrel: 'Barrel', flights: 'Flights', shaft: 'Shaft', point: 'Punt', tryOn: 'Voorbeeld',
             trying: 'Voorbeeld: {item}', reset: 'Terug naar huidige set', rotate: 'Sleep om te draaien · pijltjestoetsen',
-            resetView: 'Weergave herstellen', fallback: '2D-voorbeeld', measurements: 'Punt {tip} mm · barrel 50 mm · shaft {shaft} mm'
+            resetView: 'Weergave herstellen', fallback: '2D-voorbeeld', measurements: 'Punt {tip} mm · barrel {barrel} mm · shaft {shaft} mm · {weight} g',
+            weightLabel: 'Dartgewicht', lengthLabel: 'Barrellengte', gripZonesTitle: 'Grip per barrelgedeelte',
+            gripZonesHint: 'Alle grips staan in de lijst. Bij niet-gekochte grips staat de prijs; je kunt ze direct kopen. Voor zit bij de punt, achter bij de shaft.',
+            gripFront: 'Voor', gripMiddle: 'Midden', gripRear: 'Achter',
+            artworkTitle: 'Eigen flightafbeelding', artworkHint: 'PNG, JPG of WebP (maximaal 5 MB). De afbeelding vervangt de opdruk en werkt ook met geïntegreerde systemen.',
+            artworkAdd: 'Afbeelding kiezen', artworkChange: 'Afbeelding wijzigen', artworkRemove: 'Afbeelding verwijderen',
+            artworkInvalid: 'Kan de afbeelding niet laden. Kies een PNG-, JPG- of WebP-bestand van maximaal 5 MB.'
         }
     };
 
@@ -116,17 +140,26 @@
             item('kite', 340, null, ['Kite', 'Kite', 'Kite', 'Kite']),
             item('pear', 420, null, ['Gruszka', 'Pear', 'Birne', 'Peer']),
             item('slim', 360, null, ['Slim — wąskie', 'Slim', 'Slim', 'Slim']),
-            item('no6', 380, null, ['No. 6 — kompaktowe', 'No. 6 — compact', 'No. 6 — kompakt', 'No. 6 — compact'])
+            item('no6', 380, null, ['No. 6 — kompaktowe', 'No. 6 — compact', 'No. 6 — kompakt', 'No. 6 — compact']),
+            item('shield', 420, null, ['Tarcza', 'Shield', 'Schild', 'Schild']),
+            item('delta', 380, null, ['Delta', 'Delta', 'Delta', 'Delta']),
+            item('fan', 460, null, ['Wachlarz', 'Fan', 'Fächer', 'Waaier'])
         ]),
         barrelPattern: Object.freeze([
             item('rings', 0, null, ['Klasyczne ringi', 'Classic rings', 'Klassische Ringe', 'Klassieke ringen']),
             item('micro', 460, null, ['Micro grip', 'Micro grip', 'Micro-Grip', 'Microgrip']),
             item('shark', 580, null, ['Shark grip', 'Shark grip', 'Shark-Grip', 'Sharkgrip']),
-            item('smooth', 260, null, ['Gładki', 'Smooth', 'Glatt', 'Glad']),
+            item('smooth', 0, null, ['Gładki', 'Smooth', 'Glatt', 'Glad']),
             item('knurled', 640, null, ['Radełkowany — diament', 'Diamond knurl', 'Diamanträndelung', 'Diamantkarteling']),
             item('pixel', 740, null, ['Pixel — frezowana siatka', 'Pixel cuts', 'Pixel-Grip', 'Pixelgrip']),
             item('axial', 680, null, ['Nacięcia wzdłużne', 'Axial cuts', 'Längsrillen', 'Lengtegroeven']),
-            item('hybrid', 860, null, ['Hybrydowy — ringi i diament', 'Hybrid — rings & knurl', 'Hybrid — Ringe & Rändelung', 'Hybride — ringen & karteling'])
+            item('hybrid', 860, null, ['Hybrydowy — ringi i diament', 'Hybrid — rings & knurl', 'Hybrid — Ringe & Rändelung', 'Hybride — ringen & karteling']),
+            item('double-rings', 480, null, ['Podwójne ringi', 'Double rings', 'Doppelringe', 'Dubbele ringen']),
+            item('razor', 540, null, ['Razor — ostre nacięcia', 'Razor cuts', 'Razor-Schnitte', 'Razor-groeven']),
+            item('wave', 500, null, ['Falowany', 'Wave grip', 'Wellengriff', 'Golfgrip']),
+            item('cross-cut', 640, null, ['Krzyżowe nacięcia', 'Cross-cut', 'Kreuzschnitt', 'Kruisgroeven']),
+            item('spiral', 700, null, ['Spiralny', 'Spiral grip', 'Spiralgriff', 'Spiraalgrip']),
+            item('scalloped-rings', 620, null, ['Zaokrąglone ringi', 'Scalloped rings', 'Gerundete Ringe', 'Afgeronde ringen'])
         ]),
         barrelAccentColor: Object.freeze([
             item('graphite', 0, '#263640', ['Grafitowy', 'Graphite', 'Graphit', 'Grafiet']),
@@ -161,7 +194,15 @@
             item('sunburst', 320, null, ['Promienie', 'Sunburst', 'Strahlen', 'Zonnestralen']),
             item('circuit', 360, null, ['Obwody', 'Circuit', 'Leiterbahnen', 'Printplaat']),
             item('contour', 300, null, ['Kontury', 'Contour', 'Konturen', 'Contouren']),
-            item('crown', 380, null, ['Korona', 'Crown', 'Krone', 'Kroon'])
+            item('crown', 380, null, ['Korona', 'Crown', 'Krone', 'Kroon']),
+            item('target', 300, null, ['Tarcza', 'Target', 'Zielscheibe', 'Doelwit']),
+            item('dots', 220, null, ['Kropki', 'Dots', 'Punkte', 'Stippen']),
+            item('flames', 340, null, ['Płomienie', 'Flames', 'Flammen', 'Vlammen']),
+            item('waves', 280, null, ['Fale', 'Waves', 'Wellen', 'Golven']),
+            item('tartan', 360, null, ['Kratka tartan', 'Tartan', 'Tartan', 'Schotse ruit']),
+            item('arrows', 300, null, ['Strzałki', 'Arrows', 'Pfeile', 'Pijlen']),
+            item('stars', 320, null, ['Gwiazdy', 'Stars', 'Sterne', 'Sterren']),
+            item('camo', 380, null, ['Kamuflaż', 'Camo', 'Tarnmuster', 'Camouflage'])
         ]),
         tipLength: Object.freeze([
             item('26', 180, null, ['26 mm', '26 mm', '26 mm', '26 mm']),
@@ -188,7 +229,9 @@
         flightSystem: Object.freeze([
             item('separate', 0, null, ['Osobny shaft i piórko', 'Separate shaft and flight', 'Schaft und Flight getrennt', 'Losse shaft en flight']),
             item('integrated-solid', 650, null, ['Zintegrowany — nieprzezroczysty', 'Integrated — opaque', 'Integriert — undurchsichtig', 'Geïntegreerd — ondoorzichtig']),
-            item('integrated-clear', 750, null, ['Zintegrowany — przezroczysty', 'Integrated — transparent', 'Integriert — transparent', 'Geïntegreerd — transparant'])
+            item('integrated-clear', 750, null, ['Zintegrowany — przezroczysty', 'Integrated — transparent', 'Integriert — transparent', 'Geïntegreerd — transparant']),
+            item('integrated-ribbed', 850, null, ['Zintegrowany — żebrowany', 'Integrated — ribbed', 'Integriert — gerippt', 'Geïntegreerd — geribbeld']),
+            item('integrated-frosted', 800, null, ['Zintegrowany — matowy', 'Integrated — frosted', 'Integriert — matt', 'Geïntegreerd — mat'])
         ]),
         integratedColor: Object.freeze([
             item('white', 0, '#f4f6f7', ['Biały / bezbarwny', 'White / clear', 'Weiß / farblos', 'Wit / kleurloos']),
@@ -229,7 +272,10 @@
             ? candidate.dartCustomization : {};
         const selected = previous.selected && typeof previous.selected === 'object' ? previous.selected : {};
         const owned = previous.owned && typeof previous.owned === 'object' ? previous.owned : {};
-        const normalized = { version: 3, selected: {}, owned: {} };
+        const artwork = typeof root.dartModel?.validFlightArtwork === 'function' && root.dartModel.validFlightArtwork(previous.flightArtwork)
+            ? previous.flightArtwork : null;
+        const normalized = { version: 5, selected: {}, owned: {}, flightArtwork: artwork,
+            flightArtworkName: artwork ? String(previous.flightArtworkName || '').slice(0, 60) : '' };
         categoryKeys.forEach(category => {
             const validIds = new Set(catalogue[category].map(entry => entry.id));
             const migrate = id => category === 'tipLength' ? ({ '32': '30', '38': '40', '45': '50' }[id] || id) : id;
@@ -240,6 +286,12 @@
                 ? migratedChoice : defaults[category];
             normalized.selected[category] = choice;
         });
+        const savedZones = selected.gripZones && typeof selected.gripZones === 'object' ? selected.gripZones : {};
+        normalized.selected.gripZones = Object.fromEntries(['front', 'middle', 'rear'].map(zone => [zone,
+            normalized.owned.barrelPattern.includes(savedZones[zone]) ? savedZones[zone] : normalized.selected.barrelPattern]));
+        const weight = Number(selected.weightGrams), length = Number(selected.barrelLength);
+        normalized.selected.weightGrams = Number.isInteger(weight) && weight >= 12 && weight <= 40 ? weight : 23;
+        normalized.selected.barrelLength = Number.isInteger(length) && length >= 35 && length <= 55 ? length : 50;
         candidate.dartCustomization = normalized;
         return normalized;
     }
@@ -288,10 +340,14 @@
             tipColorId: values.tipColor.id, tipColor: values.tipColor.color,
             barrelShape: values.barrelShape.id, flightShape: values.flightShape.id,
             barrelPattern: values.barrelPattern.id, patternAccent: values.flightAccentColor.color,
+            gripZones: { ...selections.gripZones },
+            weightGrams: Number(selections.weightGrams) || 23,
+            barrelLength: Number(selections.barrelLength) || 50,
             barrelAccentColorId: values.barrelAccentColor.id, barrelAccentColor: values.barrelAccentColor.color,
             barrelAccentStyle: values.barrelAccentStyle.id,
             flightAccentColorId: values.flightAccentColor.id, flightAccentColor: values.flightAccentColor.color,
             flightPattern: values.flightPattern.id,
+            flightArtwork: source === 'career' ? owner?.dartCustomization?.flightArtwork || null : null,
             tipLength: Number(values.tipLength.id), tipStyle: values.tipStyle.id,
             shaftLength: Number(values.shaftLength.id), shaftStyle: values.shaftStyle.id,
             ownerKey: String(owner?.id || owner?.sourceName || owner?.name || '')
@@ -322,6 +378,62 @@
         return getDartLoadoutForPlayer(getMatchParticipant(side));
     }
 
+    async function uploadDartFlightArtwork(input) {
+        const file = input?.files?.[0] || input;
+        if (input?.files) input.value = '';
+        if (typeof player === 'undefined' || !file) return false;
+        if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type) || file.size > 5 * 1024 * 1024) {
+            if (typeof alert === 'function') alert(tr('artworkInvalid'));
+            return false;
+        }
+        let url;
+        try {
+            url = URL.createObjectURL(file);
+            const image = await new Promise((resolve, reject) => {
+                const loaded = new Image();
+                loaded.onload = () => resolve(loaded);
+                loaded.onerror = reject;
+                loaded.src = url;
+            });
+            if (!image.naturalWidth || !image.naturalHeight || image.naturalWidth > 8192 || image.naturalHeight > 8192)
+                throw new Error('Invalid artwork dimensions');
+            const canvas = document.createElement('canvas');
+            canvas.width = canvas.height = 256;
+            const ctx = canvas.getContext('2d');
+            const side = Math.min(image.naturalWidth, image.naturalHeight);
+            ctx.drawImage(image, (image.naturalWidth - side) / 2, (image.naturalHeight - side) / 2, side, side, 0, 0, 256, 256);
+            const artwork = canvas.toDataURL('image/png');
+            if (!root.dartModel?.validFlightArtwork(artwork)) throw new Error('Artwork exceeds save limit');
+            root.dartModel.registerFlightArtwork(artwork, canvas);
+            const state = normalizeDartCustomization(player);
+            state.flightArtwork = artwork;
+            state.flightArtworkName = String(file.name || '').slice(0, 60);
+            if (typeof saveGame === 'function') saveGame(true);
+            if (typeof showShopScreen === 'function') showShopScreen();
+            else refreshPreview();
+            notifyChange('flightArtwork');
+            return true;
+        } catch (_error) {
+            if (typeof alert === 'function') alert(tr('artworkInvalid'));
+            return false;
+        } finally {
+            if (url) URL.revokeObjectURL(url);
+        }
+    }
+
+    function removeDartFlightArtwork() {
+        if (typeof player === 'undefined') return false;
+        const state = normalizeDartCustomization(player);
+        if (!state.flightArtwork) return false;
+        state.flightArtwork = null;
+        state.flightArtworkName = '';
+        if (typeof saveGame === 'function') saveGame(true);
+        if (typeof showShopScreen === 'function') showShopScreen();
+        else refreshPreview();
+        notifyChange('flightArtwork');
+        return true;
+    }
+
     function notifyChange(category) {
         if (previewSelection) {
             delete previewSelection[category];
@@ -338,6 +450,7 @@
         const state = normalizeDartCustomization(player);
         if (!state.owned[category].includes(id) || !findItem(category, id)) return false;
         state.selected[category] = id;
+        if (category === 'barrelPattern') state.selected.gripZones = { front: id, middle: id, rear: id };
         notifyChange(category);
         if (typeof showShopScreen === 'function') showShopScreen();
         if (typeof saveGame === 'function') saveGame(true);
@@ -360,6 +473,7 @@
         player.budget = budget - product.price;
         state.owned[category].push(id);
         state.selected[category] = id;
+        if (category === 'barrelPattern') state.selected.gripZones = { front: id, middle: id, rear: id };
         if (typeof updateHub === 'function') updateHub();
         notifyChange(category);
         if (typeof showShopScreen === 'function') showShopScreen();
@@ -367,14 +481,70 @@
         return true;
     }
 
+    function setDartDimension(kind, value) {
+        if (typeof player === 'undefined' || !['weightGrams', 'barrelLength'].includes(kind)) return false;
+        const number = Number(value), minimum = kind === 'weightGrams' ? 12 : 35, maximum = kind === 'weightGrams' ? 40 : 55;
+        if (!Number.isInteger(number) || number < minimum || number > maximum) return false;
+        const state = normalizeDartCustomization(player);
+        if (state.selected[kind] === number) return true;
+        state.selected[kind] = number;
+        previewSelection = null;
+        notifyChange(kind);
+        refreshPreview();
+        if (typeof saveGame === 'function') saveGame(true);
+        return true;
+    }
+
+    function setDartGripZone(zone, id, control = null) {
+        if (typeof player === 'undefined' || !['front', 'middle', 'rear'].includes(zone)) return false;
+        const state = normalizeDartCustomization(player);
+        const product = catalogue.barrelPattern.find(entry => entry.id === id);
+        const restoreSelection = () => { if (control) control.value = state.selected.gripZones[zone]; };
+        if (!product) { restoreSelection(); return false; }
+        if (state.selected.gripZones[zone] === id) return true;
+        const needsPurchase = !state.owned.barrelPattern.includes(id);
+        if (needsPurchase) {
+            const budget = Math.max(0, Number(player.budget) || 0);
+            if (budget < product.price) {
+                if (typeof alert === 'function') alert(tr('noFunds'));
+                restoreSelection();
+                return false;
+            }
+            const question = tr('confirm').replace('{item}', nameOf(product)).replace('{price}', product.price.toLocaleString('en-GB'));
+            if (typeof confirm === 'function' && !confirm(question)) {
+                restoreSelection();
+                return false;
+            }
+            player.budget = budget - product.price;
+            state.owned.barrelPattern.push(id);
+            if (typeof updateHub === 'function') updateHub();
+        }
+        state.selected.gripZones[zone] = id;
+        previewSelection = null;
+        notifyChange('gripZones');
+        refreshPreview();
+        if (needsPurchase && typeof showShopScreen === 'function') showShopScreen();
+        if (typeof document !== 'undefined') document.querySelectorAll('[data-category="barrelPattern"]').forEach(option => {
+            const selected = ['front', 'middle', 'rear'].every(part => state.selected.gripZones[part] === option.dataset.item);
+            option.classList.toggle('selected', selected);
+            const button = option.querySelector('button:not(.dart-try-button)');
+            if (button) {
+                button.disabled = selected;
+                button.textContent = selected ? tr('selected') : tr('owned');
+            }
+        });
+        if (typeof saveGame === 'function') saveGame(true);
+        return true;
+    }
+
 
     function previewMarkup(loadout) {
         const a = root.dartModel.normalize(loadout), d = root.dartModel.dimensions(a);
-        const integrated = a.flightSystem !== 'separate', clear = a.flightSystem === 'integrated-clear';
-        const r = root.dartModel.radiusAt, cut = root.dartModel.cutAt;
+        const integrated = a.flightSystem !== 'separate', clear = a.flightSystem === 'integrated-clear' || a.flightSystem === 'integrated-frosted';
+        const r = root.dartModel.radiusAt, cut = root.dartModel.gripCutAt;
         const barrel = [];
-        for (let z = 0; z <= 50; z += .2) barrel.push([a.tipLength + z, -(r(a.barrelShape, z) - cut(a.barrelPattern, z))]);
-        for (let z = 50; z >= 0; z -= .2) barrel.push([a.tipLength + z, r(a.barrelShape, z) - cut(a.barrelPattern, z)]);
+        for (let z = 0; z <= a.barrelLength + .001; z += .2) barrel.push([a.tipLength + z, -(r(a.barrelShape, z, a.barrelLength) - cut(a, z))]);
+        for (let z = a.barrelLength; z >= -.001; z -= .2) barrel.push([a.tipLength + z, r(a.barrelShape, z, a.barrelLength) - cut(a, z)]);
         const outline = barrel.map(p => p.join(',')).join(' ');
         const flight = root.dartModel.outlines[a.flightShape];
         const wing = flight.map(([x,z]) => `${d.flightStart + z},${-x}`).concat([...flight].reverse().map(([x,z]) => `${d.flightStart + z},${x}`)).join(' ');
@@ -394,12 +564,12 @@
             <path d="M0 0 Q5 -1 11 -1.05 H${a.tipLength} V1.05 H11 Q5 1 0 0" fill="${a.tipColor}"/>
             <polygon points="${outline}" fill="${a.barrelColor}"/>
             <g clip-path="url(#kit-barrel)" fill="${a.barrelAccentColor}">
-                ${a.barrelAccentStyle === 'split' ? `<rect x="${a.tipLength}" y="-5" width="25" height="10"/>`
-                    : a.barrelAccentStyle === 'bands' ? [10,35].map(z => `<rect x="${a.tipLength + z}" y="-5" width="5" height="10"/>`).join('')
-                        : Array.from({length: 205}, (_,i) => i*.2+5).filter(z => cut(a.barrelPattern,z) > .16).map(z => `<rect x="${a.tipLength+z}" y="-5" width=".2" height="10"/>`).join('')}
+                ${a.barrelAccentStyle === 'split' ? `<rect x="${a.tipLength}" y="-5" width="${a.barrelLength / 2}" height="10"/>`
+                    : a.barrelAccentStyle === 'bands' ? [a.barrelLength * .2, a.barrelLength * .7].map(z => `<rect x="${a.tipLength + z}" y="-5" width="${a.barrelLength * .1}" height="10"/>`).join('')
+                        : Array.from({length: Math.ceil((a.barrelLength - 9) * 5)}, (_,i) => i*.2+5).filter(z => cut(a,z) > .16).map(z => `<rect x="${a.tipLength+z}" y="-5" width=".2" height="10"/>`).join('')}
             </g>
             <polygon points="${outline}" fill="url(#kit-metal)"/>
-            <path d="M${a.tipLength+50} -2.4 L${d.flightStart} -1.2 L${integrated ? d.totalLength : a.tipLength+50+a.shaftLength} -.6 V.6 L${d.flightStart} 1.2 L${a.tipLength+50} 2.4 Z" fill="${a.shaftColor}" opacity="${clear ? .68 : 1}"/>
+            <path d="M${a.tipLength+a.barrelLength} -2.4 L${d.flightStart} -1.2 L${integrated ? d.totalLength : a.tipLength+a.barrelLength+a.shaftLength} -.6 V.6 L${d.flightStart} 1.2 L${a.tipLength+a.barrelLength} 2.4 Z" fill="${a.shaftColor}" opacity="${clear ? .68 : 1}"/>
             <image href="${flightPrint}" x="${d.flightStart}" y="-17.5" width="42" height="35" preserveAspectRatio="none" clip-path="url(#kit-flight)"/>
             <polygon points="${wing}" fill="${a.flightColor}" transform="scale(1 .24)" stroke="${integrated ? a.flightColor : a.flightAccentColor}" stroke-width=".2" opacity="${clear ? .38 : 1}"/>
             ${clear ? `<polygon points="${wing}" fill="none" stroke="${a.flightColor}" stroke-width=".3" opacity=".7"/>` : ''}
@@ -413,6 +583,8 @@
         if (!host) return;
         const state = normalizeDartCustomization(player);
         const selections = { ...state.selected, ...(previewSelection || {}) };
+        if (previewSelection?.barrelPattern) selections.gripZones = { front: previewSelection.barrelPattern,
+            middle: previewSelection.barrelPattern, rear: previewSelection.barrelPattern };
         const loadout = buildLoadout(selections, 'career', player);
         const integrated = loadout.flightSystem !== 'separate';
         document.querySelectorAll('[data-dart-category]').forEach(section => {
@@ -425,7 +597,8 @@
         const tried = previewSelection ? Object.entries(previewSelection).map(([category,id]) => nameOf(findItem(category,id))).join(' · ') : '';
         document.getElementById('dart-preview-status').textContent = tried ? tr('trying').replace('{item}', tried) : tr('preview');
         document.getElementById('dart-preview-reset').hidden = !tried;
-        document.getElementById('dart-preview-measurements').textContent = tr('measurements').replace('{tip}', loadout.tipLength).replace('{shaft}', loadout.shaftLength)
+        document.getElementById('dart-preview-measurements').textContent = tr('measurements').replace('{tip}', loadout.tipLength)
+            .replace('{barrel}', loadout.barrelLength).replace('{shaft}', loadout.shaftLength).replace('{weight}', loadout.weightGrams)
             + (integrated ? ` · ${nameOf(findItem('flightSystem', loadout.flightSystem))}` : '');
         document.querySelectorAll('.dart-option').forEach(option => {
             const trying = previewSelection?.[option.dataset.category] === option.dataset.item;
@@ -489,11 +662,37 @@
                     <nav class="dart-part-tabs" aria-label="${escapeHtml(tr('title'))}">${Object.keys(parts).map(part => `<button type="button" data-dart-tab="${part}" aria-pressed="${activePart === part}" onclick="selectDartCustomizationPart('${part}')">${escapeHtml(tr(part))}</button>`).join('')}</nav>`;
         Object.entries(parts).forEach(([part, categories]) => {
             html += `<div class="dart-customizer-categories" data-dart-part="${part}" ${activePart === part ? '' : 'hidden'}>`;
+            if (part === 'barrel') html += `<section class="dart-barrel-controls">
+                <label class="dart-dimension">${escapeHtml(tr('weightLabel'))}<span class="dart-dimension-input">
+                    <input type="range" min="12" max="40" step="1" value="${state.selected.weightGrams}" aria-label="${escapeHtml(tr('weightLabel'))}"
+                        oninput="this.nextElementSibling.textContent=this.value+' g'" onchange="setDartDimension('weightGrams',this.value)"/>
+                    <output>${state.selected.weightGrams} g</output></span></label>
+                <label class="dart-dimension">${escapeHtml(tr('lengthLabel'))}<span class="dart-dimension-input">
+                    <input type="range" min="35" max="55" step="1" value="${state.selected.barrelLength}" aria-label="${escapeHtml(tr('lengthLabel'))}"
+                        oninput="this.nextElementSibling.textContent=this.value+' mm'" onchange="setDartDimension('barrelLength',this.value)"/>
+                    <output>${state.selected.barrelLength} mm</output></span></label>
+                <div class="dart-grip-zones"><h5>${escapeHtml(tr('gripZonesTitle'))}</h5>
+                    <p>${escapeHtml(tr('gripZonesHint'))}</p><div class="dart-grip-zone-fields">
+                    ${[['front', 'gripFront'], ['middle', 'gripMiddle'], ['rear', 'gripRear']].map(([zone, label]) => `<label>${escapeHtml(tr(label))}
+                        <select aria-label="${escapeHtml(tr(label))}" onchange="setDartGripZone('${zone}',this.value,this)">
+                        ${catalogue.barrelPattern.map(entry =>
+                            `<option value="${entry.id}" data-owned="${state.owned.barrelPattern.includes(entry.id)}" ${state.selected.gripZones[zone] === entry.id ? 'selected' : ''}>${escapeHtml(nameOf(entry))}${state.owned.barrelPattern.includes(entry.id) ? '' : ` · £${entry.price.toLocaleString('en-GB')}`}</option>`).join('')}
+                        </select></label>`).join('')}
+                    </div></div></section>`;
             if (part === 'shaft' || part === 'flights') html += `<p class="dart-integrated-hint" data-integrated-hint hidden>${escapeHtml(tr('integratedHint'))}</p>`;
+            if (part === 'flights') html += `<section class="dart-artwork"><h5>${escapeHtml(tr('artworkTitle'))}</h5>
+                <p>${escapeHtml(tr('artworkHint'))}</p><div class="dart-artwork-actions">
+                ${state.flightArtwork ? `<img src="${state.flightArtwork}" alt="" class="dart-artwork-thumb"/><span class="dart-artwork-name">${escapeHtml(state.flightArtworkName)}</span>` : ''}
+                <label class="dart-artwork-upload">${escapeHtml(tr(state.flightArtwork ? 'artworkChange' : 'artworkAdd'))}
+                    <input type="file" accept="image/png,image/jpeg,image/webp" onchange="uploadDartFlightArtwork(this)"/></label>
+                ${state.flightArtwork ? `<button type="button" onclick="removeDartFlightArtwork()">${escapeHtml(tr('artworkRemove'))}</button>` : ''}
+                </div></section>`;
             categories.forEach(category => {
                 html += `<section class="dart-customizer-category" data-dart-category="${category}"><h5>${escapeHtml(tr(category))}</h5><div class="dart-customizer-options">`;
                 catalogue[category].forEach(product => {
-                    const selected = state.selected[category] === product.id;
+                    const selected = category === 'barrelPattern'
+                        ? ['front', 'middle', 'rear'].every(zone => state.selected.gripZones[zone] === product.id)
+                        : state.selected[category] === product.id;
                     const owned = state.owned[category].includes(product.id);
                     const action = selected ? '' : owned
                         ? `onclick="equipDartCustomization('${category}','${product.id}')"`
@@ -526,4 +725,11 @@
     root.previewDartCustomization = previewDartCustomization;
     root.resetDartCustomizationPreview = resetDartCustomizationPreview;
     root.selectDartCustomizationPart = selectDartCustomizationPart;
+    root.setDartDimension = setDartDimension;
+    root.setDartGripZone = setDartGripZone;
+    root.uploadDartFlightArtwork = uploadDartFlightArtwork;
+    root.removeDartFlightArtwork = removeDartFlightArtwork;
+    if (typeof root.addEventListener === 'function') root.addEventListener('dart-flight-artwork-ready', () => {
+        if (typeof document !== 'undefined' && document.getElementById('dart-kit-preview')) refreshPreview();
+    });
 })(typeof window !== 'undefined' ? window : globalThis);

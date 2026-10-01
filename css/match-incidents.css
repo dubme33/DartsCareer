@@ -1,3 +1,6 @@
+.match-incident-settings-tile { cursor: default; }
+.match-incident-settings-tile select { width: 100%; padding: 10px; margin: 10px 0; background: #102c4b; color: #fff; border: 1px solid #527a9d; border-radius: 6px; }
+.match-incident-settings-tile small { display: block; color: #adc3d8; line-height: 1.5; }
 .match-incident[hidden] { display: none !important; }
 .match-incident {
     position: fixed;

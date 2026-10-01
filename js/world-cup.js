@@ -86,7 +86,8 @@ function getWorldCupQualifierTournamentDisplayName() {
 
 function getWorldCupCountryName(country) {
     const language = typeof currentLang === 'string' ? currentLang : 'pl';
-    return WORLD_CUP_COUNTRY_TRANSLATIONS[language]?.[country] || country;
+    return WORLD_CUP_COUNTRY_TRANSLATIONS[language]?.[country]
+        || (typeof t === 'function' ? t(country) : null) || country;
 }
 
 function getWorldCupQualifierLabel(event) {
@@ -214,6 +215,20 @@ function getWorldCupRankedPlayers() {
     });
 }
 
+function getWorldCupTeamOverrides() {
+    const overrides = typeof player !== 'undefined' ? player?.worldCupTeamOverrides : null;
+    return overrides && typeof overrides === 'object' && !Array.isArray(overrides) ? overrides : {};
+}
+
+function getWorldCupOverridePlayer(reference, country, eligiblePlayers) {
+    if (!reference || typeof reference !== 'object') return null;
+    const candidates = eligiblePlayers.filter(candidate => candidate.country === country);
+    return candidates.find(candidate => reference.id && candidate.id && String(candidate.id) === String(reference.id))
+        || candidates.find(candidate => getWorldCupPlayerIdentity(candidate) === reference.identity)
+        || candidates.find(candidate => candidate.name === reference.name)
+        || null;
+}
+
 function repairWorldCupTeamRosters() {
     if (!worldCupState || !Array.isArray(worldCupState.teams)) return false;
 
@@ -229,7 +244,7 @@ function repairWorldCupTeamRosters() {
 
         currentPlayers.forEach(candidate => {
             const key = getWorldCupPlayerIdentity(candidate);
-            if (!candidate || !key || playerKeys.has(key) || uniquePlayers.length >= 2
+            if (!candidate || candidate.country !== team.country || !key || playerKeys.has(key) || uniquePlayers.length >= 2
                 || (typeof isPlayerInjured === 'function' && isPlayerInjured(candidate))) {
                 changed = true;
                 teamChanged = true;
@@ -279,8 +294,19 @@ function createWorldCupQualifier(country, slot, countryIndex) {
 function getWorldCupAutomaticNationList() {
     const nations = [...WORLD_CUP_AUTOMATIC_NATIONS];
     const qualifierNations = new Set(WORLD_CUP_QUALIFIER_EVENTS.flatMap(event => event.nations));
+    const protectedCountries = new Set();
+    for (const [country, override] of Object.entries(getWorldCupTeamOverrides())) {
+        const replacementIndex = nations.indexOf(override?.replaces);
+        if (!country || !override?.replaces || qualifierNations.has(country) || nations.includes(country)
+            || replacementIndex < 0 || protectedCountries.has(override.replaces)) continue;
+        nations[replacementIndex] = country;
+        protectedCountries.add(override.replaces);
+        protectedCountries.add(country);
+    }
     if (player && player.country && !nations.includes(player.country) && !qualifierNations.has(player.country)) {
-        nations[nations.length - 1] = player.country;
+        const replacementIndex = nations.findLastIndex(country => !protectedCountries.has(country)
+            && !getWorldCupTeamOverrides()[country]);
+        if (replacementIndex >= 0) nations[replacementIndex] = player.country;
     }
     return [...new Set(nations)].slice(0, 33);
 }
@@ -297,18 +323,31 @@ function buildWorldCupTeams(nations = getWorldCupAutomaticNationList()) {
     return nations.map((country, countryIndex) => {
         const eligiblePlayers = [...(byCountry.get(country) || [])]
             .sort((first, second) => (oomRanks.get(first.id || `${first.name}|${first.country}`) || 999) - (oomRanks.get(second.id || `${second.name}|${second.country}`) || 999));
-        const players = eligiblePlayers.slice(0, 2);
+        const override = getWorldCupTeamOverrides()[country];
+        const players = [];
+        const used = new Set();
+        for (const reference of Array.isArray(override?.players) ? override.players.slice(0, 2) : []) {
+            const candidate = getWorldCupOverridePlayer(reference, country, eligiblePlayers);
+            const identity = getWorldCupPlayerIdentity(candidate);
+            if (candidate && !used.has(identity)) { players.push(candidate); used.add(identity); }
+        }
+        for (const candidate of eligiblePlayers) {
+            if (players.length >= 2) break;
+            const identity = getWorldCupPlayerIdentity(candidate);
+            if (!used.has(identity)) { players.push(candidate); used.add(identity); }
+        }
         while (players.length < 2) players.push(createWorldCupQualifier(country, players.length + 1, countryIndex));
 
-        const leader = eligiblePlayers[0];
+        const leaderRank = Math.min(...players.map(candidate =>
+            oomRanks.get(candidate.id || `${candidate.name}|${candidate.country}`) || 999));
         return {
             id: `wc-team-${country.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}`,
             country,
             players,
             // Do rozstawienia liczą się tylko zawodnicy z kartą PDC. Zawodnicy
             // dopisani jako reprezentacyjni kwalifikanci mają hasTourCard=false.
-            tourCardCount: eligiblePlayers.filter(candidate => candidate.hasTourCard !== false).length,
-            leaderRank: leader ? (oomRanks.get(leader.id || `${leader.name}|${leader.country}`) || 999) : 999,
+            tourCardCount: players.filter(candidate => !candidate.isWorldCupGuest && candidate.hasTourCard !== false).length,
+            leaderRank,
             containsPlayer: players.some(candidate => isCurrentPlayer(candidate))
         };
     });
@@ -1336,6 +1375,8 @@ function startWorldCupPendingMatch() {
     if (typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy()) return false;
     const match = getWorldCupPendingMatch();
     if (!match) return;
+    if (typeof maybeBeginPreTournamentPressConference === 'function'
+        && maybeBeginPreTournamentPressConference(activeTournament, null, () => startWorldCupPendingMatch())) return true;
     document.getElementById('bracket-modal').style.display = 'none';
     startWorldCupMatch(match);
 }
@@ -1423,6 +1464,10 @@ function startWorldCupMatch(match) {
         }
     };
     if (currentMatch.doublesThrower.p1 < 0) currentMatch.doublesThrower.p1 = 0;
+    if (typeof prepareMatchBullOff === 'function') {
+        prepareMatchBullOff(currentMatch, playerTeam.players[currentMatch.doublesThrower.p1], opponentTeam.players[0],
+            { p1: getWorldCupCountryName(playerTeam.country), p2: getWorldCupCountryName(opponentTeam.country) });
+    }
 
     currentTurnScore = 0;
     document.getElementById('match-log').innerHTML = '';
@@ -1447,6 +1492,7 @@ function startWorldCupMatch(match) {
     updateMatchStatsUI();
     setTurnUI();
     showScreen('screen-match');
+    if (typeof showMatchBullOff === 'function') showMatchBullOff();
     logThrow(`🌍 ${getWorldCupTeamLabel(playerTeam)} vs ${getWorldCupTeamLabel(opponentTeam)}`, 'system');
 }
 

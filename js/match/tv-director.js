@@ -42,7 +42,7 @@
             legHistory: 'HISTORIA LEGÓW', oneEighties: 'RZUCONE 180', dartsStat: 'LOTKI',
             replay: 'POWTÓRKA', replayOf: 'Zakończenie lega', skip: 'Pomiń powtórkę',
             moment: 'MOMENT MECZU', legWon: 'KONIEC LEGA', maximum: 'Maksimum 180', bigVisit: 'Wysoka kolejka',
-            bullFinish: 'Bull na zakończenie', highCheckout: 'Wysoki checkout', bounceOut: 'Bounce-out',
+            bullFinish: 'Bull na zakończenie', highCheckout: 'Wysoki checkout', bounceOut: 'Bounce-out', robinHood: 'Robin Hood',
             hundred: '100+', oneForty: '140+', averages: 'ŚREDNIE', matchAverage: 'ŚREDNIA MECZOWA', firstNineAverage: 'ŚREDNIA 9 LOTEK',
             percentage: 'SKUTECZNOŚĆ', madeAttempts: 'TRAFIONE / PRÓBY', leg: 'LEG', darts: 'lotek'
         },
@@ -51,7 +51,7 @@
             legHistory: 'LEG HISTORY', oneEighties: '180s SCORED', dartsStat: 'DARTS',
             replay: 'REPLAY', replayOf: 'Leg-winning dart', skip: 'Skip replay',
             moment: 'MATCH MOMENT', legWon: 'LEG COMPLETE', maximum: 'Maximum 180', bigVisit: 'Big visit',
-            bullFinish: 'Bull finish', highCheckout: 'High checkout', bounceOut: 'Bounce-out',
+            bullFinish: 'Bull finish', highCheckout: 'High checkout', bounceOut: 'Bounce-out', robinHood: 'Robin Hood',
             hundred: '100+', oneForty: '140+', averages: 'AVERAGES', matchAverage: 'MATCH AVERAGE', firstNineAverage: 'FIRST 9 AVERAGE',
             percentage: 'PERCENTAGE', madeAttempts: 'MADE / ATTEMPTS', leg: 'LEG', darts: 'darts'
         },
@@ -60,7 +60,7 @@
             legHistory: 'LEG-VERLAUF', oneEighties: 'GEWORFENE 180ER', dartsStat: 'DARTS',
             replay: 'WIEDERHOLUNG', replayOf: 'Leg-Dart', skip: 'Wiederholung überspringen',
             moment: 'MATCHMOMENT', legWon: 'LEG BEENDET', maximum: 'Maximum 180', bigVisit: 'Hohe Aufnahme',
-            bullFinish: 'Bull-Finish', highCheckout: 'Hohes Checkout', bounceOut: 'Bounce-out',
+            bullFinish: 'Bull-Finish', highCheckout: 'Hohes Checkout', bounceOut: 'Bounce-out', robinHood: 'Robin Hood',
             hundred: '100+', oneForty: '140+', averages: 'DURCHSCHNITTE', matchAverage: 'MATCH-AVERAGE', firstNineAverage: 'ERSTE 9 DARTS',
             percentage: 'QUOTE', madeAttempts: 'TREFFER / VERSUCHE', leg: 'LEG', darts: 'Darts'
         },
@@ -69,7 +69,7 @@
             legHistory: 'LEGOVERZICHT', oneEighties: 'GEGOOIDE 180-ERS', dartsStat: 'DARTS',
             replay: 'HERHALING', replayOf: 'Winnende leg-dart', skip: 'Herhaling overslaan',
             moment: 'WEDSTRIJDMOMENT', legWon: 'LEG AFGELOPEN', maximum: 'Maximum 180', bigVisit: 'Hoge beurt',
-            bullFinish: 'Bull-finish', highCheckout: 'Hoge checkout', bounceOut: 'Bounce-out',
+            bullFinish: 'Bull-finish', highCheckout: 'Hoge checkout', bounceOut: 'Bounce-out', robinHood: 'Robin Hood',
             hundred: '100+', oneForty: '140+', averages: 'GEMIDDELDEN', matchAverage: 'WEDSTRIJDGEMIDDELDE', firstNineAverage: 'EERSTE 9 PIJLEN',
             percentage: 'PERCENTAGE', madeAttempts: 'RAAK / POGINGEN', leg: 'LEG', darts: 'darts'
         }
@@ -350,6 +350,7 @@
             return { ...event, replayKind: 'big-visit' };
         }
         if (event.bounced) return { ...event, replayKind: 'bounce', replayFrame: captureFrame() };
+        if (event.robinHood) return { ...event, replayKind: 'robin-hood', replayFrame: captureFrame() };
         return null;
     }
     function replayHeadline(payload) {
@@ -360,6 +361,7 @@
         if (payload.replayKind === 'bull-finish') return copy.bullFinish;
         if (payload.replayKind === 'high-checkout') return `${copy.highCheckout} ${Number(payload.visitScore) || ''}`.trim();
         if (payload.replayKind === 'bounce') return copy.bounceOut;
+        if (payload.replayKind === 'robin-hood') return copy.robinHood;
         return copy.replayOf;
     }
     function hideMomentBanner() {
@@ -377,7 +379,7 @@
         const parts = [];
         if (leg && Number(payload.legDarts)) parts.push(`${payload.legDarts} ${copy.darts}`);
         parts.push(replayHeadline(payload));
-        const shownTarget = payload.bounced ? payload.target : payload.hit;
+        const shownTarget = payload.bounced || payload.robinHood ? payload.target : payload.hit;
         if (shownTarget?.sector) parts.push(field(shownTarget));
         momentDetail.textContent = parts.join('  ·  ');
         momentBanner.hidden = false;
@@ -495,7 +497,7 @@
         if (image) replayImage.src = image; else replayImage.removeAttribute('src');
         const details = [replayHeadline(payload), payload.playerName];
         if (payload.legCompleted && Number(payload.legDarts)) details.push(`${payload.legDarts} ${text().darts}`);
-        const shownTarget = payload.bounced ? payload.target : payload.hit;
+        const shownTarget = payload.bounced || payload.robinHood ? payload.target : payload.hit;
         if (shownTarget?.sector) details.push(field(shownTarget));
         replayCaption.textContent = details.filter(Boolean).join(' · ');
         document.getElementById('tv-replay-badge').textContent = text().replay;
@@ -511,8 +513,8 @@
         session.replayShot = shot;
         replay.dataset.shot = shot;
         if (live3D) {
-            window.matchBoard3D?.setReplayShot?.(shot, payload.bounced ? payload.target : payload.hit, scaledReplayTime(480));
-            if (payload.bounced) window.matchBoard3D?.replayThrow?.(payload, replaySlowMotion);
+            window.matchBoard3D?.setReplayShot?.(shot, payload.bounced || payload.robinHood ? payload.target : payload.hit, scaledReplayTime(480));
+            if (payload.bounced || payload.robinHood) window.matchBoard3D?.replayThrow?.(payload, replaySlowMotion);
             else window.matchBoard3D?.replayLastDart?.(replaySlowMotion);
         }
     }
@@ -663,7 +665,7 @@
             if (directorSettings().replays === 'rare' && state.replayCandidates % 3 !== 0) highlight = null;
         }
         let callerQueued = false;
-        if (tvActive() && highlight?.replayKind === 'bounce' && !event.visitComplete) {
+        if (tvActive() && ['bounce', 'robin-hood'].includes(highlight?.replayKind) && !event.visitComplete) {
             state.queuedBounceReplay[side] = highlight;
             state.pendingReplayKind = 'bounce';
         } else if (tvActive() && !event.legCompleted

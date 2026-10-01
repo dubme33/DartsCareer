@@ -112,6 +112,7 @@ const translations = {
         "t-progress": "Postęp:",
         "t-wins": "wygranych",
         "t-no-mails": "Brak wiadomości w skrzynce.",
+        "t-more-mails": "Pokaż starsze wiadomości ({count})",
         "t-scheduled": "Zaplanowany",
         "t-no-darts": "Podstawowe rzutki mosiężne",
         "t-no-darts-desc": "Nie dają żadnych bonusów.",
@@ -567,6 +568,7 @@ const translations = {
         "t-progress": "Progress:",
         "t-wins": "wins",
         "t-no-mails": "No messages in the inbox.",
+        "t-more-mails": "Show older messages ({count})",
         "t-scheduled": "Scheduled",
         "t-no-darts": "Basic Brass Darts",
         "t-no-darts-desc": "No bonuses provided.",
@@ -1035,6 +1037,7 @@ const translations = {
         "t-progress": "Fortschritt:",
         "t-wins": "Siege",
         "t-no-mails": "Keine Nachrichten im Posteingang.",
+        "t-more-mails": "Ältere Nachrichten anzeigen ({count})",
         "t-scheduled": "Geplant",
         "t-no-darts": "Grundlegende Messingdarts",
         "t-no-darts-desc": "Keine Boni vorhanden.",
@@ -1470,6 +1473,7 @@ const translations = {
         "t-progress": "Voortgang:",
         "t-wins": "winsten",
         "t-no-mails": "Geen berichten in het postvak.",
+        "t-more-mails": "Oudere berichten tonen ({count})",
         "t-scheduled": "Gepland",
         "t-no-darts": "Basis koperen pijltjes",
         "t-no-darts-desc": "Geen bonussen voorzien.",
@@ -2106,6 +2110,7 @@ const translations = {
             if(typeof refreshTutorialTranslations === 'function') refreshTutorialTranslations();
             if(typeof refreshHubNavigationTranslations === 'function') refreshHubNavigationTranslations();
             if(typeof refreshPlayerEditorTranslations === 'function') refreshPlayerEditorTranslations();
+            if(typeof refreshWorldCupTeamEditorTranslations === 'function') refreshWorldCupTeamEditorTranslations();
             if(typeof refreshTournamentEditorTranslations === 'function') refreshTournamentEditorTranslations();
             if(typeof refreshAverageRecordsTranslations === 'function') refreshAverageRecordsTranslations();
             if(typeof applyPdcRankingSearch === 'function') applyPdcRankingSearch();
@@ -2116,6 +2121,7 @@ const translations = {
             if(typeof refreshPlayerNicknameUI === 'function') refreshPlayerNicknameUI();
             if(typeof refreshTournamentWatchSettingsUI === 'function') refreshTournamentWatchSettingsUI();
             if(typeof refreshBounceOutSettingsUI === 'function') refreshBounceOutSettingsUI();
+            if(typeof refreshMatchIncidentSettingsUI === 'function') refreshMatchIncidentSettingsUI();
             if(typeof refreshDartFlightMotionUI === 'function') refreshDartFlightMotionUI();
             if(typeof refreshMatchLayoutSettingsUI === 'function') refreshMatchLayoutSettingsUI();
             if(typeof refreshPostMatchReportSettingsUI === 'function') refreshPostMatchReportSettingsUI();

@@ -193,6 +193,50 @@ const MATCH_INCIDENT_OUTCOMES = Object.freeze({
 });
 
 let matchIncidentResultTimer = null;
+const MATCH_INCIDENT_CHANCE = 0.08;
+const MATCH_INCIDENT_MIN_VISITS = 5;
+const MATCH_INCIDENT_COOLDOWN_VISITS = 10;
+const MATCH_INCIDENT_MAX_PER_MATCH = 2;
+const MATCH_INCIDENT_SETTINGS_TEXT = {
+    pl: { title: '🎭 Wydarzenia podczas meczu', intro: 'Losowe sytuacje i decyzje podczas Twoich meczów.', label: 'Wydarzenia podczas meczu', enabled: 'Włączone (domyślnie)', disabled: 'Wyłączone', rule: 'Wydarzenia są rzadkie; sytuacje z udziałem publiczności występują tylko w turniejach scenicznych.' },
+    en: { title: '🎭 Match events', intro: 'Random situations and decisions during your matches.', label: 'Match events', enabled: 'Enabled (default)', disabled: 'Disabled', rule: 'Events are rare; crowd moments occur only in stage tournaments.' },
+    de: { title: '🎭 Matchereignisse', intro: 'Zufällige Situationen und Entscheidungen während deiner Matches.', label: 'Matchereignisse', enabled: 'Aktiviert (Standard)', disabled: 'Deaktiviert', rule: 'Ereignisse sind selten; Publikumssituationen gibt es nur bei Bühnenturnieren.' },
+    nl: { title: '🎭 Wedstrijdgebeurtenissen', intro: 'Willekeurige situaties en keuzes tijdens je wedstrijden.', label: 'Wedstrijdgebeurtenissen', enabled: 'Ingeschakeld (standaard)', disabled: 'Uitgeschakeld', rule: 'Gebeurtenissen zijn zeldzaam; publieksmomenten komen alleen voor bij podiumtoernooien.' }
+};
+
+function initializeMatchIncidentSettings(candidate = typeof player === 'object' ? player : null, reset = false) {
+    if (!candidate) return false;
+    candidate.matchIncidentsEnabled = reset || typeof candidate.matchIncidentsEnabled !== 'boolean'
+        ? true : candidate.matchIncidentsEnabled;
+    return candidate.matchIncidentsEnabled;
+}
+
+function areMatchIncidentsEnabled() {
+    return typeof player === 'object' && player?.matchIncidentsEnabled !== false;
+}
+
+function changeMatchIncidentSetting(value) {
+    if (typeof player !== 'object' || !player?.name || !['enabled', 'disabled'].includes(value)
+        || (typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy())) return false;
+    player.matchIncidentsEnabled = value === 'enabled';
+    if (!player.matchIncidentsEnabled && typeof currentMatch !== 'undefined') clearMatchIncidentAfterMatch(currentMatch);
+    refreshMatchIncidentSettingsUI();
+    if (typeof setTurnUI === 'function' && typeof currentMatch !== 'undefined' && currentMatch) setTurnUI();
+    if (typeof saveGame === 'function') saveGame(true);
+    return true;
+}
+
+function refreshMatchIncidentSettingsUI() {
+    if (typeof document === 'undefined') return;
+    const language = typeof currentLang === 'string' ? currentLang : 'pl';
+    const copy = MATCH_INCIDENT_SETTINGS_TEXT[language] || MATCH_INCIDENT_SETTINGS_TEXT.pl;
+    for (const key of ['title', 'intro', 'label', 'enabled', 'disabled', 'rule']) {
+        const element = document.getElementById(`match-incident-settings-${key}`);
+        if (element) element.textContent = copy[key];
+    }
+    const select = document.getElementById('hub-match-incident-mode');
+    if (select) select.value = areMatchIncidentsEnabled() ? 'enabled' : 'disabled';
+}
 const MATCH_STORY_TYPES = Object.freeze(['heckler', 'fan_sign', 'referee', 'opponent_delay', 'opponent_space', 'camera', 'rival']);
 const MATCH_STORY_TEXT = {
     pl: { walkon: 'Trybuny pamiętają: {moment}', rematch: 'Kibice pamiętają sytuację „{moment}” z poprzedniego meczu z {opponent}. Początek spotkania ma dodatkowy ładunek emocji.',
@@ -273,13 +317,14 @@ function recordMatchIncidentStory(match, type, choice, effect) {
 }
 
 function getMatchStoryForInterview(id = null) {
+    if (!areMatchIncidentsEnabled()) return null;
     const stories = getMatchStories();
     return (id == null ? null : stories.find(story => story.id === id && story.interviewPending))
         || stories.find(story => story.interviewPending) || null;
 }
 
 function getPendingMatchStoryRematch(opponent) {
-    if (!opponent) return null;
+    if (!areMatchIncidentsEnabled() || !opponent) return null;
     return getMatchStories().find(entry => entry.rematchPending &&
         (entry.opponentId != null && opponent.id != null
             ? String(entry.opponentId) === String(opponent.id)
@@ -294,6 +339,7 @@ function resolveMatchStoryInterview(story, choice) {
 }
 
 function takeMatchStorySponsorAssessment() {
+    if (!areMatchIncidentsEnabled()) return 0;
     const pending = getMatchStories().filter(story => story.sponsorPending);
     if (!pending.length) return 0;
     pending.forEach(story => { story.sponsorPending = false; });
@@ -332,6 +378,17 @@ function getMatchIncidentState(match) {
     return match.matchIncidents;
 }
 
+function getMatchIncidentVisitToken(match) {
+    return `${match.totalLegsPlayed || 0}:${match.stats?.p1TotalDarts || 0}:${match.stats?.p2TotalDarts || 0}`;
+}
+
+function skipMatchIncidentForSimulatedLeg(match) {
+    if (!match?.vsAI || match.isSpectator) return;
+    const state = getMatchIncidentState(match);
+    state.effect = null;
+    state.skipNextPlayerVisit = true;
+}
+
 function getMatchIncidentOutcome(type, index, random = Math.random) {
     const variants = MATCH_INCIDENT_OUTCOMES[type]?.[index];
     if (!variants) return null;
@@ -347,6 +404,8 @@ function formatMatchIncidentEffect(effect, copy) {
 }
 
 function renderMatchIncident(match) {
+    const finished = match && typeof isMatchFinished === 'function' && isMatchFinished(match);
+    if ((finished || !areMatchIncidentsEnabled()) && match?.matchIncidents?.pending) clearMatchIncidentAfterMatch(match);
     if (typeof document === 'undefined') return;
     const panel = document.getElementById('match-incident');
     if (!panel) return;
@@ -402,7 +461,8 @@ function showMatchIncidentResult(message) {
 }
 
 function mayShowMatchIncident(match) {
-    return Boolean(match && match.vsAI && !match.isSpectator && !match.isFinishing && !match.matchEnding
+    return Boolean(areMatchIncidentsEnabled() && match && match.vsAI && !match.isSpectator && !match.isFinishing && !match.matchEnding
+        && !(typeof isMatchFinished === 'function' && isMatchFinished(match))
         && Number(match.p1Score) > 0 && Number(match.p2Score) > 0
         && !match.introInProgress && !match.isTurnLocked && !match.isDartInFlight
         && match.turn === 'p1' && match.dartsThrown === 0
@@ -412,31 +472,39 @@ function mayShowMatchIncident(match) {
 }
 
 function getAvailableMatchIncidentTypes(match) {
-    const types = ['crowd', 'pause', 'heckler', 'grip', 'referee', 'fan_sign',
-        'flight', 'scoreboard', 'dry_throat', 'shoulder', 'silence', 'familiar_face'];
+    const types = ['pause', 'grip', 'referee', 'flight', 'scoreboard', 'dry_throat', 'shoulder'];
     const opponentHasVisitedThisLeg = (Number(match.stats?.p2LegDarts) || 0) > 0;
     if (opponentHasVisitedThisLeg) types.push('opponent_delay', 'dart_check', 'opponent_space');
     const stageMatch = typeof window !== 'undefined' && window.matchCrowd?.isStageMatch?.(match,
         typeof activeTournament !== 'undefined' ? activeTournament : null);
-    if (stageMatch) types.push('camera', 'announcer', 'lights', 'replay_screen');
+    if (stageMatch) types.push('crowd', 'heckler', 'fan_sign', 'silence', 'familiar_face',
+        'camera', 'announcer', 'lights', 'replay_screen');
     if (opponentHasVisitedThisLeg && (Number(match.lastOpponentVisitScore) || 0) >= 140) types.push('rival');
     if (Number(match.p1Score) <= 170 && Number(match.p1Score) > 1) types.push('checkout');
     return types;
 }
 
 function maybeOfferMatchIncident(match, random = Math.random) {
+    if (!areMatchIncidentsEnabled()) {
+        if (match?.matchIncidents?.pending || match?.matchIncidents?.effect) clearMatchIncidentAfterMatch(match);
+        return false;
+    }
     if (!mayShowMatchIncident(match)) return false;
     activateMatchStoryRematch(match);
     const state = getMatchIncidentState(match);
     if (state.pending) { renderMatchIncident(match); return true; }
-    const token = `${match.totalLegsPlayed || 0}:${match.stats?.p1TotalDarts || 0}:${match.stats?.p2TotalDarts || 0}`;
+    const token = getMatchIncidentVisitToken(match);
     if (state.lastToken === token) return false;
     state.lastToken = token;
     state.visitsSeen++;
-    if (state.visitsSeen < 2 || state.shown >= 3 || state.lastLeg === (match.totalLegsPlayed || 0)
-        || state.visitsSeen - state.lastVisit < 4) return false;
-    const due = state.shown === 0 ? state.visitsSeen >= 7 : state.visitsSeen - state.lastVisit >= 8;
-    if (!due && random() >= 0.16) return false;
+    if (state.skipNextPlayerVisit) {
+        state.skipNextPlayerVisit = false;
+        return false;
+    }
+    if (state.visitsSeen < MATCH_INCIDENT_MIN_VISITS || state.shown >= MATCH_INCIDENT_MAX_PER_MATCH
+        || state.lastLeg === (match.totalLegsPlayed || 0)
+        || state.visitsSeen - state.lastVisit < MATCH_INCIDENT_COOLDOWN_VISITS) return false;
+    if (random() >= MATCH_INCIDENT_CHANCE) return false;
     const types = getAvailableMatchIncidentTypes(match);
     const fresh = types.filter(type => type !== state.lastType);
     const pool = fresh.length ? fresh : types;
@@ -465,7 +533,12 @@ function applyMatchIncidentCareerEffect(effect) {
 
 function resolveMatchIncident(choiceIndex) {
     const match = typeof currentMatch !== 'undefined' ? currentMatch : null;
+    if (!areMatchIncidentsEnabled()) {
+        clearMatchIncidentAfterMatch(match);
+        return false;
+    }
     if (!match || match.matchEnding || match.isFinishing
+        || (typeof isMatchFinished === 'function' && isMatchFinished(match))
         || Number(match.p1Score) <= 0 || Number(match.p2Score) <= 0) {
         clearMatchIncidentAfterMatch(match);
         return false;
@@ -496,6 +569,7 @@ function resolveMatchIncident(choiceIndex) {
 }
 
 function applyMatchIncidentToStats(match, stats) {
+    if (!areMatchIncidentsEnabled()) return stats;
     const effect = match?.matchIncidents?.effect;
     if (!match || match.turn !== 'p1' || match.isSpectator || match.dartsThrown >= 3) return stats;
     const clampStat = value => Math.max(0, Math.min(110, value));

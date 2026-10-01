@@ -788,7 +788,7 @@ function showRoundResults() {
             }
             
             if (opponent && opponent.isBye) {
-                alert("Otrzymujesz wolny los (BYE) jako zawodnik rozstawiony! Awansujesz do kolejnej fazy bez gry.");
+                alert(t('t-alert-bye'));
                 advanceTournament(true);
                 showRoundResults(); // Pokaże symulację rywali
                 return;

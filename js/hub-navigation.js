@@ -185,14 +185,21 @@ function getHubUpcomingTournament() {
     }
     if (typeof tournamentDatabase === 'undefined' || !Array.isArray(tournamentDatabase)) return null;
     const year = currentDate.getFullYear();
-    return tournamentDatabase.map((tournament, index) => {
+    const today = hubDateAtMidnight(currentDate);
+    const upcoming = [];
+    tournamentDatabase.forEach((tournament, index) => {
+        if (!tournament || tournament.completed === true) return;
         const date = new Date(year, tournament.month, tournament.day);
         const end = new Date(year, tournament.endMonth ?? tournament.month, tournament.endDay ?? tournament.day);
-        return { tournament, index, date, end, days: getHubDaysBetween(date, currentDate), active: false };
-    }).filter(entry => entry.tournament && entry.tournament.completed !== true && isHubTournamentRelevant(entry.tournament)
-        && entry.end >= hubDateAtMidnight(currentDate)
-        && (typeof isTournamentScheduledForCareerYear !== 'function' || isTournamentScheduledForCareerYear(entry.tournament, year)))
-        .sort((a, b) => a.date - b.date || a.index - b.index)[0] || null;
+        if (end < today || (typeof isTournamentScheduledForCareerYear === 'function'
+            && !isTournamentScheduledForCareerYear(tournament, year))) return;
+        upcoming.push({ tournament, index, date, end });
+    });
+    // Qualification checks can build a full field. Check them only until the
+    // first relevant event, rather than for every event left in the season.
+    upcoming.sort((a, b) => a.date - b.date || a.index - b.index);
+    const next = upcoming.find(entry => isHubTournamentRelevant(entry.tournament));
+    return next ? { ...next, days: getHubDaysBetween(next.date, currentDate), active: false } : null;
 }
 
 function getHubQualificationOverview() {

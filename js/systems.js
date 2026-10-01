@@ -147,7 +147,7 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
                 && typeof hasTournamentMatchHistory === 'function'
                 && hasTournamentMatchHistory(tournamentMatchHistory));
             const shouldSaveLegacyActiveHtml = Boolean(activeTournament && !hasActiveCompactHistory);
-            return {
+            const gameState = {
                 version: 4,
                 player: {
                     ...player,
@@ -172,6 +172,8 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
                 grandSlamState: typeof getGrandSlamStateForSave === 'function' ? getGrandSlamStateForSave() : null,
                 playerLifecycleState: typeof playerLifecycleState !== 'undefined' ? playerLifecycleState : null
             };
+            return typeof packSeasonMatchKeysForSave === 'function'
+                ? packSeasonMatchKeysForSave(gameState) : gameState;
         }
 
         function isPlainObject(value) {
@@ -803,6 +805,12 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
                 && options.tournamentRollback !== true) return false;
             try {
                 validateGameState(gameState);
+                if (Object.prototype.hasOwnProperty.call(gameState, 'recordedMatchKeyPool')) {
+                    if (typeof restoreSeasonMatchKeysFromSave !== 'function') {
+                        throw new Error('Match key decoder unavailable.');
+                    }
+                    restoreSeasonMatchKeysFromSave(gameState);
+                }
                 if (typeof clearCareerProfileMediaRuntime === 'function') clearCareerProfileMediaRuntime();
 
                 player = gameState.player;
@@ -856,6 +864,7 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
                 currentDate = new Date(gameState.currentDate);
                 if (typeof initializeTournamentWatchSettings === 'function') initializeTournamentWatchSettings(player);
                 if (typeof initializeBounceOutSettings === 'function') initializeBounceOutSettings(player);
+                if (typeof initializeMatchIncidentSettings === 'function') initializeMatchIncidentSettings(player);
                 if (typeof initializePostMatchReportSetting === 'function') initializePostMatchReportSetting(player);
                 if (typeof normalizeSponsorGoals === 'function') normalizeSponsorGoals();
                 if (typeof resetSponsorOffers === 'function') resetSponsorOffers();
@@ -1078,11 +1087,9 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
             if (typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy()) return false;
             try {
                 const liveState = buildGameState();
-                const gameState = typeof structuredClone === 'function'
-                    ? structuredClone(liveState) : JSON.parse(JSON.stringify(liveState));
                 const portableGameState = typeof createPortableCareerGameState === 'function'
-                    ? await createPortableCareerGameState(gameState)
-                    : gameState;
+                    ? await createPortableCareerGameState(liveState)
+                    : liveState;
                 const file = new Blob([JSON.stringify(portableGameState)], { type: 'application/json' });
                 const fileUrl = URL.createObjectURL(file);
                 const dlAnchorNode = document.createElement('a');
@@ -1889,6 +1896,7 @@ async function updateProfileWalkon(event) {
                 ? createAiScoringVisit() : null;
             resetMatchThrowGrouping(currentMatch);
             const groupingVisit = createThrowGroupingVisit();
+            groupingVisit.side = isP1 ? 'p1' : 'p2';
 
             for (let i = 0; i < 3; i++) {
                 let aim = scoringVisit ? getAiScoringAim(currentScore, isDIDO, 3 - i, scoringVisit, opponentScore)
@@ -1896,6 +1904,8 @@ async function updateProfileWalkon(event) {
                 const throwStats = typeof applyMentalPressureToStats === 'function'
                     ? applyMentalPressureToStats(pObj, statsObj, isP1, aim, currentScore) : statsObj;
                 let result = calculateVisitThrow(aim.sector, aim.mult, throwStats, groupingVisit);
+                if (result.robinHood && typeof logThrow === 'function')
+                    logThrow(`${pObj.name}: ${getRobinHoodText()}`, isP1 ? 'hit' : 'ai');
                 if (typeof recordMatchBounceOut === 'function' && recordMatchBounceOut(isP1, result)) {
                     if (typeof logThrow === 'function') logThrow(`${pObj.name}: ${getBounceOutText().log}`, isP1 ? 'hit' : 'ai');
                 }
@@ -2114,19 +2124,22 @@ async function updateProfileWalkon(event) {
         function simulateOneLegFast() {
             if (!canSimulateCurrentMatch()) return false;
             if (isMatchFinished()) return finishMatch();
-            skipWalkon(); // Wycisza muzykę, żeby uniknąć nakładania dźwięków
+            if (currentMatch.introInProgress) skipWalkon();
             clearTimeout(window.aiTimeout); // ZABEZPIECZENIE: Przerywa zaplanowane ruchy AI
             const simulatedVisits = processFastLeg();
             
             updateScores(); updateMatchStatsUI(); drawnDarts = [];
-            drawDartboard(); updateDartDots(); setTurnUI();
+            drawDartboard(); updateDartDots();
             window.matchTVDirector?.onSimulatedLeg?.(simulatedVisits);
             
             if (isMatchFinished()) return finishMatch();
+            if (typeof skipMatchIncidentForSimulatedLeg === 'function') skipMatchIncidentForSimulatedLeg(currentMatch);
+            setTurnUI();
         }
 
         function canSimulateCurrentMatch() {
             if (!currentMatch || currentMatch.isFinishing
+                || (typeof isMatchBullOffPending === 'function' && isMatchBullOffPending(currentMatch))
                 || currentMatch.matchIncidents?.pending
                 || (typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy())) return false;
             // Ręczny checkout ma jeszcze zaplanowane naliczenie lega / zmianę
@@ -2138,7 +2151,7 @@ async function updateProfileWalkon(event) {
             if (!canSimulateCurrentMatch()) return false;
             if (!confirm(t('t-confirm-sim-match'))) return;
             if (isMatchFinished()) return finishMatch();
-            skipWalkon(); 
+            if (currentMatch.introInProgress) skipWalkon();
             clearTimeout(window.aiTimeout);
             let safety = 0;
             while (!isMatchFinished() && safety < 100) {

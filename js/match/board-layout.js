@@ -40,7 +40,7 @@
         const presentations = darts.map(data => {
             const point = toDisplayPoint(data), pose = data.dartPose || physics?.basePose(data);
             let presentation = { point, pose };
-            if (physics && !physics.separated(point, pose, previous)) {
+            if (!data.robinHood && physics && !physics.separated(point, pose, previous)) {
                 const expected = physics.field(data);
                 const nearest = previous.reduce((best, dart) => Math.hypot(dart.x - point.x, dart.y - point.y) < Math.hypot(best.x - point.x, best.y - point.y) ? dart : best, previous[0]);
                 const away = Math.atan2(point.y - nearest.y, point.x - nearest.x) + previous.length * .37;
@@ -57,7 +57,7 @@
                 }
             }
             // Only the view receives these corrections. The stored hit and pose are untouched.
-            previous.push({ ...presentation.point, dartPose: presentation.pose });
+            if (!data.robinHood) previous.push({ ...presentation.point, dartPose: presentation.pose });
             return presentation;
         });
         cachedDarts = darts.slice(); cachedPositions = positions; cachedPresentations = presentations;

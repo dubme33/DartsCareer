@@ -1,0 +1,133 @@
+#press-conference-modal {
+    z-index: 6500;
+    padding: 16px;
+    box-sizing: border-box;
+    background: rgba(4, 10, 22, .88);
+}
+
+.press-conference-card {
+    box-sizing: border-box;
+    width: min(680px, 100%);
+    max-height: min(800px, calc(100dvh - 32px));
+    overflow-y: auto;
+    padding: clamp(20px, 4vw, 34px);
+    border: 1px solid #41c9a5;
+    border-radius: 16px;
+    background: linear-gradient(145deg, #17345a, #101a30 55%, #142336);
+    color: #f4f8fc;
+    box-shadow: 0 24px 80px rgba(0, 0, 0, .55);
+}
+
+.press-conference-heading {
+    display: flex;
+    gap: 16px;
+    align-items: center;
+    padding-bottom: 16px;
+    border-bottom: 1px solid #456582;
+}
+
+.press-conference-icon {
+    width: 52px;
+    height: 52px;
+    flex: 0 0 52px;
+    display: grid;
+    place-items: center;
+    border-radius: 12px;
+    background: #1f806f;
+    font-size: 28px;
+}
+
+.press-conference-heading h2 {
+    margin: 0 0 3px;
+    font-size: clamp(20px, 3.5vw, 27px);
+}
+
+#press-conference-tournament {
+    margin: 0;
+    color: #a9ded2;
+    font-size: 14px;
+}
+
+.press-conference-reporter {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    margin: 24px 0 12px;
+    font-weight: 700;
+}
+
+.press-conference-reporter::before {
+    content: '🎙️';
+    display: grid;
+    place-items: center;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: #315174;
+}
+
+#press-conference-question-label {
+    display: block;
+    margin-bottom: 7px;
+    color: #6fe3bd;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: .14em;
+}
+
+#press-conference-question {
+    margin: 0 0 23px;
+    font-size: clamp(18px, 3vw, 22px);
+    line-height: 1.4;
+}
+
+#press-conference-choices {
+    display: grid;
+    gap: 9px;
+}
+
+.press-conference-answer {
+    width: 100%;
+    padding: 13px 15px;
+    border: 1px solid #4b6982;
+    border-radius: 9px;
+    background: #213b57;
+    color: #fff;
+    text-align: left;
+    line-height: 1.35;
+    cursor: pointer;
+}
+
+.press-conference-answer:hover,
+.press-conference-answer:focus-visible {
+    border-color: #6fe3bd;
+    background: #2b5271;
+}
+
+#press-conference-outcome[hidden] { display: none; }
+
+#press-conference-outcome {
+    padding: 16px;
+    border: 1px solid #4b806f;
+    border-radius: 9px;
+    background: #153c3c;
+}
+
+#press-conference-outcome-title {
+    display: block;
+    margin-bottom: 8px;
+    color: #a9ded2;
+}
+
+#press-conference-outcome-changes { margin: 0 0 17px; font-weight: 700; }
+
+#press-conference-continue {
+    width: 100%;
+    padding: 12px;
+    border: 0;
+    border-radius: 7px;
+    background: #30bf8a;
+    color: #071b18;
+    font-weight: 800;
+    cursor: pointer;
+}

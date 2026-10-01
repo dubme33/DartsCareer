@@ -299,6 +299,8 @@ function startGrandSlamCareerGroupMatch() {
             isCurrentPlayer(pending.p1) ? 5 : 0, isCurrentPlayer(pending.p2) ? 5 : 0);
         return simulateGrandSlamRemainingAiGroupMatches();
     }
+    if (typeof maybeBeginPreTournamentPressConference === 'function'
+        && maybeBeginPreTournamentPressConference(activeTournament, opponent, () => startGrandSlamCareerGroupMatch())) return true;
     tournamentBracket = [player, opponent];
     tournamentRound = 32;
     document.getElementById('bracket-modal').style.display = 'none';
