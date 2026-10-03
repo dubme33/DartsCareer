@@ -412,6 +412,40 @@
 #screen-player-editor #player-editor-back { background: #263a50; border-color: #4a6680; }
 #screen-player-editor #player-editor-save { background: #238b52; border-color: #57d28c; }
 
+#screen-player-editor .player-pack { padding: 15px 28px; border-bottom: 1px solid #29435e; background: #102b40; }
+#screen-player-editor .player-pack-toolbar,
+#screen-player-editor .player-pack-preview-heading,
+#screen-player-editor .player-pack-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+#screen-player-editor .player-pack-toolbar h3,
+#screen-player-editor .player-pack-preview h4 { margin: 0 0 4px; color: #fff; font-size: 17px; }
+#screen-player-editor .player-pack-toolbar p,
+#screen-player-editor #player-pack-hint { margin: 0; color: #afc9da; font-size: 12px; line-height: 1.45; }
+#screen-player-editor .player-pack-buttons,
+#screen-player-editor .player-pack-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+#screen-player-editor .player-pack button { padding: 9px 13px; border: 1px solid #4d7b97; border-radius: 7px; background: #15354e; color: #f5f9fc; font: inherit; font-weight: 700; cursor: pointer; }
+#screen-player-editor .player-pack button:hover:not(:disabled) { background: #20516f; }
+#screen-player-editor .player-pack button:disabled { opacity: .5; cursor: not-allowed; }
+#screen-player-editor #player-pack-export { background: #145b51; border-color: #3d9f88; }
+#screen-player-editor #player-pack-apply { background: #147755; border-color: #28ad78; }
+#screen-player-editor #player-pack-file[hidden],
+#screen-player-editor .player-pack-preview[hidden] { display: none !important; }
+#screen-player-editor .player-pack-preview { margin-top: 14px; padding: 14px; border: 1px solid #43657c; border-radius: 8px; background: #0b2032; }
+#screen-player-editor .player-pack-preview-heading h4 { margin: 0; }
+#screen-player-editor #player-pack-summary { color: #8dddc2; font-size: 12px; font-weight: 700; }
+#screen-player-editor #player-pack-hint { margin: 9px 0 11px; }
+#screen-player-editor #player-pack-validation { margin: 0 0 9px; color: #ffb5ad; font-size: 12px; }
+#screen-player-editor #player-pack-validation:empty { display: none; }
+#screen-player-editor .player-pack-list { max-height: min(46vh, 440px); overflow-y: auto; display: grid; gap: 5px; padding-right: 4px; }
+#screen-player-editor .player-pack-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 0; padding: 9px 11px; border: 1px solid #2e4c61; border-radius: 6px; background: #143047; }
+#screen-player-editor .player-pack-row.locked { opacity: .7; }
+#screen-player-editor .player-pack-row > div { min-width: 0; }
+#screen-player-editor .player-pack-row strong { display: block; overflow-wrap: anywhere; font-size: 13px; }
+#screen-player-editor .player-pack-row small { display: block; margin-top: 3px; color: #a9c4d5; font-size: 11px; line-height: 1.35; overflow-wrap: anywhere; }
+#screen-player-editor .player-pack-row select { flex: 0 0 auto; min-width: 125px; max-width: 46%; padding: 7px 8px; border: 1px solid #53778e; border-radius: 5px; background: #0c2438; color: #fff; font: inherit; font-size: 12px; }
+#screen-player-editor .player-pack-actions { justify-content: flex-end; margin-top: 12px; }
+#screen-player-editor #player-pack-status { min-height: 0; margin: 5px 0 0; color: #a6edc5; font-size: 12px; }
+#screen-player-editor #player-pack-status.is-error { color: #ffaaa8; }
+
 #screen-player-editor button:focus-visible,
 #screen-player-editor label[for="player-editor-photo-input"]:focus-visible,
 #screen-player-editor label[for="player-editor-walkon-input"]:focus-visible {
@@ -427,6 +461,8 @@
     #screen-player-editor .player-editor-roster { border-right: 0; border-bottom: 1px solid #29435e; }
     #screen-player-editor .player-editor-roster-list { max-height: 250px; }
     #screen-player-editor .player-editor-form { padding: 20px; }
+    #screen-player-editor .player-pack { padding: 14px; }
+    #screen-player-editor .player-pack-toolbar { align-items: flex-start; flex-wrap: wrap; }
 }
 
 @media (max-width: 520px) {
@@ -443,6 +479,8 @@
     #screen-player-editor .player-editor-money-fields { grid-template-columns: minmax(0, 1fr); }
     #screen-player-editor .player-editor-footer-actions { display: grid; grid-template-columns: 1fr; }
     #screen-player-editor .player-editor-footer-actions button { width: 100%; }
+    #screen-player-editor .player-pack-row { align-items: stretch; flex-direction: column; gap: 6px; }
+    #screen-player-editor .player-pack-row select { max-width: none; width: 100%; }
 }
 
 @media (prefers-reduced-motion: reduce) {

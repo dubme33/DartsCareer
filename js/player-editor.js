@@ -262,7 +262,11 @@ function rememberPlayerEditorDeletion(candidate) {
     const record = {
         id: typeof candidate.id === 'string' ? candidate.id : '',
         defaultTemplateIndex: Number.isInteger(templateIndex) ? templateIndex : null,
-        identity: Number.isInteger(templateIndex) ? getPlayerEditorDeletionIdentity(candidate) : ''
+        identity: !candidate.editorCreated && !candidate.isNewgen ? getPlayerEditorDeletionIdentity(candidate) : '',
+        sourceName: candidate.sourceName || candidate.name,
+        name: candidate.name,
+        country: candidate.country,
+        editorCreated: candidate.editorCreated === true
     };
     if (!isPlayerEditorDeleted(candidate, templateIndex)) player.editorDeletedPlayers.push(record);
     return true;
@@ -602,6 +606,7 @@ function populatePlayerEditorForm(candidate = null) {
     const walkonInput = document.getElementById('player-editor-walkon-input');
     if (walkonInput) walkonInput.value = '';
     renderPlayerEditorWalkon(candidate, typeof candidate?.walkon === 'string' ? candidate.walkon : '');
+    if (typeof populateAiDartEditor === 'function') populateAiDartEditor(candidate);
     setPlayerEditorStatus();
 }
 
@@ -873,6 +878,7 @@ function savePlayerEditor(event) {
         name: values.name,
         nickname: values.nickname,
         playerEditorNicknameOverride: true,
+        playerEditorProfileOverride: true,
         country: values.country,
         birthYear: values.birthYear,
         gender: values.gender,
@@ -898,6 +904,8 @@ function savePlayerEditor(event) {
     applyPlayerEditorTraits(candidate, values);
     if (playerEditorPhotoChanged) candidate.photo = playerEditorPendingPhoto || '';
     if (playerEditorWalkonChanged) candidate.walkon = playerEditorPendingWalkon || null;
+    if (typeof applyAiDartEditorToCandidate === 'function'
+        && !(typeof player !== 'undefined' && candidate === player)) applyAiDartEditorToCandidate(candidate);
     if (typeof enforcePlayerRatingLimits === 'function') enforcePlayerRatingLimits(candidate);
     if (wasCreated) pdcPlayers.push(candidate);
     if (typeof normalizePlayerIds === 'function') normalizePlayerIds(pdcPlayers, typeof player !== 'undefined' ? player : null);
@@ -1203,6 +1211,7 @@ function showPlayerEditor() {
     }
     renderPlayerEditorRoster();
     if (typeof showScreen === 'function') showScreen('screen-player-editor');
+    if (typeof refreshAiDartEditorPreview === 'function') refreshAiDartEditorPreview();
     if (typeof window !== 'undefined' && typeof window.scrollTo === 'function') window.scrollTo({ top: 0, behavior: 'auto' });
     return true;
 }

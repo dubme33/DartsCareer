@@ -127,6 +127,11 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
             return (Array.isArray(tournamentDatabase) ? tournamentDatabase : []).map(tournament => {
                 if (!isPlainObject(tournament)) return tournament;
                 const savedTournament = { ...tournament };
+                if (savedTournament.editorTeamState?.teams) {
+                    savedTournament.editorTeamState = { ...savedTournament.editorTeamState,
+                        teams: savedTournament.editorTeamState.teams.map(team => ({ ...team,
+                            players: team.players.map(getWorldCupPlayerSaveReference) })) };
+                }
                 const hasCompactHistory = typeof hasTournamentMatchHistory === 'function'
                     && hasTournamentMatchHistory(savedTournament.matchHistory);
                 const canRebuildWorldCupHistory = savedTournament.specialType === 'worldCup'
@@ -906,6 +911,12 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
                 activeTournament = savedTournament
                     ? resolveLoadedTournamentReference(savedTournament)
                     : null;
+                tournamentDatabase.forEach(event => {
+                    if (!event.editorTeamState?.teams) return;
+                    event.editorTeamState.teams.forEach(team => {
+                        team.players = Array.isArray(team.players) ? team.players.map(resolveLoadedPlayer).filter(Boolean) : [];
+                    });
+                });
                 const completedActiveTournament = activeTournament?.completed ? activeTournament : null;
                 if (completedActiveTournament) {
                     // Zapis pobrany pomiędzy oznaczeniem kwalifikatora jako ukończony

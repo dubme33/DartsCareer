@@ -1,4 +1,6 @@
 const TOURNAMENT_EDITOR_PRIZE_ROUNDS = ['winner', '2', '4', '8', '16', '32', '64', '128', '256'];
+const TOURNAMENT_EDITOR_CYCLES = ['auto', 'major', 'proTour', 'playersChampionship', 'europeanTour',
+    'challengeTour', 'developmentTour', 'worldSeries', 'premierLeague', 'worldCup', 'qualifier', 'custom', 'other'];
 const TOURNAMENT_EDITOR_TEXT = {
     pl: {
         switch: '🏆 Edytor turniejów', eyebrow: 'KALENDARZ KARIERY', title: '🏆 Edytor turniejów',
@@ -106,6 +108,35 @@ TOURNAMENT_EDITOR_TEXT.en.etHostHint = 'The European Tour country also determine
 TOURNAMENT_EDITOR_TEXT.de.etHostHint = 'Das Land der European Tour bestimmt auch die Teilnahme an der Gastgeberqualifikation. Ändere hier das Land und speichere, ohne die Turnierregeln zu ersetzen.';
 TOURNAMENT_EDITOR_TEXT.nl.etHostHint = 'Het land van de European Tour bepaalt ook wie aan de gastlandkwalificatie mag deelnemen. Wijzig het land hier en sla op; de toernooiregels blijven behouden.';
 
+Object.assign(TOURNAMENT_EDITOR_TEXT.pl, {
+    cycle: 'Kategoria / cykl', customTour: 'Nazwa własnego cyklu', chooseCycle: 'Wybierz kategorię',
+    cycleHint: 'Kategoria porządkuje kalendarz; zasady udziału i rankingu ustawiasz osobno.',
+    invalidCycle: 'Wybierz kategorię turnieju i podaj nazwę własnego cyklu, jeśli go tworzysz.',
+    cycleOptions: ['Automatycznie (turniej gry)', 'Major', 'Pro Tour', 'Players Championship', 'European Tour',
+        'Challenge Tour', 'Development Tour', 'World Series', 'Premier League', 'World Cup', 'Kwalifikacje', 'Własny cykl', 'Inne']
+});
+Object.assign(TOURNAMENT_EDITOR_TEXT.en, {
+    cycle: 'Category / tour', customTour: 'Custom tour name', chooseCycle: 'Choose a category',
+    cycleHint: 'This groups the calendar; set entry and ranking rules separately.',
+    invalidCycle: 'Choose a tournament category and enter a name if you are creating a custom tour.',
+    cycleOptions: ['Automatic (built-in event)', 'Major', 'Pro Tour', 'Players Championship', 'European Tour',
+        'Challenge Tour', 'Development Tour', 'World Series', 'Premier League', 'World Cup', 'Qualifiers', 'Custom tour', 'Other']
+});
+Object.assign(TOURNAMENT_EDITOR_TEXT.de, {
+    cycle: 'Kategorie / Tour', customTour: 'Name der eigenen Tour', chooseCycle: 'Kategorie wählen',
+    cycleHint: 'Die Kategorie ordnet den Kalender; Teilnahme- und Ranglistenregeln legst du separat fest.',
+    invalidCycle: 'Wähle eine Turnierkategorie und gib für eine eigene Tour einen Namen ein.',
+    cycleOptions: ['Automatisch (Spielturnier)', 'Major', 'Pro Tour', 'Players Championship', 'European Tour',
+        'Challenge Tour', 'Development Tour', 'World Series', 'Premier League', 'World Cup', 'Qualifikation', 'Eigene Tour', 'Andere']
+});
+Object.assign(TOURNAMENT_EDITOR_TEXT.nl, {
+    cycle: 'Categorie / tour', customTour: 'Naam van eigen tour', chooseCycle: 'Kies een categorie',
+    cycleHint: 'Dit groepeert de kalender; stel deelname- en rankingregels apart in.',
+    invalidCycle: 'Kies een toernooicategorie en vul een naam in voor een eigen tour.',
+    cycleOptions: ['Automatisch (speltoernooi)', 'Major', 'Pro Tour', 'Players Championship', 'European Tour',
+        'Challenge Tour', 'Development Tour', 'World Series', 'Premier League', 'World Cup', 'Kwalificaties', 'Eigen tour', 'Overige']
+});
+
 function trTournamentEditor(key, params = {}) {
     const language = typeof currentLang === 'string' && TOURNAMENT_EDITOR_TEXT[currentLang] ? currentLang : 'pl';
     return String(TOURNAMENT_EDITOR_TEXT[language][key] || TOURNAMENT_EDITOR_TEXT.en[key] || key)
@@ -151,6 +182,23 @@ function updateTournamentEditorMatchFields() {
     tournamentEditorElement('te-sets-wrap').hidden = mode !== 'sets';
     tournamentEditorElement('te-legs-per-set-wrap').hidden = mode !== 'sets';
 }
+function updateTournamentEditorCycleFields() {
+    const custom = tournamentEditorValue('te-cycle') === 'custom';
+    tournamentEditorElement('te-custom-tour-wrap').hidden = !custom;
+    tournamentEditorElement('te-custom-tour').required = custom;
+}
+function refreshTournamentEditorTourSuggestions() {
+    const list = tournamentEditorElement('te-custom-tour-options');
+    if (!list?.replaceChildren || typeof tournamentDatabase === 'undefined') return;
+    list.replaceChildren();
+    const names = [...new Set(tournamentDatabase.map(event => event?.editorTourName).filter(Boolean))]
+        .sort((first, second) => first.localeCompare(second));
+    names.forEach(name => {
+        const option = document.createElement('option');
+        option.value = name;
+        list.appendChild(option);
+    });
+}
 function populateTournamentEditorForm(tournament) {
     if (!tournament) return;
     tournamentEditorSelected = tournament;
@@ -162,6 +210,9 @@ function populateTournamentEditorForm(tournament) {
         tournament.endDay ?? tournament.day, year);
     tournamentEditorElement('te-city').value = tournament.city || '';
     tournamentEditorElement('te-country').value = tournament.country || '';
+    tournamentEditorElement('te-cycle').value = tournament.editorCycle
+        || (tournament.isEditorTournament ? 'other' : 'auto');
+    tournamentEditorElement('te-custom-tour').value = tournament.editorTourName || '';
     tournamentEditorElement('te-min-ovr').value = Number(tournament.minOvr) || 0;
     tournamentEditorElement('te-field-size').value = String(tournament.editorFieldSize || 32);
     tournamentEditorElement('te-field-size').disabled = tournament.isEditorTournament !== true;
@@ -176,6 +227,9 @@ function populateTournamentEditorForm(tournament) {
         tournamentEditorElement(`te-prize-${round}`).value = Number.isFinite(amount) && amount >= 0 ? amount : 0;
     });
     populateTournamentEditorQualification(tournament);
+    if (typeof populateTournamentTeamEditor === 'function') populateTournamentTeamEditor(tournament);
+    refreshTournamentEditorTourSuggestions();
+    updateTournamentEditorCycleFields();
     updateTournamentEditorMatchFields();
     refreshTournamentEditorFormText();
     renderTournamentEditorList();
@@ -193,11 +247,16 @@ function startAddingTournament() {
     tournamentEditorElement('te-field-size').value = '32';
     tournamentEditorElement('te-field-size').disabled = false;
     tournamentEditorElement('te-min-ovr').value = '0';
+    tournamentEditorElement('te-cycle').value = '';
+    tournamentEditorElement('te-custom-tour').value = '';
     tournamentEditorElement('te-match-mode').value = 'legs';
     tournamentEditorElement('te-ranking').checked = true;
     const defaults = { winner: 35000, 2: 15000, 4: 10000, 8: 8000, 16: 5000, 32: 2000, 64: 0, 128: 0, 256: 0 };
     TOURNAMENT_EDITOR_PRIZE_ROUNDS.forEach(round => { tournamentEditorElement(`te-prize-${round}`).value = defaults[round]; });
     populateTournamentEditorQualification(null);
+    if (typeof populateTournamentTeamEditor === 'function') populateTournamentTeamEditor(null);
+    refreshTournamentEditorTourSuggestions();
+    updateTournamentEditorCycleFields();
     updateTournamentEditorMatchFields();
     refreshTournamentEditorFormText();
     renderTournamentEditorList();
@@ -255,6 +314,7 @@ function refreshTournamentEditorTranslations() {
         'tournament-editor-intro': 'intro', 'tournament-editor-back': 'back', 'tournament-editor-list-title': 'list',
         'tournament-editor-new': 'add', 'tournament-editor-search-label': 'searchLabel', 'te-name-label': 'name',
         'te-start-label': 'start', 'te-end-label': 'end', 'te-city-label': 'city', 'te-country-label': 'country',
+        'te-cycle-label': 'cycle', 'te-cycle-hint': 'cycleHint', 'te-custom-tour-label': 'customTour',
         'te-min-ovr-label': 'minOvr', 'te-field-size-label': 'fieldSize', 'te-game-format-label': 'gameFormat',
         'te-match-mode-label': 'matchMode', 'te-legs-label': 'legsToWin', 'te-sets-label': 'setsToWin',
         'te-legs-per-set-label': 'legsPerSet', 'te-ranking-label': 'ranking', 'te-prizes-title': 'prizes',
@@ -268,7 +328,13 @@ function refreshTournamentEditorTranslations() {
     [['te-game-format', ['standard', 'dido']], ['te-match-mode', ['auto', 'legs', 'sets']]].forEach(([id, keys]) => {
         [...tournamentEditorElement(id).options].forEach((option, index) => { option.textContent = trTournamentEditor(keys[index]); });
     });
+    const language = typeof currentLang === 'string' && TOURNAMENT_EDITOR_TEXT[currentLang] ? currentLang : 'pl';
+    const cycleLabels = TOURNAMENT_EDITOR_TEXT[language].cycleOptions;
+    [...(tournamentEditorElement('te-cycle')?.options || [])].forEach((option, index) => {
+        option.textContent = index ? cycleLabels[index - 1] : trTournamentEditor('chooseCycle');
+    });
     refreshTournamentEditorQualificationTranslations();
+    if (typeof refreshTournamentTeamEditorTranslations === 'function') refreshTournamentTeamEditorTranslations();
     if (typeof refreshTournamentPackTranslations === 'function') refreshTournamentPackTranslations();
     refreshTournamentEditorFormText();
     renderTournamentEditorList();
@@ -316,10 +382,18 @@ function getTournamentEditorFormData() {
             : null;
     const editorPrizes = {};
     TOURNAMENT_EDITOR_PRIZE_ROUNDS.forEach(round => { editorPrizes[round] = integer(`te-prize-${round}`, 0, 999999999); });
+    const cycle = tournamentEditorValue('te-cycle');
+    const customTour = tournamentEditorValue('te-custom-tour').trim().replace(/\s+/g, ' ');
+    if (!TOURNAMENT_EDITOR_CYCLES.includes(cycle) || cycle === 'auto' && tournamentEditorCreating
+        || cycle === 'custom' && !customTour) throw new Error(trTournamentEditor('invalidCycle'));
     const values = { name, month: start.month, day: start.day, endMonth: end.month, endDay: end.day,
         city, country, minOvr, format: tournamentEditorValue('te-game-format') === 'DIDO' ? 'DIDO' : 'legs',
-        editorFieldSize, editorMatchFormat, rankingOverride: tournamentEditorElement('te-ranking').checked, editorPrizes };
-    values.editorQualification = getTournamentEditorQualificationFormData(values);
+        editorFieldSize, editorMatchFormat, rankingOverride: tournamentEditorElement('te-ranking').checked, editorPrizes,
+        editorCycle: cycle === 'auto' ? null : cycle, editorTourName: cycle === 'custom' ? customTour : null };
+    const teamData = typeof getTournamentTeamEditorFormData === 'function'
+        ? getTournamentTeamEditorFormData(editorFieldSize) : { editorTeamMode: null, editorTeamEntries: null };
+    Object.assign(values, teamData);
+    values.editorQualification = teamData.editorTeamMode ? null : getTournamentEditorQualificationFormData(values);
     return values;
 }
 async function persistTournamentEditorChange(successMessage) {
@@ -353,7 +427,14 @@ async function saveTournamentEditor(event) {
     const previousCity = tournament.city;
     if (!creating && !tournament.sourceName) tournament.sourceName = tournament.name;
     Object.assign(tournament, values, { editorModified: true });
+    if (tournament.isEditorTournament === true) {
+        if (values.editorTeamMode) tournament.isDoubles = true;
+        else delete tournament.isDoubles;
+    }
+    if (!values.editorCycle) delete tournament.editorCycle;
+    if (!values.editorTourName) delete tournament.editorTourName;
     if (!values.editorQualification) delete tournament.editorQualification;
+    if (!values.editorTeamMode) { delete tournament.editorTeamMode; delete tournament.editorTeamEntries; delete tournament.editorTeamState; }
     if (isTournamentEditorQualifier(tournament)) tournament.qualifierFor = getTournamentEditorLinkedMain(tournament)?.name;
     else if (qualificationUpdates.length) delete tournament.qualifierFor;
     qualificationUpdates.forEach(({ main, rules }) => { main.editorQualification = rules; main.editorModified = true; });

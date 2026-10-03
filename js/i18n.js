@@ -2110,6 +2110,9 @@ const translations = {
             if(typeof refreshTutorialTranslations === 'function') refreshTutorialTranslations();
             if(typeof refreshHubNavigationTranslations === 'function') refreshHubNavigationTranslations();
             if(typeof refreshPlayerEditorTranslations === 'function') refreshPlayerEditorTranslations();
+            if(typeof refreshPlayerPackTranslations === 'function') refreshPlayerPackTranslations();
+            if(typeof refreshAiDartEditorTranslations === 'function') refreshAiDartEditorTranslations();
+            if(typeof refreshAiDartPackTranslations === 'function') refreshAiDartPackTranslations();
             if(typeof refreshWorldCupTeamEditorTranslations === 'function') refreshWorldCupTeamEditorTranslations();
             if(typeof refreshTournamentEditorTranslations === 'function') refreshTournamentEditorTranslations();
             if(typeof refreshAverageRecordsTranslations === 'function') refreshAverageRecordsTranslations();

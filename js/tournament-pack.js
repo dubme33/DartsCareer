@@ -1,10 +1,12 @@
 // Portable tournament configuration. Match results, players, finances and save data never enter a pack.
 const TOURNAMENT_PACK_FORMAT = 'darts-career-tournament-pack';
-const TOURNAMENT_PACK_VERSION = 1;
+const TOURNAMENT_PACK_VERSION = 3;
 const TOURNAMENT_PACK_MAX_BYTES = 2 * 1024 * 1024;
 const TOURNAMENT_PACK_MAX_EVENTS = 1000;
 const TOURNAMENT_PACK_FIELD_SIZES = [8, 16, 32, 64, 128, 256];
 const TOURNAMENT_PACK_RANKINGS = ['open', 'oom', 'protour', 'pc', 'europeanTour', 'challengeTour', 'developmentTour'];
+const TOURNAMENT_PACK_CYCLES = ['major', 'proTour', 'playersChampionship', 'europeanTour',
+    'challengeTour', 'developmentTour', 'worldSeries', 'premierLeague', 'worldCup', 'qualifier', 'custom', 'other'];
 const TOURNAMENT_PACK_TEXT = {
     pl: { title: 'Pakiety turniejów', intro: 'Zapisz kalendarz i zasady w pliku JSON albo wczytaj pakiet od innego gracza.',
         export: 'Eksportuj pakiet', import: 'Wczytaj pakiet', preview: 'Podgląd importu',
@@ -162,21 +164,49 @@ function normalizeTournamentPackEvent(raw) {
     }
     const rankingOverride = raw.rankingOverride == null ? null : raw.rankingOverride;
     if (rankingOverride !== null && typeof rankingOverride !== 'boolean') throw tournamentPackError('invalid');
+    const editorCycle = raw.editorCycle == null ? null : raw.editorCycle;
+    if (editorCycle !== null && !TOURNAMENT_PACK_CYCLES.includes(editorCycle)) throw tournamentPackError('invalid');
+    const editorTourName = editorCycle === 'custom'
+        ? tournamentPackString(raw.editorTourName, 80, true) : null;
+    if (editorCycle !== 'custom' && raw.editorTourName != null) throw tournamentPackError('invalid');
     if (!['DIDO', 'legs'].includes(raw.format)) throw tournamentPackError('invalid');
     const editorQualification = normalizeTournamentPackRules(raw.editorQualification, size);
     if (editorQualification && size === null) throw tournamentPackError('invalid');
+    const editorTeamMode = raw.editorTeamMode == null ? null : raw.editorTeamMode;
+    if (editorTeamMode !== null && (raw.kind !== 'custom' || !['national', 'pairs'].includes(editorTeamMode)
+        || editorQualification)) throw tournamentPackError('invalid');
+    let editorTeamEntries = null;
+    if (editorTeamMode) {
+        if (!Array.isArray(raw.editorTeamEntries) || raw.editorTeamEntries.length > size) throw tournamentPackError('invalid');
+        editorTeamEntries = raw.editorTeamEntries.map(entry => {
+            if (!entry || typeof entry !== 'object' || Array.isArray(entry)) throw tournamentPackError('invalid');
+            if (editorTeamMode === 'national') return { country: tournamentPackString(entry.country, 80, true) };
+            if (!Array.isArray(entry.players) || entry.players.length !== 2) throw tournamentPackError('invalid');
+            return { name: tournamentPackString(entry.name || '', 80), players: entry.players.map(reference => ({
+                id: reference.id == null ? null : tournamentPackString(String(reference.id), 120),
+                name: tournamentPackString(reference.name, 120, true),
+                country: tournamentPackString(reference.country, 80, true)
+            })) };
+        });
+        if (editorTeamMode === 'national' && editorTeamEntries.length === 1
+            || editorTeamMode === 'pairs' && editorTeamEntries.length < 2) throw tournamentPackError('invalid');
+        if (editorTeamMode === 'national' && new Set(editorTeamEntries.map(entry => entry.country)).size !== editorTeamEntries.length
+            || editorTeamMode === 'pairs' && new Set(editorTeamEntries.flatMap(entry => entry.players.map(reference =>
+                `${reference.name}|${reference.country}`))).size !== editorTeamEntries.length * 2) throw tournamentPackError('invalid');
+    } else if (raw.editorTeamEntries != null) throw tournamentPackError('invalid');
     if (raw.kind === 'custom' && endMonth < month || raw.kind === 'custom' && endMonth === month && endDay < day) {
         throw tournamentPackError('invalid');
     }
     return { key, kind: raw.kind, name, month, day, endMonth, endDay, city, country,
         minOvr: tournamentPackInteger(raw.minOvr ?? 0, 0, 100), editorFieldSize: size,
         format: raw.format, editorMatchFormat, rankingOverride, editorPrizes, editorQualification,
+        editorCycle, editorTourName, editorTeamMode, editorTeamEntries,
         qualifierFor: raw.qualifierFor == null ? null : tournamentPackString(raw.qualifierFor, 120, true) };
 }
 
 function parseTournamentPack(value) {
     if (!value || typeof value !== 'object' || Array.isArray(value) || value.format !== TOURNAMENT_PACK_FORMAT
-        || value.version !== TOURNAMENT_PACK_VERSION || !Array.isArray(value.events)
+        || ![1, 2, TOURNAMENT_PACK_VERSION].includes(value.version) || !Array.isArray(value.events)
         || value.events.length > TOURNAMENT_PACK_MAX_EVENTS || !Array.isArray(value.deletedKeys)
         || value.deletedKeys.length > TOURNAMENT_PACK_MAX_EVENTS) throw tournamentPackError('invalid');
     const events = value.events.map(normalizeTournamentPackEvent);
@@ -204,6 +234,10 @@ function createTournamentPackEvent(tournament) {
         editorFieldSize: tournament.editorFieldSize ?? (tournament.isEditorTournament ? 32 : null),
         format: tournament.format === 'DIDO' ? 'DIDO' : 'legs', editorMatchFormat: tournament.editorMatchFormat || null,
         rankingOverride: typeof tournament.rankingOverride === 'boolean' ? tournament.rankingOverride : null,
+        editorCycle: tournament.editorCycle || null,
+        editorTourName: tournament.editorTourName || null,
+        editorTeamMode: tournament.editorTeamMode || null,
+        editorTeamEntries: tournament.editorTeamEntries || null,
         editorPrizes: tournament.editorPrizes || null, editorQualification: tournament.editorQualification || null,
         qualifierFor: tournament.qualifierFor || null };
     return normalizeTournamentPackEvent(event);
@@ -240,6 +274,7 @@ function tournamentPackMatchFormat(event) {
 function getTournamentPackChanges(target, event) {
     if (!target) return [tournamentPackDate(event), tournamentPackPlace(event),
         event.editorFieldSize ? `${trTournamentPack('field')}: ${event.editorFieldSize}` : '',
+        event.editorCycle ? `${trTournamentPack('calendar')}: ${[event.editorCycle, event.editorTourName].filter(Boolean).join(' / ')}` : '',
         event.editorQualification ? `${trTournamentPack('rules')}: ${tournamentPackRules(event)}` : ''].filter(Boolean);
     const old = createTournamentPackEvent(target);
     const groups = [
@@ -250,6 +285,10 @@ function getTournamentPackChanges(target, event) {
         ['field', old.editorFieldSize ?? '—', event.editorFieldSize ?? '—'],
         ['format', tournamentPackMatchFormat(old), tournamentPackMatchFormat(event)],
         ['ranking', old.rankingOverride ?? '—', event.rankingOverride ?? '—'],
+        ['calendar', [old.editorCycle, old.editorTourName].filter(Boolean).join(' / ') || '—',
+            [event.editorCycle, event.editorTourName].filter(Boolean).join(' / ') || '—'],
+        ['field', JSON.stringify([old.editorTeamMode, old.editorTeamEntries]),
+            JSON.stringify([event.editorTeamMode, event.editorTeamEntries])],
         ['prize', JSON.stringify(old.editorPrizes || {}), JSON.stringify(event.editorPrizes || {})],
         ['rules', `${tournamentPackRules(old)}${old.qualifierFor ? ` → ${old.qualifierFor}` : ''}`,
             `${tournamentPackRules(event)}${event.qualifierFor ? ` → ${event.qualifierFor}` : ''}`]
@@ -302,11 +341,16 @@ function setTournamentPackConfiguration(tournament, event) {
     tournament.minOvr = event.minOvr; tournament.format = event.format;
     tournament.editorModified = true;
     for (const field of ['endMonth', 'endDay', 'editorFieldSize', 'editorMatchFormat',
-        'rankingOverride', 'editorPrizes', 'editorQualification', 'qualifierFor']) {
+        'rankingOverride', 'editorPrizes', 'editorQualification', 'qualifierFor', 'editorCycle', 'editorTourName',
+        'editorTeamMode', 'editorTeamEntries']) {
         const value = event[field];
         if (value == null || field === 'endMonth' && value === event.month
             || field === 'endDay' && value === event.day && event.endMonth === event.month) delete tournament[field];
         else tournament[field] = value && typeof value === 'object' ? structuredClone(value) : value;
+    }
+    if (tournament.isEditorTournament === true) {
+        if (event.editorTeamMode) tournament.isDoubles = true;
+        else delete tournament.isDoubles;
     }
 }
 
@@ -347,7 +391,9 @@ function validateTournamentPackLinks(events, touchedKeys) {
                 const nativePlaces = events.filter(candidate => candidate.editorQualification?.kind === 'qualifier'
                     && tournamentPackKey(candidate.editorQualification.targetKey) === tournamentPackKey(rules.targetKey))
                     .reduce((total, candidate) => total + candidate.editorQualification.qualifyingPlaces, 0);
-                if (nativePlaces > 4) throw tournamentPackError('linkInvalid', { name: main.name });
+                const capacity = getTournamentEditorNativeQualifierCapacity(main);
+                if (capacity !== null && nativePlaces > capacity)
+                    throw tournamentPackError('linkInvalid', { name: main.name });
             }
         }
     }
@@ -595,7 +641,8 @@ async function applyStagedTournamentPack() {
             const original = projection.originalForCopy.get(copy);
             if (!original) return copy;
             for (const field of ['endMonth', 'endDay', 'editorFieldSize', 'editorMatchFormat',
-                'rankingOverride', 'editorPrizes', 'editorQualification', 'qualifierFor']) {
+                'rankingOverride', 'editorPrizes', 'editorQualification', 'qualifierFor', 'editorCycle', 'editorTourName',
+                'editorTeamMode', 'editorTeamEntries']) {
                 if (!Object.hasOwn(copy, field)) delete original[field];
             }
             Object.assign(original, copy);

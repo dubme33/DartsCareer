@@ -1,0 +1,70 @@
+#screen-player-editor .ai-dart-pack { padding: 15px 28px; border-bottom: 1px solid #29435e; background: #102b40; }
+#screen-player-editor .ai-dart-pack-toolbar,
+#screen-player-editor .ai-dart-pack-preview-heading,
+#screen-player-editor .ai-dart-pack-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+#screen-player-editor .ai-dart-pack h3,
+#screen-player-editor .ai-dart-pack h4 { margin: 0 0 4px; color: #fff; font-size: 17px; }
+#screen-player-editor .ai-dart-pack p { margin: 0; color: #afc9da; font-size: 12px; line-height: 1.45; }
+#screen-player-editor .ai-dart-pack-buttons,
+#screen-player-editor .ai-dart-pack-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+#screen-player-editor .ai-dart-pack button,
+#screen-player-editor .ai-dart-editor button,
+#screen-player-editor .ai-dart-editor-artwork label { padding: 9px 13px; border: 1px solid #4d7b97; border-radius: 7px; background: #15354e; color: #f5f9fc; font: inherit; font-weight: 700; cursor: pointer; }
+#screen-player-editor .ai-dart-pack button:disabled { opacity: .5; cursor: not-allowed; }
+#screen-player-editor #ai-dart-pack-export { background: #145b51; border-color: #3d9f88; }
+#screen-player-editor #ai-dart-pack-apply { background: #147755; border-color: #28ad78; }
+#screen-player-editor #ai-dart-pack-file[hidden],
+#screen-player-editor #ai-dart-pack-preview[hidden],
+#screen-player-editor #player-editor-darts[hidden] { display: none !important; }
+#screen-player-editor #ai-dart-pack-preview { margin-top: 14px; padding: 14px; border: 1px solid #43657c; border-radius: 8px; background: #0b2032; }
+#screen-player-editor #ai-dart-pack-preview-title { margin: 0; }
+#screen-player-editor #ai-dart-pack-summary { color: #8dddc2; font-size: 12px; font-weight: 700; }
+#screen-player-editor #ai-dart-pack-hint { margin: 9px 0 11px; }
+#screen-player-editor #ai-dart-pack-list { max-height: min(46vh, 440px); overflow-y: auto; display: grid; gap: 5px; padding-right: 4px; }
+#screen-player-editor .ai-dart-pack-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-width: 0; padding: 9px 11px; border: 1px solid #2e4c61; border-radius: 6px; background: #143047; }
+#screen-player-editor .ai-dart-pack-row.locked { opacity: .7; }
+#screen-player-editor .ai-dart-pack-row > div { min-width: 0; }
+#screen-player-editor .ai-dart-pack-row strong { display: block; overflow-wrap: anywhere; font-size: 13px; }
+#screen-player-editor .ai-dart-pack-row small { display: block; margin-top: 3px; color: #a9c4d5; font-size: 11px; }
+#screen-player-editor .ai-dart-pack-row select { flex: 0 0 auto; min-width: 125px; max-width: 46%; padding: 7px 8px; border: 1px solid #53778e; border-radius: 5px; background: #0c2438; color: #fff; font: inherit; font-size: 12px; }
+#screen-player-editor .ai-dart-pack-actions { justify-content: flex-end; margin-top: 12px; }
+#screen-player-editor #ai-dart-pack-status { margin-top: 5px; color: #a6edc5; }
+#screen-player-editor #ai-dart-pack-status.is-error { color: #ffaaa8; }
+
+#screen-player-editor .ai-dart-editor > p { margin: 0 0 12px; color: #93abc0; font-size: 12px; line-height: 1.45; }
+#screen-player-editor .ai-dart-editor-layout { display: grid; grid-template-columns: minmax(220px, .8fr) minmax(0, 1.2fr); gap: 16px; }
+#screen-player-editor .ai-dart-editor-preview-wrap { min-width: 0; align-self: start; padding: 12px; border: 1px solid #315473; border-radius: 9px; background: #102238; }
+#screen-player-editor #ai-dart-editor-preview { height: 220px; }
+#screen-player-editor #ai-dart-editor-measurements { color: #c9dfec; font-size: 11px; text-align: center; }
+#screen-player-editor #ai-dart-editor-reset-view { display: block; margin: 0 auto; padding: 6px 9px; font-size: 11px; }
+#screen-player-editor #ai-dart-editor-controls { display: grid; gap: 12px; min-width: 0; }
+#screen-player-editor .ai-dart-control-group { padding: 11px; border: 1px solid #315473; border-radius: 8px; background: #102238; }
+#screen-player-editor .ai-dart-control-group h5 { margin: 0 0 9px; color: #95d8ef; font-size: 12px; }
+#screen-player-editor .ai-dart-control-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
+#screen-player-editor .ai-dart-control-grid label { min-width: 0; color: #b9cce0; font-size: 11px; font-weight: 700; }
+#screen-player-editor .ai-dart-control-grid label span { display: block; margin-bottom: 5px; }
+#screen-player-editor .ai-dart-control-grid select,
+#screen-player-editor .ai-dart-control-grid input { width: 100%; min-width: 0; box-sizing: border-box; padding: 7px; border: 1px solid #355577; border-radius: 6px; background: #132a45; color: #fff; font: inherit; }
+#screen-player-editor .ai-dart-control-grid input[type=color] { height: 37px; padding: 3px; cursor: pointer; }
+#screen-player-editor .ai-dart-control-grid input[type=range] { height: 37px; padding: 0; }
+#screen-player-editor .ai-dart-control-grid label.is-hidden { display: none; }
+#screen-player-editor .ai-dart-editor-artwork { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 14px; }
+#screen-player-editor #ai-dart-editor-artwork-file { display: none; }
+#screen-player-editor #ai-dart-editor-reset { background: #3a3149; }
+#screen-player-editor #ai-dart-editor-status { min-height: 18px; margin-top: 9px; color: #93d8bb; font-size: 12px; }
+#screen-player-editor #ai-dart-editor-status.is-error { color: #ffaaa8; }
+
+@media (max-width: 900px) {
+    #screen-player-editor .ai-dart-editor-layout { grid-template-columns: 1fr; }
+}
+@media (max-width: 760px) {
+    #screen-player-editor .ai-dart-pack { padding: 14px; }
+    #screen-player-editor .ai-dart-pack-toolbar { align-items: flex-start; flex-wrap: wrap; }
+}
+@media (max-width: 520px) {
+    #screen-player-editor .ai-dart-control-grid { grid-template-columns: 1fr; }
+    #screen-player-editor .ai-dart-pack-row { align-items: stretch; flex-direction: column; gap: 6px; }
+    #screen-player-editor .ai-dart-pack-row select { max-width: none; width: 100%; }
+    #screen-player-editor .ai-dart-editor-artwork > button,
+    #screen-player-editor .ai-dart-editor-artwork > label { width: 100%; box-sizing: border-box; text-align: center; }
+}

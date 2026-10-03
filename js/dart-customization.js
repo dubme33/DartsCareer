@@ -354,11 +354,57 @@
         });
     }
 
+    const aiDartSelectFields = ['barrelShape', 'barrelPattern', 'barrelAccentStyle', 'flightShape',
+        'flightPattern', 'flightSystem', 'shaftStyle', 'tipStyle'];
+    const aiDartColorFields = ['barrelColor', 'barrelAccentColor', 'shaftColor', 'tipColor',
+        'flightColor', 'flightAccentColor', 'integratedColor'];
+    function normalizeAiDartAppearance(input = {}) {
+        const raw = input && typeof input === 'object' && !Array.isArray(input) ? input : {};
+        const base = root.dartModel.normalize();
+        const result = {};
+        for (const field of aiDartSelectFields) {
+            result[field] = catalogue[field].some(item => item.id === raw[field]) ? raw[field] : base[field];
+        }
+        for (const field of aiDartColorFields) {
+            result[field] = typeof raw[field] === 'string' && /^#[0-9a-f]{6}$/i.test(raw[field])
+                ? raw[field].toLowerCase() : base[field];
+        }
+        result.tipLength = [26, 30, 35, 40, 50].includes(Number(raw.tipLength)) ? Number(raw.tipLength) : base.tipLength;
+        result.shaftLength = [28, 35, 41].includes(Number(raw.shaftLength)) ? Number(raw.shaftLength) : base.shaftLength;
+        result.barrelLength = Number.isInteger(Number(raw.barrelLength)) && Number(raw.barrelLength) >= 35
+            && Number(raw.barrelLength) <= 55 ? Number(raw.barrelLength) : base.barrelLength;
+        result.weightGrams = Number.isInteger(Number(raw.weightGrams)) && Number(raw.weightGrams) >= 12
+            && Number(raw.weightGrams) <= 40 ? Number(raw.weightGrams) : base.weightGrams;
+        const zones = raw.gripZones && typeof raw.gripZones === 'object' && !Array.isArray(raw.gripZones)
+            ? raw.gripZones : {};
+        result.gripZones = Object.fromEntries(['front', 'middle', 'rear'].map(zone => [zone,
+            catalogue.barrelPattern.some(item => item.id === zones[zone]) ? zones[zone] : result.barrelPattern]));
+        result.flightArtwork = root.dartModel.validFlightArtwork(raw.flightArtwork) ? raw.flightArtwork : null;
+        return result;
+    }
+    function isValidAiDartAppearance(input) {
+        if (!input || typeof input !== 'object' || Array.isArray(input)) return false;
+        const normal = normalizeAiDartAppearance(input);
+        const fields = [...aiDartSelectFields, ...aiDartColorFields, 'tipLength', 'shaftLength',
+            'barrelLength', 'weightGrams', 'flightArtwork'];
+        if (Object.keys(input).length !== fields.length + 1) return false;
+        if (fields.some(field => !Object.prototype.hasOwnProperty.call(input, field)
+            || input[field] !== normal[field])) return false;
+        const zones = input.gripZones;
+        return !!zones && typeof zones === 'object' && !Array.isArray(zones)
+            && Object.keys(zones).length === 3
+            && ['front', 'middle', 'rear'].every(zone => zones[zone] === normal.gripZones[zone]);
+    }
+
     function getDartLoadoutForPlayer(candidate) {
         if (isCareerPlayer(candidate)) {
             const state = normalizeDartCustomization(player);
             return buildLoadout(state.selected, 'career', player);
         }
+        if (candidate?.aiDartAppearance) return Object.freeze({
+            ...root.dartModel.normalize(normalizeAiDartAppearance(candidate.aiDartAppearance)),
+            source: 'opponent', ownerKey: String(candidate.id || candidate.sourceName || candidate.name || '')
+        });
         return buildLoadout(aiSelections(candidate), 'opponent', candidate);
     }
 
@@ -716,6 +762,9 @@
     }
 
     root.dartCustomizationCatalogue = catalogue;
+    root.normalizeAiDartAppearance = normalizeAiDartAppearance;
+    root.isValidAiDartAppearance = isValidAiDartAppearance;
+    root.dartCustomizationPreviewMarkup = previewMarkup;
     root.normalizeDartCustomization = normalizeDartCustomization;
     root.getDartLoadoutForPlayer = getDartLoadoutForPlayer;
     root.getMatchDartLoadout = getMatchDartLoadout;

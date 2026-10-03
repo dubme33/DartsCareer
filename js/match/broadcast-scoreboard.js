@@ -59,20 +59,26 @@
             const candidate = match.isDoubles
                 ? (isP1 ? match.worldCupTeamP1 : match.worldCupTeamP2)
                 : (isP1 ? (match.isSpectator ? match.spectatorP1 : (typeof player !== 'undefined' ? player : null)) : match.opponent);
-            const name = match.isDoubles ? candidate?.country : candidate?.name;
+            const name = match.isDoubles && candidate?.country && typeof getWorldCupCountryName === 'function'
+                ? getWorldCupCountryName(candidate.country)
+                : (match.isDoubles ? candidate?.country : candidate?.name);
             put(`broadcast-name-${side}`, name || '—');
             put(`broadcast-score-${side}`, match[`${side}Score`]);
             put(`broadcast-legs-${side}`, match[`${side}Legs`] || 0);
             put(`broadcast-sets-${side}`, match[`${side}Sets`] || 0);
             document.getElementById(`broadcast-sets-${side}`).hidden = !sets;
             const flag = document.getElementById(`broadcast-flag-${side}`);
-            if (flag.dataset.country !== (candidate?.country || '')) {
-                flag.dataset.country = candidate?.country || '';
-                const code = typeof flags !== 'undefined' ? flags[candidate?.country] : '';
+            const flagCountry = match.isDoubles ? candidate?.flagCountry || (match.isWorldCup ? candidate?.country : '') : candidate?.country;
+            if (flag.dataset.country !== (flagCountry || '')) {
+                flag.dataset.country = flagCountry || '';
+                const code = typeof flags !== 'undefined' ? flags[flagCountry] : '';
                 flag.innerHTML = flagArt[code]
                     ? `<svg viewBox="0 0 30 20" aria-hidden="true">${flagArt[code]}</svg>`
-                    : (typeof getFlagImg === 'function' ? getFlagImg(candidate?.country) : '');
-                flag.setAttribute('aria-label', candidate?.country || '');
+                    : (flagCountry && typeof getFlagImg === 'function' ? getFlagImg(flagCountry) : '');
+            }
+            const flagLabel = match.isDoubles ? name : flagCountry;
+            if (flag.getAttribute('aria-label') !== (flagLabel || '')) {
+                flag.setAttribute('aria-label', flagLabel || '');
             }
             const row = document.getElementById(`broadcast-${side}`);
             const throwing = match.turn === side;

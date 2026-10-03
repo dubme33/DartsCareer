@@ -466,6 +466,8 @@ function initCareerChronicle() {
                 // Korekty ocen gry nakładamy poniżej jednorazowo, z zachowaniem rozwoju.
                 if (modData.pdcPlayers) {
                     const playersBySourceName = new Map(pdcPlayers.map(candidate => [candidate.sourceName || candidate.name, candidate]));
+                    const playersByTemplateIndex = new Map(pdcPlayers.filter(candidate => Number.isInteger(candidate.defaultTemplateIndex))
+                        .map(candidate => [candidate.defaultTemplateIndex, candidate]));
                     const normalizeSourceName = value => String(value || '').trim().replace(/\s+/g, ' ').toLocaleLowerCase('pl');
                     const careerSourceName = normalizeSourceName(player.sourceName || player.name);
                     if (!Number.isInteger(player.defaultTemplateIndex) && Array.isArray(defaultPdcPlayerTemplates)) {
@@ -488,14 +490,15 @@ function initCareerChronicle() {
                         );
                         if (isCareerPlayerEntry) {
                             if (typeof applyModPlayerNickname === 'function') applyModPlayerNickname(player, modPlayer);
-                            ['name', 'sourceName', 'birthYear', 'country', 'hasTourCard', 'favoriteDouble'].forEach(field => {
+                            (player.playerEditorProfileOverride === true ? ['hasTourCard']
+                                : ['name', 'sourceName', 'birthYear', 'country', 'hasTourCard', 'favoriteDouble']).forEach(field => {
                                 if (modPlayer[field] !== undefined) player[field] = modPlayer[field];
                             });
                             player.defaultTemplateIndex = templateIndex;
                             return;
                         }
                         const indexedCandidate = pdcPlayers[index];
-                        const candidate = playersBySourceName.get(sourceName) || (
+                        const candidate = playersByTemplateIndex.get(templateIndex) || playersBySourceName.get(sourceName) || (
                             indexedCandidate &&
                             indexedCandidate.country === modPlayer.country &&
                             Number(indexedCandidate.ovr) === Number(modPlayer.ovr)
@@ -504,7 +507,8 @@ function initCareerChronicle() {
                         );
                         if (candidate) {
                             if (typeof applyModPlayerNickname === 'function') applyModPlayerNickname(candidate, modPlayer);
-                            ['name', 'sourceName', 'birthYear', 'country', 'hasTourCard', 'favoriteDouble'].forEach(field => {
+                            (candidate.playerEditorProfileOverride === true ? ['hasTourCard']
+                                : ['name', 'sourceName', 'birthYear', 'country', 'hasTourCard', 'favoriteDouble']).forEach(field => {
                                 if (modPlayer[field] !== undefined) candidate[field] = modPlayer[field];
                             });
                             if (!Number.isInteger(candidate.defaultTemplateIndex) && candidate === indexedCandidate) {

@@ -87,6 +87,19 @@
 #te-prizes-panel[hidden] { display: none !important; }
 #te-routes-label { display: block; margin-top: 15px; font-size: 12px; }
 #te-add-route { padding: 8px 12px; }
+.te-team-panel { margin-top: 16px; padding: 15px; border: 1px solid #3b5a72; border-radius: 8px; }
+.te-team-panel[hidden], .te-team-panel [hidden], #te-qualification-panel[hidden] { display: none !important; }
+.te-team-panel h4 { margin: 0 0 5px; }
+.te-team-panel p { margin: 0 0 12px; color: #adc4d4; font-size: 12px; line-height: 1.45; }
+.te-team-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+.te-team-row input, .te-team-row select { flex: 1 1 160px; min-width: 0; box-sizing: border-box; padding: 9px;
+    border: 1px solid #55738a; border-radius: 6px; background: #0a1a2b; color: #fff; font: inherit; }
+.te-team-row .te-pair-name { flex-basis: 100%; }
+.te-pair-row { padding-bottom: 10px; border-bottom: 1px solid #345269; }
+.te-pair-row .te-pair-player { flex: 1 1 100%; }
+.te-pair-row .te-team-remove { margin-left: auto; }
+.te-team-row .te-team-remove { padding: 8px 12px; }
+.te-team-panel > div > button { margin-top: 9px; padding: 8px 12px; }
 .tournament-pack { padding: 15px 26px; border-bottom: 1px solid #365269; background: #102b40; }
 .tournament-pack-toolbar, .tournament-pack-preview-heading, .tournament-pack-actions { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .tournament-pack-toolbar h3, .tournament-pack-preview h4 { margin: 0 0 4px; color: #f6fbff; font-size: 17px; }

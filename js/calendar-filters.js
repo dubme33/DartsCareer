@@ -1,12 +1,15 @@
 const CALENDAR_FILTER_VERSION = 1;
 const CALENDAR_FILTER_CYCLE_ORDER = Object.freeze([
+    'major',
     'premierLeague',
+    'proTour',
     'playersChampionship',
     'europeanTour',
     'worldSeries',
     'challengeTour',
     'developmentTour',
     'worldCup',
+    'qualifier',
     'other'
 ]);
 
@@ -16,6 +19,7 @@ const CALENDAR_FILTER_TRANSLATIONS = Object.freeze({
         hint: 'Odznacz cały cykl albo rozwiń go i wybierz pojedyncze turnieje.',
         showAll: 'Pokaż wszystko', hideAll: 'Ukryj wszystko', visible: 'Widoczne: {visible}/{total}',
         empty: 'Żaden turniej nie pasuje do wybranych filtrów.',
+        major: 'Majory', proTour: 'Pro Tour', qualifier: 'Kwalifikacje',
         premierLeague: 'Global Darts League (Premier League)',
         playersChampionship: 'Pro Players Cup (Players Championship)',
         europeanTour: 'Continental Tour (European Tour)',
@@ -29,6 +33,7 @@ const CALENDAR_FILTER_TRANSLATIONS = Object.freeze({
         hint: 'Untick an entire circuit or expand it to choose individual tournaments.',
         showAll: 'Show all', hideAll: 'Hide all', visible: 'Visible: {visible}/{total}',
         empty: 'No tournaments match the selected filters.',
+        major: 'Majors', proTour: 'Pro Tour', qualifier: 'Qualifiers',
         premierLeague: 'Global Darts League (Premier League)',
         playersChampionship: 'Pro Players Cup (Players Championship)',
         europeanTour: 'Continental Tour (European Tour)',
@@ -42,6 +47,7 @@ const CALENDAR_FILTER_TRANSLATIONS = Object.freeze({
         hint: 'Deaktiviere eine ganze Serie oder öffne sie, um einzelne Turniere auszuwählen.',
         showAll: 'Alle anzeigen', hideAll: 'Alle ausblenden', visible: 'Sichtbar: {visible}/{total}',
         empty: 'Keine Turniere entsprechen den ausgewählten Filtern.',
+        major: 'Major-Turniere', proTour: 'Pro Tour', qualifier: 'Qualifikation',
         premierLeague: 'Global Darts League (Premier League)',
         playersChampionship: 'Pro Players Cup (Players Championship)',
         europeanTour: 'Continental Tour (European Tour)',
@@ -55,6 +61,7 @@ const CALENDAR_FILTER_TRANSLATIONS = Object.freeze({
         hint: 'Vink een hele reeks uit of klap deze open om afzonderlijke toernooien te kiezen.',
         showAll: 'Alles tonen', hideAll: 'Alles verbergen', visible: 'Zichtbaar: {visible}/{total}',
         empty: 'Geen toernooien voldoen aan de geselecteerde filters.',
+        major: 'Majors', proTour: 'Pro Tour', qualifier: 'Kwalificaties',
         premierLeague: 'Global Darts League (Premier League)',
         playersChampionship: 'Pro Players Cup (Players Championship)',
         europeanTour: 'Continental Tour (European Tour)',
@@ -104,6 +111,10 @@ function getCalendarTournamentFilterKey(tournament) {
 
 function getCalendarTournamentCycle(tournament) {
     if (!tournament || typeof tournament !== 'object') return 'other';
+    if (tournament.editorCycle === 'custom' && String(tournament.editorTourName || '').trim()) {
+        return `custom:${encodeURIComponent(tournament.editorTourName.trim().replace(/\s+/g, ' ').toLocaleLowerCase())}`;
+    }
+    if (CALENDAR_FILTER_CYCLE_ORDER.includes(tournament.editorCycle)) return tournament.editorCycle;
     const type = normalizeCalendarFilterName(tournament.specialType);
     const sourceName = normalizeCalendarFilterName(tournament.sourceName || tournament.name).toLowerCase();
 
@@ -216,15 +227,20 @@ function renderCalendarTournamentFilters(entries) {
     const grouped = new Map(CALENDAR_FILTER_CYCLE_ORDER.map(cycle => [cycle, []]));
     sourceEntries.forEach(entry => {
         const tournament = getCalendarFilterTournament(entry);
-        grouped.get(getCalendarTournamentCycle(tournament)).push({
+        const cycle = getCalendarTournamentCycle(tournament);
+        if (!grouped.has(cycle)) grouped.set(cycle, []);
+        grouped.get(cycle).push({
             tournament,
             key: getCalendarTournamentFilterKey(tournament)
         });
     });
+    const customCycles = [...grouped.keys()].filter(cycle => cycle.startsWith('custom:'))
+        .sort((first, second) => first.localeCompare(second));
+    const cycleOrder = [...CALENDAR_FILTER_CYCLE_ORDER.slice(0, -1), ...customCycles, 'other'];
     const visibleTotal = sourceEntries.filter(entry =>
         !hidden.has(getCalendarTournamentFilterKey(getCalendarFilterTournament(entry)))).length;
 
-    const groupsHtml = CALENDAR_FILTER_CYCLE_ORDER.map(cycle => {
+    const groupsHtml = cycleOrder.map(cycle => {
         const events = grouped.get(cycle);
         if (!events.length) return '';
         const visibleInCycle = events.filter(event => !hidden.has(event.key)).length;
@@ -237,8 +253,9 @@ function renderCalendarTournamentFilters(entries) {
         return `<details class="calendar-filter-cycle">
             <summary>
                 <label class="calendar-filter-cycle-label">
-                    <input type="checkbox" data-calendar-filter-cycle="${cycle}"${allVisible ? ' checked' : ''}>
-                    <span>${escapeCalendarFilterHtml(trCalendarFilter(cycle))}</span>
+                    <input type="checkbox" data-calendar-filter-cycle="${escapeCalendarFilterHtml(cycle)}"${allVisible ? ' checked' : ''}>
+                    <span>${escapeCalendarFilterHtml(cycle.startsWith('custom:')
+                        ? events[0].tournament.editorTourName : trCalendarFilter(cycle))}</span>
                 </label>
                 <span class="calendar-filter-cycle-count">${visibleInCycle}/${events.length}</span>
             </summary>

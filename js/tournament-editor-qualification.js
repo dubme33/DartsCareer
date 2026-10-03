@@ -73,6 +73,27 @@ function isTournamentEditorNativeTarget(tournament) {
         && !['worldCup', 'worldCupQualifier', 'worldCupQualifiers'].includes(tournament.specialType);
 }
 
+function getTournamentEditorNativeQualifierCapacity(tournament) {
+    if (!isTournamentEditorNativeTarget(tournament)) return 0;
+    if (tournament.isEditorTournament === true) return Number(tournament.editorFieldSize) || 32;
+    const name = String(tournament.sourceName || tournament.name || '').toLowerCase();
+    if (typeof isContinentalTourTournament === 'function' && isContinentalTourTournament(tournament))
+        return typeof CONTINENTAL_QUALIFIER_PATHS !== 'undefined'
+            ? CONTINENTAL_QUALIFIER_PATHS.host.places : 4;
+    if (typeof getWorldMastersTournamentRound === 'function'
+        && (typeof isWorldMastersTournament === 'function' && isWorldMastersTournament(tournament)
+            || typeof isWorldMastersFinalsTournament === 'function' && isWorldMastersFinalsTournament(tournament)))
+        return getWorldMastersTournamentRound(tournament);
+    if (/players championship finals|pro players finals/.test(name)) return 64;
+    if (/players championship|pro players cup/.test(name)) return 128;
+    if (/uk open|british open/.test(name) || tournament.specialType === 'ukOpen') return 160;
+    if (/world championship|global championship/.test(name)) return 128;
+    // Other fixed built-in knockout fields use 32 places. Dynamic secondary tours
+    // can vary with eligibility, so their draw applies the available places.
+    if (/challenge tour|development tour/.test(name)) return null;
+    return 32;
+}
+
 function getTournamentEditorNativeQualifierWinners(main, candidates, referenceDate = currentDate) {
     if (!isTournamentEditorNativeTarget(main) || typeof tournamentDatabase === 'undefined') return [];
     const targetKey = String(main.sourceName || main.name || '');
@@ -98,9 +119,10 @@ function applyTournamentEditorNativeQualifierDraw(main, draw, candidates, refere
     const result = [...draw];
     const key = getTournamentEditorPlayerKey;
     const existing = new Set(result.map(key).filter(Boolean));
-    const protectedKeys = new Set(getTournamentEditorRanking(result.filter(candidate => candidate && !candidate.isBye), 'oom')
-        .slice(0, Math.min(16, Math.floor(result.length / 2))).map(key));
     const winnerKeys = new Set(winners.map(key));
+    const protectedCount = Math.min(16, Math.floor(result.length / 2), Math.max(0, result.length - winnerKeys.size));
+    const protectedKeys = new Set(getTournamentEditorRanking(result.filter(candidate => candidate && !candidate.isBye
+        && !winnerKeys.has(key(candidate))), 'oom').slice(0, protectedCount).map(key));
     winners.forEach(winner => {
         const winnerKey = key(winner);
         if (existing.has(winnerKey)) return;

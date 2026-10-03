@@ -125,8 +125,12 @@ function startMatch(vsAI) {
 
             // Czysty tekst bez małych, zagnieżdżonych obrazków w statystykach
             if (currentMatch.isDoubles) {
-                updateMatchStatsTitle('p1', currentMatch.worldCupTeamP1.country, currentMatch.worldCupTeamP1.country, true);
-                updateMatchStatsTitle('p2', currentMatch.worldCupTeamP2.country, currentMatch.worldCupTeamP2.country, true);
+                for (const side of ['p1', 'p2']) {
+                    const country = currentMatch[side === 'p1' ? 'worldCupTeamP1' : 'worldCupTeamP2'].country;
+                    const name = typeof getWorldCupCountryName === 'function'
+                        ? getWorldCupCountryName(country) : country;
+                    updateMatchStatsTitle(side, name, country, true);
+                }
             } else {
                 const p1Candidate = typeof getCurrentSinglesMatchPlayer === 'function'
                     ? getCurrentSinglesMatchPlayer(true)
@@ -230,6 +234,7 @@ function startMatch(vsAI) {
             // Wspólna logika wyniku i nagród, lecz reszta rundy oddaje sterowanie
             // po partiach meczów. Pozostałe tryby zachowują dotychczasowy przebieg.
             const isCareerKnockout = match.isTournament && activeTournament && !match.isSpectator && !match.isWorldCup
+                && !match.isEditorTeamTournament
                 && !(typeof isGrandSlamCareerGroupMatch === 'function' && isGrandSlamCareerGroupMatch(match));
             if (isCareerKnockout) {
                 const tournament = activeTournament;
@@ -263,6 +268,10 @@ function startMatch(vsAI) {
         function* iterateMatchCompletion() {
             if (currentMatch?.isSpectator && typeof finishSpectatedTournamentMatch === 'function') {
                 finishSpectatedTournamentMatch();
+                return;
+            }
+            if (currentMatch?.isEditorTeamTournament && typeof finishEditorTeamTournamentMatch === 'function') {
+                finishEditorTeamTournamentMatch();
                 return;
             }
             if (currentMatch && currentMatch.isWorldCup && typeof finishWorldCupMatch === 'function') {

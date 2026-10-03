@@ -30,7 +30,7 @@ function seasonArchiveRankings(candidates) {
 
 function seasonArchiveResultTournament(result) {
     return { name: result.tournament || '', sourceName: result.sourceTournament || result.tournament || '',
-        specialType: result.tournamentSpecialType || '' };
+        specialType: result.tournamentSpecialType || '', isDoubles: Boolean(result.tournamentIsDoubles) };
 }
 
 function seasonArchiveIsQualifier(tournament) {

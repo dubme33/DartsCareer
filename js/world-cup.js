@@ -220,6 +220,30 @@ function getWorldCupTeamOverrides() {
     return overrides && typeof overrides === 'object' && !Array.isArray(overrides) ? overrides : {};
 }
 
+function getWorldCupQualifierEvents() {
+    const overrides = getWorldCupTeamOverrides();
+    const standardCountries = new Set([...WORLD_CUP_AUTOMATIC_NATIONS,
+        ...WORLD_CUP_QUALIFIER_EVENTS.flatMap(event => event.nations)]);
+    const occupied = new Set();
+    return WORLD_CUP_QUALIFIER_EVENTS.map(event => {
+        const nations = [...event.nations];
+        for (const [country, override] of Object.entries(overrides)) {
+            if (!country || standardCountries.has(country) || override?.qualifierEventId !== event.id) continue;
+            const replaced = override.replaces;
+            if (replaced) {
+                const index = nations.indexOf(replaced);
+                if (index < 0 || occupied.has(replaced) || replaced === player?.country
+                    || overrides[replaced]) continue;
+                nations[index] = country;
+                occupied.add(replaced);
+            } else {
+                nations.push(country);
+            }
+        }
+        return { ...event, nations };
+    });
+}
+
 function getWorldCupOverridePlayer(reference, country, eligiblePlayers) {
     if (!reference || typeof reference !== 'object') return null;
     const candidates = eligiblePlayers.filter(candidate => candidate.country === country);
@@ -293,11 +317,12 @@ function createWorldCupQualifier(country, slot, countryIndex) {
 
 function getWorldCupAutomaticNationList() {
     const nations = [...WORLD_CUP_AUTOMATIC_NATIONS];
-    const qualifierNations = new Set(WORLD_CUP_QUALIFIER_EVENTS.flatMap(event => event.nations));
+    const qualifierNations = new Set([...WORLD_CUP_QUALIFIER_EVENTS.flatMap(event => event.nations),
+        ...getWorldCupQualifierEvents().flatMap(event => event.nations)]);
     const protectedCountries = new Set();
     for (const [country, override] of Object.entries(getWorldCupTeamOverrides())) {
         const replacementIndex = nations.indexOf(override?.replaces);
-        if (!country || !override?.replaces || qualifierNations.has(country) || nations.includes(country)
+        if (!country || !override?.replaces || override.qualifierEventId || qualifierNations.has(country) || nations.includes(country)
             || replacementIndex < 0 || protectedCountries.has(override.replaces)) continue;
         nations[replacementIndex] = country;
         protectedCountries.add(override.replaces);
@@ -484,8 +509,8 @@ function buildWorldCupQualificationEvent(event, automaticCountries) {
     const drawnTeams = shuffleWorldCupTeams(teams);
     const groups = event.id === 'asian-tour'
         ? [
-            createWorldCupQualificationGroup(event.id, 'A', drawnTeams.slice(0, 3)),
-            createWorldCupQualificationGroup(event.id, 'B', drawnTeams.slice(3, 6))
+            createWorldCupQualificationGroup(event.id, 'A', drawnTeams.slice(0, Math.ceil(drawnTeams.length / 2))),
+            createWorldCupQualificationGroup(event.id, 'B', drawnTeams.slice(Math.ceil(drawnTeams.length / 2)))
         ]
         : [createWorldCupQualificationGroup(event.id, 'A', drawnTeams)];
     return { ...baseEvent, groups };
@@ -523,7 +548,7 @@ function buildWorldCupGroupStage(selectedTeams) {
 function buildWorldCupState() {
     const automaticTeams = buildWorldCupTeams(getWorldCupAutomaticNationList());
     const automaticCountries = new Set(automaticTeams.map(team => team.country));
-    const events = WORLD_CUP_QUALIFIER_EVENTS.map(event => buildWorldCupQualificationEvent(event, automaticCountries));
+    const events = getWorldCupQualifierEvents().map(event => buildWorldCupQualificationEvent(event, automaticCountries));
     const qualifierTeams = events.flatMap(event => Object.keys(event.teamCountries)
         .map(teamId => buildWorldCupTeams([event.teamCountries[teamId]])[0]));
     const allTeams = [...automaticTeams, ...qualifierTeams];
@@ -626,11 +651,16 @@ function getWorldCupGroupStandings(group) {
 }
 
 function compareWorldCupStandingRows(first, second) {
-    if (second.wins !== first.wins) return second.wins - first.wins;
+    const firstMatches = first.matchesPlayed || 1;
+    const secondMatches = second.matchesPlayed || 1;
+    const winsDifference = second.wins * firstMatches - first.wins * secondMatches;
+    if (winsDifference !== 0) return winsDifference;
     const firstDifference = first.legsWon - first.legsLost;
     const secondDifference = second.legsWon - second.legsLost;
-    if (secondDifference !== firstDifference) return secondDifference - firstDifference;
-    if (second.legsWon !== first.legsWon) return second.legsWon - first.legsWon;
+    const legsDifference = secondDifference * firstMatches - firstDifference * secondMatches;
+    if (legsDifference !== 0) return legsDifference;
+    const legsWonDifference = second.legsWon * firstMatches - first.legsWon * secondMatches;
+    if (legsWonDifference !== 0) return legsWonDifference;
     return getWorldCupTeam(first.teamId).country.localeCompare(getWorldCupTeam(second.teamId).country, 'pl');
 }
 
@@ -652,7 +682,9 @@ function completeWorldCupQualifications() {
         let qualifiedTeamIds = [];
         if (event.id === 'asian-tour') {
             const groupWinners = groupTables.map(standings => standings[0]);
-            const bestRunnerUp = groupTables.map(standings => standings[1])
+            const bestRunnerUp = groupTables.map((standings, index) => ({
+                ...standings[1], matchesPlayed: Math.max(1, event.groups[index].teamIds.length - 1)
+            }))
                 .sort(compareWorldCupStandingRows)[0];
             qualifiedTeamIds = [...groupWinners, bestRunnerUp].map(row => row.teamId);
         } else {
@@ -1319,6 +1351,8 @@ function refreshWorldCupTranslations() {
     document.getElementById('match-p1-name').innerHTML = `${getFlagImg(playerTeam.country)} <strong>${escapeHtml(getWorldCupCountryName(playerTeam.country))}</strong><br><small>${escapeHtml(playerTeam.players.map(candidate => candidate.name).join(' / '))}</small>`;
     document.getElementById('match-p2-name').innerHTML = `${getFlagImg(opponentTeam.country)} <strong>${escapeHtml(getWorldCupCountryName(opponentTeam.country))}</strong><br><small>${escapeHtml(opponentTeam.players.map(candidate => candidate.name).join(' / '))}</small>`;
     document.getElementById('match-title').innerText = `🏆 ${trWorldCup('matchTitle', { tournament: getWorldCupTournamentDisplayName(), round: getWorldCupRoundLabel(), legs: format.legsToWin })}`;
+    if (typeof refreshMatchBroadcastScoreboard === 'function') refreshMatchBroadcastScoreboard();
+    if (typeof updateMatchStatsUI === 'function') updateMatchStatsUI();
 }
 
 function startWorldCupTournament() {

@@ -549,6 +549,9 @@ function skipActiveTournament() {
                 }
                 showScreen('screen-match'); return;
             }
+            if (typeof isEditorTeamTournament === 'function' && isEditorTeamTournament(activeTournament)) {
+                return startEditorTeamTournament();
+            }
             if (typeof isWorldCupTournament === 'function' && isWorldCupTournament(activeTournament)) {
                 return startWorldCupTournament();
             }

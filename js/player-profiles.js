@@ -569,6 +569,7 @@ function recordSeasonTournamentResult(candidate, tournament, details = {}) {
         tournament: tournament.name,
         sourceTournament: tournament.sourceName || tournament.name,
         tournamentSpecialType: tournament.specialType || '',
+        tournamentIsDoubles: Boolean(tournament.isDoubles),
         worldMastersEvent: tournament.worldMastersEvent || '',
         round,
         won,

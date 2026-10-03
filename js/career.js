@@ -473,6 +473,19 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
         function isCareerPlayerParticipatingInTournament(tournament, careerPlayer = player) {
             if (!tournament || !careerPlayer) return true;
             if (typeof isPlayerInjured === 'function' && isPlayerInjured(careerPlayer)) return false;
+            if (typeof isEditorTeamTournament === 'function' && isEditorTeamTournament(tournament)) {
+                const identity = candidate => candidate === careerPlayer
+                    || candidate?.id && careerPlayer.id && String(candidate.id) === String(careerPlayer.id)
+                    || candidate?.name === careerPlayer.name && candidate?.country === careerPlayer.country;
+                if (tournament.editorTeamState?.teams) return tournament.editorTeamState.teams
+                    .some(team => team.players?.some(identity));
+                if (tournament.editorTeamMode === 'pairs') return (tournament.editorTeamEntries || [])
+                    .some(team => team.players?.some(identity));
+                const countries = (tournament.editorTeamEntries || []).map(entry => entry.country);
+                if (countries.length && !countries.includes(careerPlayer.country)) return false;
+                return typeof buildEditorTeamField === 'function'
+                    ? buildEditorTeamField(tournament).some(team => team.players.some(identity)) : true;
+            }
             const isCareerPlayer = candidate => {
                 if (!candidate) return false;
                 if (candidate === careerPlayer) return true;
@@ -764,6 +777,8 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
                             tournament.completed = false;
                             tournament.historyLogs = '';
                             delete tournament.matchHistory;
+                            delete tournament.editorTeamState;
+                            delete tournament.editorTeamWinner;
                             delete tournament.premierLeagueOpeningPairs;
                             delete tournament.editorQualifierResults;
                             delete tournament.bracketSeedPlayerKeys;

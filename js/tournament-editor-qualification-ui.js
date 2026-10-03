@@ -47,16 +47,16 @@ const TOURNAMENT_EDITOR_QUALIFICATION_TEXT = {
     teamRules: ['Turnieje drużynowe i liga korzystają z wbudowanych zasad uczestnictwa.', 'Team events and the league use built-in entry rules.', 'Teamturniere und Liga nutzen integrierte Teilnahmeregeln.', 'Teamtoernooien en de competitie gebruiken ingebouwde deelnameregels.']
 };
 TOURNAMENT_EDITOR_QUALIFICATION_TEXT.qualifierHint = [
-    'Wybierz istniejący lub własny turniej. Kwalifikator musi zakończyć się przed nim. Przy wbudowanych zasadach awansujący zastępują najniżej sklasyfikowanych uczestników (maksymalnie 4 miejsca); w European Tour zajmują miejsca ścieżki gospodarzy.',
-    'Select a built-in or custom event. The qualifier must finish first. With built-in rules, winners replace the lowest-ranked entrants (up to 4 places); in European Tour they take host-nation places.',
-    'Wähle ein bestehendes oder eigenes Turnier. Die Qualifikation muss vorher enden. Bei integrierten Regeln ersetzen die Sieger bis zu vier der am niedrigsten platzierten Teilnehmer; bei der European Tour belegen sie Gastgeberplätze.',
-    'Kies een bestaand of eigen toernooi. De kwalificatie moet eerder eindigen. Bij ingebouwde regels vervangen winnaars maximaal vier van de laagst gerangschikte deelnemers; in de European Tour bezetten zij gastlandplaatsen.'
+    'Wybierz istniejący lub własny turniej. Kwalifikator musi zakończyć się przed nim. Przy wbudowanych zasadach awansujący zastępują najniżej sklasyfikowanych uczestników; w European Tour zajmują miejsca ścieżki gospodarzy.',
+    'Select a built-in or custom event. The qualifier must finish first. With built-in rules, winners replace the lowest-ranked entrants; in European Tour they take host-nation places.',
+    'Wähle ein bestehendes oder eigenes Turnier. Die Qualifikation muss vorher enden. Bei integrierten Regeln ersetzen die Sieger die am niedrigsten platzierten Teilnehmer; bei der European Tour belegen sie Gastgeberplätze.',
+    'Kies een bestaand of eigen toernooi. De kwalificatie moet eerder eindigen. Bij ingebouwde regels vervangen winnaars de laagst gerangschikte deelnemers; in de European Tour bezetten zij gastlandplaatsen.'
 ];
 TOURNAMENT_EDITOR_QUALIFICATION_TEXT.invalidQualifier = [
-    'Wybierz turniej docelowy, który jeszcze się nie rozpoczął. Kwalifikator musi skończyć się wcześniej, a liczba awansujących musi być potęgą 2 mniejszą od jego pola. Limit: 4 miejsca w turnieju wbudowanym.',
-    'Select a target event that has not started. The qualifier must finish earlier, and advancing places must be a power of two smaller than its field. Limit: 4 places in a built-in event.',
-    'Wähle ein noch nicht begonnenes Zielturnier. Die Qualifikation muss vorher enden; die Aufstiegsplätze müssen eine Zweierpotenz unter der Feldgröße sein. Limit: 4 Plätze bei integrierten Turnieren.',
-    'Kies een doeltoernooi dat nog niet is begonnen. De kwalificatie moet eerder eindigen; het aantal plaatsen moet een macht van twee kleiner dan het deelnemersveld zijn. Limiet: 4 plaatsen bij ingebouwde toernooien.'
+    'Wybierz turniej docelowy, który jeszcze się nie rozpoczął. Kwalifikator musi skończyć się wcześniej, a liczba awansujących musi być potęgą 2 mniejszą od pola kwalifikatora i mieścić się w turnieju głównym.',
+    'Select a target event that has not started. The qualifier must finish earlier; advancing places must be a power of two smaller than the qualifier field and fit in the main event.',
+    'Wähle ein noch nicht begonnenes Zielturnier. Die Qualifikation muss vorher enden; die Aufstiegsplätze müssen eine Zweierpotenz unter der Feldgröße der Qualifikation sein und ins Hauptturnier passen.',
+    'Kies een doeltoernooi dat nog niet is begonnen. De kwalificatie moet eerder eindigen; het aantal plaatsen moet een macht van twee kleiner dan het kwalificatieveld zijn en in het hoofdtoernooi passen.'
 ];
 Object.entries(TOURNAMENT_EDITOR_QUALIFICATION_TEXT).forEach(([key, texts]) =>
     ['pl', 'en', 'de', 'nl'].forEach((language, index) => { TOURNAMENT_EDITOR_TEXT[language][key] = texts[index]; }));
@@ -134,14 +134,18 @@ function addTournamentEditorRoute(route = { source: 'oom', places: 8 }) {
 }
 
 function updateTournamentEditorQualificationFields() {
+    const teamEvent = ['national', 'pairs'].includes(tournamentEditorValue('te-team-mode'))
+        && (tournamentEditorCreating || tournamentEditorSelected?.isEditorTournament === true);
+    const qualificationPanel = tournamentEditorElement('te-qualification-panel');
+    if (qualificationPanel) qualificationPanel.hidden = teamEvent;
     const custom = tournamentEditorValue('te-qualification-mode') === 'custom';
     const qualifier = tournamentEditorValue('te-event-kind') === 'qualifier';
     tournamentEditorElement('te-qualification-fields').hidden = !custom;
     tournamentEditorElement('te-target-wrap').hidden = !qualifier;
     tournamentEditorElement('te-qualifying-places-wrap').hidden = !qualifier;
     tournamentEditorElement('te-qualifier-hint').hidden = !qualifier;
-    tournamentEditorElement('te-prizes-panel').hidden = custom && qualifier;
-    tournamentEditorElement('te-ranking').disabled = custom && qualifier;
+    tournamentEditorElement('te-prizes-panel').hidden = !teamEvent && custom && qualifier;
+    tournamentEditorElement('te-ranking').disabled = !teamEvent && custom && qualifier;
     tournamentEditorElement('te-field-size').disabled = !custom && !tournamentEditorCreating
         && tournamentEditorSelected?.isEditorTournament !== true;
     tournamentEditorElement('te-field-size-wrap').hidden = tournamentEditorElement('te-field-size').disabled;
@@ -286,8 +290,9 @@ function prepareTournamentEditorQualificationUpdate(tournament, values) {
                 && isTournamentEditorQualifier(event)
                 && event.editorQualification.targetKey === tournamentEditorKey(nextMain))
                 .reduce((total, event) => total + event.editorQualification.qualifyingPlaces, 0);
-            const limit = 4;
-            if (linkedPlaces + rules.qualifyingPlaces > limit) throw new Error(trTournamentEditor('invalidQualifier'));
+            const capacity = getTournamentEditorNativeQualifierCapacity(nextMain);
+            if (capacity !== null && linkedPlaces + rules.qualifyingPlaces > capacity)
+                throw new Error(trTournamentEditor('invalidQualifier'));
         }
     }
     linked.forEach(event => {

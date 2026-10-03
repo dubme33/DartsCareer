@@ -746,7 +746,8 @@ function applyKnownPlayerCorrections(players, options = {}) {
         // sourceName. Dzięki temu obejmuje bazowego Micka Manbuya i prawdziwe
         // nazwisko z moda, ale nie zmienia narodowości innych modowych zamienników
         // korzystających z tego samego slotu (np. polskiego moda).
-        if (displayName === 'mick manbuy' || displayName === 'mickey mansell') {
+        if (candidate.playerEditorProfileOverride !== true
+            && (displayName === 'mick manbuy' || displayName === 'mickey mansell')) {
             candidate.country = 'Irlandia';
         }
         const identities = [candidate.sourceName, candidate.name]
@@ -760,6 +761,8 @@ function applyKnownPlayerCorrections(players, options = {}) {
                 // jednorazowe zmiany OVR obsługuje applyPlayerRatingUpdate.
                 if ((options.preserveProgress || candidate.playerEditorRatingOverride === true)
                     && ['ovr', 'scoring', 'doubles'].includes(field)) return;
+                if (candidate.playerEditorProfileOverride === true
+                    && ['name', 'country', 'birthYear', 'gender', 'favoriteDouble'].includes(field)) return;
                 candidate[field] = value;
             });
         }

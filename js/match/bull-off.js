@@ -159,6 +159,8 @@ function rollMatchBullDart(candidate, random = Math.random) {
     return { ring, x: Math.cos(angle) * radius, y: Math.sin(angle) * radius };
 }
 function compareMatchBullDarts(first, second) {
+    // Two red-bull hits are a tie even when their visual landing points differ.
+    if (first?.ring === 'bull' && second?.ring === 'bull') return 0;
     return Math.sign(getMatchBullBoardRadius(second) - getMatchBullBoardRadius(first));
 }
 function resolveMatchBullAutomatically(p1, p2, random = Math.random) {
