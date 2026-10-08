@@ -358,48 +358,75 @@ function getPlayerCareerTitles(candidate) {
         || String(first.name || '').localeCompare(String(second.name || ''), getPlayerProfileLocale()));
 }
 
-function playerMatchesHistoricalChampion(candidate, historicalId) {
-    if (!candidate || candidate.isBye || !historicalId
-        || typeof historicalChampionProfiles === 'undefined') return false;
+// Historical profiles change only through mod overrides. Cache their name index, never
+// a player's titles or live calendar references (editors and reload can change them).
+let historicalChampionNameIndex = null;
+function invalidateHistoricalChampionNameIndex() {
+    historicalChampionNameIndex = null;
+}
+function getPlayerHistoricalChampionIds(candidate) {
+    const matched = new Set();
+    if (!candidate || candidate.isBye || typeof historicalChampionProfiles === 'undefined') return matched;
     // A debutant or custom player is not the original champion, even when
     // they share a name. Historical titles belong to the database identity.
     if (candidate.isNewgen || candidate.editorCreated || candidate.kind === 'custom'
-        || /^(?:newgen|editor)-/.test(String(candidate.id || ''))) return false;
-    const profile = historicalChampionProfiles?.[historicalId];
-    if (!profile) return false;
+        || /^(?:newgen|editor)-/.test(String(candidate.id || ''))) return matched;
     const normalize = typeof normalizeHistoricalChampionName === 'function'
         ? normalizeHistoricalChampionName
         : normalizePlayerCareerTitle;
-    const candidateNames = new Set([candidate.name, candidate.sourceName].filter(Boolean).map(normalize));
-    return [profile.name, ...(profile.aliases || [])].filter(Boolean)
-        .some(name => candidateNames.has(normalize(name)));
+    if (!historicalChampionNameIndex || historicalChampionNameIndex.profiles !== historicalChampionProfiles
+        || historicalChampionNameIndex.normalize !== normalize) {
+        const names = new Map();
+        Object.entries(historicalChampionProfiles).forEach(([id, profile]) => {
+            [profile.name, ...(profile.aliases || [])].filter(Boolean).forEach(name => {
+                const key = normalize(name);
+                if (!names.has(key)) names.set(key, new Set());
+                names.get(key).add(id);
+            });
+        });
+        historicalChampionNameIndex = { profiles: historicalChampionProfiles, normalize, names };
+    }
+    [candidate.name, candidate.sourceName].filter(Boolean).forEach(name => {
+        historicalChampionNameIndex.names.get(normalize(name))?.forEach(id => matched.add(id));
+    });
+    return matched;
+}
+
+function playerMatchesHistoricalChampion(candidate, historicalId) {
+    return Boolean(historicalId && getPlayerHistoricalChampionIds(candidate).has(historicalId));
 }
 
 function getHistoricalPlayerCareerTitles(candidate) {
     if (!candidate || candidate.isBye || typeof historicalTournamentChampions === 'undefined'
         || !Array.isArray(historicalTournamentChampions)) return [];
+    const championIds = getPlayerHistoricalChampionIds(candidate);
+    if (!championIds.size) return [];
     const titles = [];
     const lastHistoricalSeason = typeof CAREER_HISTORY_LAST_REAL_SEASON === 'number'
         ? CAREER_HISTORY_LAST_REAL_SEASON
         : 2025;
 
     historicalTournamentChampions.forEach(history => {
-        const tournament = typeof findHistoricalCareerTournament === 'function'
-            ? findHistoricalCareerTournament(history)
-            : null;
-        const titleData = getPlayerCareerTitleData(tournament || {
-            name: history.tournament,
-            sourceName: history.sourceName || history.tournament,
-            specialType: history.specialType || ''
-        });
+        let titleData = null;
         (history.editions || []).forEach(rawEdition => {
             const edition = Array.isArray(rawEdition)
                 ? { year: Number(rawEdition[0]), champion: rawEdition[1] }
                 : rawEdition;
             const year = Number(edition?.year);
             if (!Number.isInteger(year) || year < 1900 || year > lastHistoricalSeason) return;
-            const championIds = history.team ? edition.members || [] : [edition.champion];
-            if (!championIds.some(historicalId => playerMatchesHistoricalChampion(candidate, historicalId))) return;
+            const editionChampionIds = history.team ? edition.members || [] : [edition.champion];
+            if (!editionChampionIds.some(historicalId => championIds.has(historicalId))) return;
+            // Resolve the calendar only when this player actually won this event.
+            // The ranking-news hook also queries hundreds of players with no titles.
+            if (!titleData) {
+                const tournament = typeof findHistoricalCareerTournament === 'function'
+                    ? findHistoricalCareerTournament(history) : null;
+                titleData = getPlayerCareerTitleData(tournament || {
+                    name: history.tournament,
+                    sourceName: history.sourceName || history.tournament,
+                    specialType: history.specialType || ''
+                });
+            }
             const timestamp = new Date(year, 6, 1).getTime();
             const title = upsertPlayerCareerTitle(titles, titleData, 1, timestamp);
             if (title) title.historical = true;

@@ -279,6 +279,7 @@ function seedHistoricalCareerChampions(records) {
 
 function applyHistoricalChampionModOverrides(overrides, { useRealNameFallback = false } = {}) {
     if (typeof historicalChampionProfiles === 'undefined') return;
+    if (typeof invalidateHistoricalChampionNameIndex === 'function') invalidateHistoricalChampionNameIndex();
     if (useRealNameFallback) {
         Object.values(historicalChampionProfiles).forEach(profile => {
             const realName = Array.isArray(profile?.aliases)
