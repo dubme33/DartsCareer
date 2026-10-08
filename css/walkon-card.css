@@ -76,9 +76,11 @@
 .walkon-card-footer { position: relative; z-index: 5; flex: none; display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 10px 18px; background: #090d12; }
 .walkon-card-actions { display: flex; justify-content: flex-end; align-items: stretch; gap: 8px; flex-wrap: wrap; }
 #walkon-season { color: #788c91; font-size: 10px; text-transform: uppercase; letter-spacing: .16em; }
-#walkon-card-skip, #walkon-fullscreen-toggle { appearance: none; border: 1px solid #526268; border-radius: 3px; padding: 7px 12px; background: #1d292d; color: #edf9f5; font: inherit; font-size: 11px; font-weight: 700; cursor: pointer; }
-#walkon-card-skip:hover, #walkon-fullscreen-toggle:hover { background: #2d4e46; border-color: var(--walkon-accent); }
-#walkon-card-skip:focus-visible, #walkon-fullscreen-toggle:focus-visible { outline: 2px solid var(--walkon-accent); outline-offset: 3px; }
+#walkon-card-play-music, #walkon-card-skip-current, #walkon-card-skip, #walkon-fullscreen-toggle { appearance: none; border: 1px solid #526268; border-radius: 3px; padding: 7px 12px; background: #1d292d; color: #edf9f5; font: inherit; font-size: 11px; font-weight: 700; cursor: pointer; }
+#walkon-card-play-music:hover, #walkon-card-skip-current:hover, #walkon-card-skip:hover, #walkon-fullscreen-toggle:hover { background: #2d4e46; border-color: var(--walkon-accent); }
+#walkon-card-play-music:focus-visible, #walkon-card-skip-current:focus-visible, #walkon-card-skip:focus-visible, #walkon-fullscreen-toggle:focus-visible { outline: 2px solid var(--walkon-accent); outline-offset: 3px; }
+#walkon-card-play-music { border-color: var(--walkon-accent); }
+#walkon-card-play-music:disabled { opacity: .65; cursor: wait; }
 #walkon-fullscreen-toggle[aria-pressed="true"] { border-color: var(--walkon-accent); background: #244039; }
 #walkon-fullscreen-toggle:disabled { opacity: .65; cursor: wait; }
 #career-walkon-stage.playing .walkon-player-card { animation: walkon-card-enter .45s ease-out both; }

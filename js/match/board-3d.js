@@ -282,9 +282,9 @@
         };
     }
 
-    function enqueue(dart, bouncing = false, durationScale = 1, replay = false) {
+    function enqueue(dart, bouncing = false, durationScale = 1, replay = false, droppedDarts = []) {
         if (typeof shouldAnimateDartFlight === 'function' && !shouldAnimateDartFlight(reducedMotion.matches)) {
-            if (bouncing) { scene.remove(dart.group); dartFactory.release(dart.group); dartModels.splice(dartModels.indexOf(dart), 1); }
+            if (bouncing) { releaseDart(dart); droppedDarts.forEach(releaseDart); }
             requestRender(); return;
         }
         const speed = spectatorSpeed();
@@ -297,9 +297,9 @@
         const start = Math.max(now, queueUntil);
         const settle = bouncing ? Math.max(80, 420 * durationScale / speed)
             : Math.max(35, (replay ? 180 : 120) * durationScale / speed);
-        animations.push({ dart, bouncing, replay, start, flight, settle, end: start + flight + settle,
-            path: createFlightPath(dart, bouncing),
-            impacted: false, impactCallbacks: [] });
+        const animation = { dart, bouncing, replay, droppedDarts, start, flight, settle, end: start + flight + settle,
+            path: createFlightPath(dart, bouncing), impacted: false, impactCallbacks: [] };
+        animations.push(animation);
         queueUntil = start + flight + (bouncing ? settle : 0);
         dart.group.visible = false;
         requestRender();
@@ -456,6 +456,13 @@
         }));
     }
 
+    function releaseDart(dart) {
+        const index = dartModels.indexOf(dart);
+        if (index < 0) return;
+        scene.remove(dart.group); dartFactory.release(dart.group); dartModels.splice(index, 1);
+        if (replayBoard) replayBoard.darts = replayBoard.darts.filter(entry => entry !== dart);
+    }
+
     function renderFrame(now) {
         frameId = null;
         if (!active() || !visible() || paused()) { updateVisibility(); return; }
@@ -499,9 +506,14 @@
                 const side = collision ? collision.normal[0] : .42;
                 dart.group.position.set(bounceOrigin.x + side * .5 * t, bounceOrigin.y + .15 * t - 2.1 * t * t, bounceOrigin.z + .65 * t);
                 dart.group.rotation.z = dart.rotation.z + t * 5;
+                for (const fallen of animation.droppedDarts) {
+                    fallen.group.visible = true;
+                    fallen.group.position.set(fallen.x + side * .3 * t, fallen.y - 2.1 * t * t, .008 + .4 * t);
+                    fallen.group.rotation.z = fallen.rotation.z + t * 4;
+                }
                 if (earlyBounce) shakeContactedDart(dart, Math.sin(Math.PI * t) * .045 * (1 - t));
                 if (t === 1) {
-                    scene.remove(dart.group); dartFactory.release(dart.group); dartModels.splice(dartModels.indexOf(dart), 1); return false;
+                    releaseDart(dart); animation.droppedDarts.forEach(releaseDart); return false;
                 }
             } else {
                 completeImpact(animation);
@@ -521,6 +533,10 @@
     }
 
     function shakeContactedDart(incoming, amount) {
+        if (incoming.contactedDart) {
+            if (dartModels.includes(incoming.contactedDart)) incoming.contactedDart.group.rotation.z += amount;
+            return;
+        }
         const index = incoming.data.collision?.obstacle;
         const previous = replayBoard ? replayBoard.darts
             : dartModels.filter(dart => dart !== incoming && seenDarts.includes(dart.data));
@@ -588,8 +604,15 @@
         const side = typeof currentMatch !== 'undefined' && currentMatch?.turn === 'p2' ? 'p2' : 'p1';
         const color = side === 'p2' ? '#ecf0f1' : '#f1c40f';
         const dartStyle = typeof window.getMatchDartLoadout === 'function' ? window.getMatchDartLoadout(side) : null;
-        enqueue(createDart({ ...point, color, dartSide: side, ...(dartStyle ? { dartStyle } : {}),
-            dartPose: result.dartPose, collision: result.collision }), true); return true;
+        const indices = result.knockedOutDartIndices || [];
+        const contactedDart = dartModels.filter(dart => seenDarts.includes(dart.data))[result.collision?.obstacle];
+        const droppedDarts = dartModels.filter(dart => seenDarts.includes(dart.data) && indices.includes(dart.data.visitDartIndex));
+        seenDarts = seenDarts.filter(dart => !indices.includes(dart.visitDartIndex));
+        animations = animations.filter(animation => !droppedDarts.includes(animation.dart));
+        const dart = createDart({ ...point, color, dartSide: side, ...(dartStyle ? { dartStyle } : {}),
+            dartPose: result.dartPose, collision: result.collision });
+        dart.contactedDart = contactedDart;
+        enqueue(dart, true, 1, false, droppedDarts); return true;
     }
 
     function setView(value) {
@@ -636,7 +659,9 @@
             ...(dartStyle ? { dartStyle } : {}), ...(data.dartPose ? { dartPose: data.dartPose } : {}),
             ...(data.collision ? { collision: data.collision } : {}),
             ...(data.robinHood ? { robinHood: true } : {}) });
-        enqueue(dart, Boolean(data.bounced), Math.max(1, Number(slowMotion) || 1), true);
+        const droppedDarts = replayBoard?.darts.filter(entry => data.knockedOutDartIndices?.includes(entry.data.visitDartIndex)) || [];
+        dart.contactedDart = replayBoard?.darts[data.collision?.obstacle];
+        enqueue(dart, Boolean(data.bounced), Math.max(1, Number(slowMotion) || 1), true, droppedDarts);
         return true;
     }
 
@@ -645,10 +670,8 @@
         animations = animations.filter(animation => {
             if (!animation.replay) return true;
             if (animation.bouncing || !seenDarts.includes(animation.dart.data)) {
-                scene.remove(animation.dart.group);
-                dartFactory.release(animation.dart.group);
-                const index = dartModels.indexOf(animation.dart);
-                if (index >= 0) dartModels.splice(index, 1);
+                releaseDart(animation.dart);
+                animation.droppedDarts.forEach(releaseDart);
             } else {
                 animation.dart.group.visible = true;
                 animation.dart.group.position.set(animation.dart.x, animation.dart.y, .008);
@@ -658,9 +681,7 @@
         });
         if (replayBoard) {
             replayBoard.darts.forEach(dart => {
-                scene.remove(dart.group); dartFactory.release(dart.group);
-                const index = dartModels.indexOf(dart);
-                if (index >= 0) dartModels.splice(index, 1);
+                releaseDart(dart);
             });
             replayBoard.liveVisibility.forEach((wasVisible, group) => { group.visible = wasVisible; });
             replayBoard = null; stopped = true;

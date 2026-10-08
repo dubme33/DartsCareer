@@ -36,6 +36,7 @@ function updateTeamEditorFields() {
             'Bruttobeträge für das gesamte Team. Jeder Spieler erhält die Hälfte.',
             'Brutobedragen voor het hele team. Elke speler ontvangt de helft.');
     if (typeof updateTournamentEditorQualificationFields === 'function') updateTournamentEditorQualificationFields();
+    if (typeof renderEditorStructureFields === 'function') renderEditorStructureFields();
 }
 
 function refreshTournamentTeamEditorTranslations() {
@@ -159,6 +160,10 @@ function getTournamentTeamEditorFormData(fieldSize) {
         entries = [...document.querySelectorAll('#te-pair-rows .te-pair-row')].map(row => {
             const selected = [...row.querySelectorAll('.te-pair-player')].map(input => byLabel.get(input.value.trim()));
             if (selected.some(candidate => !candidate)) throw new Error(teamEditorText('Wybierz dwóch zawodników z listy dla każdej pary.', 'Select two listed players for every pair.'));
+            if (selected.some(candidate => !isTournamentEditorGenderEligible({ editorGender: tournamentEditorValue('te-gender') }, candidate))) {
+                throw new Error(teamEditorText('Płeć zawodników w parze musi spełniać warunki turnieju.', 'Both players in a pair must meet the tournament gender requirement.',
+                    'Beide Spieler eines Doppels müssen die Geschlechtsvorgabe erfüllen.', 'Beide spelers van een koppel moeten aan de geslachtseis voldoen.'));
+            }
             return { name: row.querySelector('.te-pair-name').value.trim().replace(/\s+/g, ' '),
                 players: selected.map(candidate => ({ id: candidate.id, name: candidate.name, country: candidate.country })) };
         });

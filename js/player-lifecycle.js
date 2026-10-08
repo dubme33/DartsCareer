@@ -1,4 +1,5 @@
 let playerLifecycleState = {
+    identityVersion: 2,
     lastProcessedYear: null,
     retiredPlayerKeys: [],
     retiredPlayerNames: [],
@@ -17,7 +18,7 @@ function invalidatePlayerLifecycleCache() {
 }
 
 function getPlayerLifecycleCacheStamp(state) {
-    return [state.lastProcessedYear, ...PLAYER_LIFECYCLE_IDENTITY_FIELDS.map(field =>
+    return [state.identityVersion, state.lastProcessedYear, ...PLAYER_LIFECYCLE_IDENTITY_FIELDS.map(field =>
         Array.isArray(state[field]) ? JSON.stringify(state[field]) : null)].join('|');
 }
 
@@ -56,7 +57,7 @@ function trPlayerLifecycle(key, values = {}) {
 
 function ensurePlayerLifecycleState() {
     if (!playerLifecycleState || typeof playerLifecycleState !== 'object') {
-        playerLifecycleState = { lastProcessedYear: null, retiredPlayerKeys: [], retiredPlayerNames: [], retiredPlayerIds: [], retiredTemplateIndexes: [] };
+        playerLifecycleState = { identityVersion: 2, lastProcessedYear: null, retiredPlayerKeys: [], retiredPlayerNames: [], retiredPlayerIds: [], retiredTemplateIndexes: [] };
     }
     const roster = typeof pdcPlayers !== 'undefined' ? pdcPlayers : null;
     const templates = typeof defaultPdcPlayerTemplates !== 'undefined' ? defaultPdcPlayerTemplates : null;
@@ -87,6 +88,7 @@ function ensurePlayerLifecycleState() {
     // Kosztowna migracja nazw moda i indeksów bazy jest potrzebna tylko po
     // zmianie stanu emerytur lub składu bazy, nie dla każdego zawodnika.
     hydrateRetiredTemplateIndexes(playerLifecycleState);
+    playerLifecycleState.identityVersion = 2;
     playerLifecycleValidationCache = {
         state: playerLifecycleState, stamp: getPlayerLifecycleCacheStamp(playerLifecycleState),
         roster, rosterLength: roster?.length, templates, templatesLength: templates?.length
@@ -97,6 +99,7 @@ function ensurePlayerLifecycleState() {
 function restorePlayerLifecycleState(savedState) {
     invalidatePlayerLifecycleCache();
     playerLifecycleState = {
+        identityVersion: savedState?.identityVersion === 2 ? 2 : 1,
         lastProcessedYear: Number.isInteger(savedState?.lastProcessedYear) ? savedState.lastProcessedYear : null,
         retiredPlayerKeys: Array.isArray(savedState?.retiredPlayerKeys) ? [...new Set(savedState.retiredPlayerKeys)] : [],
         retiredPlayerNames: Array.isArray(savedState?.retiredPlayerNames)
@@ -146,6 +149,8 @@ function getPlayerLifecycleTemplateLookup() {
 
 function getLifecycleTemplateIndex(candidate) {
     if (!candidate || candidate.isBye) return null;
+    // Debutants are independent people, even if a database player shares a name.
+    if (candidate.isNewgen || candidate.editorCreated || candidate.kind === 'custom') return null;
     if (Number.isInteger(candidate.defaultTemplateIndex) && candidate.defaultTemplateIndex >= 0) {
         return candidate.defaultTemplateIndex;
     }
@@ -169,14 +174,20 @@ function getLifecycleTemplateIndex(candidate) {
 
 function hydrateRetiredTemplateIndexes(state = playerLifecycleState) {
     if (!state || typeof state !== 'object' || typeof pdcPlayers === 'undefined') return [];
+    if (state.identityVersion === 2) return state.retiredTemplateIndexes || [];
     const retiredKeys = new Set(Array.isArray(state.retiredPlayerKeys) ? state.retiredPlayerKeys : []);
     const retiredNames = new Set((Array.isArray(state.retiredPlayerNames) ? state.retiredPlayerNames : [])
         .map(getLifecyclePlayerNameKey)
         .filter(Boolean));
+    // Old hydration could poison IDs of active newgens. Actual annual retirement
+    // removes its subject from the roster; do not infer a debutant's retirement
+    // from a text registry. This migration runs once, then IDs are authoritative.
+    const activeDebutantIds = new Set(pdcPlayers.filter(p => p?.isNewgen || p?.editorCreated || p?.kind === 'custom').map(p => p.id));
+    state.retiredPlayerIds = (state.retiredPlayerIds || []).filter(id => !activeDebutantIds.has(id));
     if (!retiredKeys.size && !retiredNames.size) return state.retiredTemplateIndexes || [];
 
     const matchesRetiredIdentity = candidate => {
-        if (!candidate || candidate.isBye) return false;
+        if (!candidate || candidate.isBye || candidate.isNewgen || candidate.editorCreated || candidate.kind === 'custom') return false;
         const templateIndex = getLifecycleTemplateIndex(candidate);
         const sourceTemplate = Number.isInteger(templateIndex) && Array.isArray(defaultPdcPlayerTemplates)
             ? defaultPdcPlayerTemplates[templateIndex]
@@ -186,7 +197,15 @@ function hydrateRetiredTemplateIndexes(state = playerLifecycleState) {
             .filter(Boolean)
             .map(name => `${name}|${identity.country || ''}`));
         const names = identities.flatMap(identity => [identity.name, identity.sourceName].map(getLifecyclePlayerNameKey));
-        return keys.some(key => retiredKeys.has(key)) || names.some(name => retiredNames.has(name));
+        const exactKey = keys.some(key => retiredKeys.has(key));
+        // A name-only old record is resolved only against one unambiguous
+        // database lineage. It never becomes a general ban on that name.
+        const uniqueTemplateName = names.some(name => retiredNames.has(name)
+            && getPlayerLifecycleTemplateLookup()?.get(name)?.length === 1);
+        const uniqueModLineage = Number.isInteger(templateIndex) && names.some(name => retiredNames.has(name)
+            && pdcPlayers.filter(p => !p?.isNewgen && !p?.editorCreated
+                && [p?.name, p?.sourceName].map(getLifecyclePlayerNameKey).includes(name)).length === 1);
+        return exactKey || uniqueTemplateName || uniqueModLineage;
     };
     const indexes = new Set(Array.isArray(state.retiredTemplateIndexes) ? state.retiredTemplateIndexes : []);
     const ids = new Set(Array.isArray(state.retiredPlayerIds) ? state.retiredPlayerIds : []);
@@ -231,15 +250,16 @@ function getPlayerLifecycleRetiredLookup(state) {
 
 function isRetiredPlayer(candidate, templateIndex = getLifecycleTemplateIndex(candidate), state = ensurePlayerLifecycleState()) {
     if (!candidate || candidate.isBye) return false;
-    const { retiredKeys, retiredNames, retiredIds, retiredTemplateIndexes } = getPlayerLifecycleRetiredLookup(state);
-    const keys = [candidate.name, candidate.sourceName]
-        .filter(Boolean)
-        .map(name => `${name}|${candidate.country || ''}`);
-    const names = [candidate.name, candidate.sourceName].map(getLifecyclePlayerNameKey);
-    return (typeof candidate.id === 'string' && retiredIds.has(candidate.id))
-        || (Number.isInteger(templateIndex) && retiredTemplateIndexes.has(templateIndex))
-        || keys.some(key => retiredKeys.has(key))
-        || names.some(name => retiredNames.has(name));
+    const { retiredIds, retiredTemplateIndexes } = getPlayerLifecycleRetiredLookup(state);
+    if (typeof candidate.id === 'string' && candidate.id.trim()) {
+        if (retiredIds.has(candidate.id)) return true;
+        if (candidate.isNewgen || candidate.editorCreated) return false;
+        // Explicit lineage survives mods assigning a new ID to the same person.
+        const hasLineage = Number.isInteger(candidate.defaultTemplateIndex) || Boolean(candidate.sourceName);
+        return hasLineage && Number.isInteger(templateIndex) && retiredTemplateIndexes.has(templateIndex);
+    }
+    return !candidate.isNewgen && !candidate.editorCreated
+        && Number.isInteger(templateIndex) && retiredTemplateIndexes.has(templateIndex);
 }
 
 function removeRetiredPlayersFromPool(players = (typeof pdcPlayers !== 'undefined' ? pdcPlayers : null)) {
@@ -279,7 +299,11 @@ function getPlayerLifecycleRankings() {
 }
 
 function applyAnnualAgeDecline(candidate, age) {
-    const baseDecline = getAnnualDecline(age);
+    const career = typeof getAiIndividualAnnualDecline === 'function';
+    const year = candidate.aiDevelopmentSummary?.year ?? currentDate.getFullYear() - 1;
+    if (career && candidate.aiCareer?.lastAgingYear === year) return 0;
+    const baseDecline = career ? getAiIndividualAnnualDecline(candidate, age, year) : getAnnualDecline(age);
+    if (career) candidate.aiCareer.lastAgingYear = year;
     const decline = typeof scalePlayerDevelopmentChange === 'function'
         ? -scalePlayerDevelopmentChange(candidate, -baseDecline)
         : baseDecline;
@@ -306,6 +330,7 @@ function applyAnnualAgeDecline(candidate, age) {
     candidate.scoring = clampDisplayedRating(candidate.scoring);
     candidate.doubles = clampDisplayedRating(candidate.doubles);
     candidate.overall = candidate.ovr;
+    if (typeof recordAiFoundationAging === 'function') recordAiFoundationAging(candidate, baseOvr, candidate.baseOvr);
     return decline;
 }
 
@@ -412,15 +437,19 @@ function getNewgenStartingOverall(random = Math.random) {
 function createAnnualNewgen(year, existingNames, random = Math.random, countryOverride = null) {
     const overall = getNewgenStartingOverall(random);
     // New professionals can break through later too, not only as teenagers.
-    const age = 17 + Math.floor(random() * 19); // 17–35 inclusive
+    const age = typeof getAiNewgenEntryAge === 'function' ? getAiNewgenEntryAge(random) : 17 + Math.floor(random() * 19);
     const scoring = Math.max(40, Math.min(99, overall + (Math.floor(random() * 5) - 1)));
     const doubles = Math.max(40, Math.min(99, overall + (Math.floor(random() * 5) - 3)));
     const gender = random() < 0.18 ? 'female' : 'male';
     const country = countryOverride || pickNewgenCountry(random);
     const name = createFictionalNewgenName(existingNames, country, gender, random);
     existingNames.add(name);
-    return {
-        id: createEntityId('newgen'),
+    const id = createEntityId('newgen');
+    // One existing preference draw; career generation/RNG consumption stays unchanged.
+    const favoriteDoubles = typeof pickDefaultAiFavoriteDoubles === 'function'
+        ? pickDefaultAiFavoriteDoubles(random()) : [[16, 20, 18, 12, 8][Math.floor(random() * 5)], null, null];
+    const candidate = {
+        id,
         name,
         gender,
         country,
@@ -429,7 +458,8 @@ function createAnnualNewgen(year, existingNames, random = Math.random, countryOv
         ovr: overall,
         scoring,
         doubles,
-        favoriteDouble: [16, 20, 18, 12, 8][Math.floor(random() * 5)],
+        favoriteDouble: favoriteDoubles[0],
+        favoriteDoubles,
         prizeMoney: 0,
         proTourPrizeMoney: 0,
         pcPrizeMoney: 0,
@@ -455,6 +485,8 @@ function createAnnualNewgen(year, existingNames, random = Math.random, countryOv
         nameGenerationVersion: 2,
         joinedSeason: year
     };
+    if (typeof initializeAiDevelopmentCandidate === 'function') initializeAiDevelopmentCandidate(candidate, { referenceDate: new Date(year, 0, 1) });
+    return candidate;
 }
 
 function getLifecycleCountryName(country) {
@@ -468,13 +500,14 @@ function sendRetirementSummaryEmail(completedYear, retirements) {
         name: escapeHtml(retirement.name),
         country: escapeHtml(getLifecycleCountryName(retirement.country)),
         rank: retirement.rank || '—',
-        age: retirement.age
+        age: retirement.age ?? '—'
     })).join('<br>');
     const bodyKey = retirements.length === 1 ? 'bodySingle' : 'bodyPlural';
     addEmail(
         trPlayerLifecycle('sender'),
         trPlayerLifecycle('subject', { year: completedYear }),
-        trPlayerLifecycle(bodyKey, { year: completedYear, retirements: rows })
+        trPlayerLifecycle(bodyKey, { year: completedYear, retirements: rows }),
+        { category: 'retirement' }
     );
 }
 
@@ -495,14 +528,23 @@ function processAnnualPlayerLifecycle(completedYear) {
 
     pdcPlayers.forEach(candidate => {
         if (!candidate || candidate.isBye) return;
-        const age = Number.isInteger(candidate.birthYear) ? newSeasonYear - candidate.birthYear : null;
-        if (age !== null && Math.random() * 100 < getRetirementChance(age)) {
+        const career = typeof getAiRetirementProbability === 'function';
+        if (career) initializeAiCareerCandidate(candidate, new Date(newSeasonYear, 0, 1));
+        const age = career ? getAiLifecycleAge(candidate, new Date(newSeasonYear, 0, 1))
+            : Number.isInteger(candidate.birthYear) ? newSeasonYear - candidate.birthYear : null;
+        const rank = rankingByPlayer.get(candidate.id || getLifecyclePlayerKey(candidate)) || null;
+        const retirementChance = career ? getAiRetirementProbability(candidate, age, completedYear, rank) : getRetirementChance(age) / 100;
+        const retirementRoll = age !== null ? career ? getAiCareerRandom(candidate, 'retirement', completedYear) : Math.random() : 1;
+        if (career) candidate.aiCareer.lastRetirementDecision = { year: completedYear, chance: retirementChance, roll: retirementRoll };
+        if (age !== null && retirementRoll < retirementChance) {
+            if (career) finalizeAiCareerSeason(candidate, completedYear, rank);
             retirements.push({
                 id: candidate.id,
                 name: candidate.name,
                 country: candidate.country,
-                age,
-                rank: rankingByPlayer.get(candidate.id || getLifecyclePlayerKey(candidate)) || null
+                ovr: Number(candidate.baseOvr ?? candidate.ovr),
+                age: career ? getPlayerAge(candidate, new Date(newSeasonYear, 0, 1)) : age,
+                ...(career ? { lifecycleAge: age } : {}), rank
             });
             retiredIds.add(candidate.id);
             if (typeof candidate.id === 'string' && candidate.id.trim() && !state.retiredPlayerIds.includes(candidate.id)) {
@@ -519,6 +561,7 @@ function processAnnualPlayerLifecycle(completedYear) {
             return;
         }
         if (age !== null) applyAnnualAgeDecline(candidate, age);
+        if (career) finalizeAiCareerSeason(candidate, completedYear, rank);
         survivingPlayers.push(candidate);
     });
 

@@ -99,6 +99,8 @@ const checkoutGuide = {
         }
 
         function getTournamentMatchFormat(tournament, round) {
+            const roundFormat = tournament?.editorMatchFormat?.type === 'rounds' ? tournament.editorMatchFormat.rounds?.[round] : null;
+            if (roundFormat) return { ...roundFormat };
             if (tournament?.editorMatchFormat?.type === 'legs') {
                 return { type: 'legs', legsToWin: tournament.editorMatchFormat.legsToWin };
             }

@@ -45,9 +45,10 @@ function isTournamentSelectedForWatching(tournament, candidate = player) {
 
 function shouldAutoSimulateUnwatchedTournament(tournament, participating) {
     if (!tournament || isTournamentSelectedForWatching(tournament)) return false;
-    // Elimination from a tournament the player entered keeps the usual manual
-    // continuation. A viewing preference never withdraws a qualified player.
-    if (typeof currentDate !== 'undefined' && Number(tournament.staminaChargedYear) === currentDate.getFullYear()) return false;
+    // A paid entry is historical: after elimination, only the remaining field
+    // and the watching preference decide whether the event can finish in background.
+    if (typeof currentMatch !== 'undefined' && currentMatch?.isTournament
+        && typeof activeTournament !== 'undefined' && activeTournament === tournament) return false;
     if (typeof participating !== 'boolean') {
         if (typeof isCareerPlayerParticipatingInTournament !== 'function') return false;
         participating = isCareerPlayerParticipatingInTournament(tournament);

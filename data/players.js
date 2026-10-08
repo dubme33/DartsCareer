@@ -767,6 +767,7 @@ function applyKnownPlayerCorrections(players, options = {}) {
             });
         }
         applyPlayerRatingUpdate(candidate, options);
+        if (typeof initializeAiFavoriteDoubles === 'function') initializeAiFavoriteDoubles(candidate, options);
     });
 }
 

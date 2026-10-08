@@ -128,6 +128,8 @@
     function register(visit, result) {
         if (!visit || result.bounceOut || !result.boardPoint) return;
         visit.physicsDarts = [...(visit.physicsDarts || []), { ...result.boardPoint, dartPose: result.dartPose,
+            visitDartIndex: result.visitDartIndex,
+            ...(result.robinHood ? { attachedToVisitDartIndex: visit.physicsDarts?.slice(-2)[result.collision?.obstacle]?.visitDartIndex } : {}),
             ...(result.dartStyle ? { dartStyle: result.dartStyle } : {}), ...(result.robinHood ? { robinHood: true } : {}) }].slice(-3);
     }
     root.dartPhysics = { basePose, direction, field, resolve, register,

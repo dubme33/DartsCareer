@@ -40,11 +40,13 @@ function trContinentalQualifier(key, values = {}) {
 
 function isContinentalQualifierTournament(tournament = activeTournament) {
     if (typeof hasTournamentEditorQualification === 'function' && hasTournamentEditorQualification(tournament)) return false;
+    if (typeof hasCareerTourEntryOverride === 'function' && hasCareerTourEntryOverride(tournament)) return false;
     return Boolean(tournament && tournament.specialType === CONTINENTAL_QUALIFIER_TYPE);
 }
 
 function isContinentalTourTournament(tournament) {
     if (typeof hasTournamentEditorQualification === 'function' && hasTournamentEditorQualification(tournament)) return false;
+    if (typeof hasCareerTourEntryOverride === 'function' && hasCareerTourEntryOverride(tournament)) return false;
     if (!tournament || isContinentalQualifierTournament(tournament)) return false;
     const name = typeof tournament === 'string' ? tournament : tournament.name;
     const sourceName = typeof tournament === 'object' ? tournament.sourceName : '';
@@ -258,6 +260,7 @@ function getCompletedContinentalQualifierKeys(state, exceptPath = '') {
 }
 
 function isContinentalQualifierPathEligible(candidate, mainTournament, path) {
+    if (typeof isTournamentEditorGenderEligible === 'function' && !isTournamentEditorGenderEligible(mainTournament, candidate)) return false;
     if (!isContinentalQualificationPlayerEligible(candidate)) return false;
     // Automatyczne miejsca OOM i ProTour wynikają z rankingu, nawet gdy gracz
     // jest chwilowo kontuzjowany. Kontuzja wyklucza dopiero udział w kwalifikatorze.

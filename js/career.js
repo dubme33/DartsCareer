@@ -176,6 +176,7 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
                 unreadMailsCount = 0;
 
                 normalizePlayerIds(pdcPlayers, player);
+                if (typeof initializeAiDevelopmentFoundation === 'function') initializeAiDevelopmentFoundation();
                 if (typeof refreshMainOrderOfMerit === 'function') {
                     refreshMainOrderOfMerit([...pdcPlayers, player], currentDate);
                 }
@@ -192,6 +193,7 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
                 if (typeof initializePlayerEvents === 'function') initializePlayerEvents(true);
                 if (typeof initializeTournamentWatchSettings === 'function') initializeTournamentWatchSettings(player, true);
                 if (typeof initializeBounceOutSettings === 'function') initializeBounceOutSettings(player, true);
+                if (typeof initializeMatchBullOffSettings === 'function') initializeMatchBullOffSettings(player, true);
                 if (typeof initializeMatchIncidentSettings === 'function') initializeMatchIncidentSettings(player, true);
                 if (typeof initializePostMatchReportSetting === 'function') initializePostMatchReportSetting(player, true);
                 if (typeof initializeAllPlayerTraits === 'function') initializeAllPlayerTraits(true);
@@ -281,6 +283,7 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
                 calendarFilters: { version: 1, hiddenTournamentKeys: [] }
             };
             if (typeof initializeCareerDifficulty === 'function') initializeCareerDifficulty(player);
+            if (typeof initializeAiDevelopmentFoundation === 'function') initializeAiDevelopmentFoundation();
             emails = [];
             unreadMailsCount = 0;
             const startsWithTourCard = document.getElementById('start-with-tour-card')?.value === 'yes';
@@ -302,6 +305,7 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
                 if (typeof initializePlayerEvents === 'function') initializePlayerEvents(true);
                 if (typeof initializeTournamentWatchSettings === 'function') initializeTournamentWatchSettings(player, true);
                 if (typeof initializeBounceOutSettings === 'function') initializeBounceOutSettings(player, true);
+                if (typeof initializeMatchBullOffSettings === 'function') initializeMatchBullOffSettings(player, true);
                 if (typeof initializeMatchIncidentSettings === 'function') initializeMatchIncidentSettings(player, true);
                 if (typeof initializePostMatchReportSetting === 'function') initializePostMatchReportSetting(player, true);
             if (typeof initializeAllPlayerTraits === 'function') initializeAllPlayerTraits(true);
@@ -350,6 +354,7 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
             if (typeof refreshWorldNewsSettingsUI === 'function') refreshWorldNewsSettingsUI();
             if (typeof refreshTournamentWatchSettingsUI === 'function') refreshTournamentWatchSettingsUI();
             if (typeof refreshBounceOutSettingsUI === 'function') refreshBounceOutSettingsUI();
+            if (typeof refreshMatchBullOffSettingsUI === 'function') refreshMatchBullOffSettingsUI();
             if (typeof refreshMatchIncidentSettingsUI === 'function') refreshMatchIncidentSettingsUI();
             if (typeof refreshDartFlightMotionUI === 'function') refreshDartFlightMotionUI();
             if (typeof refreshMatchLayoutSettingsUI === 'function') refreshMatchLayoutSettingsUI();
@@ -473,12 +478,20 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
         function isCareerPlayerParticipatingInTournament(tournament, careerPlayer = player) {
             if (!tournament || !careerPlayer) return true;
             if (typeof isPlayerInjured === 'function' && isPlayerInjured(careerPlayer)) return false;
-            if (typeof isEditorTeamTournament === 'function' && isEditorTeamTournament(tournament)) {
+            if (typeof isEditorSeasonLeague === 'function' && isEditorSeasonLeague(tournament)) {
+                const identity = candidate => getTournamentEditorPlayerKey(candidate) === getTournamentEditorPlayerKey(careerPlayer);
+                const root = getEditorLeagueRoot(tournament);
+                if (root?.editorLeagueState) return isEditorLeaguePlayerPending(tournament, identity);
+                return getTournamentEditorParticipants(root).some(identity);
+            }
+            if (typeof isEditorTeamTournament === 'function' && (isEditorTeamTournament(tournament)
+                || typeof isEditorGroupTournament === 'function' && isEditorGroupTournament(tournament))) {
                 const identity = candidate => candidate === careerPlayer
                     || candidate?.id && careerPlayer.id && String(candidate.id) === String(careerPlayer.id)
                     || candidate?.name === careerPlayer.name && candidate?.country === careerPlayer.country;
-                if (tournament.editorTeamState?.teams) return tournament.editorTeamState.teams
-                    .some(team => team.players?.some(identity));
+                if (tournament.editorTeamState?.teams) return typeof isEditorCompetitionEntrantAlive === 'function'
+                    ? isEditorCompetitionEntrantAlive(tournament, identity)
+                    : tournament.editorTeamState.teams.some(team => team.players?.some(identity));
                 if (tournament.editorTeamMode === 'pairs') return (tournament.editorTeamEntries || [])
                     .some(team => team.players?.some(identity));
                 const countries = (tournament.editorTeamEntries || []).map(entry => entry.country);
@@ -500,6 +513,8 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
             if (hasOpeningDraw) {
                 if (typeof isUKOpenTournament === 'function' && isUKOpenTournament(tournament)
                     && typeof getUKOpenFullField === 'function') {
+                    if (tournamentBracket.some(isCareerPlayer)) return true;
+                    if (typeof isCareerPlayerWaitingForTournamentEntry === 'function') return isCareerPlayerWaitingForTournamentEntry();
                     const candidates = typeof getPdcTourCardPlayers === 'function'
                         ? getPdcTourCardPlayers(true)
                         : [careerPlayer, ...(Array.isArray(pdcPlayers) ? pdcPlayers : [])];
@@ -508,6 +523,8 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
                 return tournamentBracket.some(isCareerPlayer);
             }
 
+            if (typeof isCareerEditorAccessEligible === 'function' && !isCareerEditorAccessEligible(tournament, careerPlayer, currentDate)) return false;
+            if (typeof hasCareerTourEntryOverride === 'function' && hasCareerTourEntryOverride(tournament)) return getTournamentEditorParticipants(tournament, undefined, currentDate).some(isCareerPlayer);
             const name = String(tournament.name || '').toLowerCase();
             if (typeof hasTournamentEditorQualification === 'function' && hasTournamentEditorQualification(tournament)) {
                 return getTournamentEditorParticipants(tournament, undefined, currentDate).some(isCareerPlayer);
@@ -667,6 +684,7 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
                 return;
             }
 
+            if (typeof processAiCareerPeriods === 'function') processAiCareerPeriods(currentDate);
             if (currentDate.getMonth() === 11 && currentDate.getDate() === 31
                 && typeof settleAiSeasonDevelopment === 'function') {
                 settleAiSeasonDevelopment(currentDate.getFullYear());
@@ -680,6 +698,13 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
                 settleSponsorGoals(currentDate.getFullYear());
             }
             currentDate.setDate(currentDate.getDate() + 1);
+            let expiredMailRemoved = false;
+            if (typeof removeRetiredRandomEmails === 'function') {
+                const previousMailCount = Array.isArray(emails) ? emails.length : 0;
+                removeRetiredRandomEmails();
+                expiredMailRemoved = emails.length < previousMailCount;
+                updateMailBadge();
+            }
             const investmentIncome = typeof processCareerInvestmentIncome === 'function' ? processCareerInvestmentIncome() : null;
             const staffPayroll = typeof processPlayerStaffPayroll === 'function' ? processPlayerStaffPayroll() : null;
             const infrastructureMaintenance = typeof processCareerInfrastructureMaintenance === 'function'
@@ -724,9 +749,17 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
                     if(player.technicalPartner.months <= 0) player.technicalPartner = null;
                 }
                 if (totalSponsorship > 0) {
-                    player.budget += totalSponsorship;
+                    const sponsorPayment = typeof getCareerSponsorPayment === 'function' ? getCareerSponsorPayment(totalSponsorship)
+                        : { gross: totalSponsorship, tax: 0, rate: 0, net: totalSponsorship };
+                    player.budget += sponsorPayment.net;
                     let subSpon = t('t-email-spon-sub');
-                    let bodySpon = t('t-email-spon-body').replace('{amount}', totalSponsorship.toLocaleString('en-GB'));
+                    let bodySpon = t('t-email-spon-body').replace('{amount}', sponsorPayment.net.toLocaleString('en-GB'));
+                    if (sponsorPayment.tax > 0) {
+                        bodySpon += `<p>${escapeHtml(trCareerDifficulty('sponsorReceipt', {
+                            gross: formatCareerSponsorMoney(sponsorPayment.gross), tax: formatCareerSponsorMoney(sponsorPayment.tax),
+                            net: formatCareerSponsorMoney(sponsorPayment.net), rate: sponsorPayment.rate * 100
+                        }))}</p>`;
+                    }
                     if (staffSponsorBonus > 0 && typeof trPlayerStaff === 'function') {
                         bodySpon += `<p>${escapeHtml(trPlayerStaff('managerIncome', { amount: playerStaffMoney(staffSponsorBonus) }))}</p>`;
                     }
@@ -739,6 +772,8 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
                 if (currentDate.getMonth() === 0) {
                     if (typeof resetSponsorOffers === 'function') resetSponsorOffers();
                     const completedYear = currentDate.getFullYear() - 1;
+                    if (typeof processCareerTourPromotions === 'function') processCareerTourPromotions([...pdcPlayers, player], completedYear);
+                    if (typeof awardCareerEditorSeasonCards === 'function') awardCareerEditorSeasonCards([...pdcPlayers, player], completedYear);
                     addCareerChronicleEvent('season', {
                         year: completedYear,
                         rank: getPlayerRank('main'),
@@ -746,7 +781,8 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
                         timestamp: new Date(completedYear, 11, 31).getTime()
                     });
                     if (typeof processAnnualPlayerLifecycle === 'function') {
-                        processAnnualPlayerLifecycle(completedYear);
+                        const newsLifecycle = processAnnualPlayerLifecycle(completedYear);
+                        if (typeof recordWorldNewsRetirements === 'function') recordWorldNewsRetirements(newsLifecycle.retirements, completedYear);
                     }
                     if (typeof processPdcTourCardCycleStart === 'function') {
                         processPdcTourCardCycleStart([...pdcPlayers, player], currentDate);
@@ -775,9 +811,11 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
                     if (typeof tournamentDatabase !== 'undefined') {
                         tournamentDatabase.forEach(tournament => {
                             tournament.completed = false;
+                            delete tournament.editorCancelledYear;
                             tournament.historyLogs = '';
                             delete tournament.matchHistory;
                             delete tournament.editorTeamState;
+                            delete tournament.editorLeagueState;
                             delete tournament.editorTeamWinner;
                             delete tournament.premierLeagueOpeningPairs;
                             delete tournament.editorQualifierResults;
@@ -809,12 +847,15 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
                     addEmail(t('t-sender-league'), t('t-email-newyear-sub'), t('t-email-newyear-body'));
                 }
             }
+            if (typeof processAiCareerPeriods === 'function') processAiCareerPeriods(currentDate);
             const playerEvents = typeof processDailyPlayerEvents === 'function' ? processDailyPlayerEvents() : null;
             if (typeof recordWorldNewsRankingChange === 'function') recordWorldNewsRankingChange();
+            if (typeof processWorldNewsDaily === 'function') processWorldNewsDaily();
             // All daily changes are synchronous. Refresh the hub once with the
             // final state, including monthly payouts and the season reset.
             updateHub();
             const shouldAutoSaveToday = currentDate.getDate() === 1 || currentDate.getDate() === 15
+                || expiredMailRemoved
                 || staffPayroll?.changed === true || infrastructureMaintenance?.changed === true || investmentIncome?.changed === true
                 || equipmentWear?.changed === true || playerEvents?.changed === true;
 
@@ -928,16 +969,39 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
 
     function getStoredEmailTimestamp(email) {
         const storedTimestamp = Number(email?.createdAt);
-        if (Number.isFinite(storedTimestamp) && storedTimestamp > 0) return storedTimestamp;
+        if (storedTimestamp > 0 && Number.isFinite(new Date(storedTimestamp).getTime())) return storedTimestamp;
 
         const legacyDate = String(email?.date || '').match(/^(\d{1,2})\.(\d{1,2})\.(\d{4})$/);
         if (!legacyDate) return null;
-        const parsedTimestamp = new Date(
+        const parsedDate = new Date(
             Number(legacyDate[3]),
             Number(legacyDate[2]) - 1,
             Number(legacyDate[1])
-        ).getTime();
-        return Number.isFinite(parsedTimestamp) ? parsedTimestamp : null;
+        );
+        return parsedDate.getFullYear() === Number(legacyDate[3])
+            && parsedDate.getMonth() === Number(legacyDate[2]) - 1 && parsedDate.getDate() === Number(legacyDate[1])
+            ? parsedDate.getTime() : null;
+    }
+
+    function getEmailRetentionCutoff() {
+        const cutoff = new Date(currentDate.getTime());
+        const month = cutoff.getMonth();
+        cutoff.setFullYear(cutoff.getFullYear() - 1);
+        // The previous calendar year may not have February 29.
+        if (cutoff.getMonth() !== month) cutoff.setDate(0);
+        return cutoff.getTime();
+    }
+
+    const LEGACY_RETIREMENT_EMAIL_SUBJECTS = [
+        /^Koniec sezonu \d{4}\s*[—–-]\s*emerytury zawodników$/iu,
+        /^End of the \d{4} season\s*[—–-]\s*player retirements$/iu,
+        /^Ende der Saison \d{4}\s*[—–-]\s*Rücktritte$/iu,
+        /^Einde seizoen \d{4}\s*[—–-]\s*spelers met pensioen$/iu
+    ];
+
+    function isStoredRetirementEmail(email) {
+        return email?.category === 'retirement' || LEGACY_RETIREMENT_EMAIL_SUBJECTS
+            .some(pattern => pattern.test(String(email?.subject || '').replace(/\s+/g, ' ').trim()));
     }
 
     // Tylko odciski dawnych maili w czterech językach, do czyszczenia starych zapisów.
@@ -1026,6 +1090,7 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
                 ...email,
                 createdAt: timestamp,
                 kind: isStoredRandomEmail(email) ? 'random' : 'system',
+                category: isStoredRetirementEmail(email) ? 'retirement' : email.category,
                 // Starsze wersje nie aktualizowały pola read. Licznik nieprzeczytanych
                 // pozwala odtworzyć stan: najnowsze wiadomości są na początku tablicy.
                 read: hasCurrentMetadata ? email.read === true : index >= unreadLimit
@@ -1038,19 +1103,33 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
         // Ich usunięcie nie może przesunąć granicy nieprzeczytanych wiadomości w starym zapisie.
         // Zwykły autosave ma już znormalizowaną skrzynkę. Nie twórz na nowo
         // tysięcy obiektów wiadomości przy każdym zapisie długiej kariery.
-        if (Array.isArray(emails) && emails.every(email => email && typeof email === 'object'
-            && email.kind === 'system' && typeof email.createdAt === 'number' && Number.isFinite(email.createdAt)
+        if (!Array.isArray(emails) || !emails.every(email => email && typeof email === 'object'
+            && email.kind === 'system' && (email.createdAt === null
+                || typeof email.createdAt === 'number' && email.createdAt > 0 && Number.isFinite(new Date(email.createdAt).getTime()))
             && typeof email.read === 'boolean')) {
-            unreadMailsCount = emails.reduce((count, email) => count + (email.read ? 0 : 1), 0);
-            return emails;
+            emails = normalizeStoredEmails(emails, legacyUnreadCount).filter(email => email.kind !== 'random');
         }
-        emails = normalizeStoredEmails(emails, legacyUnreadCount).filter(email => email.kind !== 'random');
-        unreadMailsCount = emails.reduce((count, email) => count + (email.read === true ? 0 : 1), 0);
+        const cutoff = getEmailRetentionCutoff();
+        let retainedEmails = null;
+        unreadMailsCount = 0;
+        emails.forEach((email, index) => {
+            const retirement = isStoredRetirementEmail(email);
+            if (retirement) email.category = 'retirement';
+            if (!retirement && email.createdAt !== null && email.createdAt < cutoff) {
+                if (!retainedEmails) retainedEmails = emails.slice(0, index);
+                return;
+            }
+            if (retainedEmails) retainedEmails.push(email);
+            if (!email.read) unreadMailsCount++;
+        });
+        // Keep the existing array and email objects when there is nothing to remove.
+        if (retainedEmails) emails = retainedEmails;
         return emails;
     }
 
     function addEmail(sender, subject, body, options = {}) {
         if (isStoredRandomEmail({ sender, subject, body, kind: options.kind })) return false;
+        removeRetiredRandomEmails();
         emails.unshift({
             sender,
             subject,
@@ -1058,6 +1137,7 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
             date: currentDate.toLocaleDateString('pl-PL'),
             createdAt: currentDate.getTime(),
             kind: 'system',
+            category: options.category === 'retirement' ? 'retirement' : undefined,
             read: false,
             action: options.action === 'tutorial' ? 'tutorial' : undefined
         });
@@ -1151,7 +1231,7 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
                 const year = currentDate.getFullYear();
                 const startMonth = (tour.month + 1).toString().padStart(2, '0');
                 const endMonth = ((Number.isInteger(tour.endMonth) ? tour.endMonth : tour.month) + 1).toString().padStart(2, '0');
-                let dateStr = tour.endDay
+                let dateStr = tour.endDay && !tour.editorStructure?.league
                     ? (endMonth === startMonth
                         ? `${tour.day}-${tour.endDay}.${startMonth}.${year}`
                         : `${tour.day}.${startMonth}-${tour.endDay}.${endMonth}.${year}`)
@@ -1479,6 +1559,12 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
         }
 
         function showPdcRankings(type = 'main') {
+            if (typeof refreshCareerTourRankingButtons === 'function') refreshCareerTourRankingButtons();
+            const managedRankingIds = { protour: 'proTour', pc: 'playersChampionship', europeanTour: 'europeanTour', challengeTour: 'challengeTour', developmentTour: 'developmentTour', gdl: 'premierLeague', worldMasters: 'worldSeries' };
+            if (managedRankingIds[type] && typeof isCareerEditorTourRankingEnabled === 'function' && !isCareerEditorTourRankingEnabled(managedRankingIds[type])) type = 'main';
+            const managedRankingTour = typeof getCareerCalendarEditorState === 'function'
+                ? getCareerCalendarEditorState().tours.find(tour => tour.id === managedRankingIds[type] && tour.ranking === 'own' && !tour.removed) : null;
+            if (managedRankingTour) type = `tour:${managedRankingTour.id}`;
             currentPdcRankingType = type;
             document.getElementById('btn-rank-main').style.background = type === 'main' ? 'var(--accent-green)' : '#34495e';
             document.getElementById('btn-rank-pt').style.background = type === 'protour' ? 'var(--accent-green)' : '#34495e';
@@ -1518,6 +1604,11 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
 
             const list = document.getElementById('pdc-list');
             let rankingHtml = '';
+            if (type.startsWith('tour:') && typeof renderCareerTourRanking === 'function') {
+                renderCareerTourRanking(type.slice(5), list);
+                showScreen('screen-pdc');
+                return;
+            }
 
             if (type === 'challengeTour') {
                 if (typeof renderChallengeTourRanking === 'function') renderChallengeTourRanking(list);

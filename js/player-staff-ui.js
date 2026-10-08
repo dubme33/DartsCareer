@@ -22,8 +22,8 @@ const PLAYER_STAFF_TEXT = {
         dismissed: 'Zakończono współpracę z: {name}. Bonus został wyłączony. Nie pobrano odprawy; wcześniejsze opłaty nie są zwracane.',
         payrollSubject: 'Rozliczenie sztabu', sender: 'Biuro sztabu', paid: '{name}: pensja {amount} za miesiąc od {date}.',
         ended: '{name}: brak {amount} na pensję w dniu {date}. Umowa zakończona; bonus wyłączony.', paidTotal: 'Łącznie pobrano: {amount}.',
-        managerIncome: 'W tej wypłacie: {amount} dodatkowych wpływów dzięki menedżerowi.',
-        sponsorNote: 'Menedżer: +{bonus}% do wypłat zwykłych sponsorów. Obecne umowy: około {amount} dodatkowo na miesiąc, przed pensją menedżera.',
+        managerIncome: 'Premia menedżera w tej wypłacie, przed podatkiem: {amount}.',
+        sponsorNote: 'Menedżer: +{bonus}% do wypłat zwykłych sponsorów. Obecne umowy: około {amount} netto dodatkowo na miesiąc, przed pensją menedżera.',
         trainingNote: 'Sztab: punktacja +{scoring}% XP · podwójne +{doubles}% XP. Bonusy dotyczą wyłącznie dziennych sesji treningowych.',
         back: 'Wróć do Menu'
     },
@@ -50,8 +50,8 @@ const PLAYER_STAFF_TEXT = {
         dismissed: 'Contract with {name} ended. Bonus disabled. No severance pay; previous payments are not refunded.',
         payrollSubject: 'Staff payroll', sender: 'Staff office', paid: '{name}: salary {amount} for the month starting {date}.',
         ended: '{name}: could not pay the {amount} salary due on {date}. Contract ended; bonus disabled.', paidTotal: 'Total charged: {amount}.',
-        managerIncome: 'This payment includes {amount} extra income from your manager.',
-        sponsorNote: 'Manager: +{bonus}% on regular sponsor payments. Current contracts: about {amount} extra per month, before the manager’s salary.',
+        managerIncome: 'Manager bonus included in this payment, before tax: {amount}.',
+        sponsorNote: 'Manager: +{bonus}% on regular sponsor payments. Current contracts: about {amount} extra net per month, before the manager’s salary.',
         trainingNote: 'Staff: scoring +{scoring}% XP · doubles +{doubles}% XP. Bonuses apply only to daily training sessions.',
         back: 'Back to Menu'
     },
@@ -78,8 +78,8 @@ const PLAYER_STAFF_TEXT = {
         dismissed: 'Vertrag mit {name} beendet. Bonus deaktiviert. Keine Abfindung; bisherige Zahlungen werden nicht erstattet.',
         payrollSubject: 'Gehaltsabrechnung', sender: 'Stabsbüro', paid: '{name}: Gehalt {amount} für den Monat ab {date}.',
         ended: '{name}: Gehalt von {amount} am {date} nicht bezahlbar. Vertrag beendet; Bonus deaktiviert.', paidTotal: 'Insgesamt abgebucht: {amount}.',
-        managerIncome: 'Diese Zahlung enthält {amount} zusätzliche Einnahmen durch den Manager.',
-        sponsorNote: 'Manager: +{bonus}% auf reguläre Sponsorenzahlungen. Aktuelle Verträge: etwa {amount} zusätzlich pro Monat, vor dem Managergehalt.',
+        managerIncome: 'Managerbonus in dieser Zahlung, vor Steuern: {amount}.',
+        sponsorNote: 'Manager: +{bonus}% auf reguläre Sponsorenzahlungen. Aktuelle Verträge: etwa {amount} netto zusätzlich pro Monat, vor dem Managergehalt.',
         trainingNote: 'Stab: Scoring +{scoring}% XP · Doppel +{doubles}% XP. Boni gelten nur für tägliche Trainingseinheiten.',
         back: 'Zurück zum Menü'
     },
@@ -106,8 +106,8 @@ const PLAYER_STAFF_TEXT = {
         dismissed: 'Contract met {name} beëindigd. Bonus uitgeschakeld. Geen ontslagvergoeding; eerdere betalingen worden niet terugbetaald.',
         payrollSubject: 'Salarisafrekening', sender: 'Stafbureau', paid: '{name}: salaris {amount} voor de maand vanaf {date}.',
         ended: '{name}: salaris van {amount} op {date} niet betaalbaar. Contract beëindigd; bonus uitgeschakeld.', paidTotal: 'Totaal betaald: {amount}.',
-        managerIncome: 'Deze betaling bevat {amount} extra inkomsten dankzij je manager.',
-        sponsorNote: 'Manager: +{bonus}% op gewone sponsorbetalingen. Huidige contracten: ongeveer {amount} extra per maand, vóór het managersalaris.',
+        managerIncome: 'Managerbonus in deze betaling, vóór belasting: {amount}.',
+        sponsorNote: 'Manager: +{bonus}% op gewone sponsorbetalingen. Huidige contracten: ongeveer {amount} netto extra per maand, vóór het managersalaris.',
         trainingNote: 'Staf: scoring +{scoring}% XP · dubbels +{doubles}% XP. Bonussen gelden alleen voor dagelijkse trainingen.',
         back: 'Terug naar Menu'
     }
@@ -206,7 +206,9 @@ function renderPlayerStaffContextNotes() {
         const bonus = getPlayerStaffBonus('manager');
         sponsors.hidden = bonus === 0;
         const regular = (player.activeSponsors || []).reduce((sum, sponsor) => sum + (Number(sponsor.monthlyValue) || 0), 0);
-        sponsors.textContent = trPlayerStaff('sponsorNote', { bonus, amount: playerStaffMoney(getPlayerStaffSponsorBonus(regular)) });
+        const grossBonus = getPlayerStaffSponsorBonus(regular);
+        const netBonus = typeof getCareerSponsorPayment === 'function' ? getCareerSponsorPayment(grossBonus).net : grossBonus;
+        sponsors.textContent = trPlayerStaff('sponsorNote', { bonus, amount: playerStaffMoney(netBonus) });
     }
 }
 

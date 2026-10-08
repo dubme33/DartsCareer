@@ -45,7 +45,24 @@ const historicalChampionProfiles = {
     'co-stompe': { name: 'Co Stamper', country: 'Holandia', aliases: ['Co Stompe', 'Co Stompé'] },
     'john-henderson': { name: 'Jon Henders', country: 'Szkocja', aliases: ['John Henderson'] },
     'damon-heta': { name: 'Damian Heat', country: 'Australia', aliases: ['Damon Heta'] },
-    'josh-rock': { name: 'Joshua Rocky', country: 'Irlandia Północna', aliases: ['Josh Rock'] }
+    'josh-rock': { name: 'Joshua Rocky', country: 'Irlandia Północna', aliases: ['Josh Rock'] },
+    'justin-pipe': { name: 'Justin Pipes', country: 'Anglia', aliases: ['Justin Pipe'] },
+    'vincent-van-der-voort': { name: 'Vincent van der Vorth', country: 'Holandia', aliases: ['Vincent van der Voort'] },
+    'wes-newton': { name: 'Wes Newson', country: 'Anglia', aliases: ['Wes Newton'] },
+    'mervyn-king': { name: 'Mervin Prince', country: 'Anglia', aliases: ['Mervyn King'] },
+    'kim-huybrechts': { name: 'Kim Huibrecht', country: 'Belgia', aliases: ['Kim Huybrechts'] },
+    'ian-white': { name: 'Ian Wight', country: 'Anglia', aliases: ['Ian White'] },
+    'mensur-suljovic': { name: 'Mensa Sulovic', country: 'Austria', aliases: ['Mensur Suljovic', 'Mensur Suljović'] },
+    'martin-schindler': { name: 'Marten Schindla', country: 'Niemcy', aliases: ['Martin Schindler'] },
+    'jamie-hughes': { name: 'James Huwes', country: 'Anglia', aliases: ['Jamie Hughes'] },
+    'dave-chisnall': { name: 'Dave Chisnel', country: 'Anglia', aliases: ['Dave Chisnall'] },
+    'max-hopp': { name: 'Max Hope', country: 'Niemcy', aliases: ['Max Hopp'] },
+    'krzysztof-ratajski': { name: 'Krzysztof Ratajczyk', country: 'Polska', aliases: ['Krzysztof Ratajski'] },
+    'ricardo-pietreczko': { name: 'Rick Pietreczka', country: 'Niemcy', aliases: ['Ricardo Pietreczko'] },
+    'niko-springer': { name: 'Nick Spring', country: 'Niemcy', aliases: ['Niko Springer', 'Nico Springer'] },
+    'steve-beaton': { name: 'Stevie Benton', country: 'Anglia', aliases: ['Steve Beaton'] },
+    'alan-norris': { name: 'Allan Morris', country: 'Anglia', aliases: ['Alan Norris'] },
+    'devon-petersen': { name: 'Devon Peters', country: 'RPA', aliases: ['Devon Petersen'] }
 };
 
 // Zwycięzcy są przypisani do fikcyjnych odpowiedników turniejów z kalendarza.
@@ -199,3 +216,149 @@ const historicalTournamentChampions = [
         ]
     }
 ];
+
+// Individual European Tour events, including discontinued tournaments.
+// Source: https://en.wikipedia.org/wiki/PDC_European_Tour#Active_tournaments
+// Only 2012–2025: the playable career starts in 2026. The European
+// Championship and World Series events are separate competitions.
+const historicalEuropeanTourChampions = [
+    {
+        tournament: 'Austrian Darts Open',
+        editions: [
+            [2012, 'justin-pipe'], [2013, 'michael-van-gerwen'], [2014, 'vincent-van-der-voort'],
+            [2016, 'phil-taylor'], [2017, 'michael-van-gerwen'], [2018, 'jonny-clayton'],
+            [2019, 'michael-van-gerwen'], [2022, 'michael-van-gerwen'], [2023, 'jonny-clayton'],
+            [2024, 'luke-littler'], [2025, 'martin-schindler']
+        ]
+    },
+    {
+        tournament: 'European Darts Open',
+        editions: [
+            [2012, 'raymond-van-barneveld'], [2013, 'michael-van-gerwen'], [2014, 'peter-wright'],
+            [2015, 'robert-thornton'], [2016, 'michael-van-gerwen'], [2017, 'peter-wright'],
+            [2018, 'michael-van-gerwen'], [2019, 'michael-van-gerwen'], [2022, 'michael-van-gerwen'],
+            [2023, 'gerwyn-price'], [2024, 'dave-chisnall'], [2025, 'nathan-aspinall']
+        ]
+    },
+    {
+        tournament: 'European Darts Trophy',
+        editions: [
+            [2013, 'wes-newton'], [2014, 'michael-smith'], [2015, 'michael-smith'],
+            [2016, 'michael-van-gerwen'], [2017, 'michael-van-gerwen'], [2018, 'michael-van-gerwen'],
+            [2025, 'nathan-aspinall']
+        ]
+    },
+    {
+        tournament: 'European Darts Grand Prix',
+        editions: [
+            [2014, 'mervyn-king'], [2015, 'kim-huybrechts'], [2016, 'michael-van-gerwen'],
+            [2017, 'peter-wright'], [2018, 'michael-van-gerwen'], [2019, 'ian-white'],
+            [2020, 'jose-de-sousa'], [2022, 'luke-humphries'], [2023, 'rob-cross'],
+            [2024, 'gary-anderson'], [2025, 'gary-anderson']
+        ]
+    },
+    {
+        tournament: 'International Darts Open',
+        editions: [
+            [2015, 'michael-smith'], [2016, 'mensur-suljovic'], [2017, 'peter-wright'],
+            [2018, 'gerwyn-price'], [2019, 'gerwyn-price'], [2020, 'joe-cullen'],
+            [2022, 'gerwyn-price'], [2023, 'gerwyn-price'], [2024, 'martin-schindler'],
+            [2025, 'stephen-bunting']
+        ]
+    },
+    {
+        tournament: 'German Darts Grand Prix',
+        editions: [
+            [2017, 'michael-van-gerwen'], [2018, 'michael-van-gerwen'], [2019, 'michael-van-gerwen'],
+            [2022, 'luke-humphries'], [2023, 'michael-smith'], [2024, 'luke-humphries'],
+            [2025, 'michael-van-gerwen']
+        ]
+    },
+    {
+        tournament: 'Dutch Darts Championship',
+        editions: [
+            [2018, 'ian-white'], [2022, 'michael-smith'], [2023, 'dave-chisnall'],
+            [2024, 'josh-rock'], [2025, 'jonny-clayton']
+        ]
+    },
+    {
+        tournament: 'Czech Darts Open',
+        editions: [
+            [2019, 'jamie-hughes'], [2022, 'luke-humphries'], [2023, 'peter-wright'],
+            [2024, 'luke-humphries'], [2025, 'luke-humphries']
+        ]
+    },
+    {
+        tournament: 'Hungarian Darts Trophy',
+        editions: [
+            [2021, 'gerwyn-price'], [2022, 'joe-cullen'], [2023, 'dave-chisnall'],
+            [2024, 'michael-van-gerwen'], [2025, 'niko-springer']
+        ]
+    },
+    {
+        tournament: 'Belgian Darts Open',
+        editions: [
+            [2022, 'dave-chisnall'], [2023, 'michael-van-gerwen'],
+            [2024, 'luke-littler'], [2025, 'luke-littler']
+        ]
+    },
+    { tournament: 'Baltic Sea Darts Open', editions: [[2023, 'dave-chisnall'], [2024, 'rob-cross'], [2025, 'gerwyn-price']] },
+    { tournament: 'Flanders Darts Trophy', editions: [[2024, 'dave-chisnall'], [2025, 'luke-littler']] },
+    { tournament: 'Swiss Darts Trophy', editions: [[2024, 'martin-schindler'], [2025, 'stephen-bunting']] },
+    { tournament: 'UK Masters', editions: [[2013, 'john-part']] },
+    {
+        tournament: 'German Darts Masters',
+        editions: [
+            [2012, 'adrian-lewis'], [2013, 'steve-beaton'], [2014, 'phil-taylor'],
+            [2015, 'michael-van-gerwen'], [2016, 'michael-van-gerwen'], [2017, 'michael-van-gerwen']
+        ]
+    },
+    { tournament: 'Danish Darts Open', editions: [[2018, 'mensur-suljovic'], [2019, 'dave-chisnall']] },
+    { tournament: 'Austrian Darts Championship', editions: [[2019, 'mensur-suljovic']] },
+    {
+        tournament: 'Dutch Darts Masters',
+        editions: [
+            [2012, 'simon-whitlock'], [2013, 'kim-huybrechts'], [2014, 'michael-van-gerwen'],
+            [2015, 'michael-van-gerwen'], [2016, 'michael-van-gerwen'], [2017, 'michael-van-gerwen'],
+            [2018, 'michael-van-gerwen'], [2019, 'ian-white']
+        ]
+    },
+    { tournament: 'Belgian Darts Championship', editions: [[2020, 'gerwyn-price']] },
+    {
+        tournament: 'Gibraltar Darts Trophy',
+        editions: [
+            [2013, 'phil-taylor'], [2014, 'james-wade'], [2015, 'michael-van-gerwen'],
+            [2016, 'michael-van-gerwen'], [2017, 'michael-smith'], [2018, 'michael-van-gerwen'],
+            [2019, 'krzysztof-ratajski'], [2021, 'gerwyn-price'], [2022, 'damon-heta']
+        ]
+    },
+    {
+        tournament: 'European Darts Matchplay',
+        editions: [
+            [2015, 'michael-van-gerwen'], [2016, 'james-wade'], [2017, 'michael-van-gerwen'],
+            [2018, 'michael-van-gerwen'], [2019, 'joe-cullen'],
+            [2022, 'luke-humphries'], [2023, 'luke-humphries']
+        ]
+    },
+    {
+        tournament: 'German Darts Open',
+        editions: [
+            [2017, 'peter-wright'], [2018, 'max-hopp'], [2019, 'michael-van-gerwen'],
+            [2022, 'peter-wright'], [2023, 'krzysztof-ratajski']
+        ]
+    },
+    {
+        tournament: 'German Darts Championship',
+        editions: [
+            [2012, 'phil-taylor'], [2013, 'dave-chisnall'], [2014, 'gary-anderson'],
+            [2015, 'michael-van-gerwen'], [2016, 'alan-norris'], [2017, 'peter-wright'],
+            [2018, 'michael-van-gerwen'], [2019, 'daryl-gurney'], [2020, 'devon-petersen'],
+            [2022, 'michael-van-gerwen'], [2023, 'ricardo-pietreczko'],
+            [2024, 'peter-wright'], [2025, 'nathan-aspinall']
+        ]
+    }
+].map(history => ({ ...history, sourceName: `European Tour: ${history.tournament}` }));
+
+// A separate source key prevents old ET Masters events from becoming titles
+// of the newer, identically named World Series Masters competitions.
+historicalTournamentChampions.push(...historicalEuropeanTourChampions);

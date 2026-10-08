@@ -1,8 +1,10 @@
 // Rozwój AI jest rozliczany z całego sezonu. Drobne korekty meczowe są częścią
 // tej samej zmiany, a nie drugą premią. Nie zmieniamy treningu gracza kariery.
 const AI_SEASON_DEVELOPMENT_VERSION = 1;
-const AI_SEASON_DEVELOPMENT_MAX_CHANGE = 10;
-const AI_SEASON_DEVELOPMENT_GROWTH_MULTIPLIER = 1.05;
+const AI_SEASON_DEVELOPMENT_MAX_CHANGE = typeof AI_DEVELOPMENT_FOUNDATION_CONFIG !== 'undefined'
+    ? AI_DEVELOPMENT_FOUNDATION_CONFIG.performance.maxChange : 10;
+const AI_SEASON_DEVELOPMENT_GROWTH_MULTIPLIER = typeof AI_DEVELOPMENT_FOUNDATION_CONFIG !== 'undefined'
+    ? AI_DEVELOPMENT_FOUNDATION_CONFIG.performance.growthMultiplier : 1.05;
 
 function getAiDevelopmentRating(candidate, year) {
     const career = typeof isCurrentPlayer === 'function' && isCurrentPlayer(candidate);
@@ -84,12 +86,19 @@ function recordAiDevelopmentMatch(candidate, opponent, won, tournament, format =
     state.wins += won ? weight : 0;
     state.expectedWins += weight * expected(difference);
     state.sensitivity += weight * (expected(difference + 1) - expected(difference - 1)) / 2;
+    if (typeof recordAiCareerMatchEvidence === 'function')
+        recordAiCareerMatchEvidence(candidate, opponent, won, tournament, expected(difference));
 }
 
 function recordAiDevelopmentImmediateChange(candidate, delta) {
     const state = candidate?.aiDevelopment;
     if (state?.version === AI_SEASON_DEVELOPMENT_VERSION && state.year === currentDate.getFullYear()
-        && !state.settled && Number.isFinite(delta)) state.inSeasonDelta += delta;
+        && !state.settled && Number.isFinite(delta)) {
+        state.inSeasonDelta += delta;
+        if (typeof settleAiFoundationSeason === 'function' && delta > 0) {
+            state.provisionalGrowthApplied = (Number(state.provisionalGrowthApplied) || 0) + delta;
+        }
+    }
 }
 
 function limitAiDevelopmentGrowth(rating, change) {
@@ -99,7 +108,9 @@ function limitAiDevelopmentGrowth(rating, change) {
     // Łagodniejsze przedziały pozwalają najlepszym sezonowo wejść na 90–94,
     // ale dalszy rozwój do absolutnego maksimum nadal pozostaje coraz trudniejszy.
     // Nie ma przydziału punktów według miejsca w OOM ani automatycznych awansów.
-    for (const [ceiling, multiplier] of [[85, 1], [90, 0.75], [94, 0.45], [99, 0.2]]) {
+    const caps = typeof AI_DEVELOPMENT_FOUNDATION_CONFIG !== 'undefined'
+        ? AI_DEVELOPMENT_FOUNDATION_CONFIG.softCaps : [[85, 1], [90, 0.75], [94, 0.45], [99, 0.2]];
+    for (const [ceiling, multiplier] of caps) {
         const room = Math.max(0, ceiling - rating - increase);
         const used = Math.min(remaining, room / multiplier);
         increase += used * multiplier;
@@ -119,6 +130,17 @@ function settleAiSeasonDevelopment(completedYear) {
     if (!Number.isInteger(completedYear) || !Array.isArray(pdcPlayers)) return [];
     const changes = [];
     for (const candidate of pdcPlayers) {
+        const foundation = typeof settleAiFoundationSeason === 'function';
+        if (foundation && candidate && !candidate.isBye && !isCurrentPlayer(candidate)) {
+            if (candidate.aiDevelopmentSummary?.year >= completedYear || candidate.aiDevelopment?.year > completedYear) continue;
+            initializeAiDevelopmentCandidate(candidate);
+            if (!candidate.aiDevelopment || candidate.aiDevelopment.year !== completedYear) {
+                // Never reconstruct exposure from titles/prize money in an old save.
+                candidate.aiDevelopment = { version: AI_SEASON_DEVELOPMENT_VERSION, year: completedYear,
+                    since: new Date(completedYear, 0, 1).getTime(), matches: 0, weight: 0, baseWeight: 0,
+                    wins: 0, expectedWins: 0, sensitivity: 0, inSeasonDelta: 0, settled: false };
+            }
+        }
         const state = candidate?.aiDevelopment;
         if (!candidate || candidate.isBye || (typeof isCurrentPlayer === 'function' && isCurrentPlayer(candidate))
             || state?.version !== AI_SEASON_DEVELOPMENT_VERSION || state.year !== completedYear || state.settled) continue;
@@ -129,17 +151,36 @@ function settleAiSeasonDevelopment(completedYear) {
         // Mała próbka nie pozwala wnioskować o całym sezonie. 60 ważonych
         // meczów pozwala na pełne ±10; pojedynczy puchar nie daje skoku o 9 OVR.
         const baseWeight = Number.isFinite(state.baseWeight) && state.baseWeight >= 0 ? state.baseWeight : state.weight;
-        const limit = AI_SEASON_DEVELOPMENT_MAX_CHANGE * Math.min(1, baseWeight / 60);
+        const fullWeight = foundation ? AI_DEVELOPMENT_FOUNDATION_CONFIG.performance.fullWeight : 60;
+        const minimumMatches = foundation ? AI_DEVELOPMENT_FOUNDATION_CONFIG.performance.minimumMatches : 12;
+        const limit = AI_SEASON_DEVELOPMENT_MAX_CHANGE * Math.min(1, baseWeight / fullWeight);
         // Samo obniżenie wag znikałoby w ilorazie wyniku i czułości przy
         // długim sezonie. Średni prestiż ogranicza też końcową dodatnią premię.
         const prestigeFactor = baseWeight > 0 ? Math.max(0.2, Math.min(1.25, state.weight / baseWeight)) : 1;
-        const performanceChange = state.matches >= 12
+        const performanceChange = state.matches >= minimumMatches
             ? Math.max(-limit, Math.min(limit, (state.wins - state.expectedWins) / (state.sensitivity + 0.6)))
             : state.inSeasonDelta;
         const seasonStart = before - state.inSeasonDelta;
         // Wiek z rozliczanego sezonu, również przy wczytaniu zapisu w nowym roku.
         const ageProfile = getAgeDevelopmentProfile(candidate, new Date(completedYear, 11, 31));
         const growthMultiplier = ageProfile.seasonGrowthMultiplier || 1;
+        if (foundation) {
+            const performanceAgeFactor = getAiPerformanceAgeFactor(candidate, new Date(completedYear,11,31));
+            const input = state.matches >= AI_DEVELOPMENT_FOUNDATION_CONFIG.performance.minimumMatches
+                ? performanceChange > 0
+                    ? increaseAiSeasonDevelopmentGrowth(performanceChange * growthMultiplier * performanceAgeFactor, limit, prestigeFactor)
+                    : limitLowOverallDecline(seasonStart, performanceChange
+                        * (AI_DEVELOPMENT_FOUNDATION_CONFIG.performance.prestigeSymmetric ? prestigeFactor : 1) * performanceAgeFactor)
+                : Number.isFinite(state.provisionalGrowthInput) && Number.isFinite(state.provisionalGrowthApplied)
+                    // Reconstruct the raw positive transfers: their potential/elite
+                    // caps were provisional and must not be applied a second time.
+                    ? (state.provisionalGrowthInput + Math.min(0, state.inSeasonDelta - state.provisionalGrowthApplied)) * performanceAgeFactor
+                    : state.inSeasonDelta * performanceAgeFactor;
+            const summary = settleAiFoundationSeason(candidate, state, completedYear, { before, seasonStart, input, limit,
+                rawPerformance:performanceChange,prestigeFactor,performanceAgeFactor });
+            changes.push({ id: candidate.id, ...summary });
+            continue;
+        }
         const totalChange = state.matches >= 12
             ? performanceChange > 0
                 ? limitAiDevelopmentGrowth(seasonStart, increaseAiSeasonDevelopmentGrowth(

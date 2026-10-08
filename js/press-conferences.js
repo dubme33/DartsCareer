@@ -3,16 +3,16 @@ let pressConferenceResumeOwner = null;
 
 const PRESS_CONFERENCE_COPY = {
     pl: { pre: 'Konferencja przedturniejowa', post: 'Konferencja pomeczowa', question: 'PYTANIE',
-        continue: 'Kontynuuj', reaction: 'Reakcja mediów i sztabu', prof: 'Profesjonalizm', pop: 'Medialność',
+        continue: 'Zakończ konferencję', next: 'Następne pytanie', reaction: 'Reakcja mediów i sztabu', prof: 'Profesjonalizm', pop: 'Medialność',
         unchanged: 'Bez zmiany statystyk' },
     en: { pre: 'Pre-tournament press conference', post: 'Post-match press conference', question: 'QUESTION',
-        continue: 'Continue', reaction: 'Media and team reaction', prof: 'Professionalism', pop: 'Media presence',
+        continue: 'Finish conference', next: 'Next question', reaction: 'Media and team reaction', prof: 'Professionalism', pop: 'Media presence',
         unchanged: 'No attribute changes' },
     de: { pre: 'Pressekonferenz vor dem Turnier', post: 'Pressekonferenz nach dem Spiel', question: 'FRAGE',
-        continue: 'Weiter', reaction: 'Reaktion von Medien und Team', prof: 'Professionalität', pop: 'Medienpräsenz',
+        continue: 'Pressekonferenz beenden', next: 'Nächste Frage', reaction: 'Reaktion von Medien und Team', prof: 'Professionalität', pop: 'Medienpräsenz',
         unchanged: 'Keine Änderungen' },
     nl: { pre: 'Persconferentie voor het toernooi', post: 'Persconferentie na de wedstrijd', question: 'VRAAG',
-        continue: 'Doorgaan', reaction: 'Reactie van media en team', prof: 'Professionaliteit', pop: 'Mediabereik',
+        continue: 'Persconferentie afronden', next: 'Volgende vraag', reaction: 'Reactie van media en team', prof: 'Professionaliteit', pop: 'Mediabereik',
         unchanged: 'Geen wijzigingen' }
 };
 
@@ -64,6 +64,12 @@ function getPressConferenceState() {
     if (state.pending?.phase === 'post' && !isWinningPostMatchPressConference(state.pending.context)) {
         state.pending = null;
     }
+    if (state.pending && !Array.isArray(state.pending.questions)) {
+        // Careers saved before multi-question conferences contain one question.
+        state.pending.questions = [{ questionId: state.pending.questionId,
+            journalistIndex: state.pending.journalistIndex }];
+        state.pending.index = 0;
+    }
     return state;
 }
 
@@ -83,9 +89,9 @@ function getPressConferenceTournamentName(tournament) {
         ? getTournamentDisplayName(tournament) : tournament.name;
 }
 
-function choosePressConferenceQuestion(phase, context, state) {
+function choosePressConferenceQuestion(phase, context, state, excludedTopics = new Set()) {
     const eligible = PRESS_CONFERENCE_TOPICS.flatMap(topic => {
-        if (topic.phase !== phase || (topic.needsOpponent && !context.opponent)
+        if (topic.phase !== phase || excludedTopics.has(topic.id) || (topic.needsOpponent && !context.opponent)
             || (topic.needsH2h && !context.h2h) || (topic.needsAverage && !context.average)) return [];
         return topic.questions.map((_, index) => ({ topic, index, id: `${topic.id}:${index}` }));
     });
@@ -93,6 +99,22 @@ function choosePressConferenceQuestion(phase, context, state) {
     const fresh = eligible.filter(item => !state.recentQuestions.includes(item.id));
     const pool = fresh.length ? fresh : eligible;
     return pool[Math.floor(Math.random() * pool.length)];
+}
+
+function buildPressConferenceQuestions(phase, context, state) {
+    const count = phase === 'pre' ? 3 : 2;
+    const questions = [];
+    const topics = new Set();
+    const journalists = PRESS_CONFERENCE_JOURNALISTS.map((_, index) => index);
+    for (let index = 0; index < count; index++) {
+        const selected = choosePressConferenceQuestion(phase, context,
+            { recentQuestions: [...state.recentQuestions, ...questions.map(question => question.questionId)] }, topics);
+        if (!selected) break;
+        topics.add(selected.topic.id);
+        const journalistPosition = Math.floor(Math.random() * journalists.length);
+        questions.push({ questionId: selected.id, journalistIndex: journalists.splice(journalistPosition, 1)[0] });
+    }
+    return questions;
 }
 
 function getPressConferenceQuestion(id) {
@@ -109,12 +131,10 @@ function formatPressConferenceText(text, context) {
 function queuePressConference(phase, context, key = '') {
     const state = getPressConferenceState();
     if (state.pending) return false;
-    const selected = choosePressConferenceQuestion(phase, context, state);
-    if (!selected) return false;
+    const questions = buildPressConferenceQuestions(phase, context, state);
+    if (!questions.length) return false;
     state.pending = {
-        phase, key, questionId: selected.id,
-        journalistIndex: Math.floor(Math.random() * PRESS_CONFERENCE_JOURNALISTS.length),
-        context
+        phase, key, questions, index: 0, awaitingContinue: false, context
     };
     if (typeof saveGame === 'function') saveGame(true);
     showPendingPressConference();
@@ -179,18 +199,25 @@ function showPendingPressConference() {
     const eventModal = document.getElementById('event-modal');
     if (eventModal?.style.display === 'flex') return false;
     const pending = player.pressConferences.pending;
-    const selected = getPressConferenceQuestion(pending.questionId);
+    const current = pending.questions?.[pending.index];
+    const selected = getPressConferenceQuestion(current?.questionId);
     const modal = document.getElementById('press-conference-modal');
     if (!selected || !modal) return false;
     const copy = PRESS_CONFERENCE_COPY[getPressConferenceLanguage()];
-    const journalist = PRESS_CONFERENCE_JOURNALISTS[pending.journalistIndex]
+    const journalist = PRESS_CONFERENCE_JOURNALISTS[current.journalistIndex]
         || PRESS_CONFERENCE_JOURNALISTS[0];
     document.getElementById('press-conference-type').textContent = copy[pending.phase];
     document.getElementById('press-conference-tournament').textContent = pending.context.tournament;
     document.getElementById('press-conference-journalist').textContent = `${journalist.name} · ${journalist.outlet}`;
-    document.getElementById('press-conference-question-label').textContent = copy.question;
+    document.getElementById('press-conference-question-label').textContent =
+        `${copy.question} ${pending.index + 1}/${pending.questions.length}`;
     document.getElementById('press-conference-question').textContent = formatPressConferenceText(
         pressConferenceText(selected.topic.questions[selected.index]), pending.context);
+    if (pending.awaitingContinue) {
+        renderPressConferenceOutcome(pending.lastOutcome || { prof: 0, pop: 0 });
+        modal.style.display = 'flex';
+        return true;
+    }
     const choices = document.getElementById('press-conference-choices');
     choices.replaceChildren();
     selected.topic.answers.forEach((answer, index) => {
@@ -209,7 +236,8 @@ function showPendingPressConference() {
 function answerPressConference(answerIndex) {
     const state = getPressConferenceState();
     const pending = state.pending;
-    if (!pending || !getPressConferenceQuestion(pending.questionId)
+    const current = pending?.questions?.[pending.index];
+    if (!pending || pending.awaitingContinue || !getPressConferenceQuestion(current?.questionId)
         || !Number.isInteger(answerIndex) || answerIndex < 0 || answerIndex > 3) return false;
     const possible = PRESS_CONFERENCE_REACTIONS[answerIndex];
     const rolled = possible[Math.floor(Math.random() * possible.length)];
@@ -219,29 +247,50 @@ function answerPressConference(answerIndex) {
     player.pop = Math.max(0, Math.min(100, oldPop + rolled.pop));
     const actualProf = player.prof - oldProf;
     const actualPop = player.pop - oldPop;
-    if (pending.phase === 'pre' && !state.preCompleted.includes(pending.key)) {
-        state.preCompleted.push(pending.key);
-        state.preCompleted = state.preCompleted.slice(-240);
-    }
-    state.recentQuestions.push(pending.questionId);
+    state.recentQuestions.push(current.questionId);
     state.recentQuestions = state.recentQuestions.slice(-16);
-    state.pending = null;
+    pending.lastOutcome = { prof: actualProf, pop: actualPop };
+    pending.awaitingContinue = true;
     if (typeof updateHub === 'function') updateHub();
     if (typeof saveGame === 'function') saveGame(true);
-    const copy = PRESS_CONFERENCE_COPY[getPressConferenceLanguage()];
-    const formatDelta = value => value > 0 ? `+${value}` : String(value);
-    const changes = [];
-    if (actualProf) changes.push(`${copy.prof} ${formatDelta(actualProf)}`);
-    if (actualPop) changes.push(`${copy.pop} ${formatDelta(actualPop)}`);
-    document.getElementById('press-conference-choices').replaceChildren();
-    document.getElementById('press-conference-outcome-title').textContent = copy.reaction;
-    document.getElementById('press-conference-outcome-changes').textContent = changes.join(' · ') || copy.unchanged;
-    document.getElementById('press-conference-continue').textContent = copy.continue;
-    document.getElementById('press-conference-outcome').hidden = false;
+    renderPressConferenceOutcome(pending.lastOutcome);
     return true;
 }
 
+function renderPressConferenceOutcome(outcome) {
+    const copy = PRESS_CONFERENCE_COPY[getPressConferenceLanguage()];
+    const formatDelta = value => value > 0 ? `+${value}` : String(value);
+    const changes = [];
+    if (outcome.prof) changes.push(`${copy.prof} ${formatDelta(outcome.prof)}`);
+    if (outcome.pop) changes.push(`${copy.pop} ${formatDelta(outcome.pop)}`);
+    document.getElementById('press-conference-choices').replaceChildren();
+    document.getElementById('press-conference-outcome-title').textContent = copy.reaction;
+    document.getElementById('press-conference-outcome-changes').textContent = changes.join(' · ') || copy.unchanged;
+    const pending = player.pressConferences.pending;
+    document.getElementById('press-conference-continue').textContent =
+        pending.index + 1 < pending.questions.length ? copy.next : copy.continue;
+    document.getElementById('press-conference-outcome').hidden = false;
+}
+
 function continueAfterPressConference() {
+    const state = typeof player !== 'undefined' && player ? getPressConferenceState() : null;
+    const pending = state?.pending;
+    if (pending?.awaitingContinue && pending.index + 1 < pending.questions.length) {
+        pending.index++;
+        pending.awaitingContinue = false;
+        delete pending.lastOutcome;
+        if (typeof saveGame === 'function') saveGame(true);
+        showPendingPressConference();
+        return;
+    }
+    if (pending?.awaitingContinue) {
+        if (pending.phase === 'pre' && !state.preCompleted.includes(pending.key)) {
+            state.preCompleted.push(pending.key);
+            state.preCompleted = state.preCompleted.slice(-240);
+        }
+        state.pending = null;
+        if (typeof saveGame === 'function') saveGame(true);
+    }
     const modal = document.getElementById('press-conference-modal');
     if (modal) modal.style.display = 'none';
     const resume = pressConferenceResumeOwner === player ? pressConferenceResume : null;

@@ -1,5 +1,10 @@
 const translations = {
     pl: {
+        "t-site-information": "Informacje o stronie",
+        "t-footer-terms": "Regulamin",
+        "t-footer-privacy": "Polityka prywatności",
+        "t-footer-contact": "Kontakt",
+        "t-site-information-close": "Zamknij",
         // Już istniejące tłumaczenia (zachowuję)
         "t-create-title": "Stwórz swojego zawodnika",
         "t-fname": "Imię:",
@@ -426,6 +431,8 @@ const translations = {
         "t-simulation-round-progress": "Postęp rundy",
         "t-simulation-groups": "Faza grupowa",
         "t-simulation-error-restored": "Symulacja została przerwana. Stan sprzed jej rozpoczęcia został zachowany. Możesz spróbować ponownie.",
+        "t-simulation-error-recovery": "Jeśli błąd się powtarza, otwórz edytor turniejów, wybierz aktywny turniej i użyj „Anuluj bieżącą edycję”, aby kontynuować karierę bez cofania wcześniejszych wyników.",
+        "t-simulation-error-details": "Szczegóły błędu",
         "t-simulation-error-reload": "Błąd symulacji. Nie zapisano niepełnych wyników. Wczytaj ostatni zapis przed dalszą grą.",
         "t-btn-watch-match": "Oglądaj mecz",
         "t-spectator-title": "Tryb widza",
@@ -455,6 +462,11 @@ const translations = {
         "t-followers": "📸 Obserwujący na Instagramie",
     },
     en: {
+        "t-site-information": "Site information",
+        "t-footer-terms": "Terms of Use",
+        "t-footer-privacy": "Privacy Policy",
+        "t-footer-contact": "Contact",
+        "t-site-information-close": "Close",
         // ANGIELSKIE TŁUMACZENIA
         "t-create-title": "Create Your Player",
         "t-fname": "First Name:",
@@ -890,6 +902,8 @@ const translations = {
         "t-simulation-round-progress": "Round progress",
         "t-simulation-groups": "Group stage",
         "t-simulation-error-restored": "Simulation was interrupted. The state from before it started has been preserved. You can try again.",
+        "t-simulation-error-recovery": "If this keeps happening, open the tournament editor, select the active event and use 'Cancel current edition' to continue your career without losing earlier results.",
+        "t-simulation-error-details": "Error details",
         "t-simulation-error-reload": "Simulation error. Incomplete results were not saved. Load your last save before continuing.",
         "t-btn-watch-match": "Watch match",
         "t-spectator-title": "Spectator mode",
@@ -919,6 +933,11 @@ const translations = {
         "t-followers": "📸 Instagram Followers",
     },
     de: {
+        "t-site-information": "Informationen zur Website",
+        "t-footer-terms": "Nutzungsbedingungen",
+        "t-footer-privacy": "Datenschutzerklärung",
+        "t-footer-contact": "Kontakt",
+        "t-site-information-close": "Schließen",
         "pdc-search-label": "Spieler suchen",
         "t-pdc-search-placeholder": "Nachnamen eingeben…",
         "pdc-search-clear": "Leeren",
@@ -1331,6 +1350,8 @@ const translations = {
         "t-simulation-round-progress": "Rundenfortschritt",
         "t-simulation-groups": "Gruppenphase",
         "t-simulation-error-restored": "Die Simulation wurde unterbrochen. Der Stand vor dem Start wurde beibehalten. Du kannst es erneut versuchen.",
+        "t-simulation-error-recovery": "Wenn der Fehler wiederholt auftritt, öffne den Turniereditor, wähle das laufende Turnier und nutze „Aktuelle Ausgabe absagen“, um ohne Verlust früherer Ergebnisse weiterzuspielen.",
+        "t-simulation-error-details": "Fehlerdetails",
         "t-simulation-error-reload": "Simulationsfehler. Unvollständige Ergebnisse wurden nicht gespeichert. Lade vor dem Weiterspielen deinen letzten Spielstand.",
         "t-btn-watch-match": "Spiel ansehen",
         "t-spectator-title": "Zuschauermodus",
@@ -1360,6 +1381,11 @@ const translations = {
         "t-followers": "📸 Instagram-Follower",
     },
     nl: {
+        "t-site-information": "Website-informatie",
+        "t-footer-terms": "Gebruiksvoorwaarden",
+        "t-footer-privacy": "Privacybeleid",
+        "t-footer-contact": "Contact",
+        "t-site-information-close": "Sluiten",
         // HOLENDERSKIE TŁUMACZENIA
         "t-create-title": "Maak je speler",
         "t-fname": "Voornaam:",
@@ -1818,6 +1844,8 @@ const translations = {
         "t-simulation-round-progress": "Voortgang van de ronde",
         "t-simulation-groups": "Groepsfase",
         "t-simulation-error-restored": "De simulatie is onderbroken. De situatie van voor de start is behouden. Je kunt het opnieuw proberen.",
+        "t-simulation-error-recovery": "Als dit blijft gebeuren, open de toernooieditor, selecteer het actieve toernooi en kies 'Huidige editie annuleren' om door te spelen zonder eerdere resultaten te verliezen.",
+        "t-simulation-error-details": "Foutdetails",
         "t-simulation-error-reload": "Simulatiefout. Onvolledige resultaten zijn niet opgeslagen. Laad je laatste opgeslagen spel voordat je verder speelt.",
         "t-btn-watch-match": "Wedstrijd bekijken",
         "t-spectator-title": "Toeschouwersmodus",
@@ -2124,6 +2152,7 @@ const translations = {
             if(typeof refreshPlayerNicknameUI === 'function') refreshPlayerNicknameUI();
             if(typeof refreshTournamentWatchSettingsUI === 'function') refreshTournamentWatchSettingsUI();
             if(typeof refreshBounceOutSettingsUI === 'function') refreshBounceOutSettingsUI();
+            if(typeof refreshMatchBullOffSettingsUI === 'function') refreshMatchBullOffSettingsUI();
             if(typeof refreshMatchIncidentSettingsUI === 'function') refreshMatchIncidentSettingsUI();
             if(typeof refreshDartFlightMotionUI === 'function') refreshDartFlightMotionUI();
             if(typeof refreshMatchLayoutSettingsUI === 'function') refreshMatchLayoutSettingsUI();

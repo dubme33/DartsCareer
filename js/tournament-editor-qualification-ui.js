@@ -17,6 +17,7 @@ const TOURNAMENT_EDITOR_QUALIFICATION_TEXT = {
     minAge: ['Minimalny wiek (0 = bez limitu)', 'Minimum age (0 = no limit)', 'Mindestalter (0 = ohne Grenze)', 'Minimumleeftijd (0 = geen limiet)'],
     maxAge: ['Maksymalny wiek (0 = bez limitu)', 'Maximum age (0 = no limit)', 'Höchstalter (0 = ohne Grenze)', 'Maximumleeftijd (0 = geen limiet)'],
     countries: ['Kraje zawodników, po przecinku (puste = wszystkie)', 'Player countries, comma separated (empty = all)', 'Spielerländer, durch Kommas getrennt (leer = alle)', 'Spelerslanden, met komma’s (leeg = alle)'],
+    invalidCountries: ['Nieznany kraj zawodników: {countries}. Użyj nazw krajów z listy ścieżek krajowych. Aby dopuścić wszystkie kraje, pozostaw pole puste.', 'Unknown player country: {countries}. Use country names from the country-route list. To allow all countries, leave this field blank.', 'Unbekanntes Spielerland: {countries}. Verwende Ländernamen aus der Länderweg-Liste. Für alle Länder das Feld leer lassen.', 'Onbekend spelersland: {countries}. Gebruik landnamen uit de landenroute-lijst. Laat het veld leeg om alle landen toe te laten.'],
     routes: ['Ścieżki i liczba miejsc', 'Routes and places', 'Wege und Plätze', 'Routes en plaatsen'],
     routeSource: ['Źródło uczestników', 'Entrant source', 'Teilnehmerquelle', 'Deelnemersbron'],
     routePlaces: ['Liczba miejsc', 'Places', 'Plätze', 'Plaatsen'],
@@ -152,10 +153,12 @@ function updateTournamentEditorQualificationFields() {
 }
 
 function updateTournamentEditorFieldSize() {
+    if (typeof updateTournamentEditorRoundVisibility === 'function') updateTournamentEditorRoundVisibility();
     const rows = document.querySelectorAll('#te-routes .te-route');
     if (rows.length === 1 && rows[0].querySelector('.te-route-source').value !== 'qualifier') {
         rows[0].querySelector('.te-route-places').value = tournamentEditorValue('te-field-size');
     }
+    if (typeof renderEditorStructureFields === 'function') renderEditorStructureFields();
 }
 
 function populateTournamentEditorQualification(tournament) {
@@ -246,6 +249,9 @@ function getTournamentEditorQualificationFormData(values) {
     const kind = tournamentEditorValue('te-event-kind');
     const rules = { mode: 'custom', kind, card: tournamentEditorValue('te-card-rule'), minAge, maxAge,
         countries: tournamentEditorValue('te-countries').split(',').map(value => value.trim()).filter(Boolean), routes };
+    const knownCountries = getTournamentEditorRouteCountries();
+    const unknownCountries = rules.countries.filter(country => !knownCountries.some(known => matchesTournamentEditorCountry({ country: known }, country)));
+    if (unknownCountries.length) throw new Error(trTournamentEditor('invalidCountries', { countries: unknownCountries.join(', ') }));
     if (kind === 'qualifier') {
         rules.targetKey = tournamentEditorValue('te-target');
         rules.qualifyingPlaces = integer(tournamentEditorValue('te-qualifying-places'), 1, 128);
@@ -263,8 +269,14 @@ function prepareTournamentEditorQualificationUpdate(tournament, values) {
     if (linked.length && hasTournamentEditorQualification(tournament)
         && (!rules || rules.kind !== 'main')) throw new Error(trTournamentEditor('linkedRules'));
     const rulesChanged = JSON.stringify(tournament?.editorQualification || null) !== JSON.stringify(rules)
+        || JSON.stringify(tournament?.editorInvitations || null) !== JSON.stringify(values.editorInvitations || null)
+        || JSON.stringify(tournament?.editorStructure || null) !== JSON.stringify(values.editorStructure || null)
+        || (tournament.editorGender || 'all') !== (values.editorGender || 'all')
         || (hasTournamentEditorQualification(tournament) && (tournament.editorFieldSize !== values.editorFieldSize || tournament.minOvr !== values.minOvr));
     if (rulesChanged && ((isTournamentEditorQualifier(tournament) && tournament.completed) || linked.some(event => event.completed))) {
+        throw new Error(trTournamentEditor('completedRules'));
+    }
+    if (isTournamentEditorGenderChangeLocked(tournament, values.editorGender)) {
         throw new Error(trTournamentEditor('completedRules'));
     }
     if (rules && rules.kind === 'main' && linked.some(event => rules.routes.filter(route =>

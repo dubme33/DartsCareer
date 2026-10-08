@@ -39,10 +39,35 @@ function matchesTournamentEditorCountry(candidate, country) {
     return Boolean(required) && required === String(candidate?.country || '').trim().toLocaleLowerCase();
 }
 
-function isTournamentEditorCandidateEligible(tournament, candidate, referenceDate) {
+function getTournamentEditorGender(tournament) {
+    if (typeof isWorldCupQualifierTournament === 'function' && isWorldCupQualifierTournament(tournament)
+        && typeof getWorldCupRosterEvent === 'function') return getWorldCupRosterEvent()?.editorGender || 'all';
+    return tournament?.editorGender || 'all';
+}
+
+function isTournamentEditorGenderEligible(tournament, candidate) {
+    const gender = getTournamentEditorGender(tournament);
+    if (!['male', 'female'].includes(gender)) return true;
+    if (Array.isArray(candidate?.players)) return candidate.players.every(member => isTournamentEditorGenderEligible(tournament, member));
+    return Boolean(candidate) && (candidate.gender === 'female' ? 'female' : 'male') === gender;
+}
+
+function isTournamentEditorGenderChangeLocked(tournament, gender) {
+    if ((tournament?.editorGender || 'all') === (gender || 'all')) return false;
+    const keys = [tournament?.name, tournament?.sourceName].filter(Boolean);
+    if (typeof tournamentDatabase !== 'undefined' && tournamentDatabase.some(event => event !== tournament
+        && (keys.includes(event.qualifierFor) || isTournamentEditorQualifier(event) && keys.includes(event.editorQualification.targetKey))
+        && (event.completed || typeof isTournamentEditorActive === 'function' && isTournamentEditorActive(event)))) return true;
+    return typeof isWorldCupTournament === 'function' && isWorldCupTournament(tournament)
+        && typeof worldCupState !== 'undefined' && Boolean(worldCupState && !worldCupState.completed);
+}
+
+function isTournamentEditorCandidateEligible(tournament, candidate, referenceDate, options = {}) {
     const rules = tournament.editorQualification;
+    if (!isTournamentEditorGenderEligible(tournament, candidate)) return false;
+    if (typeof isCareerEditorAccessEligible === 'function' && !isCareerEditorAccessEligible(tournament, candidate, referenceDate)) return false;
     if (!candidate || candidate.isBye || candidate.retired === true
-        || (typeof isPlayerAvailableForPlay === 'function' && !isPlayerAvailableForPlay(candidate))) return false;
+        || (!options.ignoreAvailability && typeof isPlayerAvailableForPlay === 'function' && !isPlayerAvailableForPlay(candidate))) return false;
     if ((Number(candidate.ovr ?? candidate.overall) || 0) < (Number(tournament.minOvr) || 0)) return false;
     if (rules.card === 'holders' && candidate.hasTourCard !== true) return false;
     if (rules.card === 'nonholders' && candidate.hasTourCard === true) return false;
@@ -104,7 +129,9 @@ function getTournamentEditorNativeQualifierWinners(main, candidates, referenceDa
         && event.editorQualifierResults?.year === referenceDate.getFullYear()).flatMap(event =>
         (event.editorQualifierResults.playerKeys || []).slice(0, event.editorQualification.qualifyingPlaces)).flatMap(key => {
         const candidate = byKey.get(key);
-        if (!candidate || used.has(key) || (Number(candidate.ovr ?? candidate.overall) || 0) < (Number(main.minOvr) || 0)
+        if (!candidate || used.has(key) || !isTournamentEditorGenderEligible(main, candidate)
+            || (typeof isCareerEditorAccessEligible === 'function' && !isCareerEditorAccessEligible(main, candidate, referenceDate))
+            || (Number(candidate.ovr ?? candidate.overall) || 0) < (Number(main.minOvr) || 0)
             || (typeof isPlayerAvailableForPlay === 'function' && !isPlayerAvailableForPlay(candidate))) return [];
         used.add(key);
         return [candidate];
@@ -143,10 +170,11 @@ function applyTournamentEditorNativeQualifierDraw(main, draw, candidates, refere
 }
 
 function getTournamentEditorQualificationGroups(tournament, candidates, referenceDate = currentDate, options = {}) {
+    if (typeof hasCareerTourEntryOverride === 'function' && hasCareerTourEntryOverride(tournament)) return getCareerTourEntryGroups(tournament, candidates, referenceDate, options);
     if (!hasTournamentEditorQualification(tournament)) return [];
     const rules = tournament.editorQualification;
     const all = getTournamentEditorCandidates(candidates);
-    let eligible = all.filter(candidate => isTournamentEditorCandidateEligible(tournament, candidate, referenceDate));
+    let eligible = all.filter(candidate => isTournamentEditorCandidateEligible(tournament, candidate, referenceDate, options));
     if (isTournamentEditorQualifier(tournament)) {
         const main = getTournamentEditorLinkedMain(tournament);
         if (main && !options.automaticOnly) {
@@ -156,7 +184,8 @@ function getTournamentEditorQualificationGroups(tournament, candidates, referenc
                 : typeof isContinentalTourTournament === 'function' && isContinentalTourTournament(main)
                     && typeof buildContinentalAutomaticField === 'function'
                     ? Object.values(buildContinentalAutomaticField(all)).flat().map(getTournamentEditorPlayerKey) : []);
-            eligible = eligible.filter(candidate => (hasTournamentEditorQualification(main)
+            eligible = eligible.filter(candidate => isTournamentEditorGenderEligible(main, candidate)
+                && (hasTournamentEditorQualification(main)
                 ? isTournamentEditorCandidateEligible(main, candidate, referenceDate)
                 : (Number(candidate.ovr ?? candidate.overall) || 0) >= (Number(main.minOvr) || 0))
                 && !automaticKeys.has(getTournamentEditorPlayerKey(candidate)));
@@ -200,13 +229,17 @@ function getTournamentEditorQualificationGroups(tournament, candidates, referenc
     });
 }
 
-function getTournamentEditorParticipants(tournament, candidates, referenceDate = currentDate) {
-    return getTournamentEditorQualificationGroups(tournament, candidates, referenceDate).flatMap(group => group.players);
+function getTournamentEditorParticipants(tournament, candidates, referenceDate = currentDate, options = {}) {
+    const participants = getTournamentEditorQualificationGroups(tournament, candidates, referenceDate, options).flatMap(group => group.players);
+    return typeof applyTournamentEditorInvitations === 'function'
+        ? applyTournamentEditorInvitations(tournament, participants, candidates, referenceDate, options) : participants;
 }
 
 function buildTournamentEditorDraw(tournament, participants) {
-    const size = Number(tournament.editorFieldSize) || 32;
+    const size = typeof getCareerTourFieldSize === 'function' ? getCareerTourFieldSize(tournament) : Number(tournament.editorFieldSize) || 32;
     const real = participants.filter(candidate => candidate && !candidate.isBye);
+    const manual = typeof applyEditorManualDraw === 'function' ? applyEditorManualDraw(tournament, real, size) : null;
+    if (manual) return manual.map(candidate => candidate || { name: '(BYE)', isBye: true, country: 'Brak', ovr: 0, overall: 0 });
     const shuffled = typeof shuffle === 'function' ? shuffle([...real]) : [...real];
     const draw = Array.from({ length: size }, () => ({ name: '(BYE)', isBye: true, country: 'Brak', ovr: 0, overall: 0 }));
     // Place entrants in opposite halves first, then opposite quarters, etc.

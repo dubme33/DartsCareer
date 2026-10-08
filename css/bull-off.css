@@ -1,3 +1,6 @@
+.bull-off-settings-tile { cursor: default; }
+.bull-off-settings-tile select { width: 100%; padding: 10px; margin: 10px 0; background: #102c4b; color: #fff; border: 1px solid #527a9d; border-radius: 6px; }
+.bull-off-settings-tile small { display: block; color: #adc3d8; line-height: 1.5; }
 #match-bull-off[hidden], #match-bull-throw[hidden] { display: none !important; }
 #match-bull-off {
     position: fixed; inset: 0; z-index: 12000; display: grid; place-items: center;

@@ -1,3 +1,17 @@
+// The bull winner starts odd sets; legs alternate within each set.
+// Call before recording a completed leg, or after resetting a won set's legs.
+function getMatchLegStarter(match) {
+    if (!match) return null;
+    const initial = ['p1', 'p2'].includes(match.startingPlayer) ? match.startingPlayer
+        : ['p1', 'p2'].includes(match.turn) ? match.turn : null;
+    if (!initial) return null;
+    const count = value => Math.max(0, Math.floor(Number(value) || 0));
+    const index = match.matchFormat?.type === 'sets'
+        ? count(match.p1Sets) + count(match.p2Sets) + count(match.p1Legs) + count(match.p2Legs)
+        : count(match.totalLegsPlayed);
+    return index % 2 === 0 ? initial : initial === 'p1' ? 'p2' : 'p1';
+}
+
 function achievementMatchesTournament(achievement, data) {
             if (!achievement || !data) return false;
             const tournament = typeof data === 'object' ? data : null;
@@ -93,9 +107,8 @@ function checkAchievements(type, data = null) {
                 const side = completedLegWinnerIsP1 ? 'p1' : 'p2';
                 currentMatch.doublesThrower[side] = currentMatch.doublesThrower[side] === 0 ? 1 : 0;
             }
-            currentMatch.turn = (currentMatch.totalLegsPlayed % 2 === 0)
-                ? currentMatch.startingPlayer
-                : (currentMatch.startingPlayer === 'p1' ? 'p2' : 'p1');
+            delete currentMatch.completedLegStarter;
+            currentMatch.turn = getMatchLegStarter(currentMatch);
             currentMatch.dartsThrown = 0;
             currentMatch.isTurnLocked = false;
             currentMatch.isDartInFlight = false;
@@ -127,10 +140,9 @@ function checkAchievements(type, data = null) {
             let setWasWon = false;
             
             // 1. Zwiększenie licznika rozegranych legów
-            const initialStarter = currentMatch.startingPlayer;
-            if (initialStarter === 'p1' || initialStarter === 'p2') {
-                const legStarter = currentMatch.totalLegsPlayed % 2 === 0
-                    ? initialStarter : (initialStarter === 'p1' ? 'p2' : 'p1');
+            const legStarter = getMatchLegStarter(currentMatch);
+            currentMatch.completedLegStarter = legStarter;
+            if (legStarter) {
                 const winnerSide = isP1 ? 'p1' : 'p2';
                 if (winnerSide !== legStarter) {
                     if (!currentMatch.breaksOfThrow) currentMatch.breaksOfThrow = { p1: 0, p2: 0 };
@@ -288,8 +300,9 @@ function checkAchievements(type, data = null) {
                     currentMatch.p2Legs = 0;
                 }
 
-                // Zmiana rozpoczynającego (naprzemiennie co leg)
-                currentMatch.turn = (currentMatch.totalLegsPlayed % 2 === 0) ? currentMatch.startingPlayer : (currentMatch.startingPlayer === 'p1' ? 'p2' : 'p1');
+                // Sety zaczynają się naprzemiennie; legi zmieniają stronę w obrębie seta.
+                delete currentMatch.completedLegStarter;
+                currentMatch.turn = getMatchLegStarter(currentMatch);
                 currentMatch.dartsThrown = 0;
                 currentMatch.isTurnLocked = false;
                 currentMatch.isDartInFlight = false;
@@ -334,20 +347,35 @@ function checkAchievements(type, data = null) {
                     Math.random, typeof areBounceOutsEnabled !== 'function' || areBounceOutsEnabled(), dartStyle);
                 hitSec = result.sector; hitMult = result.mult;
             }
+            result = { ...(result || {}), visitDartIndex: currentMatch.dartsThrown };
+            const scoringVisit = typeof getMatchScoringVisit === 'function' ? getMatchScoringVisit(currentMatch, isP1) : null;
+            if (typeof applyBounceOutKnockouts === 'function') result = applyBounceOutKnockouts(result, drawnDarts);
+            if (scoringVisit && result.knockedOutDartIndices?.length) result.knockedOutDartIndices =
+                result.knockedOutDartIndices.filter(index => scoringVisit.darts[index] && !scoringVisit.darts[index].fallen);
             const bounced = result?.bounceOut === true;
             // Replays run after the visit: retain only darts embedded at this throw.
             const replayBoardDarts = (bounced || result?.robinHood) && typeof drawnDarts !== 'undefined'
                 ? JSON.parse(JSON.stringify(drawnDarts)) : [];
+            const scoreBeforeThrow = isP1 ? currentMatch.p1Score : currentMatch.p2Score;
+            const pointsRemoved = scoringVisit && typeof removeKnockedOutVisitPoints === 'function'
+                ? removeKnockedOutVisitPoints(currentMatch, isP1, scoringVisit, result,
+                    activeTournament?.format === 'DIDO') : 0;
+            currentTurnScore -= pointsRemoved;
             if (bounced) {
                 hitSec = 0; hitMult = 0;
+                result.knockedOutBoardDarts = replayBoardDarts
+                    .filter(dart => result.knockedOutDartIndices?.includes(dart.visitDartIndex));
+                if (result.knockedOutDartIndices?.length) drawnDarts = drawnDarts
+                    .filter(dart => !result.knockedOutDartIndices.includes(dart.visitDartIndex));
                 if (typeof recordMatchBounceOut === 'function') recordMatchBounceOut(isP1, result);
                 if (typeof showBounceOutFeedback === 'function') showBounceOutFeedback(result);
+                if (result.knockedOutDartIndices?.length && typeof drawDartboard === 'function') drawDartboard();
             }
 
             if (currentMatch.p1Momentum === undefined) { currentMatch.p1Momentum = 0; currentMatch.p2Momentum = 0; }
 
             let points = hitSec * hitMult; 
-            let currentScore = isP1 ? currentMatch.p1Score : currentMatch.p2Score;
+            let currentScore = scoreBeforeThrow + pointsRemoved;
             let playerName = currentMatch.isDoubles
                 ? getCurrentMatchThrowerName(isP1)
                 : (typeof getCurrentSinglesMatchPlayerName === 'function'
@@ -371,13 +399,13 @@ function checkAchievements(type, data = null) {
             let st = currentMatch.stats; let newScore = currentScore - points;
             const actualResult = { ...(result || {}), sector: hitSec, mult: hitMult };
             if (typeof recordMatchReportDart === 'function') {
-                recordMatchReportDart(currentMatch, isP1, currentScore, { sector: targetSec, mult: targetMult }, actualResult);
+                recordMatchReportDart(currentMatch, isP1, scoreBeforeThrow, { sector: targetSec, mult: targetMult }, actualResult);
             }
             if (typeof recordMentalThrowOutcome === 'function') {
-                recordMentalThrowOutcome(isP1, currentScore, { sector: targetSec, mult: targetMult }, actualResult);
+                recordMentalThrowOutcome(isP1, scoreBeforeThrow, { sector: targetSec, mult: targetMult }, actualResult);
             }
 
-            let isAimingAtFinishingDouble = (targetMult === 2 && (currentScore <= 40 || (currentScore === 50 && targetSec === 25)));
+            let isAimingAtFinishingDouble = (targetMult === 2 && (scoreBeforeThrow <= 40 || (scoreBeforeThrow === 50 && targetSec === 25)));
 
             if (isP1) {
                 st.p1TotalDarts++; st.p1LegDarts++;
@@ -395,6 +423,8 @@ function checkAchievements(type, data = null) {
                 }
             }
 
+            if (scoringVisit) scoringVisit.darts.push({ sector: hitSec, mult: hitMult, targetSector: targetSec,
+                targetMult, points, first9: st[`${throwingSide}LegDarts`] <= 9 && newScore >= 0 });
             const bust = newScore < 0 || newScore === 1 || (newScore === 0 && hitMult !== 2);
             if (bust) {
                 logThrow(`${playerName}: ${t('t-log-bust')}`, logType);
@@ -419,7 +449,7 @@ function checkAchievements(type, data = null) {
                 let multStr = hitMult === 3 ? 'T' : (hitMult === 2 ? 'D' : '');
                 let secStr = hitSec === 25 ? (hitMult === 2 ? 'Bull' : '25') : hitSec;
                 if (points > 0) logThrow(`${playerName} ${t('t-log-throws')}: ${multStr}${secStr} (${points})`, logType);
-                else logThrow(bounced ? `${playerName}: ${getBounceOutText().log}`
+                else logThrow(bounced ? `${playerName}: ${typeof getBounceOutLog === 'function' ? getBounceOutLog(result) : getBounceOutText().log}`
                     : result?.robinHood ? `${playerName}: ${getRobinHoodText()}`
                         : `${playerName} ${t('t-log-throws')}: ${t('t-log-miss-0')}`, logType);
 
@@ -469,11 +499,12 @@ function checkAchievements(type, data = null) {
 
             const matchThrowEvent = {
                 side: isP1 ? 'p1' : 'p2', playerName,
-                scoreBefore: currentScore, scoreAfter: newScore,
+                scoreBefore: scoreBeforeThrow, scoreAfter: newScore,
                 target: { sector: targetSec, mult: targetMult },
                 hit: { sector: hitSec, mult: hitMult },
                 points: bounced ? 0 : points, bounced, robinHood: result?.robinHood === true, bust,
                 ...(bounced || result?.robinHood ? { replayBoardDarts } : {}),
+                knockedOutDartIndices: result.knockedOutDartIndices || [], pointsRemoved,
                 collision: result?.collision || null,
                 boardPoint: result?.boardPoint || null,
                 dartPose: result?.dartPose || null,
@@ -496,6 +527,10 @@ function checkAchievements(type, data = null) {
             const revealThrowAtImpact = () => {
                 if (currentMatch !== throwingMatch) return;
                 throwingMatch.isDartInFlight = false;
+                if (typeof playDartHitSound === 'function') {
+                    try { playDartHitSound(matchThrowEvent); }
+                    catch (_error) { /* An optional sound cannot interrupt match scoring. */ }
+                }
                 updateScores(); updateMatchStatsUI(); updateDartDots();
                 if (throwingMatch.isTurnLocked) {
                     const throwButton = document.getElementById('throw-btn');

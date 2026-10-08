@@ -43,7 +43,52 @@
 .world-news-rules { margin: 22px 0; color: #bdc3c7; font-size: 12px; line-height: 1.7; }
 .world-news-rules summary { cursor: pointer; color: #d1dced; padding: 6px 0; }
 .world-news-rules p { margin: 8px 0; }
+.world-news-toolbar { justify-content: space-between; align-items: end; gap: 14px; flex-wrap: wrap; }
+.world-news-toolbar label { display: grid; gap: 6px; color: #afbed5; font-size: 12px; }
+#world-news-season { background: #17233d; color: #f2f5fb; border: 1px solid #526180; padding: 10px 14px; border-radius: 6px; min-height: 44px; font: inherit; }
+#screen-world-news { max-width: 1240px; margin-inline: auto; }
+#screen-world-news > h2 { text-align: left; font-size: clamp(25px, 3vw, 40px); letter-spacing: -.8px; }
+#world-news-featured { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 16px; margin: 18px 0 28px; }
+#world-news-featured[hidden], #world-news-lead[hidden] { display: none; }
+.news-portal-columns { display: grid; grid-template-columns: minmax(0,1fr) 270px; gap: 26px; align-items: start; }
+.news-feed { min-width: 0; }
+.news-feed > h3 { text-align: left; border-bottom: 1px solid #526180; padding-bottom: 14px; color: #e5ecf7; }
+.news-feed #world-news-list { grid-template-columns: minmax(0,1fr); }
+.world-news-card { border-radius: 4px; background: linear-gradient(145deg,#172840,#132037); }
+.world-news-card.news-lead { padding: clamp(24px,4vw,48px); min-height: 260px; border-top: 4px solid #e6bd53;
+    background: radial-gradient(circle at 105% 100%,transparent 0 80px,#2b4252 82px 84px,transparent 86px 128px,#2b4252 130px 132px,transparent 134px 180px,#2b4252 182px 184px,transparent 186px),linear-gradient(110deg,#142c45,#1d3444); }
+.news-lead h3 { font-size: clamp(26px,3.5vw,44px); line-height: 1.15; letter-spacing: -.6px; max-width: 850px; }
+.news-lead > p { max-width: 850px; font-size: 15px; }
+.news-kicker { color: #f5d378!important; text-transform: uppercase; letter-spacing: 2px; margin-top: 18px!important; font-size: 11px!important; font-weight: bold; }
+.tier-major h3 { font-size: 21px; }
+.tier-short { padding: 12px 16px; border-top-width: 1px; }
+.tier-short h3 { font-size: 16px; margin-top: 8px; }
+.tier-short p { font-size: 12px; }
+.news-world_championship { border-top-color: #e6bd53; }
+.news-career { border-top-color: #60c9a2; }
+.news-ranking { border-top-color: #83b7fa; }
+.news-sidebar { display: grid; gap: 18px; }
+.news-sidebar section { padding: 18px; background: #122036; border: 1px solid #384861; border-radius: 4px; overflow-wrap: anywhere; }
+.news-sidebar h3 { text-align: left; color: #e5ecf7; font-size: 16px; border: 0; margin: 0 0 14px; }
+.news-sidebar p { font-size: 12px; color: #bdcddd; line-height: 1.6; }
+.news-trend { padding: 12px 0; border-top: 1px solid #2d4059; }
+.news-trend h4 { margin: 0; color: #f2f5fb; font-size: 14px; }
+.news-trend p { margin: 8px 0; }
+.news-trend small, .news-side-note { color: #9eb3cb; font-size: 11px; }
+.news-sidebar ol { list-style: none; counter-reset: oom; padding: 0; margin: 0; }
+.news-sidebar li { display: grid; grid-template-columns: 18px 1fr; gap: 6px; padding: 9px 0; border-top: 1px solid #2d4059; font-size: 12px; }
+.news-sidebar li::before { counter-increment: oom; content: counter(oom); color: #e6bd53; }
+.news-sidebar li strong { grid-column: 2; color: #a8bad1; font-size: 11px; }
+.news-profile-timeline ol { padding: 0; list-style: none; }
+.news-profile-timeline li { display: flex; gap: 16px; padding: 12px 0; border-top: 1px solid #344663; font-size: 13px; }
+.news-profile-timeline time { color: #e6bd53; }
+@media (max-width: 950px) {
+    .news-portal-columns { grid-template-columns: minmax(0,1fr); }
+    .news-sidebar { grid-template-columns: repeat(2,minmax(0,1fr)); }
+    #world-news-featured { grid-template-columns: repeat(2,minmax(0,1fr)); }
+}
 @media (max-width: 650px) {
+    #world-news-featured, .news-sidebar { grid-template-columns: minmax(0,1fr); }
     #world-news-list { grid-template-columns: minmax(0, 1fr); }
     .world-news-card { padding: 15px; }
     .world-news-toolbar button { width: 100%; }

@@ -168,6 +168,7 @@ function finalizeSeasonArchive(year = currentDate.getFullYear()) {
     const summary = { ...own, closed: true, awards: selectSeasonArchiveAwards(summaries, state.current.fullSeason) };
     state.seasons.push(summary);
     state.seasons.sort((a, b) => a.year - b.year);
+    if (typeof recordWorldNewsSeasonReview === 'function') recordWorldNewsSeasonReview(year, summary, summaries);
     return summary;
 }
 

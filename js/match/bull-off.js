@@ -21,6 +21,45 @@ let matchBullTimer = null;
 let matchBullRemovalTimer = null;
 let matchBullBoardMount = null;
 let matchBullBoardObserver = null;
+const MATCH_BULL_SETTINGS_TEXT = {
+    pl: { title: '🎯 Rzut do bulla', intro: 'Ustalanie rozpoczynającego mecz rzutem do środka tarczy.', label: 'Rzut do bulla przed meczem',
+        enabled: 'Włączony (domyślnie)', disabled: 'Wyłączony', rule: 'Po wyłączeniu rozpoczynający jest wybierany losowo. Dotyczy gry, oglądania i symulacji meczów.' },
+    en: { title: '🎯 Throw for the bull', intro: 'Decide who starts the match by throwing for the centre of the board.', label: 'Throw for the bull before matches',
+        enabled: 'Enabled (default)', disabled: 'Disabled', rule: 'When disabled, the starting player is chosen at random. Applies to played, watched and simulated matches.' },
+    de: { title: '🎯 Bullwurf', intro: 'Ein Wurf auf die Mitte entscheidet, wer das Match beginnt.', label: 'Bullwurf vor dem Match',
+        enabled: 'Aktiviert (Standard)', disabled: 'Deaktiviert', rule: 'Bei Deaktivierung wird der Startspieler zufällig gewählt. Gilt für gespielte, angeschaute und simulierte Matches.' },
+    nl: { title: '🎯 Bullworp', intro: 'Een worp naar het midden bepaalt wie de wedstrijd begint.', label: 'Bullworp voor wedstrijden',
+        enabled: 'Ingeschakeld (standaard)', disabled: 'Uitgeschakeld', rule: 'Bij uitschakeling wordt de startspeler willekeurig gekozen. Geldt voor gespeelde, bekeken en gesimuleerde wedstrijden.' }
+};
+function initializeMatchBullOffSettings(candidate = typeof player === 'object' ? player : null, reset = false) {
+    if (!candidate) return false;
+    candidate.bullOffEnabled = reset || typeof candidate.bullOffEnabled !== 'boolean' ? true : candidate.bullOffEnabled;
+    return candidate.bullOffEnabled;
+}
+function isMatchBullOffEnabled() {
+    return typeof player !== 'object' || player?.bullOffEnabled !== false;
+}
+function changeMatchBullOffSetting(value) {
+    if (typeof player !== 'object' || !player?.name || !['enabled', 'disabled'].includes(value)
+        || (typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy())) return false;
+    player.bullOffEnabled = value === 'enabled';
+    refreshMatchBullOffSettingsUI();
+    if (!player.bullOffEnabled && typeof currentMatch !== 'undefined' && isMatchBullOffPending(currentMatch)
+        && document.getElementById('match-bull-off')?.hidden === false) skipMatchBullOff(currentMatch);
+    if (typeof saveGame === 'function') saveGame(true);
+    return true;
+}
+function refreshMatchBullOffSettingsUI() {
+    if (typeof document === 'undefined') return;
+    const language = typeof currentLang === 'string' ? currentLang : 'pl';
+    const text = MATCH_BULL_SETTINGS_TEXT[language] || MATCH_BULL_SETTINGS_TEXT.en;
+    for (const key of ['title', 'intro', 'label', 'enabled', 'disabled', 'rule']) {
+        const node = document.getElementById(`bull-off-settings-${key}`);
+        if (node) node.textContent = text[key];
+    }
+    const select = document.getElementById('hub-bull-off-mode');
+    if (select) select.value = isMatchBullOffEnabled() ? 'enabled' : 'disabled';
+}
 function refreshMatchBullBoardView() {
     const two = document.getElementById('match-bull-view-2d');
     const three = document.getElementById('match-bull-view-3d');
@@ -164,6 +203,7 @@ function compareMatchBullDarts(first, second) {
     return Math.sign(getMatchBullBoardRadius(second) - getMatchBullBoardRadius(first));
 }
 function resolveMatchBullAutomatically(p1, p2, random = Math.random) {
+    if (!isMatchBullOffEnabled()) return random() < 0.5 ? 'p1' : 'p2';
     let first = random() < 0.5 ? 'p1' : 'p2';
     for (let round = 1; round <= 50; round++) {
         let dart1 = rollMatchBullDart(p1, random), dart2 = rollMatchBullDart(p2, random);
@@ -183,6 +223,12 @@ function prepareMatchBullOff(match, p1, p2, names = {}) {
     restoreMatchBullBoard();
     clearMatchBullBoardDarts();
     document.getElementById('match-bull-off').hidden = true;
+    if (!isMatchBullOffEnabled()) {
+        // Match constructors already choose an unbiased starter. Keep that choice
+        // and hold the turn controls until showMatchBullOff starts the normal intro.
+        match.bullOff = { status: 'skipped', names: { p1: names.p1 || p1?.name || '', p2: names.p2 || p2?.name || '' } };
+        return;
+    }
     const first = Math.random() < 0.5 ? 'p1' : 'p2';
     match.bullOff = { status: 'pending', first, turn: first, round: 1,
         throws: { p1: null, p2: null }, names: { p1: names.p1 || p1?.name || '', p2: names.p2 || p2?.name || '' },
@@ -217,6 +263,10 @@ function renderMatchBullOff(match = currentMatch) {
     if (playerTurn && !text('match-bull-off').hidden) button.focus();
 }
 function showMatchBullOff(match = currentMatch) {
+    if (isMatchBullOffPending(match) && (!isMatchBullOffEnabled() || match.bullOff.status === 'skipped')) {
+        skipMatchBullOff(match);
+        return false;
+    }
     if (!isMatchBullOffPending(match)) { setTurnUI(); return false; }
     document.getElementById('match-bull-off').hidden = false;
     mountMatchBullBoard();
@@ -228,6 +278,25 @@ function showMatchBullOff(match = currentMatch) {
     renderMatchBullOff(match);
     if (match.isSpectator || match.bullOff.turn !== 'p1') document.getElementById('match-bull-off').focus();
     scheduleMatchBullAi(match);
+    return true;
+}
+function skipMatchBullOff(match = currentMatch) {
+    if (!match || currentMatch !== match || !isMatchBullOffPending(match)) return false;
+    clearTimeout(matchBullTimer);
+    clearTimeout(matchBullRemovalTimer);
+    matchBullTimer = null;
+    matchBullRemovalTimer = null;
+    clearMatchBullBoardDarts();
+    restoreMatchBullBoard();
+    document.getElementById('match-bull-off').hidden = true;
+    const starter = ['p1', 'p2'].includes(match.startingPlayer) ? match.startingPlayer : (Math.random() < 0.5 ? 'p1' : 'p2');
+    match.startingPlayer = starter;
+    match.turn = starter;
+    match.bullOff.status = 'complete';
+    match.bullOff.skipped = true;
+    if (!match.isWorldCup && typeof playMatchIntro === 'function') {
+        playMatchIntro(match.bullOff.names.p1, match.bullOff.names.p2);
+    } else setTurnUI();
     return true;
 }
 function scheduleMatchBullAi(match) {
@@ -307,4 +376,8 @@ function advanceMatchBullOff(match = currentMatch) {
         } else setTurnUI();
     }, 1350);
     return true;
+}
+
+if (typeof document !== 'undefined' && document.addEventListener) {
+    document.addEventListener('DOMContentLoaded', refreshMatchBullOffSettingsUI);
 }

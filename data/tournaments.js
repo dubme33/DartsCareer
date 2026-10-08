@@ -232,7 +232,9 @@ function getContinentalQualifierSourceMainName(calendar, qualifier) {
 }
 
 function syncContinentalTourQualificationCalendar(calendar = tournamentDatabase) {
+    if (typeof isCareerEditorCalendarEmpty === 'function' && isCareerEditorCalendarEmpty()) return calendar;
     if (!Array.isArray(calendar)) return calendar;
+    if (typeof getCareerCalendarEditorState === 'function' && getCareerCalendarEditorState().tours.some(tour => tour.id === 'europeanTour' && tour.removed)) return calendar;
     const existingQualifiers = calendar.filter(tournament => tournament?.specialType === 'continentalQualifier');
     const reusable = new Map();
     existingQualifiers.forEach(tournament => {
@@ -317,6 +319,7 @@ function findPdc2026CalendarEntry(calendar, template) {
 }
 
 function syncPdc2026TournamentCalendar(calendar = tournamentDatabase, referenceDate = null) {
+    if (typeof isCareerEditorCalendarEmpty === 'function' && isCareerEditorCalendarEmpty()) return calendar;
     if (!Array.isArray(calendar)) return calendar;
     const parsedReferenceDate = referenceDate ? new Date(referenceDate) : null;
     const referenceTimestamp = parsedReferenceDate && !Number.isNaN(parsedReferenceDate.getTime())
@@ -334,6 +337,7 @@ function syncPdc2026TournamentCalendar(calendar = tournamentDatabase, referenceD
     }
 
     PDC_2026_CALENDAR_TEMPLATE.forEach(template => {
+        if (typeof getCareerEditorTourId === 'function' && getCareerCalendarEditorState().tours.some(tour => tour.id === getCareerEditorTourId(template) && tour.removed)) return;
         if (typeof player !== 'undefined' && Array.isArray(player?.tournamentEditorDeletedKeys)
             && player.tournamentEditorDeletedKeys.includes(template.name)) return;
         let tournament = findPdc2026CalendarEntry(calendar, template);

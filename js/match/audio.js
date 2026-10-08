@@ -1,3 +1,26 @@
+// Impact effects stay separate from the caller queue and never delay scoring.
+let dartHitSoundSource = '', dartHitSoundPool = [], dartHitSoundIndex = 0;
+function playDartHitSound(throwEvent = {}) {
+    if (throwEvent.bounced || throwEvent.bounceOut || throwEvent.robinHood) return false;
+    const volume = typeof globalVolume === 'number' ? Math.max(0, Math.min(1, globalVolume)) : 1;
+    if (!volume || typeof Audio !== 'function') return false;
+    const modSource = typeof moddedAssets !== 'undefined' ? moddedAssets?.sounds?.hit : null;
+    const source = typeof modSource === 'string' && modSource ? modSource : 'sounds/hit.mp3';
+    try {
+        if (source !== dartHitSoundSource) {
+            dartHitSoundSource = source; dartHitSoundPool = []; dartHitSoundIndex = 0;
+        }
+        const index = dartHitSoundIndex++ % 3;
+        const audio = dartHitSoundPool[index] || (dartHitSoundPool[index] = new Audio(source));
+        audio.volume = volume;
+        if (audio.currentTime) audio.currentTime = 0;
+        audio.onerror = () => {}; // The optional local clip may not be installed yet.
+        const started = audio.play();
+        if (started && typeof started.catch === 'function') started.catch(() => {});
+        return true;
+    } catch (_error) { return false; }
+}
+
 function announceAudio(event, playerName = "") {
             let soundKey = "";
             if (event === 180) soundKey = "180";

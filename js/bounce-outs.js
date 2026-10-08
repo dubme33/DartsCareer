@@ -1,4 +1,5 @@
-const BOUNCE_OUT_CONFIG = Object.freeze({ chance: 0.0015, crowdedFieldIncrease: 0.0015, simulatedDartsPerLeg: 18 });
+const BOUNCE_OUT_CONFIG = Object.freeze({ chance: 0.0015, crowdedFieldIncrease: 0.0015, simulatedDartsPerLeg: 18,
+    knockoutChance: 0.005, secondKnockoutChance: 0.1, knockoutRadius: 8 });
 const BOUNCE_OUT_TEXT = {
     pl: { title: '↘ Bounce-out', intro: 'Rzadkie odbicia i wypadnięcia lotek: 0 punktów, bez powtórki rzutu.', label: 'Bounce-out w meczach', enabled: 'Włączone (domyślne)', disabled: 'Wyłączone', rule: 'Bazowo 0,15% na punktowaną lotkę. Ciasne grupowanie nieco zwiększa ryzyko. Te same zasady dla gracza i AI; sprzęt nie ma wpływu.', log: 'Bounce-out — 0 pkt', stat: 'Bounce-outy' },
     en: { title: '↘ Bounce-out', intro: 'Rare darts bouncing off or falling out: zero points, no rethrow.', label: 'Bounce-outs in matches', enabled: 'Enabled (default)', disabled: 'Disabled', rule: 'Base chance: 0.15% per scoring dart. Tight grouping slightly increases the risk. The same rules apply to you and AI; equipment has no effect.', log: 'Bounce-out — 0 points', stat: 'Bounce-outs' },
@@ -16,7 +17,13 @@ function getBounceOutText() {
         de: ' Kontakt mit einem steckenden Dart kann Winkel und Trefferfeld ändern; ein harter Kontakt erhöht das Bounce-out-Risiko. Deaktivieren verhindert auch Kollisions-Bounce-outs.',
         nl: ' Contact met een geraakte dart kan de hoek en het scorevak veranderen; een harde botsing verhoogt de kans op een bounce-out. Uitschakelen voorkomt ook bounce-outs door botsingen.'
     };
-    return { ...text, rule: text.rule + (collision[language] || collision.en) };
+    const knockout = {
+        pl: ' Bardzo rzadko (0,5% odbić przy kontakcie) bounce-out wybija wcześniejszą lotkę z tej wizyty; jej punkty są cofane. Druga lotka może wypaść jeszcze rzadziej.',
+        en: ' Very rarely (0.5% of bounce-outs near a landed dart), a bounce-out knocks out an earlier dart from this visit; its points are removed. A second dart can fall even more rarely.',
+        de: ' Sehr selten (0,5% der Bounce-outs bei Kontakt) fällt ein früherer Dart dieser Aufnahme heraus; seine Punkte werden abgezogen. Ein zweiter Dart fällt noch seltener heraus.',
+        nl: ' Zeer zelden (0,5% van bounce-outs bij contact) valt een eerdere dart uit deze beurt; zijn punten vervallen. Een tweede dart valt nog minder vaak uit.'
+    };
+    return { ...text, rule: text.rule + (collision[language] || collision.en) + (knockout[language] || knockout.en) };
 }
 
 function initializeBounceOutSettings(candidate = typeof player === 'object' ? player : null, reset = false) {
@@ -65,11 +72,88 @@ function applyBounceOutToThrow(result, visit, random = Math.random) {
     if (visit) {
         if (!Array.isArray(visit.bounceOutLandedDarts)) visit.bounceOutLandedDarts = [];
         if (!bounced && result?.sector * result?.mult > 0) {
-            visit.bounceOutLandedDarts.push({ sector: result.sector, mult: result.mult });
+            visit.bounceOutLandedDarts.push({ sector: result.sector, mult: result.mult, visitDartIndex: visit.dartsThrown });
             visit.bounceOutLandedDarts = visit.bounceOutLandedDarts.slice(-3);
         }
     }
     return bounced ? { ...result, sector: 0, mult: 0, bounceOut: true, bouncedSector: result.sector, bouncedMult: result.mult } : result;
+}
+
+// Stable visit indices distinguish a dart from its position in the physical array,
+// which excludes earlier bounce-outs. No random draw without an eligible contact.
+function applyBounceOutKnockouts(result, darts = [], random = Math.random) {
+    if (!result?.bounceOut || result.knockoutsResolved) return result;
+    const resolved = { ...result, knockoutsResolved: true, knockedOutDartIndices: [] };
+    if (!areBounceOutsEnabled()) return resolved;
+    const previous = darts.slice(-2);
+    const point = result.collision?.plannedPoint || result.boardPoint;
+    const eligible = previous.filter((dart, index) => Number.isInteger(dart.visitDartIndex)
+        && dart.visitDartIndex < result.visitDartIndex && !dart.robinHood
+        && (result.collision?.obstacle === index || point
+            && Math.hypot(dart.x - point.x, dart.y - point.y) <= BOUNCE_OUT_CONFIG.knockoutRadius));
+    if (!eligible.length || random() >= BOUNCE_OUT_CONFIG.knockoutChance) return resolved;
+    const contacted = previous[result.collision?.obstacle];
+    const first = eligible.includes(contacted) ? contacted : eligible.reduce((a, b) =>
+        Math.hypot(a.x - point.x, a.y - point.y) <= Math.hypot(b.x - point.x, b.y - point.y) ? a : b);
+    resolved.knockedOutDartIndices.push(first.visitDartIndex);
+    const second = eligible.find(dart => dart !== first
+        && Math.hypot(dart.x - first.x, dart.y - first.y) <= BOUNCE_OUT_CONFIG.knockoutRadius);
+    if (second && random() < BOUNCE_OUT_CONFIG.secondKnockoutChance)
+        resolved.knockedOutDartIndices.push(second.visitDartIndex);
+    // A Robin Hood attached to a knocked-out dart falls with it (and still scores zero).
+    for (const dart of previous) if (dart.robinHood
+        && resolved.knockedOutDartIndices.includes(dart.attachedToVisitDartIndex))
+        resolved.knockedOutDartIndices.push(dart.visitDartIndex);
+    return resolved;
+}
+
+function getMatchScoringVisit(match, isP1) {
+    const side = isP1 ? 'p1' : 'p2', leg = match.totalLegsPlayed || 0;
+    let visit = match.scoringVisit;
+    if (!visit || match.dartsThrown === 0 || visit.side !== side || visit.leg !== leg
+        || visit.darts.length !== match.dartsThrown) {
+        visit = match.scoringVisit = { side, leg, startScore: match[`${side}TurnStartScore`],
+            darts: Array.from({ length: match.dartsThrown || 0 }, () => null) };
+    }
+    return visit;
+}
+
+// Re-evaluate the surviving visit, including double-in when its opening double falls.
+// Attempts/dart counts remain consumed; only points and the fallen double's hit change.
+function removeKnockedOutVisitPoints(match, isP1, visit, result, doubleIn) {
+    const side = isP1 ? 'p1' : 'p2';
+    const indices = result?.knockedOutDartIndices || [];
+    if (!indices.length) return 0;
+    let score = visit.startScore, removed = 0;
+    visit.darts.forEach((dart, index) => {
+        if (!dart) return; // Older saves may not contain the earlier darts' scoring ledger.
+        if (!dart.fallen && indices.includes(index)) {
+            dart.fallen = true;
+            const double = match.reportDarts?.[side]?.doubles?.[dart.targetSector];
+            if (double && dart.targetMult === 2 && dart.sector === dart.targetSector && dart.mult === 2)
+                double.hits = Math.max(0, double.hits - 1);
+        }
+        const points = dart.fallen || (doubleIn && score === 501 && dart.mult !== 2) ? 0 : dart.sector * dart.mult;
+        const lost = dart.points - points;
+        removed += lost;
+        if (dart.first9) match.stats[`${side}First9Score`] -= lost;
+        dart.points = points;
+        score -= points;
+    });
+    result.pointsRemoved = removed;
+    return removed;
+}
+
+function getBounceOutLog(result) {
+    const count = result?.knockedOutDartIndices?.length || 0;
+    if (!count) return getBounceOutText().log;
+    const label = {
+        pl: 'wybite lotki: {count}; cofnięte punkty: {points}',
+        en: 'darts knocked out: {count}; points removed: {points}',
+        de: 'herausgefallene Darts: {count}; abgezogene Punkte: {points}',
+        nl: 'uitgevallen darts: {count}; vervallen punten: {points}'
+    }[typeof currentLang === 'string' ? currentLang : 'en'] || 'darts knocked out: {count}; points removed: {points}';
+    return `${getBounceOutText().log} — ${label.replace('{count}', count).replace('{points}', result.pointsRemoved || 0)}`;
 }
 
 function recordMatchBounceOut(isP1, result, match = currentMatch) {
@@ -144,7 +228,7 @@ function showBounceOutFeedback(result) {
     const banner = document.getElementById('match-bounce-out');
     if (banner) {
         clearTimeout(banner._hideTimer);
-        banner.textContent = `↘ ${getBounceOutText().log}`;
+        banner.textContent = `↘ ${getBounceOutLog(result)}`;
         banner.hidden = false;
         banner.classList.remove('bounce-out-active', 'robin-hood-active');
         void banner.offsetWidth;

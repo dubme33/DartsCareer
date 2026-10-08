@@ -190,7 +190,8 @@ function getHubUpcomingTournament() {
     tournamentDatabase.forEach((tournament, index) => {
         if (!tournament || tournament.completed === true) return;
         const date = new Date(year, tournament.month, tournament.day);
-        const end = new Date(year, tournament.endMonth ?? tournament.month, tournament.endDay ?? tournament.day);
+        const end = tournament.editorStructure?.league ? new Date(year, tournament.month, tournament.day)
+            : new Date(year, tournament.endMonth ?? tournament.month, tournament.endDay ?? tournament.day);
         if (end < today || (typeof isTournamentScheduledForCareerYear === 'function'
             && !isTournamentScheduledForCareerYear(tournament, year))) return;
         upcoming.push({ tournament, index, date, end });

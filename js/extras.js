@@ -432,14 +432,18 @@ function initCareerChronicle() {
             if (!isCareerActive) {
                 if (modData.pdcPlayers) {
                     pdcPlayers.length = 0;
-                    modData.pdcPlayers.forEach((candidate, index) => pdcPlayers.push({
-                        ...candidate,
-                        // Łączy zawodnika moda z odpowiadającym mu wpisem bazowym,
-                        // aby przy kolejnym wczytaniu nie powstała druga kopia.
-                        defaultTemplateIndex: Number.isInteger(candidate.defaultTemplateIndex)
-                            ? candidate.defaultTemplateIndex
-                            : index
-                    }));
+                    modData.pdcPlayers.forEach((candidate, index) => {
+                        const newCandidate = {
+                            ...candidate,
+                            // Łączy zawodnika moda z odpowiadającym mu wpisem bazowym,
+                            // aby przy kolejnym wczytaniu nie powstała druga kopia.
+                            defaultTemplateIndex: Number.isInteger(candidate.defaultTemplateIndex)
+                                ? candidate.defaultTemplateIndex
+                                : index
+                        };
+                        if (typeof applyModPlayerFavoriteDoubles === 'function') applyModPlayerFavoriteDoubles(newCandidate, candidate);
+                        pdcPlayers.push(newCandidate);
+                    });
                     if (typeof removeObsoleteDuplicatePlayers === 'function') removeObsoleteDuplicatePlayers(pdcPlayers);
                     if (typeof removeRetiredPlayersFromPool === 'function') removeRetiredPlayersFromPool(pdcPlayers);
                     if (typeof applyKnownPlayerCorrections === 'function') applyKnownPlayerCorrections(pdcPlayers);
@@ -494,6 +498,7 @@ function initCareerChronicle() {
                                 : ['name', 'sourceName', 'birthYear', 'country', 'hasTourCard', 'favoriteDouble']).forEach(field => {
                                 if (modPlayer[field] !== undefined) player[field] = modPlayer[field];
                             });
+                            if (typeof applyModPlayerFavoriteDoubles === 'function') applyModPlayerFavoriteDoubles(player, modPlayer);
                             player.defaultTemplateIndex = templateIndex;
                             return;
                         }
@@ -511,6 +516,7 @@ function initCareerChronicle() {
                                 : ['name', 'sourceName', 'birthYear', 'country', 'hasTourCard', 'favoriteDouble']).forEach(field => {
                                 if (modPlayer[field] !== undefined) candidate[field] = modPlayer[field];
                             });
+                            if (typeof applyModPlayerFavoriteDoubles === 'function') applyModPlayerFavoriteDoubles(candidate, modPlayer);
                             if (!Number.isInteger(candidate.defaultTemplateIndex) && candidate === indexedCandidate) {
                                 candidate.defaultTemplateIndex = index;
                             }
@@ -521,6 +527,7 @@ function initCareerChronicle() {
                                     ? modPlayer.defaultTemplateIndex
                                     : index
                             };
+                            if (typeof applyModPlayerFavoriteDoubles === 'function') applyModPlayerFavoriteDoubles(newCandidate, modPlayer);
                             if (typeof applyKnownPlayerCorrections === 'function') applyKnownPlayerCorrections([newCandidate]);
                             pdcPlayers.push(newCandidate);
                         }

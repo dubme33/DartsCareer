@@ -2,7 +2,7 @@ const PLAYER_EDITOR_MAX_PHOTO_BYTES = 2 * 1024 * 1024;
 const PLAYER_EDITOR_MAX_WALKON_BYTES = 4 * 1024 * 1024;
 const PLAYER_EDITOR_MAX_RANKING_MONEY = 999999999;
 const PLAYER_EDITOR_FALLBACK_YEAR = 2026;
-const PLAYER_EDITOR_SORT_OPTIONS = ['name-asc', 'name-desc', 'overall-desc', 'overall-asc', 'country-asc', 'age-asc', 'age-desc'];
+const PLAYER_EDITOR_SORT_OPTIONS = ['name-asc', 'name-desc', 'overall-desc', 'overall-asc', 'oom-asc', 'oom-desc', 'country-asc', 'age-asc', 'age-desc'];
 
 const PLAYER_EDITOR_TRANSLATIONS = {
     pl: {
@@ -15,6 +15,7 @@ const PLAYER_EDITOR_TRANSLATIONS = {
         sortNameAsc: 'Alfabetycznie A–Z', sortNameDesc: 'Alfabetycznie Z–A',
         sortOverallDesc: 'Overall: najwyższy', sortOverallAsc: 'Overall: najniższy', sortCountryAsc: 'Narodowość A–Z',
         sortAgeAsc: 'Wiek: najmłodsi', sortAgeDesc: 'Wiek: najstarsi',
+        sortOomAsc: 'OOM: najlepsze miejsce', sortOomDesc: 'OOM: najniższe miejsce',
         editKicker: 'EDYCJA WPISU', addKicker: 'NOWY WPIS', choose: 'Wybierz zawodnika', create: 'Nowy zawodnik',
         baseOrigin: 'Baza gry', modOrigin: 'Wpis moda', customOrigin: 'Dodany w edytorze', careerOrigin: 'Twoja postać',
         photo: 'Zdjęcie zawodnika', noPhoto: 'BRAK ZDJĘCIA', photoHint: 'PNG, JPG lub WebP, maksymalnie 2 MB.',
@@ -61,6 +62,7 @@ const PLAYER_EDITOR_TRANSLATIONS = {
         sortNameAsc: 'Alphabetical A–Z', sortNameDesc: 'Alphabetical Z–A',
         sortOverallDesc: 'Overall: highest', sortOverallAsc: 'Overall: lowest', sortCountryAsc: 'Nationality A–Z',
         sortAgeAsc: 'Age: youngest', sortAgeDesc: 'Age: oldest',
+        sortOomAsc: 'OOM: highest ranked', sortOomDesc: 'OOM: lowest ranked',
         editKicker: 'EDIT ENTRY', addKicker: 'NEW ENTRY', choose: 'Select a player', create: 'New player',
         baseOrigin: 'Game database', modOrigin: 'Mod entry', customOrigin: 'Added in editor', careerOrigin: 'Your player', photo: 'Player photo', noPhoto: 'NO PHOTO',
         photoHint: 'PNG, JPG or WebP, up to 2 MB.', uploadPhoto: 'Choose photo', removePhoto: 'Remove photo', photoAlt: 'Player photo',
@@ -105,6 +107,7 @@ const PLAYER_EDITOR_TRANSLATIONS = {
         sortNameAsc: 'Alphabetisch A–Z', sortNameDesc: 'Alphabetisch Z–A',
         sortOverallDesc: 'Overall: höchste', sortOverallAsc: 'Overall: niedrigste', sortCountryAsc: 'Nationalität A–Z',
         sortAgeAsc: 'Alter: jüngste', sortAgeDesc: 'Alter: älteste',
+        sortOomAsc: 'OOM: höchster Rang', sortOomDesc: 'OOM: niedrigster Rang',
         editKicker: 'EINTRAG BEARBEITEN', addKicker: 'NEUER EINTRAG', choose: 'Spieler auswählen', create: 'Neuer Spieler',
         baseOrigin: 'Spieldatenbank', modOrigin: 'Mod-Eintrag', customOrigin: 'Im Editor erstellt', careerOrigin: 'Dein Spieler', photo: 'Spielerfoto', noPhoto: 'KEIN FOTO',
         photoHint: 'PNG, JPG oder WebP, maximal 2 MB.', uploadPhoto: 'Foto wählen', removePhoto: 'Foto entfernen', photoAlt: 'Spielerfoto',
@@ -149,6 +152,7 @@ const PLAYER_EDITOR_TRANSLATIONS = {
         sortNameAsc: 'Alfabetisch A–Z', sortNameDesc: 'Alfabetisch Z–A',
         sortOverallDesc: 'Overall: hoogste', sortOverallAsc: 'Overall: laagste', sortCountryAsc: 'Nationaliteit A–Z',
         sortAgeAsc: 'Leeftijd: jongste', sortAgeDesc: 'Leeftijd: oudste',
+        sortOomAsc: 'OOM: hoogste positie', sortOomDesc: 'OOM: laagste positie',
         editKicker: 'ITEM BEWERKEN', addKicker: 'NIEUW ITEM', choose: 'Kies een speler', create: 'Nieuwe speler',
         baseOrigin: 'Speldatabase', modOrigin: 'Mod-item', customOrigin: 'Toegevoegd in editor', careerOrigin: 'Jouw speler', photo: 'Spelersfoto', noPhoto: 'GEEN FOTO',
         photoHint: 'PNG, JPG of WebP, maximaal 2 MB.', uploadPhoto: 'Kies foto', removePhoto: 'Foto verwijderen', photoAlt: 'Spelersfoto',
@@ -293,8 +297,16 @@ function getPlayerEditorCountryLabel(candidate) {
     return String(typeof t === 'function' ? t(candidate?.country) : candidate?.country || '');
 }
 
-function sortPlayerEditorRosterPlayers(players, sort = 'name-asc', locale = 'pl') {
+function getPlayerEditorOomPositions(players = getPlayerEditorRosterPlayers()) {
+    const ranked = typeof getCachedRankedPlayers === 'function'
+        ? getCachedRankedPlayers('main')
+        : players.slice().sort((first, second) => (Number(second?.prizeMoney) || 0) - (Number(first?.prizeMoney) || 0));
+    return new Map(ranked.map((candidate, index) => [candidate.id || candidate, index + 1]));
+}
+
+function sortPlayerEditorRosterPlayers(players, sort = 'name-asc', locale = 'pl', oomPositions = null) {
     const normalizedSort = PLAYER_EDITOR_SORT_OPTIONS.includes(sort) ? sort : 'name-asc';
+    if (normalizedSort.startsWith('oom-') && !oomPositions) oomPositions = getPlayerEditorOomPositions(players);
     const compareName = (first, second) => String(first?.name || '').localeCompare(String(second?.name || ''), locale);
     const compareNumber = (first, second, direction = 1) => {
         if (first === null) return second === null ? 0 : 1;
@@ -306,6 +318,9 @@ function sortPlayerEditorRosterPlayers(players, sort = 'name-asc', locale = 'pl'
         if (normalizedSort === 'name-desc') result = -compareName(first, second);
         else if (normalizedSort === 'overall-desc') result = compareNumber(getPlayerEditorOverall(first), getPlayerEditorOverall(second), -1);
         else if (normalizedSort === 'overall-asc') result = compareNumber(getPlayerEditorOverall(first), getPlayerEditorOverall(second));
+        else if (normalizedSort.startsWith('oom-')) result = compareNumber(
+            oomPositions.get(first.id || first) ?? null, oomPositions.get(second.id || second) ?? null,
+            normalizedSort === 'oom-desc' ? -1 : 1);
         else if (normalizedSort === 'country-asc') result = getPlayerEditorCountryLabel(first).localeCompare(getPlayerEditorCountryLabel(second), locale);
         else if (normalizedSort === 'age-asc') result = compareNumber(getPlayerEditorAge(first), getPlayerEditorAge(second));
         else if (normalizedSort === 'age-desc') result = compareNumber(getPlayerEditorAge(first), getPlayerEditorAge(second), -1);
@@ -440,6 +455,7 @@ function renderPlayerEditorSortOptions() {
     const options = [
         ['name-asc', 'sortNameAsc'], ['name-desc', 'sortNameDesc'],
         ['overall-desc', 'sortOverallDesc'], ['overall-asc', 'sortOverallAsc'],
+        ['oom-asc', 'sortOomAsc'], ['oom-desc', 'sortOomDesc'],
         ['country-asc', 'sortCountryAsc'], ['age-asc', 'sortAgeAsc'], ['age-desc', 'sortAgeDesc']
     ];
     select.replaceChildren();
@@ -505,7 +521,9 @@ function renderPlayerEditorRoster() {
     const countryFilter = document.getElementById('player-editor-country-filter')?.value || '';
     const sort = document.getElementById('player-editor-sort')?.value || 'name-asc';
     const locale = typeof currentLang === 'string' ? currentLang : 'pl';
-    const players = sortPlayerEditorRosterPlayers(getPlayerEditorRosterPlayers(), sort, locale);
+    const roster = getPlayerEditorRosterPlayers();
+    const oomPositions = sort.startsWith('oom-') ? getPlayerEditorOomPositions(roster) : null;
+    const players = sortPlayerEditorRosterPlayers(roster, sort, locale, oomPositions);
     const filtered = players.filter(candidate => (!countryFilter || candidate.country === countryFilter)
         && (!search || [candidate.name, candidate.country, typeof t === 'function' ? t(candidate.country) : candidate.country]
             .some(value => normalizePlayerEditorIdentity(value).includes(search))));
@@ -521,7 +539,9 @@ function renderPlayerEditorRoster() {
         const name = document.createElement('strong');
         name.textContent = candidate.name || '—';
         const country = document.createElement('small');
-        country.textContent = typeof t === 'function' ? t(candidate.country) : candidate.country;
+        const countryLabel = typeof t === 'function' ? t(candidate.country) : candidate.country;
+        const oomPosition = oomPositions?.get(candidate.id || candidate);
+        country.textContent = `${countryLabel}${oomPosition ? ` · OOM #${oomPosition}` : ''}`;
         const overall = document.createElement('b');
         overall.textContent = `OVR ${Math.round(getPlayerEditorOverall(candidate))}`;
         button.append(name, country, overall);
@@ -909,6 +929,7 @@ function savePlayerEditor(event) {
     if (typeof enforcePlayerRatingLimits === 'function') enforcePlayerRatingLimits(candidate);
     if (wasCreated) pdcPlayers.push(candidate);
     if (typeof normalizePlayerIds === 'function') normalizePlayerIds(pdcPlayers, typeof player !== 'undefined' ? player : null);
+    if (typeof initializeAiDevelopmentCandidate === 'function') initializeAiDevelopmentCandidate(candidate, { ratingEdited: ratingsChanged });
     if (typeof initPlayerSeasonStats === 'function') initPlayerSeasonStats(candidate);
     if (typeof invalidatePlayerLifecycleCache === 'function') invalidatePlayerLifecycleCache();
     if (typeof invalidatePlayerRankingCache === 'function') invalidatePlayerRankingCache();

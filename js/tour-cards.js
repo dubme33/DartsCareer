@@ -34,6 +34,14 @@ const GRAND_SLAM_NORDIC_BALTIC_COUNTRIES = new Set([
 ]);
 const GRAND_SLAM_ANZ_COUNTRIES = new Set(['Australia', 'Nowa Zelandia']);
 
+function getPdcTourCardSetting(key, fallback) {
+    return typeof getCareerPdcCardSetting === 'function' ? getCareerPdcCardSetting(key, fallback) : fallback;
+}
+function getPdcTourCardTotalPlaces() {
+    return getPdcTourCardSetting('oomPlaces', PDC_TOUR_CARD_OOM_PLACES)
+        + getPdcTourCardSetting('qschoolPlaces', PDC_TOUR_CARD_QSCHOOL_PLACES);
+}
+
 function getPdcTourCardReferenceYear(referenceDate = currentDate) {
     const date = referenceDate instanceof Date ? referenceDate : new Date(referenceDate);
     return Number.isNaN(date.getTime()) ? PDC_TOUR_CARD_CYCLE_START_YEAR : date.getFullYear();
@@ -43,7 +51,7 @@ function getPdcTourCardCycleYear(referenceDate = currentDate) {
     const year = getPdcTourCardReferenceYear(referenceDate);
     if (year <= PDC_TOUR_CARD_CYCLE_START_YEAR) return PDC_TOUR_CARD_CYCLE_START_YEAR;
     return PDC_TOUR_CARD_CYCLE_START_YEAR
-        + Math.floor((year - PDC_TOUR_CARD_CYCLE_START_YEAR) / PDC_TOUR_CARD_CYCLE_LENGTH) * PDC_TOUR_CARD_CYCLE_LENGTH;
+        + Math.floor((year - PDC_TOUR_CARD_CYCLE_START_YEAR) / getPdcTourCardSetting('durationYears', PDC_TOUR_CARD_CYCLE_LENGTH)) * getPdcTourCardSetting('durationYears', PDC_TOUR_CARD_CYCLE_LENGTH);
 }
 
 function isPdcQSchoolYear(yearOrDate = currentDate) {
@@ -52,16 +60,18 @@ function isPdcQSchoolYear(yearOrDate = currentDate) {
         : Number(yearOrDate);
     return Number.isInteger(year)
         && year >= PDC_TOUR_CARD_CYCLE_START_YEAR
-        && (year - PDC_TOUR_CARD_CYCLE_START_YEAR) % PDC_TOUR_CARD_CYCLE_LENGTH === 0;
+        && (year - PDC_TOUR_CARD_CYCLE_START_YEAR) % getPdcTourCardSetting('durationYears', PDC_TOUR_CARD_CYCLE_LENGTH) === 0;
 }
 
 function isPdcQSchoolTournament(tournament = activeTournament) {
     if (typeof hasTournamentEditorQualification === 'function' && hasTournamentEditorQualification(tournament)) return false;
+    if (typeof hasCareerTourEntryOverride === 'function' && hasCareerTourEntryOverride(tournament)) return false;
     return Boolean(tournament && tournament.specialType === PDC_QSCHOOL_TYPE);
 }
 
 function isPdcTourCardQualifierTournament(tournament = activeTournament) {
     if (typeof hasTournamentEditorQualification === 'function' && hasTournamentEditorQualification(tournament)) return false;
+    if (typeof hasCareerTourEntryOverride === 'function' && hasCareerTourEntryOverride(tournament)) return false;
     return Boolean(tournament && tournament.specialType === PDC_TOUR_CARD_QUALIFIER_TYPE);
 }
 
@@ -366,7 +376,7 @@ function setPdcTourCard(candidate, source, cycleYear) {
     candidate.hasTourCard = true;
     candidate.tourCardSource = source;
     candidate.tourCardStartYear = cycleYear;
-    candidate.tourCardExpiryYear = cycleYear + PDC_TOUR_CARD_CYCLE_LENGTH;
+    candidate.tourCardExpiryYear = cycleYear + getPdcTourCardSetting('durationYears', PDC_TOUR_CARD_CYCLE_LENGTH);
     candidate.tourCardCycleYear = cycleYear;
     candidate.tourCardSystemVersion = PDC_TOUR_CARD_SYSTEM_VERSION;
     return candidate;
@@ -429,11 +439,14 @@ function awardPdcSecondaryTourCards(candidates, completedYear, stateOwner = (typ
     const categories = [];
     for (const type of ['challengeTour', 'developmentTour']) {
         const awarded = [];
+        const places = getPdcTourCardSetting('secondaryPlaces', PDC_SECONDARY_TOUR_CARD_PLACES);
+        const enabled = typeof isCareerEditorTourRankingEnabled !== 'function' || isCareerEditorTourRankingEnabled(type);
         for (const candidate of getPdcSecondaryTourCardRanking(players, type, year)) {
+            if (!places || !enabled) break;
             if (candidate.hasTourCard === true) continue;
             setPdcTourCard(candidate, type === 'challengeTour' ? 'challenge-tour' : 'development-tour', cardStartYear);
             awarded.push(candidate);
-            if (awarded.length >= PDC_SECONDARY_TOUR_CARD_PLACES) break;
+            if (awarded.length >= getPdcTourCardSetting('secondaryPlaces', PDC_SECONDARY_TOUR_CARD_PLACES)) break;
         }
         categories.push({ type, playerIds: awarded.map(getPdcTourCardPlayerKey), players: awarded });
     }
@@ -456,8 +469,10 @@ function awardPdcSecondaryTourCards(candidates, completedYear, stateOwner = (typ
 }
 
 function fillPdcTourCardVacancies(candidates, referenceDate = (typeof currentDate !== 'undefined' ? currentDate : null), source = 'vacancy') {
+    if (typeof getCareerCalendarEditorState === 'function'
+        && getCareerCalendarEditorState().pdcManualCycleYear === getPdcTourCardCycleYear(referenceDate)) return [];
     const players = uniquePdcTourCardPlayers(candidates);
-    const missingPlaces = Math.max(0, PDC_TOUR_CARD_TOTAL - getPdcTourCardHolders(players).length);
+    const missingPlaces = Math.max(0, getPdcTourCardTotalPlaces() - getPdcTourCardHolders(players).length);
     if (!missingPlaces) return [];
     const date = referenceDate instanceof Date ? referenceDate : new Date(referenceDate || Date.now());
     const cardStartYear = Number.isNaN(date.getTime()) ? PDC_TOUR_CARD_CYCLE_START_YEAR : date.getFullYear();
@@ -498,7 +513,7 @@ function beginPdcTourCardCycle(candidates, referenceDate = currentDate) {
     const ranked = uniquePdcTourCardPlayers(candidates).sort(comparePdcTourCardRanking);
 
     ranked.forEach(candidate => clearPdcTourCard(candidate, cycleYear));
-    ranked.slice(0, PDC_TOUR_CARD_OOM_PLACES)
+    ranked.slice(0, getPdcTourCardSetting('oomPlaces', PDC_TOUR_CARD_OOM_PLACES))
         .forEach(candidate => setPdcTourCard(candidate, 'oom', cycleYear));
     return ranked;
 }
@@ -515,7 +530,7 @@ function migratePdcTourCardSystem(candidates, referenceDate = currentDate) {
         const qSchoolAlreadyPassed = safeDate.getFullYear() > cycleYear
             || (safeDate.getFullYear() === cycleYear && (safeDate.getMonth() > 0 || safeDate.getDate() > 11));
         if (qSchoolAlreadyPassed) {
-            ranked.slice(PDC_TOUR_CARD_OOM_PLACES, PDC_TOUR_CARD_TOTAL)
+            ranked.slice(getPdcTourCardSetting('oomPlaces', PDC_TOUR_CARD_OOM_PLACES), getPdcTourCardTotalPlaces())
                 .forEach(candidate => setPdcTourCard(candidate, 'qschool-migration', cycleYear));
         }
         return ranked;
@@ -558,7 +573,7 @@ function getPdcQSchoolAvailablePlaces(candidates = getPdcTourCardPlayers()) {
     const secondaryCardPlaces = getPdcTourCardHolders(candidates)
         .filter(candidate => ['challenge-tour', 'development-tour'].includes(candidate.tourCardSource))
         .length;
-    return Math.max(0, PDC_TOUR_CARD_QSCHOOL_PLACES - secondaryCardPlaces);
+    return Math.max(0, getPdcTourCardSetting('qschoolPlaces', PDC_TOUR_CARD_QSCHOOL_PLACES) - secondaryCardPlaces);
 }
 
 function getPdcQSchoolParticipants(candidates = getPdcTourCardPlayers()) {
@@ -925,7 +940,7 @@ function seedCareerPlayerIntoPdcTop64(candidate, candidates, referenceDate = cur
     const rankedOthers = uniquePdcTourCardPlayers(candidates)
         .filter(other => other !== candidate)
         .sort(comparePdcTourCardRanking);
-    const threshold = Number(rankedOthers[PDC_TOUR_CARD_OOM_PLACES - 1]?.prizeMoney) || 0;
+    const threshold = Number(rankedOthers[getPdcTourCardSetting('oomPlaces', PDC_TOUR_CARD_OOM_PLACES) - 1]?.prizeMoney) || 0;
     const currentAmount = Number(candidate.prizeMoney) || 0;
     const requiredAmount = Math.max(0, threshold + 1 - currentAmount);
 

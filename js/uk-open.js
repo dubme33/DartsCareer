@@ -39,6 +39,7 @@ function getUKOpenSearchableName(tournamentOrName) {
 }
 
 function isUKOpenTournament(tournamentOrName = (typeof activeTournament !== 'undefined' ? activeTournament : null)) {
+    if (typeof hasCareerTourEntryOverride === 'function' && hasCareerTourEntryOverride(tournamentOrName)) return false;
     if (typeof hasTournamentEditorQualification === 'function' && hasTournamentEditorQualification(tournamentOrName)) return false;
     if (tournamentOrName && typeof tournamentOrName === 'object'
         && tournamentOrName.specialType === UK_OPEN_TYPE) return true;

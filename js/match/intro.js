@@ -1,10 +1,69 @@
 let matchIntroGeneration = 0;
 let matchIntroFinishTimeout = null;
 let matchIntroFinishing = false;
+let matchIntroCurrentEntrance = null;
 const walkonAudioReleases = new WeakMap();
+let matchWalkonAudioPlayer = null;
+
+function getMatchWalkonAudioPlayer() {
+    // Safari grants playback permission to the element. Reuse it for both
+    // entrants and later matches instead of creating a new locked player.
+    if (!matchWalkonAudioPlayer) matchWalkonAudioPlayer = new Audio();
+    return matchWalkonAudioPlayer;
+}
+
+function setMatchWalkonMusicBlocked(blocked) {
+    const button = document.getElementById('walkon-card-play-music');
+    if (!button) return;
+    button.hidden = !blocked;
+    button.disabled = false;
+    button.textContent = typeof trWalkonCard === 'function' ? trWalkonCard('playMusic') : '▶ Play music';
+}
+
+function resumeBlockedWalkonMusic() {
+    // Keep play() in the trusted click handler, with no await or timer first.
+    return matchIntroCurrentEntrance?.resumeMusic?.() || false;
+}
+
+let matchIntroCountryAliases = null;
+
+function getMatchIntroEnglishCountry(country) {
+    if (typeof country !== 'string' || !country.trim()) return '';
+    const normalize = value => value.trim().normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/\s+/g, ' ');
+    if (!matchIntroCountryAliases) {
+        matchIntroCountryAliases = new Map();
+        const catalog = typeof flags === 'object' ? flags : {};
+        const labels = typeof translations === 'object' ? translations : {};
+        for (const [canonical, code] of Object.entries(catalog)) {
+            const english = labels.en?.[canonical];
+            if (typeof english !== 'string' || !english.trim()) continue;
+            const aliases = [canonical, code, english, `the ${english}`,
+                ...['pl', 'de', 'nl'].map(language => labels[language]?.[canonical])];
+            if (canonical === 'USA') aliases.push('United States', 'the United States', 'United States of America');
+            for (const alias of aliases) {
+                if (typeof alias === 'string' && alias.trim()) {
+                    matchIntroCountryAliases.set(normalize(alias), english);
+                }
+            }
+        }
+    }
+    // Unknown custom labels are omitted, never spoken as a foreign country name.
+    return matchIntroCountryAliases.get(normalize(country)) || '';
+}
+
+function getMatchIntroCountryAnnouncement(country) {
+    const english = getMatchIntroEnglishCountry(country);
+    if (!english) return '';
+    const article = ['Netherlands', 'USA', 'Czech Republic', 'Philippines',
+        'Bahamas', 'Gambia', 'United Arab Emirates'].includes(english) ? 'the ' : '';
+    return `from ${article}${english}... `;
+}
 
 function releaseMatchWalkonAudio(audio) {
     if (!audio) return;
+    audio.onended = null;
+    audio.onerror = null;
     audio.pause();
     const release = walkonAudioReleases.get(audio);
     if (release) {
@@ -21,6 +80,8 @@ function releaseMatchWalkonAudio(audio) {
 function cancelMatchIntro() {
     // Każda prezentacja ma własny numer: spóźniony odczyt ZIP-a nie uruchomi audio.
     matchIntroGeneration++;
+    matchIntroCurrentEntrance = null;
+    setMatchWalkonMusicBlocked(false);
     isWalkonSkipped = true;
     clearTimeout(walkonTimeout);
     clearInterval(walkonInterval);
@@ -47,26 +108,43 @@ function startCrowd() {
             return { name: fallbackName, country: '' };
         }
 
-        function getMatchIntroMainOomRank(candidate) {
-            if (!candidate) return Number.MAX_SAFE_INTEGER;
-            let ranking = [];
+        function getMatchIntroMainOomRanking() {
             if (typeof getCachedRankedPlayers === 'function') {
-                ranking = getCachedRankedPlayers('main');
-            } else {
-                ranking = [
-                    ...(typeof pdcPlayers !== 'undefined' && Array.isArray(pdcPlayers) ? pdcPlayers : []),
-                    ...(typeof player !== 'undefined' && player ? [player] : [])
-                ].filter(Boolean).sort((first, second) =>
-                    (Number(second.prizeMoney) || 0) - (Number(first.prizeMoney) || 0));
+                return getCachedRankedPlayers('main');
             }
-            const index = ranking.findIndex(rankedCandidate => rankedCandidate === candidate
-                || (typeof samePlayer === 'function' && samePlayer(rankedCandidate, candidate)));
+            return [
+                ...(typeof pdcPlayers !== 'undefined' && Array.isArray(pdcPlayers) ? pdcPlayers : []),
+                ...(typeof player !== 'undefined' && player ? [player] : [])
+            ].filter(candidate => candidate && !candidate.isBye).sort((first, second) =>
+                (Number(second.prizeMoney) || 0) - (Number(first.prizeMoney) || 0));
+        }
+
+        function getMatchIntroMainOomRank(candidate, ranking = getMatchIntroMainOomRanking()) {
+            if (!candidate || candidate.isBye) return Number.MAX_SAFE_INTEGER;
+            const id = candidate.id && typeof pdcPlayerIdAliases !== 'undefined'
+                ? pdcPlayerIdAliases.get(candidate.id) || candidate.id : candidate.id;
+            let index = ranking.findIndex(rankedCandidate => rankedCandidate === candidate
+                || (id && rankedCandidate.id === id));
+            // Only references from before stable IDs may use a unique identity.
+            // Different modern IDs remain different people, even with the same name.
+            if (index < 0 && !id) {
+                const identityKey = person => typeof getCanonicalPlayerIdentityKey === 'function'
+                    ? getCanonicalPlayerIdentityKey(person)
+                    : [person?.sourceName || person?.name, person?.country]
+                        .map(value => String(value || '').trim().toLocaleLowerCase('pl')).join('|');
+                const key = identityKey(candidate);
+                const matches = key && (candidate.sourceName || candidate.name)
+                    ? ranking.map((person, position) => identityKey(person) === key ? position : -1)
+                        .filter(position => position >= 0) : [];
+                if (matches.length === 1) index = matches[0];
+            }
             return index >= 0 ? index + 1 : Number.MAX_SAFE_INTEGER;
         }
 
         function getMatchIntroOrder(p1Candidate, p2Candidate) {
-            const p1Rank = getMatchIntroMainOomRank(p1Candidate);
-            const p2Rank = getMatchIntroMainOomRank(p2Candidate);
+            const ranking = getMatchIntroMainOomRanking();
+            const p1Rank = getMatchIntroMainOomRank(p1Candidate, ranking);
+            const p2Rank = getMatchIntroMainOomRank(p2Candidate, ranking);
             // Wyższy numer oznacza niższe miejsce w OOM, więc ten zawodnik
             // wychodzi pierwszy. Przy nierozstrzygnięciu zachowujemy dawną,
             // stabilną kolejność P2 -> P1.
@@ -166,15 +244,6 @@ function startCrowd() {
             const hasSpeechSynthesis = Boolean(window.speechSynthesis && typeof SpeechSynthesisUtterance !== 'undefined');
             if(crowdAudio) { crowdAudio.pause(); }
 
-            // Tłumaczenie państw na angielski dla płynniejszej wymowy callera
-            const enCountries = { 
-                "Polska": "Poland", "Anglia": "England", "Szkocja": "Scotland", "Walia": "Wales", "Irlandia Północna": "Northern Ireland", 
-                "Holandia": "the Netherlands", "Niemcy": "Germany", "Irlandia": "Ireland", "Belgia": "Belgium", "Australia": "Australia", 
-                "USA": "the USA", "Austria": "Austria", "Słowacja": "Slovakia", "Węgry": "Hungary", "Czechy": "the Czech Republic", 
-                "Szwajcaria": "Switzerland", "Łotwa": "Latvia", "Szwecja": "Sweden", "Francja": "France", "Hiszpania": "Spain", 
-                "Kanada": "Canada", "Litwa": "Lithuania", "Słowenia": "Slovenia", "Chorwacja": "Croatia", "Finlandia": "Finland" 
-            };
-
             const p1Candidate = getMatchIntroPlayer(true, p1Name);
             const p2Candidate = getMatchIntroPlayer(false, p2Name);
             p1Name = p1Candidate.name || p1Name;
@@ -184,41 +253,58 @@ function startCrowd() {
             const secondCandidate = secondEntrance.candidate;
             const firstName = firstCandidate?.name || '';
             const secondName = secondCandidate?.name || '';
-            const firstCountryEn = enCountries[firstCandidate?.country] || firstCandidate?.country || '';
-            const secondCountryEn = enCountries[secondCandidate?.country] || secondCandidate?.country || '';
-            if (typeof showCareerEntranceVisual === 'function') showCareerEntranceVisual(firstCandidate);
+            const firstCountryEn = getMatchIntroCountryAnnouncement(firstCandidate?.country);
+            const secondCountryEn = getMatchIntroCountryAnnouncement(secondCandidate?.country);
             
             let u1 = hasSpeechSynthesis
-                ? new SpeechSynthesisUtterance(`Ladies and gentlemen, please welcome... from ${firstCountryEn}... ${firstName}!`)
+                ? new SpeechSynthesisUtterance(`Ladies and gentlemen, please welcome... ${firstCountryEn}${firstName}!`)
                 : {};
             u1.lang = 'en-GB'; u1.pitch = 0.85; u1.rate = 0.9; u1.volume = 1.0 * globalVolume;
             
             let u2 = hasSpeechSynthesis
-                ? new SpeechSynthesisUtterance(`And his opponent... from ${secondCountryEn}... ${secondName}!`)
+                ? new SpeechSynthesisUtterance(`And his opponent... ${secondCountryEn}${secondName}!`)
                 : {};
             u2.lang = 'en-GB'; u2.pitch = 0.8; u2.rate = 0.9; u2.volume = 1.0 * globalVolume;
             
-            async function playCandidateWalkon(candidate, isP1, onFinished) {
+            function playEntrance(candidate, isP1, utterance, onFinished) {
                 if (!isActive()) return;
-                const music = await acquireMatchWalkonAudio(candidate);
-                if (!isActive()) { music.release(); return; }
-                if (!music.url) { music.release(); onFinished(); return; }
                 let audio;
+                let music;
                 let completed = false;
-                const advance = () => {
-                    if (completed) return;
+                let musicStarted = false;
+                let playbackStarted = false;
+                let playAttemptPending = false;
+                let waitingForGesture = false;
+                const entrance = {};
+                const isEntranceActive = () => isActive() && matchIntroCurrentEntrance === entrance && !completed;
+                const advance = (cancelSpeech = false) => {
+                    if (!isEntranceActive()) return false;
                     completed = true;
+                    matchIntroCurrentEntrance = null;
+                    setMatchWalkonMusicBlocked(false);
+                    clearTimeout(walkonTimeout);
+                    clearInterval(walkonInterval);
+                    if (cancelSpeech && window.speechSynthesis) window.speechSynthesis.cancel();
                     if (audio) releaseMatchWalkonAudio(audio);
-                    else music.release();
+                    else if (music) music.release();
                     if (isActive()) onFinished();
+                    return true;
                 };
+                entrance.skip = () => advance(true);
+                entrance.resumeMusic = () => waitingForGesture && tryPlayMusic();
+                matchIntroCurrentEntrance = entrance;
+                setMatchWalkonMusicBlocked(false);
+                if (typeof showCareerEntranceVisual === 'function') showCareerEntranceVisual(candidate);
                 const beginWalkon = () => {
-                    if (!isActive()) { advance(); return; }
+                    if (!isEntranceActive() || playbackStarted) return;
+                    playbackStarted = true;
+                    waitingForGesture = false;
+                    setMatchWalkonMusicBlocked(false);
                     walkonTimeout = setTimeout(() => {
-                        if (!isActive() || completed) return;
+                        if (!isEntranceActive()) return;
                         let fadeVol = 0.6;
                         walkonInterval = setInterval(() => {
-                            if (!isActive() || completed) return;
+                            if (!isEntranceActive()) return;
                             fadeVol -= 0.05;
                             if (fadeVol > 0) {
                                 audio.volume = fadeVol * globalVolume;
@@ -229,39 +315,70 @@ function startCrowd() {
                         }, isP1 ? 300 : 200);
                     }, 20000); // Dotychczasowe czasy wejść pozostają bez zmian.
                 };
-                try {
-                    audio = new Audio(music.url);
-                    walkonAudioReleases.set(audio, music.release);
-                    if (isP1) currentWalkonAudio = audio;
-                    else oppAudio = audio;
-                    audio.volume = 0.6 * globalVolume;
-                    const playPromise = audio.play();
-                    if (playPromise && typeof playPromise.then === 'function') {
-                        playPromise.then(beginWalkon).catch(advance);
-                    } else beginWalkon();
-                } catch (_) {
-                    advance();
+                const playbackFailed = error => {
+                    if (!isEntranceActive()) return;
+                    playAttemptPending = false;
+                    if (error?.name === 'NotAllowedError') {
+                        // The file is ready, but Safari requires a fresh tap.
+                        // Keep this entrance on screen; skipping still works.
+                        waitingForGesture = true;
+                        setMatchWalkonMusicBlocked(true);
+                    } else advance();
+                };
+                function tryPlayMusic() {
+                    if (!isEntranceActive() || !audio || playAttemptPending || playbackStarted) return false;
+                    playAttemptPending = true;
+                    const button = document.getElementById('walkon-card-play-music');
+                    if (button) button.disabled = true;
+                    try {
+                        const playPromise = audio.play();
+                        if (playPromise && typeof playPromise.then === 'function') {
+                            playPromise.then(() => { playAttemptPending = false; beginWalkon(); }).catch(playbackFailed);
+                        } else { playAttemptPending = false; beginWalkon(); }
+                    } catch (error) { playbackFailed(error); }
+                    return true;
                 }
+                utterance.onend = async () => {
+                    if (!isEntranceActive() || musicStarted) return;
+                    musicStarted = true;
+                    music = await acquireMatchWalkonAudio(candidate);
+                    if (!isEntranceActive()) { music.release(); return; }
+                    if (!music.url) { advance(); return; }
+                    try {
+                        audio = getMatchWalkonAudioPlayer();
+                        audio.src = music.url;
+                        audio.preload = 'auto';
+                        walkonAudioReleases.set(audio, music.release);
+                        if (isP1) currentWalkonAudio = audio;
+                        else oppAudio = audio;
+                        audio.volume = 0.6 * globalVolume;
+                        audio.onerror = () => advance();
+                        audio.onended = () => advance();
+                        tryPlayMusic();
+                    } catch (_) {
+                        advance();
+                    }
+                };
+                utterance.onerror = utterance.onend;
+                if (hasSpeechSynthesis) {
+                    try { window.speechSynthesis.speak(utterance); }
+                    catch (_error) { utterance.onend(); }
+                }
+                else utterance.onend();
             }
-
-            u1.onend = () => playCandidateWalkon(firstCandidate, firstEntrance.isP1, playSecondIntro);
 
             function playSecondIntro() {
-                if (!isActive()) return;
-                if (typeof showCareerEntranceVisual === 'function') showCareerEntranceVisual(secondCandidate);
-                if (hasSpeechSynthesis) window.speechSynthesis.speak(u2);
-                else u2.onend();
+                playEntrance(secondCandidate, secondEntrance.isP1, u2, finishWalkon);
             }
 
-            u2.onend = () => playCandidateWalkon(secondCandidate, secondEntrance.isP1, finishWalkon);
-            if (hasSpeechSynthesis) window.speechSynthesis.speak(u1);
-            else u1.onend();
+            playEntrance(firstCandidate, firstEntrance.isP1, u1, playSecondIntro);
             return true;
         }
 
         function finishWalkon() {
             if (matchIntroFinishing) return;
             matchIntroFinishing = true;
+            matchIntroCurrentEntrance = null;
             const generation = matchIntroGeneration;
             const introMatch = currentMatch;
             const isCurrent = () => generation === matchIntroGeneration && currentMatch === introMatch;
@@ -307,6 +424,11 @@ function startCrowd() {
             if (matchIntroFinishing) return;
             cancelMatchIntro();
             finishWalkon();
+        }
+
+        function skipCurrentWalkon() {
+            if (!currentMatch?.introInProgress || matchIntroFinishing) return false;
+            return matchIntroCurrentEntrance?.skip() || false;
         }
 
         

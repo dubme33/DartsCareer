@@ -106,10 +106,12 @@
         }
 
         function normalizePlayerIds(players, currentPlayer) {
+            if (typeof ensureAiDevelopmentWorldSeed === 'function') ensureAiDevelopmentWorldSeed(currentPlayer);
             const seenIds = new Set();
             const assignId = (candidate, prefix) => {
                 if (!candidate || candidate.isBye) return;
                 if (typeof initializePlayerNickname === 'function') initializePlayerNickname(candidate);
+                if (candidate !== currentPlayer && typeof prepareAiDevelopmentIdentity === 'function') prepareAiDevelopmentIdentity(candidate);
                 if (typeof candidate.id !== 'string' || !candidate.id.trim() || seenIds.has(candidate.id)) {
                     candidate.id = createEntityId(prefix);
                 }
@@ -147,7 +149,9 @@
         });
 
         function getAgeDevelopmentProfile(candidate, referenceDate = currentDate) {
-            const age = getPlayerAge(candidate, referenceDate);
+            const knownAge = getPlayerAge(candidate, referenceDate);
+            const age = knownAge ?? (typeof getAiLifecycleAge === 'function' && !isCurrentPlayer(candidate)
+                ? getAiLifecycleAge(candidate, referenceDate) : null);
             if (!Number.isInteger(age)) return AGE_DEVELOPMENT_PROFILES.prime;
             if (age < 25) return AGE_DEVELOPMENT_PROFILES.young;
             if (age >= 44) return AGE_DEVELOPMENT_PROFILES.veteran;
@@ -562,6 +566,7 @@
                 applyForm(p);
             });
             renderCareerPlayerOptions();
+            if (player?.id && typeof initializeAiDevelopmentFoundation === 'function') initializeAiDevelopmentFoundation();
         }
 
         function applyForm(p) {
@@ -653,7 +658,7 @@
         function changeTournamentOverall(p, delta) {
             if (!p || !Number.isFinite(delta)) return;
             if (typeof isPlayerInjured === 'function' && isPlayerInjured(p)) return;
-            const ageAdjustedDelta = scalePlayerDevelopmentChange(p, delta);
+            let ageAdjustedDelta = scalePlayerDevelopmentChange(p, delta);
 
             if (isCurrentPlayer(p)) {
                 const previous = player.overall;
@@ -666,12 +671,16 @@
             }
 
             ensureBaseRatings(p);
+            if (typeof limitAiFoundationImmediateGrowth === 'function') ageAdjustedDelta = limitAiFoundationImmediateGrowth(p, ageAdjustedDelta);
             const previous = p.baseOvr;
-            p.baseOvr = clamp(previous + ageAdjustedDelta, 45, 99);
+            const minimumRating = typeof limitAiFoundationImmediateGrowth === 'function' ? Math.min(45, previous) : 45;
+            p.baseOvr = clamp(previous + ageAdjustedDelta, minimumRating, 99);
             const appliedDelta = p.baseOvr - previous;
             if (typeof recordAiDevelopmentImmediateChange === 'function') recordAiDevelopmentImmediateChange(p, appliedDelta);
-            p.baseScoring = clamp(p.baseScoring + appliedDelta, 45, 100);
-            p.baseDoubles = clamp(p.baseDoubles + appliedDelta, 40, 100);
+            p.baseScoring = clamp(p.baseScoring + appliedDelta,
+                typeof applyAiPermanentRatingAdjustment === 'function' ? Math.min(45,p.baseScoring) : 45, 100);
+            p.baseDoubles = clamp(p.baseDoubles + appliedDelta,
+                typeof applyAiPermanentRatingAdjustment === 'function' ? Math.min(40,p.baseDoubles) : 40, 100);
             applyForm(p);
         }
 
@@ -683,14 +692,22 @@
                 favoriteColdChance: 0.06, coldRunMin: 2, coldRunRange: 3, favoriteRank: 12, maxForm: 9
             };
 
-            // Krótsze turnieje są bardziej podatne na „dzień konia” zawodnika.
             const isChallengeTourEvent = (typeof isChallengeTourTournament === 'function'
                 && isChallengeTourTournament(tournament))
+                || tournament?.specialType === 'challengeTour'
                 || name.includes('rising stars circuit') || name.includes('challenge tour');
             const isDevelopmentTourEvent = (typeof isDevelopmentTourTournament === 'function'
                 && isDevelopmentTourTournament(tournament))
                 || name.includes('future champions circuit') || name.includes('development tour');
-            if (isChallengeTourEvent || isDevelopmentTourEvent
+            if (isChallengeTourEvent) {
+                // Short matches still allow upsets, but form and leg variation
+                // should not routinely outweigh the entrants' overall ratings.
+                return { ...profile, key: 'challenge', ratingScale: 24, formSpread: 2.5, matchNoise: 1.2,
+                    underdogHotChance: 0.04, hotRunMin: 2, hotRunRange: 2, underdogRank: 16,
+                    favoriteColdChance: 0.025, coldRunMin: 1, coldRunRange: 1.5, favoriteRank: 16, maxForm: 5 };
+            }
+            // The other short floor events retain their wider form variation.
+            if (isDevelopmentTourEvent
                 || ((name.includes('players championship') || name.includes('pro players cup')) && !name.includes('final'))) {
                 return { ...profile, key: 'floor', ratingScale: 36, formSpread: 6.5, matchNoise: 4.2, underdogHotChance: 0.18, hotRunMin: 5, hotRunRange: 6, underdogRank: 16, favoriteColdChance: 0.13, coldRunMin: 3, coldRunRange: 4, favoriteRank: 16, maxForm: 14 };
             }
@@ -724,8 +741,27 @@
         function getTournamentSimulationForm(candidate) {
             const key = getSimulationPlayerKey(candidate);
             const form = activeTournament?.simulationForm?.[key];
-            return Number.isFinite(form) ? form : 0;
+            if (!Number.isFinite(form)) return 0;
+            const profile = getTournamentSimulationProfile(activeTournament);
+            // Ongoing saves may contain form rolled with the former floor profile.
+            return profile.key === 'challenge' ? clamp(form, -profile.maxForm, profile.maxForm) : form;
         }
+
+        const AI_PEAK_MATCH_CONFIG = Object.freeze({
+            version: 2,
+            extraordinaryShare: 0.005,
+            averageBase: 113,
+            averageRange: 9,
+            averagePower: 4,
+            accuracyBaseline: 119,
+            accuracyPerAveragePoint: 0.5,
+            accuracySpread: 2,
+            quickAverageKnee: 103,
+            quickAverageTail: 5,
+            quickLegPaceTail: 2,
+            quickLegPaceKnee: 105,
+            quickLegPaceFull: 107
+        });
 
         // Pojedynczy wyjątkowy mecz jest czymś innym niż forma na cały turniej.
         // AI od 80 OVR może zagrać mecz życia, lecz zawodnicy z czołówki robią to
@@ -742,12 +778,15 @@
             const peakRoll = random();
             if (peakRoll >= chance) return null;
 
-            // Tylko co czwarty mecz życia osiąga poziom 115–125. Górna część
-            // tego przedziału jest znacznie rzadsza niż występ blisko 115.
-            const extraordinary = peakRoll < chance * 0.25;
+            // Wybitny występ jest tylko niewielkim ułamkiem meczów życia.
+            // To siła dnia, nie gwarantowana końcowa średnia: rzeczywiste
+            // rzuty mogą dać wyższy wynik, lecz nie podbijamy celności do
+            // poziomu seryjnych 130+. Trwałe oceny pozostają bez zmian.
+            const config = AI_PEAK_MATCH_CONFIG;
+            const extraordinary = peakRoll < chance * config.extraordinaryShare;
             const ratingRoll = random(), accuracyRoll = random(), averageRoll = random();
             const averageFloor = extraordinary
-                ? 115 + 10 * Math.pow(averageRoll, 2)
+                ? config.averageBase + config.averageRange * Math.pow(averageRoll, config.averagePower)
                 : (isElite
                     ? Math.min(120, 105 + ((overall - 88) * 0.8) + (averageRoll * 3))
                     : Math.min(116, 108 + ((overall - 80) * 0.35) + (averageRoll * 3)));
@@ -756,11 +795,55 @@
                 ratingBoost: (isElite ? 3 + (ratingRoll * 2) : 5 + (ratingRoll * 2))
                     + (extraordinary ? 2 : 0),
                 accuracyBoost: extraordinary
-                    ? Math.max(0, 134 - overall) + ((averageFloor - 115) * 1.8) + (accuracyRoll * 3)
+                    ? Math.max(0, config.accuracyBaseline - overall)
+                        + ((averageFloor - config.averageBase) * config.accuracyPerAveragePoint)
+                        + (accuracyRoll * config.accuracySpread)
                     : (isElite ? 8 + (accuracyRoll * 5) : 13 + (accuracyRoll * 5)),
                 averageFloor,
-                extraordinary
+                extraordinary,
+                averageModelVersion: config.version
             };
+        }
+
+        function normalizeAiPeakMatchPerformance(peak, candidate) {
+            if (!peak?.extraordinary || Number(peak.averageModelVersion) >= AI_PEAK_MATCH_CONFIG.version) return peak;
+            // Continue an already drawn old-save peak without rerolling it.
+            // Convert its stored rolls to the calibrated accuracy model.
+            const config = AI_PEAK_MATCH_CONFIG;
+            const overall = Number(candidate?.ovr ?? candidate?.overall) || 80;
+            const oldFloor = Number(peak.averageFloor) || 115;
+            const oldAverageRollSquared = clamp((oldFloor - 115) / 10, 0, 1);
+            const averageFloor = config.averageBase + config.averageRange
+                * Math.pow(oldAverageRollSquared, config.averagePower / 2);
+            const oldAccuracyRoll = clamp(((Number(peak.accuracyBoost) || 0)
+                - Math.max(0, 134 - overall) - (oldFloor - 115) * 1.8) / 3, 0, 1);
+            return { ...peak, averageFloor, averageModelVersion: config.version,
+                accuracyBoost: Math.max(0, config.accuracyBaseline - overall)
+                    + (averageFloor - config.averageBase) * config.accuracyPerAveragePoint
+                    + oldAccuracyRoll * config.accuracySpread };
+        }
+
+        function getAiQuickMatchPace(average, peak) {
+            const config = AI_PEAK_MATCH_CONFIG;
+            const ordinary = Math.max(average, peak?.extraordinary ? 0 : (peak?.averageFloor || 0));
+            // Smooth the upper tail of ordinary match-day form before
+            // generating leg pace, rather than editing the reported result.
+            const normalPace = ordinary > config.quickAverageKnee
+                ? config.quickAverageKnee + config.quickAverageTail
+                    * Math.tanh((ordinary - config.quickAverageKnee) / config.quickAverageTail)
+                : ordinary;
+            return Math.max(normalPace, peak?.extraordinary ? peak.averageFloor : 0);
+        }
+
+        function getAiQuickLegPaceVariation(variation, peak, average = AI_PEAK_MATCH_CONFIG.quickLegPaceFull) {
+            if (peak?.extraordinary) return variation;
+            const config = AI_PEAK_MATCH_CONFIG;
+            // Preserve ordinary leg variation and upset chances. Restrain
+            // the combination of an already exceptional pace and leg noise.
+            const weight = clamp((average - config.quickLegPaceKnee)
+                / (config.quickLegPaceFull - config.quickLegPaceKnee), 0, 1);
+            const bounded = config.quickLegPaceTail * Math.tanh(variation / config.quickLegPaceTail);
+            return variation + weight * (bounded - variation);
         }
 
         // Forma jest losowana raz na cały turniej. Dzięki temu niżej notowany gracz,
@@ -769,7 +852,14 @@
             if (!activeTournament || !Array.isArray(participants)) return;
 
             const profile = getTournamentSimulationProfile(activeTournament);
-            const rankedPlayers = [...pdcPlayers, player].sort((a, b) => (b.prizeMoney || 0) - (a.prizeMoney || 0));
+            // Main OOM earnings do not describe the favorites of a non-card tour.
+            const rankedPlayers = profile.key === 'challenge'
+                ? participants.filter(candidate => candidate && !candidate.isBye).slice().sort((a, b) => {
+                    const rating = candidate => Number(isCurrentPlayer(candidate)
+                        ? player.overall ?? player.ovr : candidate.ovr ?? candidate.overall) || 60;
+                    return rating(b) - rating(a);
+                })
+                : [...pdcPlayers, player].sort((a, b) => (b.prizeMoney || 0) - (a.prizeMoney || 0));
             const rankByKey = new Map(rankedPlayers.map((candidate, index) => [getSimulationPlayerKey(candidate), index + 1]));
             const simulationForm = {};
 

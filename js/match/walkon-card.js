@@ -1,7 +1,7 @@
 const WALKON_CARD_TRANSLATIONS = {
     pl: { age: 'Wiek', rank: 'Ranking OOM', seed: 'Rozstawienie', unseeded: '—', titles: 'Tytuły',
         careerTitles: 'Tytuły w tej karierze', best: 'Najlepszy wynik w sezonie', appearances: 'Występy w sezonie',
-        friendly: 'Mecz towarzyski', average: 'Rekord średniej', matches: 'Mecze w sezonie', skip: 'Pomiń zapowiedzi',
+        friendly: 'Mecz towarzyski', average: 'Rekord średniej', matches: 'Mecze w sezonie', skip: 'Pomiń oba wejścia', skipCurrent: 'Pomiń ten walk-on', playMusic: '▶ Włącz muzykę',
         season: 'Sezon {year}', winner: 'Zwycięzca', fullscreen: 'Pełny ekran', exitFullscreen: 'Zamknij pełny ekran',
         leagueTable: 'Tabela {league}', leaguePlayoffs: 'TOP 4 · play-offy', leagueColumns: 'Pkt · bilans legów',
         stakes: 'Stawka meczu', rivalry: 'Historia rywalizacji', groupMatch: 'Walka o wyjście z grupy',
@@ -17,7 +17,7 @@ const WALKON_CARD_TRANSLATIONS = {
         lastMeeting: 'Ostatnio: {event} · {score}', lastFinal: 'Ostatni wspólny finał: {event} · {score}' },
     en: { age: 'Age', rank: 'World ranking', seed: 'Seeding', unseeded: '—', titles: 'Titles',
         careerTitles: 'Titles in this career', best: 'Season best', appearances: 'Season appearances',
-        friendly: 'Exhibition match', average: 'Best average', matches: 'Season matches', skip: 'Skip walk-ons',
+        friendly: 'Exhibition match', average: 'Best average', matches: 'Season matches', skip: 'Skip both walk-ons', skipCurrent: 'Skip this walk-on', playMusic: '▶ Play music',
         season: 'Season {year}', winner: 'Winner', fullscreen: 'Full screen', exitFullscreen: 'Exit full screen',
         leagueTable: '{league} standings', leaguePlayoffs: 'TOP 4 · play-offs', leagueColumns: 'Pts · leg difference',
         stakes: 'Match stakes', rivalry: 'Head-to-head story', groupMatch: 'Group qualification at stake',
@@ -33,7 +33,7 @@ const WALKON_CARD_TRANSLATIONS = {
         lastMeeting: 'Last meeting: {event} · {score}', lastFinal: 'Last final together: {event} · {score}' },
     de: { age: 'Alter', rank: 'Weltrangliste', seed: 'Setzposition', unseeded: '—', titles: 'Titel',
         careerTitles: 'Titel in dieser Karriere', best: 'Bestes Saisonergebnis', appearances: 'Saisonteilnahmen',
-        friendly: 'Freundschaftsspiel', average: 'Bester Average', matches: 'Saisonspiele', skip: 'Walk-ons überspringen',
+        friendly: 'Freundschaftsspiel', average: 'Bester Average', matches: 'Saisonspiele', skip: 'Beide Walk-ons überspringen', skipCurrent: 'Diesen Walk-on überspringen', playMusic: '▶ Musik abspielen',
         season: 'Saison {year}', winner: 'Sieger', fullscreen: 'Vollbild', exitFullscreen: 'Vollbild verlassen',
         leagueTable: '{league}-Tabelle', leaguePlayoffs: 'TOP 4 · Play-offs', leagueColumns: 'Pkt · Leg-Differenz',
         stakes: 'Bedeutung des Spiels', rivalry: 'Direkter Vergleich', groupMatch: 'Kampf ums Weiterkommen in der Gruppe',
@@ -49,7 +49,7 @@ const WALKON_CARD_TRANSLATIONS = {
         lastMeeting: 'Letztes Duell: {event} · {score}', lastFinal: 'Letztes gemeinsames Finale: {event} · {score}' },
     nl: { age: 'Leeftijd', rank: 'Wereldranglijst', seed: 'Plaatsing', unseeded: '—', titles: 'Titels',
         careerTitles: 'Titels in deze carrière', best: 'Beste seizoensresultaat', appearances: 'Deelnames dit seizoen',
-        friendly: 'Oefenwedstrijd', average: 'Beste gemiddelde', matches: 'Seizoenwedstrijden', skip: 'Walk-ons overslaan',
+        friendly: 'Oefenwedstrijd', average: 'Beste gemiddelde', matches: 'Seizoenwedstrijden', skip: 'Beide walk-ons overslaan', skipCurrent: 'Deze walk-on overslaan', playMusic: '▶ Muziek afspelen',
         season: 'Seizoen {year}', winner: 'Winnaar', fullscreen: 'Volledig scherm', exitFullscreen: 'Volledig scherm sluiten',
         leagueTable: '{league}-stand', leaguePlayoffs: 'TOP 4 · play-offs', leagueColumns: 'Pnt · legverschil',
         stakes: 'Wedstrijdinzet', rivalry: 'Onderlinge historie', groupMatch: 'Strijd om doorgang uit de groep',
@@ -436,7 +436,9 @@ function renderWalkonPlayerCard(candidate) {
     set('walkon-appearances-label', data.appearancesLabel);
     set('walkon-appearances', data.appearances);
     set('walkon-season', data.season);
+    set('walkon-card-skip-current', trWalkonCard('skipCurrent'));
     set('walkon-card-skip', trWalkonCard('skip'));
+    set('walkon-card-play-music', trWalkonCard('playMusic'));
     if (typeof window !== 'undefined') window.walkonFullscreen?.refresh();
     setWalkonPlayerPhoto(candidate);
 }

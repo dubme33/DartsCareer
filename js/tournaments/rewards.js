@@ -154,6 +154,8 @@ function payCareerTournamentPrizeMoney(candidate, amount, tournament) {
             if (typeof recordSeasonArchivePrize === 'function') {
                 recordSeasonArchivePrize(p, amount, tName, {
                     countTowardsRankings: countTowardsRankings && !isSecondaryTourEvent
+                        && !(typeof getCareerEditorTour === 'function' && getCareerEditorTour(tournament)?.ranking !== undefined
+                            && getCareerEditorTour(tournament).ranking !== 'native')
                         && tournament?.rankingOverride !== false
                 });
             }
@@ -164,6 +166,7 @@ function payCareerTournamentPrizeMoney(candidate, amount, tournament) {
             if (typeof p.pcPrizeMoney !== 'number' || isNaN(p.pcPrizeMoney)) p.pcPrizeMoney = 0;
             if (typeof p.europeanTourPrizeMoney !== 'number' || isNaN(p.europeanTourPrizeMoney)) p.europeanTourPrizeMoney = 0;
 
+            if (typeof awardCareerTourPrizeMoney === 'function' && awardCareerTourPrizeMoney(p, amount, tournament, countTowardsRankings)) return;
             if (tournament?.rankingOverride === false) return;
 
             // Rising Stars Circuit posiada własną klasyfikację finansową. Nagrody

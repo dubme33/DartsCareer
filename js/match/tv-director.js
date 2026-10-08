@@ -648,7 +648,10 @@
         const state = ensureSession();
         if (!event?.side) return;
         const side = event.side;
-        if (!event.bounced && !event.bust && event.hit?.sector) state.visitHits[side].push({ sector: Number(event.hit.sector), mult: Number(event.hit.mult) });
+        if (event.knockedOutDartIndices?.length) state.visitHits[side] = state.visitHits[side]
+            .filter(hit => !event.knockedOutDartIndices.includes(hit.visitDartIndex));
+        if (!event.bounced && !event.bust && event.hit?.sector) state.visitHits[side].push({ sector: Number(event.hit.sector),
+            mult: Number(event.hit.mult), visitDartIndex: event.dartNumber - 1 });
 
         if (event.visitComplete) {
             const total = Number(event.visitScore) || 0;

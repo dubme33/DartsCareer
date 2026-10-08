@@ -127,6 +127,11 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
             return (Array.isArray(tournamentDatabase) ? tournamentDatabase : []).map(tournament => {
                 if (!isPlainObject(tournament)) return tournament;
                 const savedTournament = { ...tournament };
+                if (savedTournament.editorLeagueState?.teams) {
+                    savedTournament.editorLeagueState = { ...savedTournament.editorLeagueState,
+                        teams: savedTournament.editorLeagueState.teams.map(team => ({ ...team,
+                            players: team.players.map(getWorldCupPlayerSaveReference) })) };
+                }
                 if (savedTournament.editorTeamState?.teams) {
                     savedTournament.editorTeamState = { ...savedTournament.editorTeamState,
                         teams: savedTournament.editorTeamState.teams.map(team => ({ ...team,
@@ -147,6 +152,7 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
         }
 
         function buildGameState() {
+            if (typeof initializeAiDevelopmentFoundation === 'function') initializeAiDevelopmentFoundation();
             if (typeof removeRetiredRandomEmails === 'function') removeRetiredRandomEmails(unreadMailsCount);
             const hasActiveCompactHistory = Boolean(activeTournament
                 && typeof hasTournamentMatchHistory === 'function'
@@ -438,7 +444,7 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
                 const defaultKey = `${template.name}|${template.country}`;
                 for (let playerIndex = pdcPlayers.length - 1; playerIndex >= 0; playerIndex--) {
                     const candidate = pdcPlayers[playerIndex];
-                    if (candidate === replacement) continue;
+                    if (candidate === replacement || candidate?.isNewgen || candidate?.editorCreated) continue;
                     if (`${candidate?.name}|${candidate?.country}` === defaultKey) {
                         pdcPlayers.splice(playerIndex, 1);
                     }
@@ -448,6 +454,7 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
 
         function getPdcPlayerDuplicateKey(candidate) {
             if (!candidate || candidate.isBye) return '';
+            if ((candidate.isNewgen || candidate.editorCreated) && candidate.id) return `id:${candidate.id}`;
             if (typeof getCanonicalPlayerIdentityKey === 'function') {
                 return getCanonicalPlayerIdentityKey(candidate);
             }
@@ -584,6 +591,7 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
         }
 
         function migrateWorldCupCalendar() {
+            if (typeof isCareerEditorCalendarEmpty === 'function' && (isCareerEditorCalendarEmpty() || getCareerCalendarEditorState().tours.some(tour => tour.id === 'worldCup' && tour.removed))) return;
             const deletedKeys = new Set(Array.isArray(player?.tournamentEditorDeletedKeys)
                 ? player.tournamentEditorDeletedKeys : []);
             const existingWorldCup = tournamentDatabase.find(tournament => tournament.specialType === 'worldCup');
@@ -867,8 +875,10 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
                     syncPdc2026TournamentCalendar(tournamentDatabase, gameState.currentDate);
                 }
                 currentDate = new Date(gameState.currentDate);
+                if (typeof initializeAiDevelopmentFoundation === 'function') initializeAiDevelopmentFoundation(currentDate);
                 if (typeof initializeTournamentWatchSettings === 'function') initializeTournamentWatchSettings(player);
                 if (typeof initializeBounceOutSettings === 'function') initializeBounceOutSettings(player);
+                if (typeof initializeMatchBullOffSettings === 'function') initializeMatchBullOffSettings(player);
                 if (typeof initializeMatchIncidentSettings === 'function') initializeMatchIncidentSettings(player);
                 if (typeof initializePostMatchReportSetting === 'function') initializePostMatchReportSetting(player);
                 if (typeof normalizeSponsorGoals === 'function') normalizeSponsorGoals();
@@ -912,6 +922,9 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
                     ? resolveLoadedTournamentReference(savedTournament)
                     : null;
                 tournamentDatabase.forEach(event => {
+                    if (event.editorLeagueState?.teams) event.editorLeagueState.teams.forEach(team => {
+                        team.players = Array.isArray(team.players) ? team.players.map(reference => resolveLoadedPlayer(reference) || reference) : [];
+                    });
                     if (!event.editorTeamState?.teams) return;
                     event.editorTeamState.teams.forEach(team => {
                         team.players = Array.isArray(team.players) ? team.players.map(resolveLoadedPlayer).filter(Boolean) : [];
@@ -1323,6 +1336,10 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
             if (typeof renderPlayerStaffContextNotes === 'function') renderPlayerStaffContextNotes();
 
             document.getElementById('sponsor-count').innerText = player.activeSponsors.length;
+            const regularSponsorLimit = typeof getCareerRegularSponsorLimit === 'function' ? getCareerRegularSponsorLimit() : 3;
+            const sponsorLimitNode = document.getElementById('sponsor-limit');
+            if (sponsorLimitNode) sponsorLimitNode.innerText = regularSponsorLimit;
+            if (typeof refreshCareerDifficultyUI === 'function') refreshCareerDifficultyUI();
             const sortSelect = document.getElementById('sponsor-offer-sort');
             if (sortSelect) sortSelect.value = sponsorOfferSortMode;
 
@@ -1335,6 +1352,7 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
                     <div class="sponsor-info">
                         <p class="sponsor-name">${escapeHtml(s.name)}</p>
                         <p class="sponsor-details">${t('t-payout')} £${s.monthlyValue}/mc | ${s.months} ${t('t-months')}</p>
+                        ${renderSponsorMonthlyTaxNote(s)}
                         ${typeof renderSponsorGoalOffer === 'function' ? renderSponsorGoalOffer(s, index) : ''}
                     </div>
                 </div>`;
@@ -1349,6 +1367,7 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
                     <div class="sponsor-info">
                         <p class="sponsor-name">${escapeHtml(tech.name)}</p>
                         <p class="sponsor-details">${t('t-payout')} £${tech.monthlyValue}/mc | ${tech.months} ${t('t-months')}</p>
+                        ${renderSponsorMonthlyTaxNote(tech)}
                     </div>
                 </div>`;
             } else {
@@ -1359,12 +1378,16 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
             const offRegBox = document.getElementById('sponsor-offers-list');
             offRegBox.innerHTML = "";
             getSortedSponsorOffers(availableSponsorOffers).forEach(s => {
-                let btn = player.activeSponsors.length >= 3 ? `<button class="btn-sign" disabled style="background:gray;">Limit (3/3)</button>` : `<button class="btn-sign" onclick="signContract('${s.id}', 'regular')">${t('t-sign')}</button>`;
+                const limitText = typeof trCareerDifficulty === 'function' ? trCareerDifficulty('sponsorLimit', {
+                    count: player.activeSponsors.length, limit: regularSponsorLimit
+                }) : `Limit (${player.activeSponsors.length}/${regularSponsorLimit})`;
+                let btn = player.activeSponsors.length >= regularSponsorLimit ? `<button class="btn-sign" disabled style="background:gray;">${escapeHtml(limitText)}</button>` : `<button class="btn-sign" onclick="signContract('${s.id}', 'regular')">${t('t-sign')}</button>`;
                 offRegBox.innerHTML += `<div class="sponsor-card">
                     ${getSponsorLogoHTML(s.name)}
                     <div class="sponsor-info">
                         <p class="sponsor-name">${escapeHtml(s.name)}</p>
                         <p class="sponsor-details">${t('t-payout')} £${s.monthlyValue}/mc<br>${t('t-contract')} ${s.months} ${t('t-months')}</p>
+                        ${renderSponsorMonthlyTaxNote(s)}
                         ${s.goalBonusPercent && typeof trSponsorGoal === 'function' ? `<p class="sponsor-goal-note">${escapeHtml(trSponsorGoal('monthlyBoost', { percent: s.goalBonusPercent }))}</p>` : ''}
                         ${s.matchStorySponsorPercent && typeof formatMatchStorySponsorAssessment === 'function' ? `<p class="sponsor-goal-note">${escapeHtml(formatMatchStorySponsorAssessment(s.matchStorySponsorPercent))}</p>` : ''}
                         ${typeof renderSponsorGoalOffer === 'function' ? renderSponsorGoalOffer(s) : ''}
@@ -1383,6 +1406,7 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
                     <div class="sponsor-info">
                         <p class="sponsor-name">${escapeHtml(offer.name)}</p>
                         <p class="sponsor-details">${t('t-payout')} £${offer.monthlyValue}/mc<br>${t('t-contract')} ${offer.months} ${t('t-months')}</p>
+                        ${renderSponsorMonthlyTaxNote(offer)}
                     </div>
                     ${btn}
                 </div>`;
@@ -1397,7 +1421,8 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
             if (type === 'regular') {
                 let offerIndex = availableSponsorOffers.findIndex(o => o.id === id);
                 const offer = availableSponsorOffers[offerIndex];
-                if (!offer || player.activeSponsors.length >= 3 || player.activeSponsors.some(sponsor => sponsor.name === offer.name)) return false;
+                const limit = typeof getCareerRegularSponsorLimit === 'function' ? getCareerRegularSponsorLimit() : 3;
+                if (!offer || player.activeSponsors.length >= limit || player.activeSponsors.some(sponsor => sponsor.name === offer.name)) return false;
                 player.activeSponsors.push(offer);
                 if (typeof acceptSponsorGoal === 'function') acceptSponsorGoal(offer);
                 availableSponsorOffers.splice(offerIndex, 1);
@@ -1411,6 +1436,15 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
             alert(t('t-alert-contract'));
             showSponsorsScreen();
             return true;
+        }
+
+        function renderSponsorMonthlyTaxNote(contract) {
+            if (typeof getCareerSponsorPayment !== 'function') return '';
+            const payment = getCareerSponsorPayment(contract.monthlyValue);
+            if (!payment.rate) return '';
+            return `<p class="sponsor-goal-note">${escapeHtml(trCareerDifficulty('sponsorNet', {
+                rate: payment.rate * 100, net: formatCareerSponsorMoney(payment.net), tax: formatCareerSponsorMoney(payment.tax)
+            }))}</p>`;
         }
     
 // --- SYSTEM SKLEPU I SPRZĘTU ---
@@ -1908,21 +1942,27 @@ async function updateProfileWalkon(event) {
             resetMatchThrowGrouping(currentMatch);
             const groupingVisit = createThrowGroupingVisit();
             groupingVisit.side = isP1 ? 'p1' : 'p2';
+            const scoringDarts = { startScore, darts: [] };
 
             for (let i = 0; i < 3; i++) {
-                let aim = scoringVisit ? getAiScoringAim(currentScore, isDIDO, 3 - i, scoringVisit, opponentScore)
-                    : getOptimalAim(currentScore, isDIDO, 3 - i, opponentScore);
+                let aim = scoringVisit ? getAiScoringAim(currentScore, isDIDO, 3 - i, scoringVisit, opponentScore, pObj)
+                    : getOptimalAim(currentScore, isDIDO, 3 - i, opponentScore, pObj);
                 const throwStats = typeof applyMentalPressureToStats === 'function'
                     ? applyMentalPressureToStats(pObj, statsObj, isP1, aim, currentScore) : statsObj;
-                let result = calculateVisitThrow(aim.sector, aim.mult, throwStats, groupingVisit);
+                let result = calculateVisitThrow(aim.sector, aim.mult, throwStats, groupingVisit, currentScore);
+                const scoreBeforeThrow = currentScore;
+                const pointsRemoved = typeof removeKnockedOutVisitPoints === 'function'
+                    ? removeKnockedOutVisitPoints(currentMatch, isP1, scoringDarts, result, isDIDO) : 0;
+                currentScore += pointsRemoved;
+                turnScore -= pointsRemoved;
                 if (result.robinHood && typeof logThrow === 'function')
                     logThrow(`${pObj.name}: ${getRobinHoodText()}`, isP1 ? 'hit' : 'ai');
                 if (typeof recordMatchBounceOut === 'function' && recordMatchBounceOut(isP1, result)) {
-                    if (typeof logThrow === 'function') logThrow(`${pObj.name}: ${getBounceOutText().log}`, isP1 ? 'hit' : 'ai');
+                    if (typeof logThrow === 'function') logThrow(`${pObj.name}: ${typeof getBounceOutLog === 'function' ? getBounceOutLog(result) : getBounceOutText().log}`, isP1 ? 'hit' : 'ai');
                 }
                 if (scoringVisit) recordAiScoringObstruction(scoringVisit, aim, result, 3 - i);
-                if (typeof recordMatchReportDart === 'function') recordMatchReportDart(currentMatch, isP1, currentScore, aim, result);
-                if (typeof recordMentalThrowOutcome === 'function') recordMentalThrowOutcome(isP1, currentScore, aim, result);
+                if (typeof recordMatchReportDart === 'function') recordMatchReportDart(currentMatch, isP1, scoreBeforeThrow, aim, result);
+                if (typeof recordMentalThrowOutcome === 'function') recordMentalThrowOutcome(isP1, scoreBeforeThrow, aim, result);
                 let hitSec = result.sector;
                 let hitMult = result.mult;
                 let points = hitSec * hitMult;
@@ -1937,19 +1977,21 @@ async function updateProfileWalkon(event) {
                 if (isP1) {
                     st.p1TotalDarts++; st.p1LegDarts++;
                     if (st.p1LegDarts <= 9 && newScore >= 0) { st.p1First9Score += points; st.p1First9Darts++; }
-                    if (aim.mult === 2 && (currentScore <= 40 || (currentScore === 50 && aim.sector === 25))) {
+                    if (aim.mult === 2 && (scoreBeforeThrow <= 40 || (scoreBeforeThrow === 50 && aim.sector === 25))) {
                         st.p1DoubleAttempts++;
                         if (newScore === 0 && hitMult === 2) st.p1DoubleHits++;
                     }
                 } else {
                     st.p2TotalDarts++; st.p2LegDarts++;
                     if (st.p2LegDarts <= 9 && newScore >= 0) { st.p2First9Score += points; st.p2First9Darts++; }
-                    if (aim.mult === 2 && (currentScore <= 40 || (currentScore === 50 && aim.sector === 25))) {
+                    if (aim.mult === 2 && (scoreBeforeThrow <= 40 || (scoreBeforeThrow === 50 && aim.sector === 25))) {
                         st.p2DoubleAttempts++;
                         if (newScore === 0 && hitMult === 2) st.p2DoubleHits++;
                     }
                 }
 
+                scoringDarts.darts.push({ sector: hitSec, mult: hitMult, targetSector: aim.sector, targetMult: aim.mult,
+                    points, first9: st[`${isP1 ? 'p1' : 'p2'}LegDarts`] <= 9 && newScore >= 0 });
                 // Fura (Bust)
                 if (newScore < 0 || newScore === 1 || (newScore === 0 && hitMult !== 2)) {
                     bust = true;
@@ -2031,10 +2073,9 @@ async function updateProfileWalkon(event) {
                 checkAchievements('9darter');
             }
             
-            const initialStarter = currentMatch.startingPlayer;
-            if (initialStarter === 'p1' || initialStarter === 'p2') {
-                const legStarter = currentMatch.totalLegsPlayed % 2 === 0
-                    ? initialStarter : (initialStarter === 'p1' ? 'p2' : 'p1');
+            const legStarter = getMatchLegStarter(currentMatch);
+            currentMatch.completedLegStarter = legStarter;
+            if (legStarter) {
                 const winnerSide = isP1 ? 'p1' : 'p2';
                 if (winnerSide !== legStarter) {
                     if (!currentMatch.breaksOfThrow) currentMatch.breaksOfThrow = { p1: 0, p2: 0 };
@@ -2106,7 +2147,8 @@ async function updateProfileWalkon(event) {
                 const winningSide = isP1 ? 'p1' : 'p2';
                 currentMatch.doublesThrower[winningSide] = currentMatch.doublesThrower[winningSide] === 0 ? 1 : 0;
             }
-            currentMatch.turn = (currentMatch.totalLegsPlayed % 2 === 0) ? currentMatch.startingPlayer : (currentMatch.startingPlayer === 'p1' ? 'p2' : 'p1');
+            delete currentMatch.completedLegStarter;
+            currentMatch.turn = getMatchLegStarter(currentMatch);
             currentMatch.dartsThrown = 0; currentMatch.isTurnLocked = false; currentTurnScore = 0; drawnDarts = [];
         }
 

@@ -95,6 +95,7 @@ function getPrefix(m) { return m === 1 ? "" : (m === 2 ? "D" : "T"); }
 
         function animateBounceOutDart(result) {
             if (typeof window !== 'undefined' && window.matchBoard3D?.bounceOut(result)) return;
+            for (const dart of result.knockedOutBoardDarts || []) animateBounceOutDart({ boardPoint: dart });
             const canvas = document.getElementById('dartboard');
             if (!canvas?.parentElement || typeof canvas.getBoundingClientRect !== 'function') return;
             const boardRect = canvas.getBoundingClientRect(), parentRect = canvas.parentElement.getBoundingClientRect();
@@ -178,6 +179,8 @@ function getPrefix(m) { return m === 1 ? "" : (m === 2 ? "D" : "T"); }
             const dartStyle = result?.dartStyle || (typeof window !== 'undefined' && typeof window.getMatchDartLoadout === 'function'
                 ? window.getMatchDartLoadout(dartSide) : null);
             drawnDarts.push({ ...(result?.boardPoint || getDartboardHitPoint(hitSec, hitMult, targetSec, targetMult)),
+                visitDartIndex: result?.visitDartIndex,
+                ...(result?.robinHood ? { attachedToVisitDartIndex: drawnDarts.slice(-2)[result.collision?.obstacle]?.visitDartIndex } : {}),
                 color, dartSide, ...(dartStyle ? { dartStyle } : {}),
                 ...(result?.robinHood ? { robinHood: true } : {}),
                 ...(result?.dartPose ? { dartPose: result.dartPose } : {}), ...(result?.collision ? { collision: result.collision } : {}) });

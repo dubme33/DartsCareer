@@ -1,7 +1,7 @@
 const CAREER_DIFFICULTY_PROFILES = Object.freeze({
-    easy: Object.freeze({ growth: 1.25, decline: 0.75, sponsors: 1.25, prizeTax: 0 }),
-    normal: Object.freeze({ growth: 1, decline: 1, sponsors: 1, prizeTax: 0 }),
-    hard: Object.freeze({ growth: 0.75, decline: 1.25, sponsors: 0.75, prizeTax: 0.3 })
+    easy: Object.freeze({ growth: 1.25, decline: 0.75, sponsors: 1.25, prizeTax: 0, regularSponsorLimit: 3, sponsorTax: 0 }),
+    normal: Object.freeze({ growth: 1, decline: 1, sponsors: 1, prizeTax: 0, regularSponsorLimit: 3, sponsorTax: 0 }),
+    hard: Object.freeze({ growth: 0.75, decline: 1.25, sponsors: 0.75, prizeTax: 0.3, regularSponsorLimit: 2, sponsorTax: 0.3 })
 });
 
 const CAREER_DIFFICULTY_TEXT = Object.freeze({
@@ -10,28 +10,48 @@ const CAREER_DIFFICULTY_TEXT = Object.freeze({
         easy: 'Łatwy', normal: 'Normalny', hard: 'Trudny',
         easyDetails: 'Rozwój OVR +25% · spadki −25% · sponsorzy +25%',
         normalDetails: 'Dotychczasowy balans rozwoju, spadków i sponsorów',
-        hardDetails: 'Rozwój OVR −25% · spadki +25% · sponsorzy −25% · podatek od nagród turniejowych 30%'
+        hardDetails: 'Rozwój OVR −25% · spadki +25% · sponsorzy −25% · maks. 2 zwykłych sponsorów · podatek od wypłat sponsorskich i nagród turniejowych 30%',
+        sponsorRules: 'Limit zwykłych sponsorów: {limit} · podatek od miesięcznych wypłat sponsorów: {rate}%.',
+        sponsorLegacy: 'Wcześniej podpisane umowy pozostają ważne do wygaśnięcia.',
+        sponsorLimit: 'Limit ({count}/{limit})',
+        sponsorNet: 'Netto po podatku {rate}%: {net}/mies. · podatek: {tax}',
+        sponsorReceipt: 'Brutto: {gross} · podatek {rate}%: {tax} · na konto: {net}'
     },
     en: {
         label: 'Difficulty:', tileTitle: '🎚️ Difficulty', tileIntro: 'You can change it at any point in your career.',
         easy: 'Easy', normal: 'Normal', hard: 'Hard',
         easyDetails: 'OVR growth +25% · declines −25% · sponsors +25%',
         normalDetails: 'The existing balance for growth, declines and sponsors',
-        hardDetails: 'OVR growth −25% · declines +25% · sponsors −25% · tournament prize tax 30%'
+        hardDetails: 'OVR growth −25% · declines +25% · sponsors −25% · max. 2 regular sponsors · sponsorship payment and tournament prize tax 30%',
+        sponsorRules: 'Regular sponsor limit: {limit} · monthly sponsorship payment tax: {rate}%.',
+        sponsorLegacy: 'Previously signed contracts remain valid until they expire.',
+        sponsorLimit: 'Limit ({count}/{limit})',
+        sponsorNet: 'Net after {rate}% tax: {net}/month · tax: {tax}',
+        sponsorReceipt: 'Gross: {gross} · tax {rate}%: {tax} · credited: {net}'
     },
     de: {
         label: 'Schwierigkeitsgrad:', tileTitle: '🎚️ Schwierigkeitsgrad', tileIntro: 'Du kannst ihn jederzeit in deiner Karriere ändern.',
         easy: 'Leicht', normal: 'Normal', hard: 'Schwer',
         easyDetails: 'OVR-Entwicklung +25% · Rückgänge −25% · Sponsoren +25%',
         normalDetails: 'Bisherige Balance bei Entwicklung, Rückgängen und Sponsoren',
-        hardDetails: 'OVR-Entwicklung −25% · Rückgänge +25% · Sponsoren −25% · Steuer auf Turnierpreisgeld 30%'
+        hardDetails: 'OVR-Entwicklung −25% · Rückgänge +25% · Sponsoren −25% · max. 2 reguläre Sponsoren · Steuer auf Sponsorenzahlungen und Turnierpreisgeld 30%',
+        sponsorRules: 'Limit regulärer Sponsoren: {limit} · Steuer auf monatliche Sponsorenzahlungen: {rate}%.',
+        sponsorLegacy: 'Bereits unterzeichnete Verträge bleiben bis zum Ablauf gültig.',
+        sponsorLimit: 'Limit ({count}/{limit})',
+        sponsorNet: 'Netto nach {rate}% Steuer: {net}/Monat · Steuer: {tax}',
+        sponsorReceipt: 'Brutto: {gross} · Steuer {rate}%: {tax} · gutgeschrieben: {net}'
     },
     nl: {
         label: 'Moeilijkheid:', tileTitle: '🎚️ Moeilijkheid', tileIntro: 'Je kunt dit op elk moment in je carrière wijzigen.',
         easy: 'Makkelijk', normal: 'Normaal', hard: 'Moeilijk',
         easyDetails: 'OVR-groei +25% · dalingen −25% · sponsors +25%',
         normalDetails: 'De bestaande balans voor groei, dalingen en sponsors',
-        hardDetails: 'OVR-groei −25% · dalingen +25% · sponsors −25% · belasting op toernooiprijzen 30%'
+        hardDetails: 'OVR-groei −25% · dalingen +25% · sponsors −25% · max. 2 gewone sponsors · belasting op sponsorbetalingen en toernooiprijzen 30%',
+        sponsorRules: 'Limiet gewone sponsors: {limit} · belasting op maandelijkse sponsorbetalingen: {rate}%.',
+        sponsorLegacy: 'Eerder getekende contracten blijven geldig totdat ze aflopen.',
+        sponsorLimit: 'Limiet ({count}/{limit})',
+        sponsorNet: 'Netto na {rate}% belasting: {net}/maand · belasting: {tax}',
+        sponsorReceipt: 'Bruto: {gross} · belasting {rate}%: {tax} · ontvangen: {net}'
     }
 });
 
@@ -66,6 +86,26 @@ function getCareerDifficultySponsorMultiplier(candidate = typeof player !== 'und
 
 function getCareerDifficultyTournamentPrizeTaxRate(candidate = typeof player !== 'undefined' ? player : null) {
     return isCareerDifficultyPlayer(candidate) ? getCareerDifficultyProfile(player).prizeTax : 0;
+}
+
+function getCareerRegularSponsorLimit(candidate = typeof player !== 'undefined' ? player : null) {
+    return getCareerDifficultyProfile(candidate).regularSponsorLimit;
+}
+
+function getCareerSponsorPayment(amount, candidate = typeof player !== 'undefined' ? player : null) {
+    const gross = Number.isFinite(Number(amount)) ? Math.max(0, Number(amount)) : 0;
+    const rate = getCareerDifficultyProfile(candidate).sponsorTax;
+    const tax = Math.round(gross * rate * 100) / 100;
+    return { gross, rate, tax, net: tax ? Math.round((gross - tax) * 100) / 100 : gross };
+}
+
+function formatCareerSponsorMoney(amount) {
+    const locale = ({ pl: 'pl-PL', en: 'en-GB', de: 'de-DE', nl: 'nl-NL' })[typeof currentLang === 'string' ? currentLang : 'en'] || 'en-GB';
+    return '£' + Number(amount || 0).toLocaleString(locale, { maximumFractionDigits: 2 });
+}
+
+function trCareerDifficulty(key, values = {}) {
+    return String(getCareerDifficultyText()[key] || key).replace(/\{(\w+)\}/g, (_, name) => String(values[name] ?? ''));
 }
 
 function getCareerDifficultyText() {
@@ -109,6 +149,11 @@ function refreshCareerDifficultyUI() {
     const hubSelect = document.getElementById('hub-career-difficulty');
     if (hubSelect) hubSelect.value = getCareerDifficulty();
     setText('career-difficulty-current', text[`${getCareerDifficulty()}Details`]);
+    const sponsorLimit = getCareerRegularSponsorLimit();
+    setText('sponsor-limit', sponsorLimit);
+    setText('sponsor-difficulty-rules', trCareerDifficulty('sponsorRules', {
+        limit: sponsorLimit, rate: getCareerDifficultyProfile().sponsorTax * 100
+    }) + (typeof player !== 'undefined' && (player?.activeSponsors?.length || 0) > sponsorLimit ? ` ${text.sponsorLegacy}` : ''));
 }
 
 function syncCareerDifficultyInputs(value) {

@@ -270,7 +270,7 @@ function startMatch(vsAI) {
                 finishSpectatedTournamentMatch();
                 return;
             }
-            if (currentMatch?.isEditorTeamTournament && typeof finishEditorTeamTournamentMatch === 'function') {
+            if (currentMatch?.isEditorTeamTournament && currentMatch.isDoubles && typeof finishEditorTeamTournamentMatch === 'function') {
                 finishEditorTeamTournamentMatch();
                 return;
             }
@@ -324,6 +324,10 @@ function startMatch(vsAI) {
 
             // Przechodzimy do rozstrzygnięcia
             if (currentMatch.isTournament && activeTournament) {
+                if (currentMatch.isEditorTeamTournament && typeof finishEditorTeamTournamentMatch === 'function') {
+                    finishEditorTeamTournamentMatch();
+                    return;
+                }
                 if (typeof isGrandSlamCareerGroupMatch === 'function' && isGrandSlamCareerGroupMatch(currentMatch)) {
                     const grandSlamOutcome = finishGrandSlamCareerGroupMatch(isP1Winner, currentMatch);
                     currentMatch = null;

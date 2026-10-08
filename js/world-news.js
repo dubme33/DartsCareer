@@ -121,6 +121,8 @@ function trWorldNews(key, values = {}) {
 }
 
 function isWorldNewsEntryVisible(item) {
+    if (item.type === 'article' && item.topic === 'condition') return player?.hidePlayerFormNews !== true
+        || !['formUp','formDown','formEnded'].includes(item.data.facts?.kind);
     return player?.hidePlayerFormNews !== true || item.type !== 'condition'
         || !['formUp', 'formDown', 'formEnded'].includes(item.data?.kind);
 }
@@ -154,10 +156,11 @@ function changePlayerFormNewsSetting(value) {
 }
 
 function initWorldNews() {
-    if (!player.worldNews || player.worldNews.version !== 1) {
+    if (!player.worldNews || typeof player.worldNews !== 'object') {
         player.worldNews = { version: 1, since: currentDate.getTime(), entries: [], sequence: 0,
             leader: null, leaderInitialized: false, season: currentDate.getFullYear(), upsets: {}, youngPlayers: [] };
     }
+    if (typeof initializeWorldNewsRoom === 'function') initializeWorldNewsRoom(player.worldNews);
     return player.worldNews;
 }
 
@@ -211,6 +214,7 @@ function initializeWorldNews(reset = false) {
         state.leader = getWorldNewsLeader();
         state.leaderInitialized = true;
     }
+    if (typeof newsRoom === 'function' && state.leader?.id && !newsRoom().no1History.length) newsRoom().no1History.push(state.leader.id);
     worldNewsFilter = 'all';
     worldNewsVisibleCount = WORLD_NEWS_CONFIG.pageSize;
     updateWorldNewsBadge();
@@ -222,6 +226,10 @@ function restoreWorldNews() {
     const seen = new Set();
     const seenIds = new Set();
     state.entries = (Array.isArray(state.entries) ? state.entries : []).filter(item => {
+        if (typeof isModernWorldNewsRecord === 'function' && isModernWorldNewsRecord(item)) {
+            if (seen.has(item.key) || seenIds.has(item.id)) return false;
+            seen.add(item.key); seenIds.add(item.id); item.read = item.read === true; return true;
+        }
         if (!item || typeof item.key !== 'string' || !Number.isSafeInteger(item.id) || item.id < 1
             || !['upset', 'champion', 'youth', 'ranking', 'condition'].includes(item.type)
             || !Number.isFinite(item.timestamp) || !Number.isFinite(new Date(item.timestamp).getTime())
@@ -260,6 +268,7 @@ function restoreWorldNews() {
     reconnect(state.leader);
     state.entries.forEach(item => ['actor', 'opponent', 'previous'].forEach(role => reconnect(item.data[role])));
     state.youngPlayers = [...new Set(state.youngPlayers.map(key => migratedKeys.get(key) || key))];
+    if (typeof restoreWorldNewsRoom === 'function') restoreWorldNewsRoom(state);
     initializeWorldNews();
 }
 
@@ -267,6 +276,12 @@ function resetWorldNewsRankingBaseline() {
     const state = initWorldNews();
     state.leader = getWorldNewsLeader(state.leader);
     state.leaderInitialized = true;
+    if (typeof newsStandings === 'function') {
+        const rows = newsStandings(), room = newsRoom();
+        room.rankingBaseline = rows.map(row=>({id:newsId(row.person),rank:row.rank,money:row.money}));
+        room.lastRankingCheck = newsNow();
+        worldNewsRankingCache.delete(room);
+    }
 }
 
 function worldNewsSeasonState() {
@@ -295,6 +310,7 @@ function isWorldNewsSinglesEvent(tournament) {
 }
 
 function addWorldNews(type, key, data) {
+    if (typeof recordNewsroomLegacy === 'function') return recordNewsroomLegacy(type,key,data);
     const state = initWorldNews();
     if (state.entries.some(item => item.key === key)) return null;
     const item = { id: ++state.sequence, key, type, timestamp: currentDate.getTime(), data, read: false };
@@ -311,6 +327,7 @@ function worldNewsRating(candidate) {
 }
 
 function recordWorldNewsMatch(p1, p2, result, options, key) {
+    if (typeof recordNewsroomMatch === 'function') return recordNewsroomMatch(p1,p2,result,options,key);
     const tournament = options.tournament;
     if (!isWorldNewsSinglesEvent(tournament) || p1.isBye || p2.isBye) return;
     const firstWins = result.p1Score > result.p2Score;
@@ -330,6 +347,7 @@ function recordWorldNewsMatch(p1, p2, result, options, key) {
 }
 
 function recordWorldNewsTournament(candidate, tournament, result) {
+    if (typeof recordNewsroomTournament === 'function') return recordNewsroomTournament(candidate,tournament,result);
     if (!isWorldNewsSinglesEvent(tournament) || !worldNewsPerson(candidate)) return;
     const eventKey = worldNewsEventKey(tournament);
     if (result.won) {
@@ -362,6 +380,7 @@ function recordWorldNewsRankingChange(tournament = null) {
     const next = getWorldNewsLeader(previous);
     if (!state.leaderInitialized) { state.leader = next; state.leaderInitialized = true; return null; }
     state.leader = next;
+    if (typeof recordNewsroomRanking === 'function') return recordNewsroomRanking(tournament,previous,next);
     if (!next || worldNewsPersonKey(next) === worldNewsPersonKey(previous)) return null;
     return addWorldNews('ranking', `ranking:${currentDate.getTime()}:${tournament ? worldNewsEventKey(tournament) : 'day'}:${worldNewsPersonKey(previous)}:${worldNewsPersonKey(next)}`, {
         actor: next, previous, amount: next.amount, tournament: tournament ? worldNewsTournament(tournament) : null
@@ -378,6 +397,7 @@ function updateWorldNewsBadge() {
 }
 
 function getWorldNewsPresentation(item) {
+    if (typeof getModernWorldNewsPresentation === 'function') return getModernWorldNewsPresentation(item);
     const data = item.data;
     if (item.type === 'condition' && typeof getPlayerEventPresentation === 'function') {
         return { ...getPlayerEventPresentation(data.kind, data.event, data.actor?.name || ''), tournament: '' };
@@ -404,11 +424,13 @@ function worldNewsDate(timestamp) {
 }
 
 function getFilteredWorldNews() {
+    if (typeof getNewsroomFilteredArticles === 'function') return getNewsroomFilteredArticles();
     return getVisibleWorldNews().filter(item => worldNewsFilter === 'all'
         || (worldNewsFilter === 'unread' ? !item.read : item.type === worldNewsFilter));
 }
 
 function renderWorldNews() {
+    if (typeof renderWorldNewsPortal === 'function') return renderWorldNewsPortal();
     const list = document.getElementById('world-news-list');
     if (!list) return;
     const state = initWorldNews();
@@ -451,6 +473,18 @@ function updateWorldNewsStrings() {
         if (node) node.textContent = (id.endsWith('title') && key === 'title' ? '📰 ' : '') + trWorldNews(key)
             + (key === 'criteria' && typeof trPlayerEvents === 'function' ? ' ' + trPlayerEvents('rules') : '');
     }
+    const masthead=document.getElementById('world-news-title');if(masthead)masthead.textContent='DARTS WORLD NEWS';
+    if (typeof newsSay === 'function') {
+        const scope = document.getElementById('world-news-scope'), rules = document.getElementById('world-news-rules');
+        if (scope) scope.textContent = newsSay('The results, turning points and rivalries shaping your darts world.',
+            'Wyniki, przełomy i rywalizacje, które tworzą historię Twojego świata darta.',
+            'Ergebnisse, Wendepunkte und Rivalitäten aus deiner Dartswelt.',
+            'Resultaten, keerpunten en rivaliteiten uit jouw dartswereld.');
+        if (rules) rules.textContent = newsSay('Coverage follows confirmed results and official rankings. Important titles, upsets and career developments receive priority. Related events are combined; the season archive preserves the main stories.',
+            'Relacje opierają się na potwierdzonych wynikach i oficjalnych rankingach. Priorytet mają ważne tytuły, sensacje i przełomy kariery. Powiązane wydarzenia łączymy, a główne historie zachowuje archiwum sezonów.',
+            'Die Berichte folgen bestätigten Ergebnissen und offiziellen Ranglisten. Wichtige Titel, Überraschungen und Karriereentwicklungen haben Vorrang. Zusammengehörige Ereignisse werden gebündelt; das Saisonarchiv bewahrt die wichtigsten Geschichten.',
+            'Berichten volgen bevestigde resultaten en officiële ranglijsten. Belangrijke titels, verrassingen en carrièreontwikkelingen krijgen voorrang. Verwante gebeurtenissen worden gecombineerd; het seizoensarchief bewaart de belangrijkste verhalen.');
+    }
 }
 
 function refreshWorldNewsTranslations() {
@@ -460,8 +494,11 @@ function refreshWorldNewsTranslations() {
 }
 
 function showWorldNews(filter = 'all') {
-    worldNewsFilter = ['all', 'unread', 'upset', 'champion', 'youth', 'ranking', 'condition'].includes(filter) ? filter : 'all';
+    worldNewsFilter = ['all', 'unread', 'upset', 'champion', 'youth', 'ranking', 'condition',
+        ...(typeof DARTS_NEWS_CONFIG !== 'undefined' ? DARTS_NEWS_CONFIG.categories : [])].includes(filter) ? filter : 'all';
+    if (typeof consumeAiCareerNewsObservations === 'function') consumeAiCareerNewsObservations();
     worldNewsVisibleCount = WORLD_NEWS_CONFIG.pageSize;
+    if(typeof newsRouteId==='function')worldNewsArticleId=newsRouteId();
     updateWorldNewsStrings();
     renderWorldNews();
     showScreen('screen-world-news');
@@ -480,7 +517,7 @@ function returnToWorldNews() {
 
 function markWorldNewsRead() {
     if (typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy()) return false;
-    const entries = getVisibleWorldNews();
+    const entries = typeof getNewsroomArticles === 'function' ? getNewsroomArticles() : getVisibleWorldNews();
     if (!entries.some(item => !item.read)) return false;
     entries.forEach(item => { item.read = true; });
     renderWorldNews();
@@ -490,9 +527,11 @@ function markWorldNewsRead() {
 
 function openWorldNewsPlayer(id, role) {
     if (!['actor', 'opponent'].includes(role)) return false;
-    const person = initWorldNews().entries.find(item => item.id === id)?.data[role];
+    const entries = typeof getNewsroomArticles === 'function' ? getNewsroomArticles() : initWorldNews().entries;
+    const data = entries.find(item => item.id === id)?.data;
+    const person = (data?.facts || data)?.[role];
     if (!person) return false;
-    const candidate = resolveWorldNewsPerson(person);
+    const candidate = typeof newsStablePlayer==='function'?newsStablePlayer(person.id):resolveWorldNewsPerson(person);
     if (!candidate || typeof openPlayerProfile !== 'function') return false;
     openPlayerProfile(candidate.id, 'world-news');
     return true;

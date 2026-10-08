@@ -36,6 +36,7 @@ function getCrownMastersSearchableName(tournamentOrName) {
 
 function isCrownMastersTournament(tournamentOrName = (typeof activeTournament !== 'undefined' ? activeTournament : null)) {
     if (typeof hasTournamentEditorQualification === 'function' && hasTournamentEditorQualification(tournamentOrName)) return false;
+    if (typeof hasCareerTourEntryOverride === 'function' && hasCareerTourEntryOverride(tournamentOrName)) return false;
     const tournament = getCrownMastersCalendarTournament(tournamentOrName);
     if (tournament?.specialType === CROWN_MASTERS_TYPE) return true;
     const name = getCrownMastersSearchableName(tournamentOrName);
@@ -45,6 +46,7 @@ function isCrownMastersTournament(tournamentOrName = (typeof activeTournament !=
 
 function isCrownMastersQualifierTournament(tournamentOrName = (typeof activeTournament !== 'undefined' ? activeTournament : null)) {
     if (typeof hasTournamentEditorQualification === 'function' && hasTournamentEditorQualification(tournamentOrName)) return false;
+    if (typeof hasCareerTourEntryOverride === 'function' && hasCareerTourEntryOverride(tournamentOrName)) return false;
     const tournament = getCrownMastersCalendarTournament(tournamentOrName);
     if (tournament?.specialType === CROWN_MASTERS_QUALIFIER_TYPE) return true;
     const name = getCrownMastersSearchableName(tournamentOrName);

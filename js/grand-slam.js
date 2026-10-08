@@ -5,6 +5,7 @@ const GRAND_SLAM_KNOCKOUT_SEED_ORDER = [1, 16, 8, 9, 4, 13, 5, 12, 2, 15, 7, 10,
 
 function isGrandSlamTournament(tournament = activeTournament) {
     if (typeof hasTournamentEditorQualification === 'function' && hasTournamentEditorQualification(tournament)) return false;
+    if (typeof hasCareerTourEntryOverride === 'function' && hasCareerTourEntryOverride(tournament)) return false;
     // Nazwa kwalifikatora z moda również zawiera „Grand Slam”. Typ i
     // powiązanie z turniejem mają pierwszeństwo przed samą etykietą.
     if (!tournament || tournament.qualifierFor || tournament.specialType === 'pdcTourCardQualifier') return false;

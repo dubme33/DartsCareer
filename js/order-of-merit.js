@@ -113,6 +113,10 @@ function isMainOrderOfMeritRankingTournament(tournamentOrName) {
         : (typeof tournamentDatabase !== 'undefined' && Array.isArray(tournamentDatabase)
             ? tournamentDatabase.find(candidate => candidate?.name === tournamentOrName
                 || candidate?.sourceName === tournamentOrName) : null);
+    if (typeof getCareerEditorTour === 'function') {
+        const tour = getCareerEditorTour(editorTournament);
+        if (tour?.removed || tour && tour.ranking !== 'native') return false;
+    }
     if (typeof editorTournament?.rankingOverride === 'boolean') return editorTournament.rankingOverride;
     const displayName = getMainOomTournamentName(tournamentOrName).toLocaleLowerCase();
     const sourceName = getMainOomTournamentSourceName(tournamentOrName).toLocaleLowerCase();

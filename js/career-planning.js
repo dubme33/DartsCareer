@@ -125,6 +125,7 @@ function getPlanningRouteLabel(key) {
 }
 
 function getPlanningTournamentKind(tournament) {
+    if (typeof hasCareerTourEntryOverride === 'function' && hasCareerTourEntryOverride(tournament)) return 'editor';
     if (typeof hasTournamentEditorQualification === 'function' && hasTournamentEditorQualification(tournament)) return 'editor';
     if (!tournament || String(tournament.specialType || '').toLowerCase().includes('qualifier')) return '';
     if (typeof isCrownMastersTournament === 'function' && isCrownMastersTournament(tournament)) return 'crownMasters';
@@ -140,7 +141,7 @@ function getPlanningTournamentKind(tournament) {
 
 function buildQualificationPreview(tournament, candidates, referenceDate = currentDate, careerPlayer = player) {
     const year = referenceDate.getFullYear();
-    const all = uniquePdcTourCardPlayers(candidates);
+    const all = uniquePdcTourCardPlayers(candidates).filter(candidate => typeof isCareerEditorAccessEligible !== 'function' || isCareerEditorAccessEligible(tournament, candidate, referenceDate));
     const key = getPdcTourCardPlayerKey;
     const resolve = ids => resolvePdcTourCardPlayerKeys(ids, all);
     const kind = getPlanningTournamentKind(tournament);
@@ -158,7 +159,7 @@ function buildQualificationPreview(tournament, candidates, referenceDate = curre
                 ? `${typeof t === 'function' ? t(group.country || '') : group.country || ''} · ${trTournamentEditor(group.ranking || 'oom')}`
                 : qualifier?.name || trTournamentEditor(group.source);
         });
-        size = tournament.editorFieldSize;
+        size = typeof getCareerTourFieldSize === 'function' ? getCareerTourFieldSize(tournament) : tournament.editorFieldSize;
     } else if (kind === 'crownMasters') {
         const saved = tournament.crownMastersQualification;
         const state = typeof previewCrownMastersQualification === 'function'
@@ -339,7 +340,8 @@ function getPlanningTournaments() {
     const year = currentDate.getFullYear();
     return tournamentDatabase.map((tournament, index) => ({ tournament, index,
         date: new Date(year, tournament.month, tournament.day),
-        end: new Date(year, tournament.endMonth ?? tournament.month, tournament.endDay ?? tournament.day)
+        end: tournament.editorStructure?.league ? new Date(year, tournament.month, tournament.day)
+            : new Date(year, tournament.endMonth ?? tournament.month, tournament.endDay ?? tournament.day)
     })).filter(entry => !entry.tournament.completed && entry.end >= currentDate && getPlanningTournamentKind(entry.tournament))
         .sort((a, b) => a.date - b.date || a.index - b.index);
 }

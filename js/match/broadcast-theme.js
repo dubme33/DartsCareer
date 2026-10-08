@@ -67,6 +67,10 @@
             : (match.turn === 'p1' || match.turn === 'p2' ? match.turn : null);
         if (!initial) return null;
         const completedLegVisible = Number(match.p1Score) === 0 || Number(match.p2Score) === 0;
+        if (completedLegVisible && ['p1', 'p2'].includes(match.completedLegStarter)) return match.completedLegStarter;
+        if (typeof getMatchLegStarter === 'function' && (match.matchFormat?.type === 'sets' || !completedLegVisible)) {
+            return getMatchLegStarter(match);
+        }
         const completedLegs = Math.max(0, Math.floor(Number(match.totalLegsPlayed) || 0));
         const legIndex = Math.max(0, completedLegs - (completedLegVisible ? 1 : 0));
         if (legIndex % 2 === 0) return initial;

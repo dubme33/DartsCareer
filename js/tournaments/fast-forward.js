@@ -108,6 +108,10 @@ async function runTournamentSimulationSteps(steps, round, total, checkState) {
 }
 
 async function simulateTournamentRoundsInBatches(tournament) {
+    if ((tournament?.isEditorTournament === true
+        || typeof hasTournamentEditorQualification === 'function' && hasTournamentEditorQualification(tournament)
+        || typeof hasCareerTourEntryOverride === 'function' && hasCareerTourEntryOverride(tournament))
+        && !tournamentBracket.some(candidate => candidate && !candidate.isBye)) return 'emptyEditorTournament';
     let outcome = false;
     let simulatedRounds = 0;
     while (tournamentBracket.length > 1 && simulatedRounds < 16) {
@@ -279,6 +283,7 @@ function finishFastForwardedTournament({ announceWinner = false } = {}) {
 }
 
 function finishFastForwardedSpecialTournament(outcome) {
+    if (outcome === 'emptyEditorTournament') return closeEmptyEditorTournament({ preservePlayedRounds: true });
     const bracketModal = document.getElementById('bracket-modal');
     if (bracketModal) bracketModal.style.display = 'none';
     const resultsModal = document.getElementById('results-modal');
@@ -346,6 +351,10 @@ async function simulateRemainingTournament(options = {}) {
 }
 
 function finishHeadlessTournament(specialTournamentOutcome) {
+    if (specialTournamentOutcome === 'emptyEditorTournament') {
+        closeEmptyEditorTournament({ preservePlayedRounds: true });
+        return;
+    }
     if (specialTournamentOutcome === 'editorQualifier') {
         concludeTournamentEditorQualifier(false);
         return;
@@ -475,7 +484,9 @@ async function runTournamentSimulation(operation, { onRestored = () => showBrack
                 console.error('Nie udało się przywrócić stanu sprzed symulacji.', restoreError);
             }
         }
-        alert(t(safeToSave ? 't-simulation-error-restored' : 't-simulation-error-reload'));
+        const detail = String(error?.message || error || 'Error').replace(/\s+/g, ' ').slice(0, 400);
+        const recoveryHint = safeToSave ? `\n\n${t('t-simulation-error-recovery')}` : '';
+        alert(`${t(safeToSave ? 't-simulation-error-restored' : 't-simulation-error-reload')}${recoveryHint}\n\n${t('t-simulation-error-details')}: ${detail}`);
         return false;
     } finally {
         tournamentSimulationSaveBlocked = !safeToSave;

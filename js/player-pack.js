@@ -328,6 +328,7 @@ function applyPlayerPackDetails(candidate, entry) {
     candidate.traits = { ...(candidate.traits || {}), endurance: entry.endurance,
         consistency: entry.consistency, mental: entry.mental };
     if (typeof enforcePlayerRatingLimits === 'function') enforcePlayerRatingLimits(candidate);
+    if (typeof initializeAiDevelopmentCandidate === 'function') initializeAiDevelopmentCandidate(candidate, { ratingEdited: true });
 }
 function removePlayerPackDeletion(entry) {
     if (!Array.isArray(player?.editorDeletedPlayers)) return;
@@ -485,6 +486,7 @@ async function applyStagedPlayerPack() {
             }
         }
         if (typeof normalizePlayerIds === 'function') normalizePlayerIds(pdcPlayers, player);
+        if (typeof initializeAiDevelopmentFoundation === 'function') initializeAiDevelopmentFoundation();
         if (typeof invalidatePlayerLifecycleCache === 'function') invalidatePlayerLifecycleCache();
         if (typeof invalidatePlayerRankingCache === 'function') invalidatePlayerRankingCache();
         if (typeof renderOpponentOptions === 'function') renderOpponentOptions();

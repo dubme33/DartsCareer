@@ -90,16 +90,19 @@ function getWorldMastersSeasonYear() {
 }
 
 function isWorldMastersTournament(tournament = activeTournament) {
+    if (typeof hasCareerTourEntryOverride === 'function' && hasCareerTourEntryOverride(tournament)) return false;
     if (typeof hasTournamentEditorQualification === 'function' && hasTournamentEditorQualification(tournament)) return false;
     return Boolean(tournament && tournament.specialType === 'worldMasters');
 }
 
 function isWorldMastersFinalsTournament(tournament = activeTournament) {
+    if (typeof hasCareerTourEntryOverride === 'function' && hasCareerTourEntryOverride(tournament)) return false;
     if (typeof hasTournamentEditorQualification === 'function' && hasTournamentEditorQualification(tournament)) return false;
     return Boolean(tournament && tournament.specialType === 'worldMastersFinals');
 }
 
 function isWorldMastersFinalsQualifierTournament(tournament = activeTournament) {
+    if (typeof hasCareerTourEntryOverride === 'function' && hasCareerTourEntryOverride(tournament)) return false;
     if (typeof hasTournamentEditorQualification === 'function' && hasTournamentEditorQualification(tournament)) return false;
     return Boolean(tournament && tournament.specialType === 'worldMastersFinalsQualifier');
 }
@@ -655,6 +658,8 @@ function getWorldMastersFinalsField() {
 }
 
 function recordWorldMastersMatchResult(tournament, winner, loser, details = {}) {
+    const managed = typeof getCareerEditorTour === 'function' ? getCareerEditorTour(tournament) : null;
+    if (managed && (managed.removed || managed.ranking !== 'native')) return;
     if (!isWorldMastersTournament(tournament)) return;
     const event = getWorldMastersEvent(tournament);
     const field = ensureWorldMastersEventField(tournament);
@@ -797,6 +802,7 @@ function concludeWorldMastersFinalsQualifierEvent(showOutcome = true) {
 }
 
 function migrateWorldMastersCalendar() {
+            if (typeof isCareerEditorCalendarEmpty === 'function' && (isCareerEditorCalendarEmpty() || getCareerCalendarEditorState().tours.some(tour => tour.id === 'worldSeries' && tour.removed))) return;
     if (!Array.isArray(tournamentDatabase)) return;
     WORLD_MASTERS_CALENDAR.forEach(template => {
         if (typeof player !== 'undefined' && player?.tournamentEditorDeletedKeys?.includes(template.name)) return;

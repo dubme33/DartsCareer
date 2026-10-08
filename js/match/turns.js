@@ -50,7 +50,7 @@ function playerThrow() {
             }
             const throwStats = getCareerDartStats(aim, score);
             const result = calculateVisitThrow(targetSector, targetMultiplier, throwStats,
-                getMatchThrowGroupingVisit(currentMatch, true));
+                getMatchThrowGroupingVisit(currentMatch, true), score);
             processThrow(true, targetSector, targetMultiplier, result.sector, result.mult, result);
             return true;
         }
@@ -74,7 +74,7 @@ function playerThrow() {
                     || match.dartsThrown >= 3 || match.isTurnLocked) return;
                 const score = match.p1Score;
                 const isDoubleIn = Boolean(activeTournament && activeTournament.format === 'DIDO');
-                const aim = getOptimalAim(score, isDoubleIn, 3 - match.dartsThrown, match.p2Score);
+                const aim = getOptimalAim(score, isDoubleIn, 3 - match.dartsThrown, match.p2Score, player);
                 if (!aim || !throwCareerDart(aim.sector, aim.mult)) return;
                 simulated = true;
                 if (match.dartsThrown >= 3 || match.isTurnLocked) return;
@@ -103,18 +103,18 @@ function playerThrow() {
             let score = isP1 ? currentMatch.p1Score : currentMatch.p2Score;
             let isDIDO = activeTournament && activeTournament.format === 'DIDO';
             let dartsLeft = 3 - currentMatch.dartsThrown;
+            const aiPlayer = currentMatch.isDoubles
+                ? getDoublesCurrentThrower(isP1)
+                : (currentMatch.isSpectator && isP1 ? currentMatch.spectatorP1 : currentMatch.opponent);
             
             const scoringVisit = typeof getAiScoringVisit === 'function' ? getAiScoringVisit(currentMatch, isP1) : null;
             const opponentScore = isP1 ? currentMatch.p2Score : currentMatch.p1Score;
-            let aim = scoringVisit ? getAiScoringAim(score, isDIDO, dartsLeft, scoringVisit, opponentScore)
-                : getOptimalAim(score, isDIDO, dartsLeft, opponentScore);
+            let aim = scoringVisit ? getAiScoringAim(score, isDIDO, dartsLeft, scoringVisit, opponentScore, aiPlayer)
+                : getOptimalAim(score, isDIDO, dartsLeft, opponentScore, aiPlayer);
             if (typeof window !== 'undefined') {
                 window.matchTVDirector?.onAim({ side: isP1 ? 'p1' : 'p2', aim, score, dartNumber: currentMatch.dartsThrown + 1 });
             }
             
-            const aiPlayer = currentMatch.isDoubles
-                ? getDoublesCurrentThrower(isP1)
-                : (currentMatch.isSpectator && isP1 ? currentMatch.spectatorP1 : currentMatch.opponent);
             let aiStats = { ...aiPlayer };
             if (currentMatch.isTournament && !currentMatch.isDoubles && typeof getWorldMastersMatchRatings === 'function') {
                 aiStats = getWorldMastersMatchRatings(aiPlayer, aiStats);
@@ -133,7 +133,8 @@ function playerThrow() {
 
             if (typeof applyPlayerTraitsToMatchStats === 'function') aiStats = applyPlayerTraitsToMatchStats(aiPlayer, aiStats, isP1);
             if (typeof applyMentalPressureToStats === 'function') aiStats = applyMentalPressureToStats(aiPlayer, aiStats, isP1, aim, score);
-            let result = calculateVisitThrow(aim.sector, aim.mult, aiStats, getMatchThrowGroupingVisit(currentMatch, isP1));
+            let result = calculateVisitThrow(aim.sector, aim.mult, aiStats,
+                getMatchThrowGroupingVisit(currentMatch, isP1), score);
             if (scoringVisit) recordAiScoringObstruction(scoringVisit, aim, result, dartsLeft);
             processThrow(isP1, aim.sector, aim.mult, result.sector, result.mult, result);
         }
@@ -173,6 +174,7 @@ function playerThrow() {
                 };
                 if (typeof drawnDarts !== 'undefined') visit.physicsDarts = drawnDarts.map(dart => ({
                     x: dart.x, y: dart.y, dartPose: dart.dartPose, dartStyle: dart.dartStyle,
+                    visitDartIndex: dart.visitDartIndex, attachedToVisitDartIndex: dart.attachedToVisitDartIndex,
                     robinHood: dart.robinHood === true
                 }));
             }
@@ -192,8 +194,8 @@ function playerThrow() {
             return visit.streak >= 2 ? 12 : 8;
         }
 
-        function calculateVisitThrow(targetSector, targetMult, stats, visit) {
-            let result = calculateThrow(targetSector, targetMult, stats, visit);
+        function calculateVisitThrow(targetSector, targetMult, stats, visit, remainingScore = null) {
+            let result = calculateThrow(targetSector, targetMult, stats, visit, remainingScore);
             if (typeof dartPhysics !== 'undefined' && typeof getDartboardHitPoint === 'function') {
                 const point = getDartboardHitPoint(result.sector, result.mult, targetSector, targetMult);
                 const side = visit?.side || (typeof currentMatch !== 'undefined' ? currentMatch?.turn : 'p1');
@@ -203,6 +205,15 @@ function playerThrow() {
                     typeof areBounceOutsEnabled !== 'function' || areBounceOutsEnabled(), dartStyle);
             }
             if (typeof applyBounceOutToThrow === 'function') result = applyBounceOutToThrow(result, visit);
+            if (result.boardPoint) result = { ...result, visitDartIndex: visit?.dartsThrown || 0 };
+            if (typeof applyBounceOutKnockouts === 'function') {
+                result = applyBounceOutKnockouts(result, visit?.physicsDarts || []);
+                if (result.knockedOutDartIndices?.length && visit) {
+                    visit.physicsDarts = visit.physicsDarts.filter(dart => !result.knockedOutDartIndices.includes(dart.visitDartIndex));
+                    visit.bounceOutLandedDarts = (visit.bounceOutLandedDarts || [])
+                        .filter(dart => !result.knockedOutDartIndices.includes(dart.visitDartIndex));
+                }
+            }
             if (typeof dartPhysics !== 'undefined') dartPhysics.register(visit, result);
             if (visit) {
                 const hitTarget = isThrowGroupingTarget(targetSector, targetMult)
@@ -235,14 +246,25 @@ function playerThrow() {
         }
 
         function applyAiPeakMatchThrowStats(stats, isP1, match = currentMatch) {
-            const peak = !match?.isDoubles && (match?.isSpectator
+            const storedPeak = !match?.isDoubles && (match?.isSpectator
                 ? (isP1 ? match.p1PeakPerformance : match.p2PeakPerformance)
                 : (!isP1 ? match?.opponentPeakPerformance : null));
+            const candidate = match?.isSpectator && isP1 ? match.spectatorP1 : match?.opponent;
+            const peak = typeof normalizeAiPeakMatchPerformance === 'function'
+                ? normalizeAiPeakMatchPerformance(storedPeak, candidate) : storedPeak;
             return { ...stats, peakMatchAccuracyBoost: Number(peak?.accuracyBoost) || 0,
                 peakMatchIsExtraordinary: Boolean(peak?.extraordinary) };
         }
 
-        function getDoubleTargetHitChance(targetSector, stats, groupingVisit = null) {
+        const DOUBLE_DOUBLE_CHECKOUT_CONFIG = Object.freeze({ hitBonus: 16, maxHitChance: 95 });
+
+        function getDoubleDoubleCheckoutBonus(visit, targetSector, targetMult, remainingScore) {
+            if (targetMult !== 2 || !Number.isFinite(remainingScore) || remainingScore !== targetSector * 2
+                || getThrowGroupingBonus(visit, targetSector, targetMult) === 0) return 0;
+            return DOUBLE_DOUBLE_CHECKOUT_CONFIG.hitBonus;
+        }
+
+        function getDoubleTargetHitChance(targetSector, stats, groupingVisit = null, remainingScore = null) {
             // Wyższe limity dotyczą wyłącznie wylosowanego wybitnego meczu AI.
             const extraordinary = stats.peakMatchIsExtraordinary === true;
             const hitLimit = extraordinary ? 75 : 57;
@@ -250,10 +272,14 @@ function playerThrow() {
             const base = clamp(stat * 0.45 + getFavoriteDoubleHitBonus(targetSector, 2, stats), 12, hitLimit);
             const training = typeof getDoubleTrainingHitBonus === 'function'
                 ? getDoubleTrainingHitBonus(targetSector, 2, stats) : 0;
-            return Math.min(hitLimit, base + getThrowGroupingBonus(groupingVisit, targetSector, 2)) + training;
+            // The normal cap remains unchanged. A confirmed same-double
+            // checkout gains only the bounded contextual bonus above it.
+            const checkoutBonus = getDoubleDoubleCheckoutBonus(groupingVisit, targetSector, 2, remainingScore);
+            return Math.min(DOUBLE_DOUBLE_CHECKOUT_CONFIG.maxHitChance,
+                Math.min(hitLimit, base + getThrowGroupingBonus(groupingVisit, targetSector, 2)) + training + checkoutBonus);
         }
 
-        function calculateThrow(targetSector, targetMult, stats, groupingVisit = null) {
+        function calculateThrow(targetSector, targetMult, stats, groupingVisit = null, remainingScore = null) {
             const extraordinary = stats.peakMatchIsExtraordinary === true;
             // Dedykowana logika dla środka tarczy (Outer / Inner Bull)
             if (targetSector === 25) {
@@ -265,7 +291,8 @@ function playerThrow() {
                     // Celowanie w 50 (Inner Bull)
                     const bullHitLimit = extraordinary ? 65 : 45;
                     const baseBullHitChance = clamp(stat * 0.35, 10, bullHitLimit);
-                    const bullHitChance = Math.min(bullHitLimit, baseBullHitChance + getThrowGroupingBonus(groupingVisit, targetSector, targetMult));
+                    const bullHitChance = Math.min(bullHitLimit, baseBullHitChance + getThrowGroupingBonus(groupingVisit, targetSector, targetMult))
+                        + getDoubleDoubleCheckoutBonus(groupingVisit, targetSector, targetMult, remainingScore);
                     // Celność czerwonego środka pozostaje bez zmian. Większa
                     // część jego pudeł trafia jednak w bezpośrednio otaczający
                     // Outer Bull, zamiast przeskakiwać od razu do dużego singla.
@@ -318,7 +345,7 @@ function playerThrow() {
                 }
             } else if (targetMult === 2) {
                 const baseDoubleHitChance = clamp(stat * 0.45 + favoriteDoubleBonus, 12, extraordinary ? 75 : 57);
-                const doubleHitChance = getDoubleTargetHitChance(targetSector, stats, groupingVisit);
+                const doubleHitChance = getDoubleTargetHitChance(targetSector, stats, groupingVisit, remainingScore);
                 
                 // Bonus zamienia część singli w double, bez zmiany szansy na dalsze pudła.
                 const targetSingleChance = Math.min(90, baseDoubleHitChance + 25);

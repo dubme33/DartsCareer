@@ -1,6 +1,6 @@
 // Stored on the career player, independently of annual calendar/stat resets.
 const CAREER_RECORDS_VERSION = 2;
-const HISTORICAL_CHAMPIONS_VERSION = 2;
+const HISTORICAL_CHAMPIONS_VERSION = 3;
 const CAREER_HISTORY_LAST_REAL_SEASON = 2025;
 const CAREER_HEAD_TO_HEAD_PACKED_FORMAT = 'indexed-v1';
 let careerRecordsInitializing = false;
@@ -183,9 +183,7 @@ function getHistoricalChampionProfile(historicalId) {
 function findHistoricalChampionPlayer(historicalId) {
     const profile = getHistoricalChampionProfile(historicalId);
     if (!profile) return null;
-    const aliases = new Set([profile.name, ...(profile.aliases || [])].map(normalizeHistoricalChampionName));
-    return getCareerProfilePlayers().find(candidate => [candidate?.name, candidate?.sourceName]
-        .some(name => aliases.has(normalizeHistoricalChampionName(name)))) || null;
+    return getCareerProfilePlayers().find(candidate => playerMatchesHistoricalChampion(candidate, historicalId)) || null;
 }
 
 function buildHistoricalIndividualChampion(historicalId, edition) {
@@ -232,6 +230,13 @@ function normalizeHistoricalEdition(rawEdition, team) {
 function findHistoricalCareerTournament(history) {
     if (typeof tournamentDatabase === 'undefined' || !Array.isArray(tournamentDatabase)) return null;
     const target = normalizeHistoricalChampionName(history.tournament);
+    if (history.sourceName?.startsWith('European Tour: ')) {
+        // Numbered calendar slots do not identify the same event across years.
+        // Match only a named ET event, never a newer World Series namesake.
+        return tournamentDatabase.find(event => typeof isEuropeanTourTournament === 'function'
+            && isEuropeanTourTournament(event) && isCareerChampionship(event)
+            && [event?.name, event?.sourceName].some(name => normalizeHistoricalChampionName(name) === target)) || null;
+    }
     return tournamentDatabase.find(event => history.specialType && event?.specialType === history.specialType)
         || tournamentDatabase.find(event => [event?.name, event?.sourceName]
             .some(name => normalizeHistoricalChampionName(name) === target))
@@ -249,7 +254,9 @@ function seedHistoricalCareerChampions(records) {
         });
     });
     historicalTournamentChampions.forEach(history => {
-        const event = findHistoricalCareerTournament(history);
+        const event = findHistoricalCareerTournament(history)
+            || (history.sourceName?.startsWith('European Tour: ')
+                ? { name: history.tournament, sourceName: history.sourceName } : null);
         if (!event || !isCareerChampionship(event)) return;
         const titleData = getPlayerCareerTitleData(event);
         const eventKey = JSON.stringify(titleData.key);
@@ -258,7 +265,8 @@ function seedHistoricalCareerChampions(records) {
         if (!Array.isArray(entry.conflicts)) entry.conflicts = [];
         (history.editions || []).forEach(rawEdition => {
             const edition = normalizeHistoricalEdition(rawEdition, history.team);
-            if (!edition || !Number.isInteger(edition.year) || edition.year < 1900 || edition.year > 2100) return;
+            if (!edition || !Number.isInteger(edition.year) || edition.year < 1900
+                || edition.year > CAREER_HISTORY_LAST_REAL_SEASON) return;
             if (entry.conflicts.includes(edition.year) || entry.editions[String(edition.year)] || entry.editions[edition.editionKey]) return;
             const champion = history.team
                 ? buildHistoricalTeamChampion(edition)

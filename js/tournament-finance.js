@@ -171,7 +171,10 @@ function getTournamentPrizePreview(tournament) {
     // Match awardPrizeMoney's non-ranking branches before checking OOM helpers.
     const series = typeof isWorldMastersName === 'function' && isWorldMastersName(name)
         && !crownMasters && !crownMastersQualifier;
-    if (event.rankingOverride === false) {
+    const managedTour = typeof getCareerEditorTour === 'function' ? getCareerEditorTour(event) : null;
+    if (managedTour && managedTour.ranking !== 'native') {
+        if (!managedTour.removed && managedTour.ranking === 'own' && event.rankingOverride !== false) rankings.push(managedTour.name);
+    } else if (event.rankingOverride === false) {
         // Explicitly non-ranking events still pay cash, but never enter an OOM.
     } else if (developmentTour) {
         rankings.push('Future Champions OOM');

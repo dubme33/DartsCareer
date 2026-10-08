@@ -101,7 +101,7 @@ function getScoringSetupAim(score, dartsLeft) {
     return { sector: 20, mult: 3 };
 }
 
-function getOptimalAim(score, isDIDO, dartsLeft = 3, opponentScore) {
+function getStandardAiAim(score, isDIDO, dartsLeft = 3, opponentScore) {
     const normalizedScore = Math.max(0, Math.floor(Number(score) || 0));
     const normalizedDartsLeft = Math.max(1, Math.min(3, Math.floor(Number(dartsLeft) || 1)));
     const attackBull = shouldAiAttackBull(opponentScore);
@@ -143,6 +143,116 @@ function getOptimalAim(score, isDIDO, dartsLeft = 3, opponentScore) {
     return getScoringSetupAim(normalizedScore, normalizedDartsLeft);
 }
 
+const AI_CHECKOUT_TACTICS_CONFIG = Object.freeze({
+    preferredFinishWeights: Object.freeze([8, 4, 1]),
+    bestRouteChance: 0.8,
+    alternativeWindow: 2,
+    openingPointsWeight: 0.025,
+    singleSetupBonus: 2,
+    trebleOpeningBonus: 2,
+    standardRouteBonus: 0.4,
+    sameDoubleChanceByPreference: Object.freeze([0.55, 0.42, 0.30]),
+    otherPopularDoubleChance: 0.18,
+    otherDoubleChance: 0.04,
+    minDoubleDoubleScore: 64,
+    maxDoubleDoubleScore: 80
+});
+const aiCheckoutRouteCache = new Map();
+
+function getAiAimFavoriteDoubles(stats) {
+    if (typeof getPlayerFavoriteDoubles === 'function') return getPlayerFavoriteDoubles(stats);
+    const values = Array.isArray(stats?.favoriteDoubles) ? stats.favoriteDoubles.slice(0, 3) : [];
+    if (stats?.favoriteDouble != null) values[0] = stats.favoriteDouble;
+    const used = new Set();
+    return Array.from({ length: 3 }, (_, index) => {
+        const value = Number(values[index]);
+        if (!Number.isInteger(value) || value < 1 || value > 20 || used.has(value)) return null;
+        used.add(value); return value;
+    });
+}
+
+function getAiCheckoutRoutes(score, dartsLeft) {
+    const key = `${score}|${dartsLeft}`;
+    if (aiCheckoutRouteCache.has(key)) return aiCheckoutRouteCache.get(key);
+    // Singles, outer bull and normal trebles. Doubles used as scoring targets
+    // belong only to the explicit two-dart double-double choice below.
+    const preparations = [
+        ...Array.from({ length: 20 }, (_, i) => ({ sector: i + 1, mult: 1 })),
+        { sector: 25, mult: 1 },
+        ...Array.from({ length: 11 }, (_, i) => ({ sector: i + 10, mult: 3 }))
+    ];
+    const byPoints = new Map(preparations.map(aim => [aim.sector * aim.mult, aim]));
+    const routes = [];
+    for (let finish = 1; finish <= 20; finish++) {
+        const remaining = score - finish * 2;
+        const first = byPoints.get(remaining);
+        if (first) routes.push({ aim: first, finish, darts: 2 });
+        if (dartsLeft < 3) continue;
+        for (const opening of preparations) {
+            const second = byPoints.get(remaining - opening.sector * opening.mult);
+            if (second) routes.push({ aim: opening, finish, darts: 3 });
+        }
+    }
+    // A favourite never adds an unnecessary dart to an ordinary double finish.
+    const minimumDarts = routes.length ? Math.min(...routes.map(route => route.darts)) : 0;
+    let efficient = routes.filter(route => route.darts === minimumDarts);
+    // On 41–60, do not replace an easy single -> double with a treble to
+    // reach a favourite (or merely to add variation). 60 stays S20 -> D20.
+    if (score <= 60) {
+        const simple = efficient.filter(route => route.darts === 2 && route.aim.mult === 1 && route.aim.sector <= 20);
+        if (simple.length) efficient = simple;
+    }
+    aiCheckoutRouteCache.set(key, efficient);
+    return efficient;
+}
+
+function chooseAiPreferredRoute(routes, favorites, standardAim, random) {
+    const bestByAim = new Map();
+    for (const route of routes) {
+        const preference = favorites.indexOf(route.finish);
+        const score = (AI_CHECKOUT_TACTICS_CONFIG.preferredFinishWeights[preference] || 0)
+            + route.aim.sector * route.aim.mult * AI_CHECKOUT_TACTICS_CONFIG.openingPointsWeight
+            + (route.darts === 2 && route.aim.mult === 1 ? AI_CHECKOUT_TACTICS_CONFIG.singleSetupBonus : 0)
+            + (route.darts === 3 && route.aim.mult === 3 ? AI_CHECKOUT_TACTICS_CONFIG.trebleOpeningBonus : 0)
+            + (route.aim.sector === standardAim?.sector && route.aim.mult === standardAim?.mult ? AI_CHECKOUT_TACTICS_CONFIG.standardRouteBonus : 0);
+        const key = `${route.aim.sector}|${route.aim.mult}`;
+        if (!bestByAim.has(key) || bestByAim.get(key).score < score) bestByAim.set(key, { ...route, score });
+    }
+    const choices = [...bestByAim.values()].sort((a, b) => b.score - a.score);
+    if (!choices.length) return standardAim;
+    const alternatives = choices.slice(1).filter(route => route.score >= choices[0].score - AI_CHECKOUT_TACTICS_CONFIG.alternativeWindow);
+    if (!alternatives.length || random() < AI_CHECKOUT_TACTICS_CONFIG.bestRouteChance) return { ...choices[0].aim };
+    const alternative = alternatives[Math.min(alternatives.length - 1, Math.floor(random() * alternatives.length))];
+    return { ...alternative.aim };
+}
+
+function getOptimalAim(score, isDIDO, dartsLeft = 3, opponentScore, stats = null, random = Math.random) {
+    const standardAim = getStandardAiAim(score, isDIDO, dartsLeft, opponentScore);
+    // Route previews and callers without a player keep the canonical guide.
+    if (!stats) return standardAim;
+    const remaining = Math.max(0, Math.floor(Number(score) || 0));
+    const darts = Math.max(1, Math.min(3, Math.floor(Number(dartsLeft) || 1)));
+    const favorites = getAiAimFavoriteDoubles(stats);
+    if (isDIDO && remaining === 501) return { sector: favorites.find(value => value != null) || 20, mult: 2 };
+    if (getOneDartCheckoutAim(remaining) || (remaining === 50 && darts === 1 && shouldAiAttackBull(opponentScore))) return standardAim;
+
+    if (darts === 2 && remaining >= AI_CHECKOUT_TACTICS_CONFIG.minDoubleDoubleScore
+        && remaining <= AI_CHECKOUT_TACTICS_CONFIG.maxDoubleDoubleScore && remaining % 4 === 0) {
+        const double = remaining / 4;
+        const preference = favorites.indexOf(double);
+        const chance = AI_CHECKOUT_TACTICS_CONFIG.sameDoubleChanceByPreference[preference]
+            ?? ([16, 18, 20].includes(double) ? AI_CHECKOUT_TACTICS_CONFIG.otherPopularDoubleChance : AI_CHECKOUT_TACTICS_CONFIG.otherDoubleChance);
+        if (random() < chance) return { sector: double, mult: 2 };
+    }
+    // Preserve the rescue single -> bull under real checkout pressure.
+    if (darts === 2 && remaining >= 61 && remaining <= 70 && shouldAiAttackBull(opponentScore)) return standardAim;
+    if (remaining > 170 || remaining < 3 || AI_BOGEY_SCORES.has(remaining)) return standardAim;
+    // Important bull-led routes (e.g. 132) keep their tactical pressure logic.
+    if (standardAim?.sector === 25 && standardAim.mult === 2 && remaining !== 50) return standardAim;
+    const routes = getAiCheckoutRoutes(remaining, Math.max(2, darts));
+    return chooseAiPreferredRoute(routes, favorites, standardAim, random);
+}
+
 function createAiScoringVisit() {
     return { blockedTriples: [], dartsThrown: 0 };
 }
@@ -158,8 +268,8 @@ function getAiScoringVisit(match, isP1) {
     return visit;
 }
 
-function getAiScoringAim(score, isDIDO, dartsLeft, visit, opponentScore) {
-    const aim = getOptimalAim(score, isDIDO, dartsLeft, opponentScore);
+function getAiScoringAim(score, isDIDO, dartsLeft, visit, opponentScore, stats = null, random = Math.random) {
+    const aim = getOptimalAim(score, isDIDO, dartsLeft, opponentScore, stats, random);
     // Checkouty, podwójne otwierające i konkretne ustawienia mają pierwszeństwo
     // przed zmianą sektora. Pierwsza lotka nie ma jeszcze czego omijać.
     if (dartsLeft >= 3 || score <= 170 || aim.mult !== 3

@@ -361,6 +361,10 @@ function getPlayerCareerTitles(candidate) {
 function playerMatchesHistoricalChampion(candidate, historicalId) {
     if (!candidate || candidate.isBye || !historicalId
         || typeof historicalChampionProfiles === 'undefined') return false;
+    // A debutant or custom player is not the original champion, even when
+    // they share a name. Historical titles belong to the database identity.
+    if (candidate.isNewgen || candidate.editorCreated || candidate.kind === 'custom'
+        || /^(?:newgen|editor)-/.test(String(candidate.id || ''))) return false;
     const profile = historicalChampionProfiles?.[historicalId];
     if (!profile) return false;
     const normalize = typeof normalizeHistoricalChampionName === 'function'
@@ -385,7 +389,7 @@ function getHistoricalPlayerCareerTitles(candidate) {
             : null;
         const titleData = getPlayerCareerTitleData(tournament || {
             name: history.tournament,
-            sourceName: history.tournament,
+            sourceName: history.sourceName || history.tournament,
             specialType: history.specialType || ''
         });
         (history.editions || []).forEach(rawEdition => {
@@ -459,6 +463,7 @@ function getPlayerCareerTitleSeries(title) {
     const names = `${tournament.name} ${tournament.sourceName || ''} ${tournament.specialType || ''}`;
     // Finals and qualifiers stay separate from the series win counters.
     if (/final|play[\s-]*off|qualifier|kwalifikac|q-school|qschool/i.test(names)) return null;
+    if (title.sourceName?.startsWith('European Tour: ')) return 'European Tour';
     if (getPlayerCareerTitlePremierLeagueStage(tournament) === 'night') {
         return 'Premier League - Nights';
     }
@@ -596,6 +601,7 @@ function recordSeasonTournamentResult(candidate, tournament, details = {}) {
         if (typeof initializePlayerTraits === 'function') initializePlayerTraits(candidate);
     }
     if (typeof recordWorldNewsTournament === 'function') recordWorldNewsTournament(candidate, tournament, result);
+    if (typeof recordAiCareerTournamentEvidence === 'function') recordAiCareerTournamentEvidence(candidate, tournament, result);
     return result;
 }
 
@@ -739,6 +745,7 @@ function openPlayerProfile(playerId, rankingType = 'main') {
     ${typeof renderPlayerEventProfile === 'function' ? renderPlayerEventProfile(selectedPlayer) : ''}
     ${typeof renderPlayerTraitProfile === 'function' ? renderPlayerTraitProfile(selectedPlayer) : ''}
     ${typeof renderPlayerMatchStatistics === 'function' ? renderPlayerMatchStatistics(selectedPlayer) : ''}
+    ${typeof renderWorldNewsTimeline === 'function' ? renderWorldNewsTimeline(selectedPlayer) : ''}
     <section class="profile-panel">
         <h3>${trPlayerProfile('highlights', { year: stats.year })}</h3>
         <ul class="profile-list">${highlightsMarkup}</ul>

@@ -72,8 +72,40 @@
 .tournament-editor-status.is-error { color: #ffaaa8; }
 .tournament-editor-actions { justify-content: flex-end; }
 .tournament-editor-actions button { padding: 10px 17px; }
+.career-calendar-manager { padding: 18px 26px; border-bottom: 1px solid #365269; background: #0e273b; }
+.career-editor-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+.career-editor-toolbar h3 { margin: 0 0 5px; }
+.career-calendar-manager p { color: #b9d0de; font-size: 12px; line-height: 1.5; margin: 8px 0 12px; }
+.career-editor-managers { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: start; gap: 16px; margin-top: 15px; }
+.career-editor-managers details { padding: 14px; border: 1px solid #42647b; border-radius: 8px; background: #102e45; min-width: 0; }
+.career-editor-managers summary { cursor: pointer; font-weight: 800; }
+.career-editor-managers details > select { margin: 14px 0; }
+.career-editor-managers select, .career-editor-managers input:not([type="checkbox"]) { width: 100%; box-sizing: border-box; min-width: 0; padding: 9px; background: #0a1a2b; color: #fff; border: 1px solid #55738a; border-radius: 6px; font: inherit; }
+.career-editor-managers label { display: grid; gap: 6px; color: #cbdde9; font-size: 12px; font-weight: 700; margin-bottom: 9px; }
+.career-editor-managers option { padding: 4px; }
+.career-editor-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+.career-editor-actions button, #te-clear-calendar { padding: 9px 12px; }
+.career-editor-managers [hidden], #te-round-formats[hidden], .career-tour-ranking-buttons button[hidden] { display: none !important; }
+#te-clear-calendar, .ce-danger { background: #702735 !important; border-color: #a84a59 !important; }
+#ce-status { color: #9feac3; min-height: 18px; }
+#ce-status.is-error { color: #ffaaa8; }
+.career-tour-ranking-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+.career-tour-ranking-buttons button { flex: 1 1 150px; padding: 10px; margin: 8px 0; }
+#screen-pdc button[hidden] { display: none !important; }
+.career-tour-ranking { width: 100%; border-collapse: collapse; text-align: left; }
+.career-tour-ranking th, .career-tour-ranking td { padding: 10px; border-bottom: 1px solid #365269; }
+@media (max-width: 700px) {
+    .career-calendar-manager { padding: 16px; }
+    .career-editor-managers { grid-template-columns: minmax(0, 1fr); }
+    .career-editor-toolbar { align-items: stretch; flex-direction: column; }
+}
 #tournament-editor-delete { margin-right: auto; background: #702735 !important; border-color: #a84a59 !important; }
 #tournament-editor-save { background: #147755 !important; border-color: #28ad78 !important; }
+@media (max-width: 700px) {
+    .tournament-editor-actions { flex-direction: column; align-items: stretch; }
+    .tournament-editor-actions button { width: 100%; }
+    #tournament-editor-delete { margin-right: 0; }
+}
 .te-qualification-mode { display: grid; gap: 6px; margin-bottom: 12px; font-size: 12px; font-weight: 700; }
 .te-qualification-mode select, .te-route select, .te-route input { width: 100%; min-width: 0; box-sizing: border-box; padding: 9px; border: 1px solid #3b5a72; border-radius: 6px; background: #102c43; color: #fff; }
 .te-route { display: flex; gap: 8px; margin: 10px 0; align-items: center; flex-wrap: wrap; }

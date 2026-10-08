@@ -168,6 +168,10 @@ function isWorldCupQualifierTournament(tournament = activeTournament) {
         tournament.name === WORLD_CUP_QUALIFIER_TOURNAMENT_NAME));
 }
 
+function getWorldCupRosterEvent() {
+    return typeof tournamentDatabase !== 'undefined' && tournamentDatabase.find(event => isWorldCupTournament(event)) || null;
+}
+
 function getWorldCupFlagUrl(country) {
     if (typeof flags === 'undefined' || !flags[country]) return 'https://placehold.co/160x100/16213e/ffffff?text=FLAG';
     return `https://flagcdn.com/w160/${flags[country]}.png`;
@@ -256,7 +260,9 @@ function getWorldCupOverridePlayer(reference, country, eligiblePlayers) {
 function repairWorldCupTeamRosters() {
     if (!worldCupState || !Array.isArray(worldCupState.teams)) return false;
 
-    const rankedPlayers = getWorldCupRankedPlayers();
+    const rosterEvent = getWorldCupRosterEvent();
+    const rankedPlayers = getWorldCupRankedPlayers().filter(candidate =>
+        typeof isTournamentEditorGenderEligible !== 'function' || isTournamentEditorGenderEligible(rosterEvent, candidate));
     let changed = false;
 
     worldCupState.teams.forEach((team, countryIndex) => {
@@ -269,6 +275,7 @@ function repairWorldCupTeamRosters() {
         currentPlayers.forEach(candidate => {
             const key = getWorldCupPlayerIdentity(candidate);
             if (!candidate || candidate.country !== team.country || !key || playerKeys.has(key) || uniquePlayers.length >= 2
+                || (typeof isTournamentEditorGenderEligible === 'function' && !isTournamentEditorGenderEligible(rosterEvent, candidate))
                 || (typeof isPlayerInjured === 'function' && isPlayerInjured(candidate))) {
                 changed = true;
                 teamChanged = true;
@@ -282,7 +289,7 @@ function repairWorldCupTeamRosters() {
             candidate.country === team.country && !playerKeys.has(getWorldCupPlayerIdentity(candidate))
         );
         while (uniquePlayers.length < 2) {
-            const replacement = replacements.shift() || createWorldCupQualifier(team.country, uniquePlayers.length + 1, countryIndex);
+            const replacement = replacements.shift() || createWorldCupQualifier(team.country, uniquePlayers.length + 1, countryIndex, rosterEvent?.editorGender);
             uniquePlayers.push(replacement);
             playerKeys.add(getWorldCupPlayerIdentity(replacement));
             changed = true;
@@ -298,12 +305,13 @@ function repairWorldCupTeamRosters() {
     return changed;
 }
 
-function createWorldCupQualifier(country, slot, countryIndex) {
+function createWorldCupQualifier(country, slot, countryIndex, gender) {
     const rating = Math.max(50, 63 - Math.floor(countryIndex / 5) - (slot - 1) * 2);
     return {
         id: `wc-qualifier-${country.replace(/[^a-z0-9]+/gi, '-').toLowerCase()}-${slot}`,
         name: trWorldCup('guestName', { country: getWorldCupCountryName(country), slot }),
         country,
+        ...(gender === 'female' || gender === 'male' ? { gender } : {}),
         ovr: rating,
         overall: rating,
         scoring: rating + 1,
@@ -336,8 +344,10 @@ function getWorldCupAutomaticNationList() {
     return [...new Set(nations)].slice(0, 33);
 }
 
-function buildWorldCupTeams(nations = getWorldCupAutomaticNationList()) {
-    const rankedPlayers = getWorldCupRankedPlayers();
+function buildWorldCupTeams(nations = getWorldCupAutomaticNationList(), options = {}) {
+    const rosterEvent = options.event || getWorldCupRosterEvent();
+    const rankedPlayers = (options.candidates || getWorldCupRankedPlayers()).filter(candidate =>
+        typeof isTournamentEditorGenderEligible !== 'function' || isTournamentEditorGenderEligible(rosterEvent, candidate));
     const oomRanks = new Map(rankedPlayers.map((candidate, index) => [candidate.id || `${candidate.name}|${candidate.country}`, index + 1]));
     const byCountry = new Map();
     rankedPlayers.forEach(candidate => {
@@ -361,7 +371,7 @@ function buildWorldCupTeams(nations = getWorldCupAutomaticNationList()) {
             const identity = getWorldCupPlayerIdentity(candidate);
             if (!used.has(identity)) { players.push(candidate); used.add(identity); }
         }
-        while (players.length < 2) players.push(createWorldCupQualifier(country, players.length + 1, countryIndex));
+        while (players.length < 2) players.push(createWorldCupQualifier(country, players.length + 1, countryIndex, rosterEvent?.editorGender));
 
         const leaderRank = Math.min(...players.map(candidate =>
             oomRanks.get(candidate.id || `${candidate.name}|${candidate.country}`) || 999));
