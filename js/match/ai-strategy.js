@@ -85,6 +85,22 @@ function getOneDartSetupAim(score) {
 function getScoringSetupAim(score, dartsLeft) {
     if (AI_BOGEY_SETUP_AIMS[score]) return AI_BOGEY_SETUP_AIMS[score];
 
+    // Także single w celowanym sektorze powinny zachować możliwość ustawienia
+    // checkoutu pozostałymi treblami. Np. 302: S20 + T20 + T20 zostawia 162,
+    // S19 zostawia 163, a S18 zostawia zamykalne 164. To ustawienie punktowe,
+    // niezależne od ulubionych doubles.
+    const followUpPoints = 60 * (dartsLeft - 1);
+    if (AI_BOGEY_SCORES.has(score - 20 - followUpPoints)) {
+        for (let sector = 19; sector >= 17; sector--) {
+            const singleLeave = score - sector - followUpPoints;
+            const trebleLeave = score - sector * 3;
+            if (!AI_BOGEY_SCORES.has(singleLeave)
+                && (dartsLeft > 1 || trebleLeave > 170 || isAiCheckoutScore(trebleLeave))) {
+                return { sector, mult: 3 };
+            }
+        }
+    }
+
     // Ostatnią lotką wybieramy najwyższy treble, który nie pozostawia bogey.
     // Dla wyższych wyników nadal punktujemy możliwie wysoko, zamiast sztucznie
     // schodzić singlami do 160-170.
@@ -147,9 +163,6 @@ const AI_CHECKOUT_TACTICS_CONFIG = Object.freeze({
     preferredFinishWeights: Object.freeze([8, 4, 1]),
     bestRouteChance: 0.8,
     alternativeWindow: 2,
-    openingPointsWeight: 0.025,
-    singleSetupBonus: 2,
-    trebleOpeningBonus: 2,
     standardRouteBonus: 0.4,
     sameDoubleChanceByPreference: Object.freeze([0.55, 0.42, 0.30]),
     otherPopularDoubleChance: 0.18,
@@ -171,49 +184,28 @@ function getAiAimFavoriteDoubles(stats) {
     });
 }
 
-function getAiCheckoutRoutes(score, dartsLeft) {
-    const key = `${score}|${dartsLeft}`;
-    if (aiCheckoutRouteCache.has(key)) return aiCheckoutRouteCache.get(key);
-    // Singles, outer bull and normal trebles. Doubles used as scoring targets
-    // belong only to the explicit two-dart double-double choice below.
-    const preparations = [
-        ...Array.from({ length: 20 }, (_, i) => ({ sector: i + 1, mult: 1 })),
-        { sector: 25, mult: 1 },
-        ...Array.from({ length: 11 }, (_, i) => ({ sector: i + 10, mult: 3 }))
-    ];
-    const byPoints = new Map(preparations.map(aim => [aim.sector * aim.mult, aim]));
+function getAiDoubleSetupRoutes(score) {
+    if (aiCheckoutRouteCache.has(score)) return aiCheckoutRouteCache.get(score);
+    // Preferencje dotyczą tylko ostatniego ustawienia single -> double.
+    // Nie planujemy całej wizyty od nowa ani nie wymuszamy niskich trebli
+    // (np. 130 -> T20 -> T10 -> D20) dla ulubionego pola.
     const routes = [];
     for (let finish = 1; finish <= 20; finish++) {
-        const remaining = score - finish * 2;
-        const first = byPoints.get(remaining);
-        if (first) routes.push({ aim: first, finish, darts: 2 });
-        if (dartsLeft < 3) continue;
-        for (const opening of preparations) {
-            const second = byPoints.get(remaining - opening.sector * opening.mult);
-            if (second) routes.push({ aim: opening, finish, darts: 3 });
+        const single = score - finish * 2;
+        if (single >= 1 && single <= 20) {
+            routes.push({ aim: { sector: single, mult: 1 }, finish });
         }
     }
-    // A favourite never adds an unnecessary dart to an ordinary double finish.
-    const minimumDarts = routes.length ? Math.min(...routes.map(route => route.darts)) : 0;
-    let efficient = routes.filter(route => route.darts === minimumDarts);
-    // On 41–60, do not replace an easy single -> double with a treble to
-    // reach a favourite (or merely to add variation). 60 stays S20 -> D20.
-    if (score <= 60) {
-        const simple = efficient.filter(route => route.darts === 2 && route.aim.mult === 1 && route.aim.sector <= 20);
-        if (simple.length) efficient = simple;
-    }
-    aiCheckoutRouteCache.set(key, efficient);
-    return efficient;
+    aiCheckoutRouteCache.set(score, routes);
+    return routes;
 }
 
 function chooseAiPreferredRoute(routes, favorites, standardAim, random) {
+    if (!routes.some(route => favorites.includes(route.finish))) return standardAim;
     const bestByAim = new Map();
     for (const route of routes) {
         const preference = favorites.indexOf(route.finish);
         const score = (AI_CHECKOUT_TACTICS_CONFIG.preferredFinishWeights[preference] || 0)
-            + route.aim.sector * route.aim.mult * AI_CHECKOUT_TACTICS_CONFIG.openingPointsWeight
-            + (route.darts === 2 && route.aim.mult === 1 ? AI_CHECKOUT_TACTICS_CONFIG.singleSetupBonus : 0)
-            + (route.darts === 3 && route.aim.mult === 3 ? AI_CHECKOUT_TACTICS_CONFIG.trebleOpeningBonus : 0)
             + (route.aim.sector === standardAim?.sector && route.aim.mult === standardAim?.mult ? AI_CHECKOUT_TACTICS_CONFIG.standardRouteBonus : 0);
         const key = `${route.aim.sector}|${route.aim.mult}`;
         if (!bestByAim.has(key) || bestByAim.get(key).score < score) bestByAim.set(key, { ...route, score });
@@ -244,12 +236,10 @@ function getOptimalAim(score, isDIDO, dartsLeft = 3, opponentScore, stats = null
             ?? ([16, 18, 20].includes(double) ? AI_CHECKOUT_TACTICS_CONFIG.otherPopularDoubleChance : AI_CHECKOUT_TACTICS_CONFIG.otherDoubleChance);
         if (random() < chance) return { sector: double, mult: 2 };
     }
-    // Preserve the rescue single -> bull under real checkout pressure.
-    if (darts === 2 && remaining >= 61 && remaining <= 70 && shouldAiAttackBull(opponentScore)) return standardAim;
-    if (remaining > 170 || remaining < 3 || AI_BOGEY_SCORES.has(remaining)) return standardAim;
-    // Important bull-led routes (e.g. 132) keep their tactical pressure logic.
-    if (standardAim?.sector === 25 && standardAim.mult === 2 && remaining !== 50) return standardAim;
-    const routes = getAiCheckoutRoutes(remaining, Math.max(2, darts));
+    // Scoring, trasy treblowe i ratunkowy single -> Bull pozostają standardowe.
+    // Dopiero przed zwykłym double wybieramy osiągalne ulubione pole.
+    if (remaining > 60 || remaining < 3) return standardAim;
+    const routes = getAiDoubleSetupRoutes(remaining);
     return chooseAiPreferredRoute(routes, favorites, standardAim, random);
 }
 

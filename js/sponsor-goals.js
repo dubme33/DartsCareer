@@ -1,6 +1,9 @@
 // Seasonal clauses are independent of monthly contracts: an accepted bonus
 // remains payable after the sponsor's monthly contract expires.
-const SPONSOR_GOAL_CONFIG = Object.freeze({ limit: 3, offerBonusPerGoal: 5, historyYears: 10 });
+const SPONSOR_GOAL_CONFIG = Object.freeze({
+    limit: 3, offerBonusPerGoal: 5, historyYears: 10,
+    annualWinTargets: Object.freeze({ outsideTop64: 24, top64: 40, top32: 60 })
+});
 const SPONSOR_GOAL_TEXT = {
     pl: {
         title: 'Cele sponsorskie · {year}', summary: 'Przyjęte cele: {count}/3',
@@ -141,7 +144,9 @@ function getSponsorGoalOffer(sponsor) {
     const type = types[hash % types.length];
     const remaining = (Date.UTC(year + 1, 0, 1) - Date.UTC(year, currentDate.getMonth(), currentDate.getDate()))
         / (Date.UTC(year + 1, 0, 1) - Date.UTC(year, 0, 1));
-    const wins = rank > 64 ? 12 : rank > 32 ? 20 : 30;
+    const winTargets = SPONSOR_GOAL_CONFIG.annualWinTargets;
+    const wins = rank > 0 && rank <= 32 ? winTargets.top32
+        : rank > 0 && rank <= 64 ? winTargets.top64 : winTargets.outsideTop64;
     const targetRank = rank > 64 ? 64 : rank > 32 ? 32 : rank > 16 ? 16 : rank > 8 ? 8 : rank > 4 ? 4 : 1;
     const target = type === 'rank' ? targetRank : type === 'wins' ? Math.max(1, Math.ceil(wins * remaining)) : 1;
     const multiplier = type === 'rank' ? 2 : type === 'quarterfinal' ? 1.5 : 1;

@@ -93,15 +93,17 @@ function getCareerRegularSponsorLimit(candidate = typeof player !== 'undefined' 
 }
 
 function getCareerSponsorPayment(amount, candidate = typeof player !== 'undefined' ? player : null) {
-    const gross = Number.isFinite(Number(amount)) ? Math.max(0, Number(amount)) : 0;
+    const gross = Number.isFinite(Number(amount)) ? Math.max(0, Math.round(Number(amount))) : 0;
     const rate = getCareerDifficultyProfile(candidate).sponsorTax;
-    const tax = Math.round(gross * rate * 100) / 100;
-    return { gross, rate, tax, net: tax ? Math.round((gross - tax) * 100) / 100 : gross };
+    const net = Math.round(gross * (1 - rate));
+    // Whole-pound net payments; derive tax from the same amount so the
+    // contract note, receipt and credited money always reconcile.
+    return { gross, rate, tax: gross - net, net };
 }
 
 function formatCareerSponsorMoney(amount) {
     const locale = ({ pl: 'pl-PL', en: 'en-GB', de: 'de-DE', nl: 'nl-NL' })[typeof currentLang === 'string' ? currentLang : 'en'] || 'en-GB';
-    return '£' + Number(amount || 0).toLocaleString(locale, { maximumFractionDigits: 2 });
+    return '£' + Number(amount || 0).toLocaleString(locale, { maximumFractionDigits: 0 });
 }
 
 function trCareerDifficulty(key, values = {}) {
@@ -177,6 +179,9 @@ function getDifficultySponsorContracts(candidate) {
 function initializeCareerDifficulty(candidate = typeof player !== 'undefined' ? player : null) {
     if (!candidate) return 'normal';
     candidate.difficulty = getCareerDifficulty(candidate);
+    // Older saves may contain pennies from the former sponsorship tax.
+    // Normalize the existing balance without recalculating past payments.
+    if (Number.isFinite(Number(candidate.budget))) candidate.budget = Math.round(Number(candidate.budget));
     const sponsorMultiplier = getCareerDifficultySponsorMultiplier(candidate);
     getDifficultySponsorContracts(candidate).forEach(contract => {
         if (!Number.isFinite(Number(contract.difficultyBaseMonthlyValue))) {
