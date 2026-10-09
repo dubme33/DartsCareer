@@ -134,6 +134,16 @@
                     <p class="cl-desc">Player profiles include all 137 European Tour titles from 2012–2025, including discontinued events, grouped into one European Tour total. Titles won during your career add to that total, and individual event winners are available in the champions archive. Existing saves receive the history without duplicating career results.</p>
                 </div>
                 <div class="cl-item">
+                    <span class="cl-tag fix">Player Packs</span>
+                    <span class="cl-title">📥 Safer Large Player Pack Imports</span>
+                    <p class="cl-desc">Player packs support up to 5,000 players. Invalid entries now identify the player and missing country. Packs with a different roster order match existing players by verified identity, so a foreign slot number cannot overwrite an unrelated player. Native players keep their identity through save/load; additional players start without another player's ranking history.</p>
+                </div>
+                <div class="cl-item">
+                    <span class="cl-tag fix">TV &amp; 3D Performance</span>
+                    <span class="cl-title">⚡ Smoother 3D Dart Throws</span>
+                    <p class="cl-desc">Match dart models and materials are prepared before the first throw to reduce animation hitches. Lighter match geometry and native-resolution rendering reduce graphics work on high-refresh-rate screens, while the dart editor keeps its detailed models. Throw timing, scoring, collisions and replays remain unchanged.</p>
+                </div>
+                <div class="cl-item">
                     <span class="cl-tag tag-blue">AI Checkout Tactics</span>
                     <span class="cl-title">🎯 Personal AI Checkout Styles</span>
                     <p class="cl-desc">AI players use three ordered favourite doubles to choose sensible checkout routes, with preferences matched to 120 players. Expect varied setups and double-double finishes on 64, 68, 72, 76 or 80 with two darts left, while simple single–double finishes still take priority.</p>
@@ -3925,7 +3935,7 @@
     <script src="js/match/pressure.js?v=1.4.9&mental=1"></script>
     <script src="js/match/incidents.js?v=1.4.9&match-incidents=5&stories=2&incident-finish=1&incident-settings=1&incident-sim-fix=1"></script>
     <script src="js/european-tour.js?v=1.4.9&performance=1&editor-money=1&ec-draw=2&tournament-editor=2&calendar-manager=1"></script>
-    <script src="js/order-of-merit.js?v=1.4.9&fix=planning-1&crown-masters=1&performance=1&editor-money=1&calendar-manager=1"></script>
+    <script src="js/order-of-merit.js?v=1.4.9&fix=planning-1&crown-masters=1&performance=1&editor-money=1&calendar-manager=1&player-pack-identity=1"></script>
     <script src="js/career-calendar-editor.js?v=1.4.9&calendar-manager=1&tournament-gender=1&season-leagues=1"></script>
     <script src="js/career-tour-promotions.js?v=1.4.9&season-leagues=1"></script>
     <script src="js/tour-cards.js?v=1.4.9&fix=grand-slam-qualification-2&secondary-cards=1&vacancies=1&tournament-editor=2&slam-qualification-audit=1&calendar-manager=1"></script>
@@ -3948,7 +3958,7 @@
     <script src="js/tutorial.js?v=1.4.9&tutorial=3"></script>
     <script src="js/hub-navigation.js?v=1.4.9&hub-nav=6&tournament-watch=1&news-qualifier-options=1&readiness-preparation=1&career-work=1&season-leagues=1"></script>
     <script src="js/player-editor.js?v=1.4.9&player-editor=8&favorite-doubles=1&nicknames=1&ai-darts=1&ai-career=final-1&oom-sort=1"></script>
-    <script src="js/player-pack.js?v=1.4.9&player-pack=1&ai-career=final-1"></script>
+    <script src="js/player-pack.js?v=1.4.9&player-pack=2&ai-career=final-1"></script>
     <script src="js/player-profiles.js?v=1.4.9&stats=1&goals=1&news=1&traits=1&mental=1&titles=8&records=1&finance=1&et-seed-cash=1&challenge-tour=1&development-tour=1&average-records=1&player-events=1&slam-prizes=1&prize-tax=1&profile-nicknames=1&ai-career=final-1&newsroom=final-1"></script>
     <script src="js/average-records.js?v=1.4.9&average-records=1&ranking-search=1"></script>
     <script src="js/match-report.js?v=1.4.9&match-report=1&report-setting=1"></script>
@@ -3984,7 +3994,7 @@
     <script src="js/match/crowd.js?v=1.4.9&stage-crowd=2&post-match-music=1"></script>
     <script src="js/match/dart-physics.js?v=1.4.9&knockouts=1&robin-hood=1&dart-collisions=1"></script>
     <script src="js/match/turns.js?v=1.4.9&knockouts=1&robin-hood=1&ws-local=1&traits=1&mental=1&cover=1&grouping=3&visit-sim=1&checkout-tactics=2&bull-aim=1&bounce-outs=1&favorite-doubles=1&match-report=1&board-3d=5&tv-director=1&impact-ui=1&impact-continuation=1&double-training=1&peak-averages=1&match-incidents=1&bull-order=1&double-double=2&average-tail=2&ai-checkouts=1"></script>
-    <script src="js/dart-model.js?v=1.4.9&darts=5"></script>
+    <script src="js/dart-model.js?v=1.4.9&darts=5&match-detail=1"></script>
     <script src="js/dart-preview.js?v=1.4.9&darts=1"></script>
     <script src="js/dart-customization.js?v=1.4.9&dart-customization=7"></script>
     <script src="js/ai-dart-editor.js?v=1.4.9&ai-darts=1"></script>
@@ -3997,7 +4007,7 @@
     <script src="js/match/broadcast-scoreboard.js?v=1.4.9&broadcast=3&broadcast-themes=1&leg-starter=1&early-nine=1"></script>
     <script src="js/match/flight-motion-settings.js?v=1.4.9&flight-motion=1"></script>
     <script src="js/match/layout-settings.js?v=1.4.9&layout=1"></script>
-    <script src="js/match/board-3d.js?v=1.4.9&knockouts=1&robin-hood=1&board-3d=9&mod-board=1&narrow-rings=2&left-camera=1&tv-camera=4&spider=2&bull=3&darts=5&replay-shots=1&bounce-replay=2&faster-flight=2&impact-ui=1&surround-fit=2&regular-framing=1&flight-motion=2&layout=1"></script>
+    <script src="js/match/board-3d.js?v=1.4.9&knockouts=1&robin-hood=1&board-3d=9&mod-board=1&narrow-rings=2&left-camera=1&tv-camera=4&spider=2&bull=3&darts=5&replay-shots=1&bounce-replay=2&faster-flight=2&impact-ui=1&surround-fit=2&regular-framing=1&flight-motion=2&layout=1&throw-performance=1"></script>
     <script src="js/match/tv-mode.js?v=1.4.9&tv=2&ai-speed=1&walkon-fullscreen=1&sidebar-fit=1"></script>
     <script src="js/match/walkon-fullscreen.js?v=1.4.9&walkon-fullscreen=1"></script>
     <script src="js/match/tv-director.js?v=1.4.9&knockouts=1&robin-hood=1&director=8&single-shot-replay=1&stinger=1&impact-focus=1&highlights=1&caller-sync=1&stat-portraits=2&collision-replay=0&bounce-snapshot=1&averages=1&scoring-visits=1&no-startup-card=1&surround-fit=2&director-options=1&leg-camera-reset=1"></script>

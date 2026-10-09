@@ -39,6 +39,7 @@
     let cameraTvLayout = matchScreen.classList.contains('match-tv-mode');
     let restorePending = true, suspendedAt = null, frameCount = 0;
     let previousMotionFrame = null, motionFrameMs = null;
+    let preparedMatch = null, preparedStyles = null, preparedDarts = [];
 
     function readPreference(key, fallback) {
         try { return localStorage.getItem(key) || fallback; } catch (_error) { return fallback; }
@@ -151,7 +152,7 @@
 
     function createScene() {
         renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, powerPreference: 'high-performance' });
-        renderer.setPixelRatio(Math.min(Math.max(window.devicePixelRatio || 1, 1.5), 2));
+        renderer.setPixelRatio(Math.min(Math.max(window.devicePixelRatio || 1, 1), 2));
         renderer.setClearColor(0x000000, 0);
         renderer.outputColorSpace = THREE.SRGBColorSpace;
         renderer.toneMapping = THREE.ACESFilmicToneMapping;
@@ -210,7 +211,7 @@
             const middle = (130 + outerBull) / 2;
             blade.position.set(middle / 130 * Math.cos(angle), middle / 130 * Math.sin(angle), spiderDetail.faceZ);
         }
-        dartFactory = window.dartModel.createFactory(THREE);
+        dartFactory = window.dartModel.createFactory(THREE, { detail: 'match' });
         updateCamera();
     }
 
@@ -232,6 +233,38 @@
         // one prevents parallax from drawing a second wire over doubles and trebles.
         spiderMeshes.forEach(mesh => { mesh.visible = !surface; });
         refreshUI(); requestRender();
+    }
+
+    function prepareDartLoadouts() {
+        if (!renderer || typeof currentMatch === 'undefined' || !currentMatch) return;
+        const styles = ['p1', 'p2'].map(side => window.dartModel.normalize(
+            typeof window.getMatchDartLoadout === 'function' ? window.getMatchDartLoadout(side) : null));
+        const key = JSON.stringify(styles);
+        if (preparedMatch === currentMatch && preparedStyles === key) return;
+        const models = [];
+        try {
+            for (const style of styles) {
+                const group = dartFactory.create(style);
+                // Behind the board, with culling disabled, so even a first throw's
+                // shaders, buffers and textures are prepared before flight starts.
+                group.position.set(0, 0, -1);
+                group.traverse(part => { if (part.isMesh) part.frustumCulled = false; });
+                models.push(group); scene.add(group);
+            }
+            renderer.compile(scene, camera);
+            renderer.render(scene, camera);
+            preparedDarts.forEach(group => dartFactory.release(group));
+            preparedDarts = models;
+            preparedMatch = currentMatch; preparedStyles = key;
+        } finally {
+            models.forEach(group => {
+                scene.remove(group);
+                if (preparedDarts !== models) dartFactory.release(group);
+            });
+            // The visible frame is painted after preparation in the same task.
+            // Temporary models never enter dartModels or any scoring state.
+            renderer.render(scene, camera);
+        }
     }
 
     function createDart(data, presentation = null) {
@@ -415,8 +448,9 @@
         const width = Math.round(stage.clientWidth), height = Math.round(stage.clientHeight);
         if (width <= 0 || height <= 0) return;
         const dimensions = renderer.getSize(new THREE.Vector2());
-        // Supersampling keeps numbers and thin tips crisp, with a bounded pixel budget.
-        const ratio = Math.min(2, Math.max(window.devicePixelRatio || 1, 1.5), Math.sqrt(1800000 / (width * height)));
+        // Native resolution with antialiasing; avoid forcing 2.25x pixel work on
+        // ordinary desktop monitors. High-DPI screens retain the pixel budget.
+        const ratio = Math.min(2, Math.max(window.devicePixelRatio || 1, 1), Math.sqrt(1800000 / (width * height)));
         if (renderer.getPixelRatio() !== ratio) renderer.setPixelRatio(ratio);
         if (dimensions.x !== width || dimensions.y !== height) {
             renderer.setSize(width, height, false);
@@ -564,6 +598,7 @@
         }
         resources.forEach(resource => resource.dispose()); resources.clear();
         dartFactory?.dispose(); dartFactory = null; renderer = null; scene = null; camera = null;
+        preparedMatch = null; preparedStyles = null; preparedDarts = [];
         boardFace = null; defaultBoardTexture = null; modBoardTexture = null; skinSource = null; spiderMeshes.length = 0; replayShot = null;
         stage.replaceChildren(); refreshUI(); drawDartboard();
     }
@@ -586,6 +621,11 @@
         if (mode !== '3d' || failed) return false;
         if (!renderer) { if (visible()) ensureScene(); return false; }
         const currentDarts = darts.slice(-3);
+        // Warm at match/visit setup, never on the critical path of a live throw.
+        if (restorePending || currentDarts.length === 0) {
+            try { prepareDartLoadouts(); }
+            catch (_error) { fallback(); return false; }
+        }
         const presentations = matchBoardLayout.presentDarts(currentDarts);
         if (seenDarts.length > currentDarts.length || seenDarts.some((dart, i) => dart !== currentDarts[i])) clear();
         for (let i = seenDarts.length; i < currentDarts.length; i++) {
@@ -728,6 +768,7 @@
                 })) : null,
                 frames: frameCount, animationFps: motionFrameMs ? Math.round(1000 / motionFrameMs) : null,
                 pixelRatio: renderer?.getPixelRatio(), drawCalls: renderer?.info.render.calls,
+                triangles: renderer?.info.render.triangles,
                 geometries: renderer?.info.memory.geometries, textures: renderer?.info.memory.textures,
                 boardSkin: skinSource ? window.matchBoardSkin.getState().name : null, boardSurfaceZ: boardFace?.position.z,
                 spider: { source: skinSource ? 'photographic' : 'generated', generated: spiderMeshes.length,

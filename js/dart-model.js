@@ -293,8 +293,11 @@
         ctx.restore();
     }
 
-    function createFactory(THREE) {
+    function createFactory(THREE, options = {}) {
         const cache = new Map();
+        // The board needs a lighter mesh than the full-size equipment editor.
+        // Dimensions and collision profiles remain identical in both factories.
+        const matchDetail = options.detail === 'match';
         let activeEntries;
         function asset(key, build) {
             let entry = cache.get(key);
@@ -318,7 +321,8 @@
                 // 64 sides deviate from a circle by about 0.005 mm, even in close-ups.
                 const directionalGrip = Object.values(a.gripZones).some(grip =>
                     ['knurled', 'pixel', 'axial', 'hybrid', 'wave', 'cross-cut', 'spiral'].includes(grip));
-                const around = directionalGrip ? 96 : 64, along = 500, stride = around + 1;
+                const around = directionalGrip ? (matchDetail ? 48 : 96) : (matchDetail ? 32 : 64);
+                const along = matchDetail ? 256 : 500, stride = around + 1;
                 const vertices = new Float32Array((along + 1) * stride * 3);
                 const colors = new Float32Array(vertices.length);
                 const indices = new Uint16Array(along * around * 6);

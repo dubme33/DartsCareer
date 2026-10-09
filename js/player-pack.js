@@ -11,6 +11,8 @@ const PLAYER_PACK_TEXT = {
         summary: 'Dodaj: {add} · zastąp: {replace} · usuń: {remove} · pomiń: {skip}',
         exported: 'Wyeksportowano {count} zawodników.', imported: 'Zastosowano {count} zmian w bazie zawodników.',
         invalid: 'Nieprawidłowy lub nieobsługiwany pakiet zawodników.', tooLarge: 'Pakiet przekracza limit 64 MB.',
+        missingCountry: 'Brak kraju zawodnika.', invalidEntries: 'Nieprawidłowe wpisy ({count}): {details}',
+        entryError: '#{index} {name}: {reason}', moreErrors: 'i jeszcze {count}',
         noChanges: 'Nie wybrano żadnych zmian.', saveFailed: 'Zmiany są aktywne, ale zapis kariery się nie powiódł.',
         duplicate: 'Powtarzający się zawodnik: {name}', conflict: 'Nie można zastosować wyboru: {reason}',
         career: 'To Twoja postać kariery', retired: 'Zawodnik zakończył już karierę w tym zapisie',
@@ -27,6 +29,8 @@ const PLAYER_PACK_TEXT = {
         summary: 'Add: {add} · replace: {replace} · remove: {remove} · skip: {skip}',
         exported: 'Exported {count} players.', imported: 'Applied {count} player database changes.',
         invalid: 'Invalid or unsupported player pack.', tooLarge: 'The pack exceeds the 64 MB limit.',
+        missingCountry: 'Player country is missing.', invalidEntries: 'Invalid entries ({count}): {details}',
+        entryError: '#{index} {name}: {reason}', moreErrors: 'and {count} more',
         noChanges: 'No changes selected.', saveFailed: 'Changes are active, but saving the career failed.',
         duplicate: 'Duplicate player: {name}', conflict: 'Cannot apply selection: {reason}',
         career: 'This is your career player', retired: 'This player has retired in this career',
@@ -43,6 +47,8 @@ const PLAYER_PACK_TEXT = {
         summary: 'Neu: {add} · ersetzen: {replace} · entfernen: {remove} · überspringen: {skip}',
         exported: '{count} Spieler exportiert.', imported: '{count} Änderungen an der Spielerdatenbank übernommen.',
         invalid: 'Ungültiges oder nicht unterstütztes Spielerpaket.', tooLarge: 'Das Paket überschreitet 64 MB.',
+        missingCountry: 'Das Land des Spielers fehlt.', invalidEntries: 'Ungültige Einträge ({count}): {details}',
+        entryError: '#{index} {name}: {reason}', moreErrors: 'und {count} weitere',
         noChanges: 'Keine Änderungen ausgewählt.', saveFailed: 'Änderungen sind aktiv, aber die Karriere konnte nicht gespeichert werden.',
         duplicate: 'Doppelter Spieler: {name}', conflict: 'Auswahl kann nicht übernommen werden: {reason}',
         career: 'Das ist dein Karriere-Spieler', retired: 'Dieser Spieler hat seine Karriere bereits beendet',
@@ -59,6 +65,8 @@ const PLAYER_PACK_TEXT = {
         summary: 'Toevoegen: {add} · vervangen: {replace} · verwijderen: {remove} · overslaan: {skip}',
         exported: '{count} spelers geëxporteerd.', imported: '{count} wijzigingen in de spelersdatabase toegepast.',
         invalid: 'Ongeldig of niet ondersteund spelerspakket.', tooLarge: 'Het pakket is groter dan 64 MB.',
+        missingCountry: 'Het land van de speler ontbreekt.', invalidEntries: 'Ongeldige vermeldingen ({count}): {details}',
+        entryError: '#{index} {name}: {reason}', moreErrors: 'en nog {count}',
         noChanges: 'Geen wijzigingen gekozen.', saveFailed: 'Wijzigingen zijn actief, maar de carrière kon niet worden opgeslagen.',
         duplicate: 'Dubbele speler: {name}', conflict: 'Keuze kan niet worden toegepast: {reason}',
         career: 'Dit is je eigen carrièrespeler', retired: 'Deze speler is in deze carrière gestopt',
@@ -106,6 +114,7 @@ function playerPackAsset(value, kind) {
 }
 function normalizePlayerPackEntry(raw) {
     if (!raw || typeof raw !== 'object' || Array.isArray(raw) || !['template', 'source', 'custom'].includes(raw.kind)) throw playerPackError('invalid');
+    if (typeof raw.country !== 'string' || !raw.country.trim()) throw playerPackError('missingCountry');
     const index = raw.kind === 'template' ? playerPackInt(raw.defaultTemplateIndex, 0, 99999) : null;
     const name = playerPackString(raw.name, 120, true);
     if (name.split(/\s+/).length < 2) throw playerPackError('invalid');
@@ -148,7 +157,19 @@ function parsePlayerPack(raw) {
     if (!raw || typeof raw !== 'object' || Array.isArray(raw) || raw.format !== PLAYER_PACK_FORMAT
         || raw.version !== PLAYER_PACK_VERSION || !Array.isArray(raw.players) || !Array.isArray(raw.deleted)
         || raw.players.length > PLAYER_PACK_MAX_PLAYERS || raw.deleted.length > PLAYER_PACK_MAX_PLAYERS) throw playerPackError('invalid');
-    const players = raw.players.map(normalizePlayerPackEntry);
+    const errors = [];
+    const players = raw.players.map((entry, index) => {
+        try { return normalizePlayerPackEntry(entry); }
+        catch (error) {
+            errors.push(trPlayerPack('entryError', { index: index + 1,
+                name: typeof entry?.name === 'string' ? entry.name.slice(0, 120) : '—',
+                reason: error.message || trPlayerPack('invalid') }));
+            return null;
+        }
+    });
+    if (errors.length) throw playerPackError('invalidEntries', { count: errors.length,
+        details: [...errors.slice(0, 5), ...(errors.length > 5
+            ? [trPlayerPack('moreErrors', { count: errors.length - 5 })] : [])].join('; ') });
     const deleted = raw.deleted.map(normalizePlayerPackDeletion);
     const keys = new Set();
     for (const entry of [...players, ...deleted]) {
@@ -219,8 +240,22 @@ function createPlayerPackLookup(database) {
     }
     return lookup;
 }
+function getPlayerPackTemplateIndex(entry) {
+    if (entry.kind === 'custom' || typeof defaultPdcPlayerTemplates === 'undefined'
+        || !Array.isArray(defaultPdcPlayerTemplates)) return null;
+    const source = playerPackIdentity(entry.sourceName);
+    const matches = template => source && playerPackIdentity(template?.sourceName || template?.name) === source;
+    if (matches(defaultPdcPlayerTemplates[entry.defaultTemplateIndex])) return entry.defaultTemplateIndex;
+    const indexes = defaultPdcPlayerTemplates.flatMap((template, index) => matches(template) ? [index] : []);
+    return indexes.length === 1 ? indexes[0] : null;
+}
 function findPlayerPackTarget(entry, database = pdcPlayers, lookup = createPlayerPackLookup(database)) {
-    const byKey = lookup.key.get(entry.key) || [];
+    // A foreign pack may number its own reordered roster as template:0,1,... .
+    // A slot number alone is not enough to overwrite an unrelated player.
+    const byKey = (lookup.key.get(entry.key) || []).filter(candidate => entry.kind !== 'template'
+        || playerPackIdentity(entry.sourceName) === playerPackIdentity(candidate.sourceName || candidate.name)
+        || getPlayerPackTemplateIndex(entry) === getPlayerEditorTemplateIndex(candidate)
+            && getPlayerPackTemplateIndex(entry) !== null);
     if (byKey.length === 1) return { target: byKey[0] };
     if (byKey.length > 1) return { reason: 'ambiguous' };
     const source = playerPackIdentity(entry.sourceName);
@@ -236,7 +271,8 @@ function findPlayerPackTarget(entry, database = pdcPlayers, lookup = createPlaye
 }
 function isPlayerPackCareer(entry, target) {
     if (target && target === player) return true;
-    if (entry.kind === 'template' && getPlayerEditorTemplateIndex(player) === entry.defaultTemplateIndex) return true;
+    const templateIndex = getPlayerPackTemplateIndex(entry);
+    if (templateIndex !== null && getPlayerEditorTemplateIndex(player) === templateIndex) return true;
     return Boolean(playerPackIdentity(entry.sourceName)
         && playerPackIdentity(player?.sourceName || player?.name) === playerPackIdentity(entry.sourceName));
 }
@@ -262,9 +298,11 @@ function planPlayerPackImport(pack, choices = {}, database = pdcPlayers) {
     const lookup = createPlayerPackLookup(database);
     for (const entry of pack.players) {
         const match = findPlayerPackTarget(entry, database, lookup);
+        const templateIndex = getPlayerPackTemplateIndex(entry);
         const reason = match.reason || (isPlayerPackCareer(entry, match.target) ? 'career'
             : !match.target && typeof isRetiredPlayer === 'function'
-                && isRetiredPlayer(entry, entry.defaultTemplateIndex ?? undefined) ? 'retired' : '');
+                && isRetiredPlayer({ ...entry, defaultTemplateIndex: templateIndex,
+                    editorCreated: templateIndex === null }, templateIndex ?? undefined) ? 'retired' : '');
         const changes = match.target && !reason ? getPlayerPackChanges(match.target, entry) : [];
         const same = match.target && !reason && changes.length === 0;
         const available = reason ? ['skip'] : match.target ? ['replace', 'skip'] : ['add', 'skip'];
@@ -469,6 +507,12 @@ async function applyStagedPlayerPack() {
                 if (index >= 0) pdcPlayers.splice(index, 1);
                 if (Array.isArray(player?.activeRivalIds)) player.activeRivalIds = player.activeRivalIds.filter(id => id !== row.target.id);
             } else if (row.action === 'replace') {
+                // Capture native lineage before a name/country edit makes it
+                // impossible to infer. Save migration must not add the old
+                // default profile as a second person after loading the pack.
+                const templateIndex = getPlayerEditorTemplateIndex(row.target);
+                if (templateIndex !== null) row.target.defaultTemplateIndex = templateIndex;
+                if (!row.target.sourceName) row.target.sourceName = row.target.name;
                 applyPlayerPackDetails(row.target, row.entry);
             } else if (row.action === 'add') {
                 const entry = row.entry;
@@ -477,10 +521,14 @@ async function applyStagedPlayerPack() {
                         main: 0, proTour: 0, playersChampionship: 0, europeanTour: 0,
                         challengeTour: 0, developmentTour: 0 } });
                 candidate.sourceName = entry.sourceName;
-                candidate.editorCreated = entry.kind === 'custom';
-                if (entry.kind === 'template') candidate.defaultTemplateIndex = entry.defaultTemplateIndex;
+                const templateIndex = getPlayerPackTemplateIndex(entry);
+                candidate.editorCreated = templateIndex === null;
+                if (templateIndex !== null) candidate.defaultTemplateIndex = templateIndex;
                 applyPlayerPackDetails(candidate, entry);
-                removePlayerPackDeletion(entry);
+                const lineage = { ...entry, kind: templateIndex !== null ? 'template' : 'custom',
+                    defaultTemplateIndex: templateIndex, editorCreated: candidate.editorCreated };
+                lineage.key = playerPackKey(lineage);
+                removePlayerPackDeletion(lineage);
                 pdcPlayers.push(candidate);
                 if (typeof initPlayerSeasonStats === 'function') initPlayerSeasonStats(candidate);
             }

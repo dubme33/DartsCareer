@@ -312,6 +312,10 @@ function reconcileMainOomOpeningSnapshot(entries, templateIndex) {
 }
 
 function inferMainOomTemplateIndex(candidate, fallbackIndex = null) {
+    // Imported custom players and newgens are independent identities. A
+    // matching real name or roster position must not grant another person's
+    // template lineage or opening ranking money.
+    if (candidate?.editorCreated || candidate?.isNewgen) return null;
     if (Number.isInteger(candidate?.defaultTemplateIndex)) return candidate.defaultTemplateIndex;
     const historySize = typeof PDC_OOM_REAL_NAMES_BY_TEMPLATE_INDEX !== 'undefined'
         ? PDC_OOM_REAL_NAMES_BY_TEMPLATE_INDEX.length
