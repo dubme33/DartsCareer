@@ -16,8 +16,10 @@
     };
     const denied = () => Object.fromEntries(Object.keys(purposeFields).map(key => [key, 'denied']));
     let purposes = denied(), apiReady = false, listenerRegistered = false, listenerFailed = false;
-    let tagRequested = false, tagLoaded = false, pageViewSent = false;
+    let tagRequested = false, tagLoaded = false, tagFailed = false, pageViewSent = false;
+    let gdprApplies = null, purposeStatuses = {};
     let waitingForChoice = false, refreshTimer = null, status = 'awaiting-cmp';
+    let settingsTimer = null, revocationPending = false, revocationUiSeen = false;
     window[disableKey] = true;
     window.dataLayer = window.dataLayer || [];
     window.gtag = window.gtag || function () { window.dataLayer.push(arguments); };
@@ -40,7 +42,7 @@
         script.async = true;
         script.src = 'https://www.googletagmanager.com/gtag/js?id=' + measurementId;
         script.onload = () => { tagLoaded = true; sendPageView(); };
-        script.onerror = () => { status = 'analytics-unavailable'; suspendAnalytics(); };
+        script.onerror = () => { tagFailed = true; status = 'analytics-unavailable'; suspendAnalytics(); };
         window.gtag('js', new Date());
         window.gtag('config', measurementId, {
             send_page_view: false,
@@ -49,19 +51,31 @@
         });
         document.head.appendChild(script);
     }
+    function purposeStatus(cmp, name) {
+        // Google's enum reference uses short keys; its sample uses prefixed keys.
+        // Resolve the actual enum, never treat a missing API or a numeric guess as consent.
+        const values = cmp.ConsentModePurposeStatusEnum;
+        return values?.[name] ?? values?.['CONSENT_MODE_PURPOSE_STATUS_' + name];
+    }
     function readCmpPurposes() {
         if (waitingForChoice || listenerFailed) { suspendAnalytics(); return; }
         try {
             const cmp = window.googlefc;
-            if (typeof cmp.getGoogleConsentModeValues !== 'function') { suspendAnalytics(); return; }
+            if (typeof cmp.getGoogleConsentModeValues !== 'function') { status = 'cmp-unavailable'; suspendAnalytics(); return; }
             const values = cmp.getGoogleConsentModeValues();
-            const granted = cmp.ConsentModePurposeStatusEnum?.CONSENT_MODE_PURPOSE_STATUS_GRANTED;
+            const granted = purposeStatus(cmp, 'GRANTED');
             // UNKNOWN, DENIED, NOT_APPLICABLE and NOT_CONFIGURED all fail closed.
             // A configured, explicit analytics grant is required independently of ads.
-            purposes = Object.fromEntries(Object.entries(purposeFields).map(([key, field]) =>
-                [key, granted !== undefined && values?.[field] === granted ? 'granted' : 'denied']));
-            status = 'cmp-ready';
-            window[disableKey] = purposes.analytics_storage !== 'granted';
+            purposeStatuses = Object.fromEntries(Object.entries(purposeFields).map(([key, field]) =>
+                [key, values?.[field] ?? null]));
+            purposes = Object.fromEntries(Object.entries(purposeStatuses).map(([key, value]) =>
+                [key, typeof granted === 'number' && granted > 0 && value === granted ? 'granted' : 'denied']));
+            const inapplicable = purposeStatus(cmp, 'NOT_APPLICABLE');
+            status = purposes.analytics_storage !== 'granted' && (gdprApplies === false ||
+                (inapplicable !== undefined && purposeStatuses.analytics_storage === inapplicable))
+                ? 'regional-policy-required' : 'cmp-ready';
+            if (tagFailed) status = 'analytics-unavailable';
+            window[disableKey] = purposes.analytics_storage !== 'granted' || tagFailed;
             if (!window[disableKey]) loadAnalytics();
         } catch (_error) { purposes = denied(); status = 'cmp-unavailable'; suspendAnalytics(); }
     }
@@ -78,13 +92,20 @@
                 purposes = denied(); status = 'cmp-unavailable'; suspendAnalytics(); return;
             }
             listenerFailed = false;
+            if (typeof data?.gdprApplies === 'boolean') gdprApplies = data.gdprApplies;
             if (data?.eventStatus === 'cmpuishown') {
                 waitingForChoice = true;
+                revocationUiSeen = true;
+                if (settingsTimer !== null) window.clearTimeout(settingsTimer);
+                settingsTimer = null;
                 suspendAnalytics();
                 return;
             }
-            if (data?.eventStatus !== 'useractioncomplete' && data?.eventStatus !== 'tcloaded') return;
+            if (data?.eventStatus !== 'useractioncomplete' && data?.eventStatus !== 'tcloaded' && gdprApplies !== false) return;
             waitingForChoice = false;
+            revocationPending = false;
+            if (settingsTimer !== null) window.clearTimeout(settingsTimer);
+            settingsTimer = null;
             suspendAnalytics();
             // Let the CMP finish updating its own Consent Mode purpose values.
             // No TCF-purpose guessing and no competing gtag consent updates.
@@ -106,13 +127,15 @@
     const copy = {
         pl: {
             title: 'Ustawienia prywatności i cookies', close: 'Zamknij', policy: 'Polityka prywatności',
-            unavailable: 'Panel zgód Google jest obecnie niedostępny lub nie został jeszcze skonfigurowany. Opcjonalne śledzenie Google Analytics jest w tej sesji wstrzymane. Ta wersja gry nie wyświetla reklam AdSense.',
+            unavailable: 'Panel zgód Google jest obecnie niedostępny. Opcjonalne śledzenie Google Analytics jest w tej sesji wstrzymane.',
+            regional: 'Europejski panel zgód Google nie jest dostępny dla Twojego regionu. Brak tego komunikatu nie oznacza zgody na śledzenie. Opcjonalne śledzenie Google Analytics jest w tej sesji wstrzymane.',
             protected: 'Ustawienia zgód nie usuwają zapisów kariery, modów ani ustawień gry. Lokalne dane niezbędne do rozgrywki pozostają na Twoim urządzeniu.',
             contact: 'Pytania dotyczące prywatności: dartscareer@gmail.com.'
         },
         en: {
             title: 'Privacy & Cookie Settings', close: 'Close', policy: 'Privacy Policy',
-            unavailable: 'The Google consent panel is currently unavailable or has not yet been configured. Optional Google Analytics tracking is paused for this session. This version of the game does not display AdSense ads.',
+            unavailable: 'The Google consent panel is currently unavailable. Optional Google Analytics tracking is paused for this session.',
+            regional: 'The European Google consent panel is not available in your region. The absence of that message does not mean consent to tracking. Optional Google Analytics tracking is paused for this session.',
             protected: 'Consent settings do not delete career saves, mods or game settings. Local data required to play remains on your device.',
             contact: 'Privacy enquiries: dartscareer@gmail.com.'
         }
@@ -143,28 +166,48 @@
         dialog.lang = lang;
         dialog.querySelector('h2').textContent = text.title;
         dialog.querySelectorAll('[data-privacy-copy]').forEach(element => { element.textContent = text[element.dataset.privacyCopy]; });
+        if (status === 'regional-policy-required') dialog.querySelector('[data-privacy-copy="unavailable"]').textContent = text.regional;
         dialog.querySelector('a').href = (document.documentElement.dataset.privacyPage === 'true' ? 'index.html' : 'privacy-policy/index.html') + '?lang=' + lang;
         if (!dialog.open) dialog.showModal();
     }
     function openSettings() {
         suspendAnalytics();
+        if (revocationPending) return false;
         const cmp = window.googlefc;
-        if (!apiReady || typeof cmp.showRevocationMessage !== 'function') {
+        const inapplicable = purposeStatus(cmp, 'NOT_APPLICABLE');
+        if (gdprApplies === false || (inapplicable !== undefined && purposeStatuses.analytics_storage === inapplicable)) {
+            status = 'regional-policy-required'; showUnavailable(); return false;
+        }
+        if (!apiReady || typeof cmp.showRevocationMessage !== 'function' || typeof cmp.callbackQueue?.push !== 'function') {
             status = 'cmp-unavailable'; showUnavailable(); return false;
         }
         waitingForChoice = true;
+        revocationPending = true;
+        revocationUiSeen = false;
+        function unavailableSettings() {
+            revocationPending = false; waitingForChoice = false;
+            status = 'cmp-unavailable'; showUnavailable();
+        }
         // API calls must run through the official callback queue, after readiness.
         cmp.callbackQueue.push(() => {
+            if (!revocationPending) return;
             try {
                 if (typeof window.googlefc.showRevocationMessage !== 'function') throw new Error('CMP unavailable');
                 window.googlefc.showRevocationMessage();
-            } catch (_error) { waitingForChoice = false; status = 'cmp-unavailable'; showUnavailable(); }
+            } catch (_error) { unavailableSettings(); }
         });
+        // An available API is not proof that Google can serve the account's panel.
+        // If its queue/message never opens, keep GA paused and explain the failure.
+        if (revocationPending && !revocationUiSeen) settingsTimer = window.setTimeout(() => {
+            settingsTimer = null;
+            if (revocationPending && !revocationUiSeen) unavailableSettings();
+        }, 6000);
         return false;
     }
     window.dartsPrivacy = Object.freeze({
         openSettings,
-        getStatus: () => ({ measurementId, status, apiReady, purposes: { ...purposes },
+        getStatus: () => ({ measurementId, status, apiReady, gdprApplies, purposes: { ...purposes },
+            purposeStatuses: { ...purposeStatuses }, outsideEuropePolicy: 'explicit-analytics-consent',
             analyticsRequested: tagRequested, analyticsLoaded: tagLoaded,
             analyticsEnabled: !window[disableKey], awaitingChoice: waitingForChoice, adsEnabled: false })
     });
