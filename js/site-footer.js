@@ -1,15 +1,14 @@
-function openSiteInformation(page) {
-    const pageIds = { terms: 'site-information-terms', privacy: 'site-information-privacy', contact: 'site-information-contact' };
-    const dialog = Object.hasOwn(pageIds, page) && document.getElementById(pageIds[page]);
-    if (dialog && !dialog.open) dialog.showModal();
-    return false;
-}
+document.getElementById('site-footer-privacy')?.addEventListener('click', event => {
+    const language = typeof currentLang === 'string' && currentLang === 'pl' ? 'pl' : 'en';
+    event.currentTarget.href = 'privacy-policy/index.html?lang=' + language;
+});
 
-document.querySelectorAll('.site-information-dialog').forEach(dialog => {
-    dialog.addEventListener('click', event => {
-        if (event.target !== dialog) return;
-        const bounds = dialog.getBoundingClientRect();
-        if (event.clientX < bounds.left || event.clientX > bounds.right
-            || event.clientY < bounds.top || event.clientY > bounds.bottom) dialog.close();
-    });
+document.getElementById('site-footer-terms')?.addEventListener('click', event => {
+    const language = typeof currentLang === 'string' && currentLang === 'pl' ? 'pl' : 'en';
+    event.currentTarget.href = 'terms-of-use/index.html?lang=' + language;
+});
+
+document.getElementById('site-footer-contact')?.addEventListener('click', event => {
+    const language = typeof currentLang === 'string' && currentLang === 'pl' ? 'pl' : 'en';
+    event.currentTarget.href = 'contact/index.html?lang=' + language;
 });

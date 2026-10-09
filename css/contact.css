@@ -1,0 +1,24 @@
+/* Contact-only additions; shared document typography and navigation stay intact. */
+.contact-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 24px; margin: 32px 0 38px; }
+.contact-card { display: flex; flex-direction: column; margin: 0; padding: 26px; background: var(--panel); border: 1px solid var(--border); border-radius: 9px; }
+.contact-card h2 { margin-top: 18px; font-size: 22px; }
+.contact-mark { display: grid; place-items: center; width: 42px; height: 42px; border: 1px solid #68db95; border-radius: 50%; color: #68db95; font-size: 17px; font-weight: 700; }
+.contact-address { margin-top: 0; color: #8ce5b1; overflow-wrap: anywhere; user-select: all; }
+.contact-card ul, .contact-report ul { margin: 0 0 22px; padding-left: 21px; }
+.contact-card li, .contact-report li { margin-bottom: 9px; padding-left: 2px; }
+.contact-card p { margin-top: 0; }
+.contact-action { display: inline-block; align-self: flex-start; margin-top: auto; padding: 10px 18px; background: #227c49; border: 1px solid #388e5d; border-radius: 6px; color: #fff; text-decoration: none; font-size: 14px; font-weight: 600; }
+.contact-action:hover { background: #286e46; color: #fff; }
+.contact-discord { background: #4752c4; border-color: #6973dc; }
+.contact-discord:hover { background: #3e48ad; }
+.contact-report { padding: 26px; border-left: 3px solid #68db95; background: var(--panel); border-radius: 0 9px 9px 0; }
+.contact-note { color: var(--muted); font-size: 14px; }
+@media (max-width: 700px) {
+    .contact-grid { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+    .contact-card, .contact-report { padding: 22px; }
+}
+@media print {
+    .contact-grid { display: block; }
+    .contact-card, .contact-report { background: white; border-color: #bbb; }
+    .contact-action, .contact-mark { color: #111; background: transparent; }
+}

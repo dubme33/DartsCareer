@@ -3,6 +3,7 @@ const translations = {
         "t-site-information": "Informacje o stronie",
         "t-footer-terms": "Regulamin",
         "t-footer-privacy": "Polityka prywatności",
+        "t-footer-privacy-settings": "Ustawienia prywatności i cookies",
         "t-footer-contact": "Kontakt",
         "t-site-information-close": "Zamknij",
         // Już istniejące tłumaczenia (zachowuję)
@@ -465,6 +466,7 @@ const translations = {
         "t-site-information": "Site information",
         "t-footer-terms": "Terms of Use",
         "t-footer-privacy": "Privacy Policy",
+        "t-footer-privacy-settings": "Privacy & Cookie Settings",
         "t-footer-contact": "Contact",
         "t-site-information-close": "Close",
         // ANGIELSKIE TŁUMACZENIA
@@ -936,6 +938,7 @@ const translations = {
         "t-site-information": "Informationen zur Website",
         "t-footer-terms": "Nutzungsbedingungen",
         "t-footer-privacy": "Datenschutzerklärung",
+        "t-footer-privacy-settings": "Datenschutz- und Cookie-Einstellungen",
         "t-footer-contact": "Kontakt",
         "t-site-information-close": "Schließen",
         "pdc-search-label": "Spieler suchen",
@@ -1384,6 +1387,7 @@ const translations = {
         "t-site-information": "Website-informatie",
         "t-footer-terms": "Gebruiksvoorwaarden",
         "t-footer-privacy": "Privacybeleid",
+        "t-footer-privacy-settings": "Privacy- en cookie-instellingen",
         "t-footer-contact": "Contact",
         "t-site-information-close": "Sluiten",
         // HOLENDERSKIE TŁUMACZENIA

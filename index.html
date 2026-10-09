@@ -1,17 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <!-- Google tag (gtag.js) -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-J5GF9EPVRM"></script>
-<script>
-  window.dataLayer = window.dataLayer || [];
-  function gtag(){dataLayer.push(arguments);}
-  gtag('js', new Date());
-
-  gtag('config', 'G-J5GF9EPVRM');
-</script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="js/site-privacy.js?v=1.4.9&privacy-links=2"></script>
+    <!-- Insert only the actual Google CMP tag supplied by the publisher account after the adapter above. No ads are configured. -->
+    <link rel="stylesheet" href="css/site-privacy.css?v=1.4.9">
     <title>Darts Career - Free Browser Simulator Game</title>
     <meta name="description" content="Play the ultimate free Darts Career simulator in your browser. Create your player, climb the rankings, buy equipment, sign sponsors, and hit 9-darters!">
     <meta name="keywords" content="darts career, darts simulator, darts game, darts manager, pdc, browser game">
@@ -3876,35 +3870,15 @@
     <footer style="width: 100%; box-sizing: border-box; text-align: center; padding: 25px 15px; margin-top: auto; color: #7f8c8d; font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 2px;">
         <nav class="site-footer-links" aria-labelledby="site-footer-information-label">
             <span id="site-footer-information-label" class="dyn-t" data-key="t-site-information">Informacje o stronie</span>
-            <a id="site-footer-terms" href="#site-information-terms" onclick="return openSiteInformation('terms')" aria-haspopup="dialog" class="dyn-t" data-key="t-footer-terms">Regulamin</a>
-            <a id="site-footer-privacy" href="#site-information-privacy" onclick="return openSiteInformation('privacy')" aria-haspopup="dialog" class="dyn-t" data-key="t-footer-privacy">Polityka prywatności</a>
-            <a id="site-footer-contact" href="#site-information-contact" onclick="return openSiteInformation('contact')" aria-haspopup="dialog" class="dyn-t" data-key="t-footer-contact">Kontakt</a>
+            <a id="site-footer-terms" href="terms-of-use/index.html?lang=pl" target="_blank" rel="noopener" class="dyn-t" data-key="t-footer-terms">Regulamin</a>
+            <a id="site-footer-privacy" href="privacy-policy/index.html?lang=pl" target="_blank" rel="noopener" class="dyn-t" data-key="t-footer-privacy">Polityka prywatności</a>
+            <a id="site-footer-contact" href="contact/index.html?lang=pl" target="_blank" rel="noopener" class="dyn-t" data-key="t-footer-contact">Kontakt</a>
+            <a id="site-footer-privacy-settings" href="#privacy-settings-status" onclick="return dartsPrivacy.openSettings()" aria-haspopup="dialog" class="dyn-t" data-key="t-footer-privacy-settings">Ustawienia prywatności i cookies</a>
         </nav>
         <div style="margin-bottom: 5px; color: #bdc3c7;">V. 1.4.9</div>
         <a href="mailto:dartscareer@gmail.com" style="color: #bdc3c7; text-decoration: none; text-transform: lowercase; display: inline-block; margin-top: 5px;">dartscareer@gmail.com</a>
     </footer>
 
-    <dialog id="site-information-terms" class="site-information-dialog" aria-labelledby="site-terms-title">
-        <div class="site-information-heading">
-            <h2 id="site-terms-title" class="dyn-t" data-key="t-footer-terms">Regulamin</h2>
-            <form method="dialog"><button type="submit" class="site-information-close dyn-t" data-key="t-site-information-close">Zamknij</button></form>
-        </div>
-        <div id="site-terms-content" class="site-information-content"></div>
-    </dialog>
-    <dialog id="site-information-privacy" class="site-information-dialog" aria-labelledby="site-privacy-title">
-        <div class="site-information-heading">
-            <h2 id="site-privacy-title" class="dyn-t" data-key="t-footer-privacy">Polityka prywatności</h2>
-            <form method="dialog"><button type="submit" class="site-information-close dyn-t" data-key="t-site-information-close">Zamknij</button></form>
-        </div>
-        <div id="site-privacy-content" class="site-information-content"></div>
-    </dialog>
-    <dialog id="site-information-contact" class="site-information-dialog" aria-labelledby="site-contact-title">
-        <div class="site-information-heading">
-            <h2 id="site-contact-title" class="dyn-t" data-key="t-footer-contact">Kontakt</h2>
-            <form method="dialog"><button type="submit" class="site-information-close dyn-t" data-key="t-site-information-close">Zamknij</button></form>
-        </div>
-        <div id="site-contact-content" class="site-information-content"></div>
-    </dialog>
 
     <!-- SKRYPTY -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
@@ -4048,6 +4022,6 @@
     <script src="js/tournament-editor-teams.js?v=1.4.9&editor-structure=1&team-tournaments=1&tournament-gender=1"></script>
     <script src="js/tournament-pack.js?v=1.4.9&editor-structure=1&tournament-packs=1&qualifier-seats=1&editor-cycles=1&calendar-manager=1&tournament-gender=1&season-leagues=1"></script>
 
-    <script src="js/site-footer.js?v=1.4.9&footer-pages=1"></script>
+    <script src="js/site-footer.js?v=1.4.9&footer-pages=5"></script>
 </body>
 </html>
