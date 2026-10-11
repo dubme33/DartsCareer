@@ -188,14 +188,14 @@
             revocationPending = false; waitingForChoice = false;
             status = 'cmp-unavailable'; showUnavailable();
         }
-        // API calls must run through the official callback queue, after readiness.
-        cmp.callbackQueue.push(() => {
+        // Opening the panel requires the API, not an existing consent decision.
+        cmp.callbackQueue.push({ CONSENT_API_READY: () => {
             if (!revocationPending) return;
             try {
                 if (typeof window.googlefc.showRevocationMessage !== 'function') throw new Error('CMP unavailable');
                 window.googlefc.showRevocationMessage();
             } catch (_error) { unavailableSettings(); }
-        });
+        } });
         // An available API is not proof that Google can serve the account's panel.
         // If its queue/message never opens, keep GA paused and explain the failure.
         if (revocationPending && !revocationUiSeen) settingsTimer = window.setTimeout(() => {
