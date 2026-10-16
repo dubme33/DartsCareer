@@ -21,7 +21,7 @@ const PLAYER_PACK_TEXT = {
         same: 'Bez zmian', details: '{country} · OVR {overall} · {birthYear}', deleted: 'Usunięty zawodnik',
         fieldName: 'nazwisko', fieldCountry: 'kraj', fieldNickname: 'pseudonim', fieldBirth: 'rok urodzenia',
         fieldGender: 'płeć', fieldDoubles: 'ulubione double', fieldRatings: 'oceny', fieldTraits: 'cechy',
-        fieldPhoto: 'zdjęcie', fieldWalkon: 'muzyka wejściowa', fieldDarts: 'lotki' },
+        fieldPhoto: 'zdjęcie', fieldWalkon: 'muzyka wejściowa', fieldDarts: 'lotki', fieldDartEntryAngle: 'kąt wbicia lotek' },
     en: { title: 'Player packs', intro: 'Share the AI roster as a JSON file or load another player’s database.',
         export: 'Export database', import: 'Load database', preview: 'Import preview',
         hint: 'Choose an action for each change. Match results, ranking money and your career player are not transferred. Deletions are skipped by default.',
@@ -39,7 +39,7 @@ const PLAYER_PACK_TEXT = {
         same: 'No changes', details: '{country} · OVR {overall} · {birthYear}', deleted: 'Deleted player',
         fieldName: 'name', fieldCountry: 'country', fieldNickname: 'nickname', fieldBirth: 'birth year',
         fieldGender: 'gender', fieldDoubles: 'favourite doubles', fieldRatings: 'ratings', fieldTraits: 'traits',
-        fieldPhoto: 'photo', fieldWalkon: 'walk-on music', fieldDarts: 'darts' },
+        fieldPhoto: 'photo', fieldWalkon: 'walk-on music', fieldDarts: 'darts', fieldDartEntryAngle: 'dart entry angle' },
     de: { title: 'Spielerpakete', intro: 'KI-Spielerdatenbank als JSON-Datei teilen oder eine andere Datenbank laden.',
         export: 'Datenbank exportieren', import: 'Datenbank laden', preview: 'Importvorschau',
         hint: 'Wähle für jede Änderung eine Aktion. Ergebnisse, Ranglisten-Preisgeld und dein Karriere-Spieler werden nicht übertragen. Löschungen werden standardmäßig übersprungen.',
@@ -57,7 +57,7 @@ const PLAYER_PACK_TEXT = {
         same: 'Keine Änderungen', details: '{country} · OVR {overall} · {birthYear}', deleted: 'Gelöschter Spieler',
         fieldName: 'Name', fieldCountry: 'Land', fieldNickname: 'Spitzname', fieldBirth: 'Geburtsjahr',
         fieldGender: 'Geschlecht', fieldDoubles: 'Lieblingsdoppel', fieldRatings: 'Werte', fieldTraits: 'Eigenschaften',
-        fieldPhoto: 'Foto', fieldWalkon: 'Walk-on-Musik', fieldDarts: 'Darts' },
+        fieldPhoto: 'Foto', fieldWalkon: 'Walk-on-Musik', fieldDarts: 'Darts', fieldDartEntryAngle: 'Dart-Einschlagwinkel' },
     nl: { title: 'Spelerspakketten', intro: 'Deel de AI-spelersdatabase als JSON of laad een database van een andere speler.',
         export: 'Database exporteren', import: 'Database laden', preview: 'Importvoorbeeld',
         hint: 'Kies per wijziging een actie. Wedstrijdresultaten, rankinggeld en je eigen carrièrespeler worden niet overgenomen. Verwijderingen worden standaard overgeslagen.',
@@ -75,7 +75,7 @@ const PLAYER_PACK_TEXT = {
         same: 'Geen wijzigingen', details: '{country} · OVR {overall} · {birthYear}', deleted: 'Verwijderde speler',
         fieldName: 'naam', fieldCountry: 'land', fieldNickname: 'bijnaam', fieldBirth: 'geboortejaar',
         fieldGender: 'geslacht', fieldDoubles: 'favoriete dubbels', fieldRatings: 'ratings', fieldTraits: 'eigenschappen',
-        fieldPhoto: 'foto', fieldWalkon: 'walk-onmuziek', fieldDarts: 'darts' }
+        fieldPhoto: 'foto', fieldWalkon: 'walk-onmuziek', fieldDarts: 'darts', fieldDartEntryAngle: 'insteekhoek van de darts' }
 };
 
 function trPlayerPack(key, values = {}) {
@@ -141,6 +141,9 @@ function normalizePlayerPackEntry(raw) {
             entry.darts = normalizeAiDartAppearance(raw.darts);
         else throw playerPackError('invalid');
     }
+    if (Object.prototype.hasOwnProperty.call(raw, 'dartEntryAngle')) {
+        entry.dartEntryAngle = raw.dartEntryAngle === null ? null : playerPackInt(raw.dartEntryAngle, -10, 45);
+    }
     return entry;
 }
 function normalizePlayerPackDeletion(raw) {
@@ -199,6 +202,8 @@ function createPlayerPackEntry(candidate) {
         walkon: typeof candidate.walkon === 'string' && candidate.walkon.startsWith('data:') ? candidate.walkon : '' };
     if (typeof normalizeAiDartAppearance === 'function') raw.darts = candidate.aiDartAppearance
         ? normalizeAiDartAppearance(candidate.aiDartAppearance) : null;
+    raw.dartEntryAngle = Number.isInteger(candidate.dartEntryAngle) && candidate.dartEntryAngle >= -10
+        && candidate.dartEntryAngle <= 45 ? candidate.dartEntryAngle : null;
     return normalizePlayerPackEntry(raw);
 }
 function createPlayerPack() {
@@ -290,7 +295,9 @@ function getPlayerPackChanges(target, entry) {
         ...changed(['endurance', 'consistency', 'mental'], 'fieldTraits'),
         ...changed(['photo'], 'fieldPhoto'), ...changed(['walkon'], 'fieldWalkon'),
         ...(entry.darts !== undefined && JSON.stringify(current.darts) !== JSON.stringify(entry.darts)
-            ? [trPlayerPack('fieldDarts')] : [])
+            ? [trPlayerPack('fieldDarts')] : []),
+        ...(Object.prototype.hasOwnProperty.call(entry, 'dartEntryAngle') && current.dartEntryAngle !== entry.dartEntryAngle
+            ? [trPlayerPack('fieldDartEntryAngle')] : [])
     ];
 }
 function planPlayerPackImport(pack, choices = {}, database = pdcPlayers) {
@@ -361,6 +368,10 @@ function applyPlayerPackDetails(candidate, entry) {
     if (entry.darts !== undefined) {
         if (entry.darts === null) delete candidate.aiDartAppearance;
         else candidate.aiDartAppearance = normalizeAiDartAppearance(entry.darts);
+    }
+    if (Object.prototype.hasOwnProperty.call(entry, 'dartEntryAngle')) {
+        if (entry.dartEntryAngle === null) delete candidate.dartEntryAngle;
+        else candidate.dartEntryAngle = entry.dartEntryAngle;
     }
     if (typeof initializePlayerTraits === 'function') initializePlayerTraits(candidate);
     candidate.traits = { ...(candidate.traits || {}), endurance: entry.endurance,

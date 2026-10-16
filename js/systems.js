@@ -12,22 +12,23 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
         // różne ID. Mapa pozwala nadal odtworzyć ich referencje w drabinkach i tabelach.
         let pdcPlayerIdAliases = new Map();
 
-        function getWorldCupPlayerSaveReference(candidate) {
+        function getWorldCupPlayerSaveReference(candidate, reference = getPlayerSaveReference) {
             if (!candidate || typeof candidate !== 'object') return candidate;
 
             // Kwalifikanci spoza bazy zawodników nie mają odpowiednika do odtworzenia po
             // wczytaniu, więc zachowujemy ich pełne, niewielkie obiekty.
             if (candidate.isWorldCupGuest) return { ...candidate };
 
-            return getPlayerSaveReference(candidate);
+            return (typeof reference === 'function' ? reference : getPlayerSaveReference)(candidate);
         }
 
-        function getPlayerSaveReference(candidate) {
+        function getPlayerSaveReference(candidate, knownPlayerIndex = null) {
             if (!candidate || typeof candidate !== 'object') return candidate;
             if (candidate.isBye) return { ...candidate };
 
-            const knownPlayers = [player, ...(Array.isArray(pdcPlayers) ? pdcPlayers : [])];
-            const savedPlayer = knownPlayers.find(known => samePlayer(known, candidate));
+            const savedPlayer = knownPlayerIndex instanceof Map
+                ? knownPlayerIndex.get(candidate.id)
+                : [player, ...(Array.isArray(pdcPlayers) ? pdcPlayers : [])].find(known => samePlayer(known, candidate));
 
             // Zawodnicy z bazy są już zapisani w player/pdcPlayers. Ponowne zapisywanie
             // ich historii w drabince, tabeli ligi i zespołach tylko zużywa localStorage.
@@ -108,7 +109,7 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
             };
         }
 
-        function getWorldCupStateForSave(state) {
+        function getWorldCupStateForSave(state, reference = getPlayerSaveReference) {
             if (!isPlainObject(state)) return null;
             return {
                 ...state,
@@ -116,26 +117,27 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
                     ? state.teams.map(team => ({
                         ...team,
                         players: Array.isArray(team.players)
-                            ? team.players.map(getWorldCupPlayerSaveReference)
+                            ? team.players.map(candidate => getWorldCupPlayerSaveReference(candidate, reference))
                             : []
                     }))
                     : []
             };
         }
 
-        function getTournamentDatabaseForSave() {
+        function getTournamentDatabaseForSave(reference = getPlayerSaveReference) {
+            const teamReference = candidate => getWorldCupPlayerSaveReference(candidate, reference);
             return (Array.isArray(tournamentDatabase) ? tournamentDatabase : []).map(tournament => {
                 if (!isPlainObject(tournament)) return tournament;
                 const savedTournament = { ...tournament };
                 if (savedTournament.editorLeagueState?.teams) {
                     savedTournament.editorLeagueState = { ...savedTournament.editorLeagueState,
                         teams: savedTournament.editorLeagueState.teams.map(team => ({ ...team,
-                            players: team.players.map(getWorldCupPlayerSaveReference) })) };
+                            players: team.players.map(teamReference) })) };
                 }
                 if (savedTournament.editorTeamState?.teams) {
                     savedTournament.editorTeamState = { ...savedTournament.editorTeamState,
                         teams: savedTournament.editorTeamState.teams.map(team => ({ ...team,
-                            players: team.players.map(getWorldCupPlayerSaveReference) })) };
+                            players: team.players.map(teamReference) })) };
                 }
                 const hasCompactHistory = typeof hasTournamentMatchHistory === 'function'
                     && hasTournamentMatchHistory(savedTournament.matchHistory);
@@ -154,6 +156,14 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
         function buildGameState() {
             if (typeof initializeAiDevelopmentFoundation === 'function') initializeAiDevelopmentFoundation();
             if (typeof removeRetiredRandomEmails === 'function') removeRetiredRandomEmails(unreadMailsCount);
+            // A per-snapshot index avoids scanning the entire roster for every
+            // bracket/team member. It is discarded after this save, so edits,
+            // replacements and imports cannot leave a stale identity cache.
+            const knownPlayerIndex = new Map();
+            for (const candidate of [player, ...(Array.isArray(pdcPlayers) ? pdcPlayers : [])]) {
+                if (candidate?.id && !knownPlayerIndex.has(candidate.id)) knownPlayerIndex.set(candidate.id, candidate);
+            }
+            const savePlayerReference = candidate => getPlayerSaveReference(candidate, knownPlayerIndex);
             const hasActiveCompactHistory = Boolean(activeTournament
                 && typeof hasTournamentMatchHistory === 'function'
                 && hasTournamentMatchHistory(tournamentMatchHistory));
@@ -166,23 +176,26 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
                         ? getCareerRecordsForSave(player?.careerRecords)
                         : player?.careerRecords
                 },
-                pdcPlayers, tournamentDatabase: getTournamentDatabaseForSave(),
+                pdcPlayers, tournamentDatabase: getTournamentDatabaseForSave(savePlayerReference),
                 currentDate: currentDate.getTime(), emails, unreadMailsCount,
                 gdlTable: Array.isArray(gdlTable)
-                    ? gdlTable.map(row => isPlainObject(row) ? { ...row, player: getPlayerSaveReference(row.player) } : row)
+                    ? gdlTable.map(row => isPlainObject(row) ? { ...row, player: savePlayerReference(row.player) } : row)
                     : [],
                 activeTournament: getActiveTournamentSaveReference(activeTournament),
                 tournamentRound,
-                tournamentBracket: Array.isArray(tournamentBracket) ? tournamentBracket.map(getPlayerSaveReference) : [],
+                tournamentBracket: Array.isArray(tournamentBracket) ? tournamentBracket.map(savePlayerReference) : [],
                 preTournamentRanks,
                 tournamentMatchHistory: hasActiveCompactHistory ? tournamentMatchHistory : null,
                 lastTournamentResults: shouldSaveLegacyActiveHtml ? lastTournamentResults : '',
                 currentRoundHTML: shouldSaveLegacyActiveHtml ? currentRoundHTML : '',
-                worldCupState: typeof worldCupState !== 'undefined' ? getWorldCupStateForSave(worldCupState) : null,
+                worldCupState: typeof worldCupState !== 'undefined' ? getWorldCupStateForSave(worldCupState, savePlayerReference) : null,
                 worldMastersState: typeof worldMastersState !== 'undefined' ? worldMastersState : null,
                 grandSlamState: typeof getGrandSlamStateForSave === 'function' ? getGrandSlamStateForSave() : null,
                 playerLifecycleState: typeof playerLifecycleState !== 'undefined' ? playerLifecycleState : null
             };
+            if(typeof getWomensSeriesMatchForSave==='function'){
+                const match=getWomensSeriesMatchForSave();if(match)gameState.womensSeriesMatch=match;
+            }
             return typeof packSeasonMatchKeysForSave === 'function'
                 ? packSeasonMatchKeysForSave(gameState) : gameState;
         }
@@ -237,6 +250,7 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
 
         function getTournamentRetirementReplacementPool(tournament, candidates) {
             if (!tournament || tournament.completed) return [];
+            if(typeof isWomensSeriesTournament==='function'&&isWomensSeriesTournament(tournament))return getWomensSeriesEligiblePlayers(candidates,currentDate,tournament);
             const name = `${tournament.name || ''} ${tournament.sourceName || ''}`.toLowerCase();
             const rankBy = property => [...candidates].sort((first, second) =>
                 (Number(second[property]) || 0) - (Number(first[property]) || 0)
@@ -248,6 +262,9 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
                 && !secondaryWithdrawals.has(`${String(candidate.name || '').trim()}|${String(candidate.country || '').trim()}`);
 
             if (tournament.specialType === 'pdcQSchool') {
+                if (tournament.qSchoolStage && typeof getPdcQSchoolDayParticipants === 'function') {
+                    return getPdcQSchoolDayParticipants(tournament, candidates);
+                }
                 return rankBy('prizeMoney').filter(candidate => candidate.hasTourCard !== true);
             }
             if (tournament.specialType === 'challengeTour'
@@ -328,7 +345,7 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
             }
             if (name.includes('world darts championship') || name.includes('global darts championship')) {
                 return typeof buildWorldChampionshipQualification === 'function'
-                    ? buildWorldChampionshipQualification(candidates).participants : [];
+                    ? buildWorldChampionshipQualification(candidates, currentDate, tournament).participants : [];
             }
             if (typeof isContinentalTourTournament === 'function' && isContinentalTourTournament(tournament)) {
                 const state = tournament.continentalQualification;
@@ -363,7 +380,7 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
             const usedIdentities = new Set(bracket.map(getIdentity).filter(Boolean));
             const isRetired = candidate => !candidate
                 || (typeof isRetiredPlayer === 'function' && isRetiredPlayer(candidate));
-            const restrictedQualifier = ['pdcQSchool', 'challengeTour', 'developmentTour', 'pdcTourCardQualifier', 'continentalQualifier',
+            const restrictedQualifier = ['pdcQSchool', 'challengeTour', 'developmentTour', 'womensSeries', 'pdcTourCardQualifier', 'continentalQualifier',
                 'worldMastersFinalsQualifier', 'classicMastersQualifier']
                 .includes(tournament.specialType);
             if (!restrictedQualifier && !bracket.some(isRetired)) return bracket;
@@ -818,6 +835,7 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
                 && options.tournamentRollback !== true) return false;
             try {
                 validateGameState(gameState);
+                if(!options.tournamentRollback&&typeof clearWomensSeriesMatchBeforeLoad==='function')clearWomensSeriesMatchBeforeLoad();
                 if (Object.prototype.hasOwnProperty.call(gameState, 'recordedMatchKeyPool')) {
                     if (typeof restoreSeasonMatchKeysFromSave !== 'function') {
                         throw new Error('Match key decoder unavailable.');
@@ -826,6 +844,8 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
                 }
                 if (typeof clearCareerProfileMediaRuntime === 'function') clearCareerProfileMediaRuntime();
 
+                const needsLegacyPdcQSchool = !gameState.player.pdcQSchoolEditions
+                    && ![gameState.player, ...gameState.pdcPlayers].some(candidate => candidate.pdcTourCard?.version === 2);
                 player = gameState.player;
                 if (typeof initializeCareerDifficulty === 'function') initializeCareerDifficulty(player);
                 if (typeof initializeWalkonTournamentMode === 'function') initializeWalkonTournamentMode(player);
@@ -855,6 +875,7 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
                 // pełnoprawnymi uczestnikami kariery. Nie zerujemy ponownie ich
                 // nagród ani kart przy każdym wczytaniu zapisu.
                 applyKnownPlayerBirthYears([player, ...pdcPlayers]);
+                if(typeof applyDevelopmentPopulationBirthDates==='function') applyDevelopmentPopulationBirthDates([player,...pdcPlayers]);
                 if (typeof removeCareerPlayerFromAiPool === 'function') removeCareerPlayerFromAiPool();
                 normalizePlayerIds(pdcPlayers, player);
                 if (typeof removeLegacyPlayerForm === 'function') {
@@ -872,9 +893,15 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
                 if (typeof migrateContinentalTourQualifiersCalendar === 'function') migrateContinentalTourQualifiersCalendar();
                 if (typeof migrateWorldMastersCalendar === 'function') migrateWorldMastersCalendar();
                 if (typeof syncPdc2026TournamentCalendar === 'function') {
-                    syncPdc2026TournamentCalendar(tournamentDatabase, gameState.currentDate);
+                    syncPdc2026TournamentCalendar(tournamentDatabase, gameState.currentDate, {activeTournament:gameState.activeTournament});
                 }
                 currentDate = new Date(gameState.currentDate);
+                if (!options?.tournamentRollback && typeof applyWomensAgeCalibrations === 'function') {
+                    applyWomensAgeCalibrations([player,...pdcPlayers],currentDate);
+                }
+                if (!options?.tournamentRollback && typeof applyWomensRatingCalibrations === 'function') {
+                    applyWomensRatingCalibrations([player,...pdcPlayers], {careerPlayer:player,referenceDate:currentDate});
+                }
                 if (typeof initializeAiDevelopmentFoundation === 'function') initializeAiDevelopmentFoundation(currentDate);
                 if (typeof initializeTournamentWatchSettings === 'function') initializeTournamentWatchSettings(player);
                 if (typeof initializeBounceOutSettings === 'function') initializeBounceOutSettings(player);
@@ -930,6 +957,14 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
                         team.players = Array.isArray(team.players) ? team.players.map(resolveLoadedPlayer).filter(Boolean) : [];
                     });
                 });
+                if (typeof ensurePdcQSchoolCalendar === 'function') ensurePdcQSchoolCalendar(tournamentDatabase, currentDate, { activeTournament,
+                    legacy: needsLegacyPdcQSchool });
+                if (typeof ensureWorldYouthCalendar === 'function') ensureWorldYouthCalendar(tournamentDatabase,currentDate,{migration:!options?.tournamentRollback});
+                if (typeof applyWomensPopulationEligibility === 'function') applyWomensPopulationEligibility([...pdcPlayers,player]);
+                if (typeof ensureWomensSeriesCalendar === 'function') ensureWomensSeriesCalendar(tournamentDatabase,currentDate,{migration:!options?.tournamentRollback});
+                if(typeof ensureWomensWorldMatchplayCalendar==='function')ensureWomensWorldMatchplayCalendar(tournamentDatabase,currentDate,{migration:!options?.tournamentRollback});
+                if (!options?.tournamentRollback && typeof ensureWomensSeriesPopulation === 'function') ensureWomensSeriesPopulation(currentDate,{reason:'save-migration'});
+                if (!options?.tournamentRollback && typeof ensureYouthDevelopmentPopulation === 'function') ensureYouthDevelopmentPopulation(currentDate,{reason:'save-migration'});
                 const completedActiveTournament = activeTournament?.completed ? activeTournament : null;
                 if (completedActiveTournament) {
                     // Zapis pobrany pomiędzy oznaczeniem kwalifikatora jako ukończony
@@ -948,10 +983,6 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
                         if (linkedMainTournament) getPdcTourCardQualifiedMainField(linkedMainTournament, [player, ...pdcPlayers]);
                     }
                     activeTournament = null;
-                }
-                if (!activeTournament && (!Array.isArray(gameState.tournamentBracket) || gameState.tournamentBracket.length === 0)
-                    && typeof recoverPendingTournamentForCurrentDate === 'function') {
-                    recoverPendingTournamentForCurrentDate(true);
                 }
                 tournamentRound = Number.isFinite(gameState.tournamentRound) ? gameState.tournamentRound : 32;
                 const savedPreTournamentRanks = isPlainObject(gameState.preTournamentRanks) ? gameState.preTournamentRanks : {};
@@ -983,6 +1014,12 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
                 }
                 if (typeof repairCareerTournamentBracket === 'function') {
                     tournamentBracket = repairCareerTournamentBracket(tournamentBracket);
+                }
+                // Restore saved globals first: recovering a parked session earlier
+                // would overwrite its finalists with the empty between-session save.
+                if (!activeTournament && (!Array.isArray(gameState.tournamentBracket) || gameState.tournamentBracket.length === 0)
+                    && typeof recoverPendingTournamentForCurrentDate === 'function') {
+                    recoverPendingTournamentForCurrentDate(true);
                 }
                 if (typeof restoreGrandSlamState === 'function') restoreGrandSlamState(gameState.grandSlamState);
                 worldCupState = gameState.worldCupState && isPlainObject(gameState.worldCupState)
@@ -1016,6 +1053,7 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
             if (typeof restorePlayerEquipmentWear === 'function') restorePlayerEquipmentWear();
             if (typeof restoreTutorialState === 'function') restoreTutorialState();
                 updateDateDisplay(); updateMailBadge(); updateHub(); showScreen('screen-hub');
+                if(!options?.tournamentRollback&&typeof restoreWomensSeriesMatchFromSave==='function')restoreWomensSeriesMatchFromSave(gameState);
                 if (typeof clearTournamentSimulationSaveBlock === 'function') clearTournamentSimulationSaveBlock();
                 if (showFeedback) alert(t('t-alert-load-ok'));
                 return true;
@@ -1917,6 +1955,7 @@ async function updateProfileWalkon(event) {
     // --- 8. SILNIK BŁYSKAWICZNEJ SYMULACJI (FAST-FORWARD) ---
 
         function simulateTurnFast(isP1) {
+            if (typeof ensureMatchSetAverage === 'function') ensureMatchSetAverage(currentMatch);
             const isDoublesMatch = Boolean(currentMatch.isDoubles && typeof getDoublesCurrentThrower === 'function');
             const pObj = isDoublesMatch
                 ? getDoublesCurrentThrower(isP1)
@@ -1966,6 +2005,8 @@ async function updateProfileWalkon(event) {
                 let hitSec = result.sector;
                 let hitMult = result.mult;
                 let points = hitSec * hitMult;
+                if (typeof recordMatchDoubleInDart === 'function') recordMatchDoubleInDart(currentMatch,
+                    isP1, currentScore, result, scoringDarts);
 
                 if (isDIDO && currentScore === 501 && hitMult !== 2) points = 0;
 
@@ -2060,6 +2101,7 @@ async function updateProfileWalkon(event) {
 
         function handleFastLegWin(isP1) {
             resetMatchThrowGrouping(currentMatch);
+            if (typeof ensureMatchSetAverage === 'function') ensureMatchSetAverage(currentMatch);
             const st = currentMatch.stats;
             const isSetMatch = currentMatch.matchFormat && currentMatch.matchFormat.type === 'sets';
             const wasSuddenDeath = Boolean(currentMatch.suddenDeath);
@@ -2141,7 +2183,10 @@ async function updateProfileWalkon(event) {
             currentMatch.p1TurnStartScore = 501; currentMatch.p2TurnStartScore = 501;
             st.p1LegDarts = 0; st.p2LegDarts = 0;
 
-            if (setWasWon) { currentMatch.p1Legs = 0; currentMatch.p2Legs = 0; }
+            if (setWasWon) {
+                currentMatch.p1Legs = 0; currentMatch.p2Legs = 0;
+                if (typeof beginMatchSetAverage === 'function') beginMatchSetAverage(currentMatch);
+            }
 
             if (currentMatch.isDoubles) {
                 const winningSide = isP1 ? 'p1' : 'p2';
@@ -2191,7 +2236,7 @@ async function updateProfileWalkon(event) {
         }
 
         function canSimulateCurrentMatch() {
-            if (!currentMatch || currentMatch.isFinishing
+            if (!currentMatch || currentMatch.isFinishing || currentMatch.isSpectator || currentMatch.careerAutoplay
                 || (typeof isMatchBullOffPending === 'function' && isMatchBullOffPending(currentMatch))
                 || currentMatch.matchIncidents?.pending
                 || (typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy())) return false;

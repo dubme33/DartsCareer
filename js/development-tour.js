@@ -75,6 +75,9 @@ function getDevelopmentTourSearchableName(tournamentOrName) {
 }
 
 function isDevelopmentTourTournament(tournamentOrName = (typeof activeTournament !== 'undefined' ? activeTournament : null)) {
+    if(typeof isWomensWorldMatchplayTournament==='function'&&isWomensWorldMatchplayTournament(tournamentOrName))return false;
+    if (typeof isWomensSeriesTournament === 'function' && isWomensSeriesTournament(tournamentOrName)) return false;
+    if (typeof isWorldYouthTournament === 'function' && isWorldYouthTournament(tournamentOrName)) return false;
     if (tournamentOrName && typeof tournamentOrName === 'object'
         && tournamentOrName.specialType === DEVELOPMENT_TOUR_TYPE) return true;
     const name = getDevelopmentTourSearchableName(tournamentOrName);
@@ -89,8 +92,24 @@ function getDevelopmentTourReferenceYear(referenceDate = (typeof currentDate !==
 }
 
 function getDevelopmentTourSeasonAge(candidate, referenceDate) {
-    const birthYear = Number(candidate?.birthYear);
+    const exact = getDevelopmentTourExactAge(candidate, new Date(getDevelopmentTourReferenceYear(referenceDate),0,4));
+    if (exact !== null) return exact;
+    const birthYear = Number((typeof getWomensAgeBirthContext === 'function'
+        ? getWomensAgeBirthContext(candidate, new Date(getDevelopmentTourReferenceYear(referenceDate),0,4)) : candidate)?.birthYear);
     return Number.isInteger(birthYear) ? getDevelopmentTourReferenceYear(referenceDate) - birthYear : null;
+}
+
+function getDevelopmentTourExactAge(candidate, referenceDate) {
+    if (typeof getWomensAgeBirthContext === 'function') candidate=getWomensAgeBirthContext(candidate,referenceDate);
+    const parts = /^(\d{4})-(\d{2})-(\d{2})$/.exec(candidate?.birthDate || candidate?.dateOfBirth || '');
+    if (!parts) return null;
+    if(candidate.birthYear!=null&&Number.isInteger(Number(candidate.birthYear))&&Number(candidate.birthYear)!==+parts[1])return null;
+    const born = new Date(+parts[1],+parts[2]-1,+parts[3]);
+    if(born.getFullYear()!==+parts[1]||born.getMonth()!==+parts[2]-1||born.getDate()!==+parts[3])return null;
+    const date = referenceDate instanceof Date ? referenceDate : new Date(referenceDate);
+    if(Number.isNaN(date.getTime()))return null;
+    return date.getFullYear()-born.getFullYear()-(date.getMonth()<born.getMonth()
+        ||date.getMonth()===born.getMonth()&&date.getDate()<born.getDate()?1:0);
 }
 
 function getDevelopmentTourPlayerKey(candidate) {
@@ -137,7 +156,9 @@ function getDevelopmentTourEligiblePlayers(candidates, referenceDate = (typeof c
     const top64 = getDevelopmentTourTop64PlayerKeys(active);
     return active.filter(candidate => {
         const age = getDevelopmentTourSeasonAge(candidate, referenceDate);
-        return age >= DEVELOPMENT_TOUR_MIN_AGE && age <= DEVELOPMENT_TOUR_MAX_AGE
+        if (typeof isPdcParticipationRestricted === 'function' && isPdcParticipationRestricted(candidate, getPdcTourCardReferenceYear(referenceDate))) return false;
+        const participationAge = getDevelopmentTourExactAge(candidate,referenceDate) ?? age;
+        return participationAge >= DEVELOPMENT_TOUR_MIN_AGE && age <= DEVELOPMENT_TOUR_MAX_AGE
             && !top64.has(getDevelopmentTourPlayerKey(candidate));
     }).sort(compareDevelopmentTourOrderOfMerit);
 }

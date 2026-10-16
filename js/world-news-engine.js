@@ -105,6 +105,9 @@ function newsTournamentIdentity(t) {
     return identity;
 }
 function newsTournamentClass(t) {
+    if(typeof isWomensWorldMatchplayTournament==='function'&&isWomensWorldMatchplayTournament(t))return {qualifier:false,world:false,major:false,prestige:.65,series:'womensWorldMatchplay'};
+    if (typeof isWomensSeriesTournament==='function'&&isWomensSeriesTournament(t))return {qualifier:false,world:false,major:false,prestige:.2,series:'womensSeries'};
+    if (typeof isWorldYouthTournament === 'function' && isWorldYouthTournament(t)) return {qualifier:false,world:false,major:false,prestige:.45,series:'worldYouth'};
     const identity=newsTournamentIdentity(t),name=identity.sourceName.toLowerCase(),type=String(identity.specialType||'');
     const cycle=identity.editorCycle||identity.series||(typeof getCalendarTournamentCycle==='function'?getCalendarTournamentCycle(identity):'');
     const qualifier=!!identity.qualifierFor||identity.qualifier===true||cycle==='qualifier'||/qualifier|kwalifikac|q.?school/.test(name+' '+type.toLowerCase());
@@ -233,6 +236,8 @@ function newsLeadEligible(topic,f) {
     return false;
 }
 function newsCategory(topic,f) {
+    if(f.tournament?.series==='womensWorldMatchplay')return 'WOMENS_WORLD_MATCHPLAY';
+    if(f.tournament?.series==='womensSeries')return 'WOMENS_SERIES';
     if(f.tournament?.world&&!['ranking','retirement'].includes(topic))return 'WORLD_CHAMPIONSHIP';
     if(topic==='season_review'||topic==='record')return 'RECORD';
     if(topic.includes('preview'))return 'PREVIEW';

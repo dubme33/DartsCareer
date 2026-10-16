@@ -159,6 +159,36 @@ const NEWGEN_NAME_PROFILES = Object.freeze({
         female: ['Emma', 'Leah', 'Mia', 'Anika', 'Marli', 'Nadine', 'Naledi', 'Lerato', 'Zanele', 'Thandi', 'Amahle', 'Ayanda'],
         last: ['van der Merwe', 'Botha', 'Pretorius', 'Coetzee', 'Nel', 'Jacobs', 'Williams', 'Mokoena', 'Dlamini', 'Ndlovu', 'Khumalo', 'Molefe', 'Naidoo', 'Pillay', 'Daniels', 'Adams']
     },
+    mongolian: {
+        male: ['Bat-Erdene', 'Temuulen', 'Bilguun', 'Tengis', 'Munkh-Erdene', 'Anar', 'Batsaikhan', 'Erdenebat', 'Tuvshin', 'Sukhbat', 'Bayar', 'Ganbold'],
+        female: ['Anu', 'Nomin', 'Enkhjin', 'Saruul', 'Bolormaa', 'Tsetseg', 'Khulan', 'Solongo', 'Oyun', 'Sarnai', 'Tuya', 'Uyanga'],
+        last: ['Batbayar', 'Enkhbat', 'Munkhbat', 'Dorj', 'Ganbaatar', 'Tserendorj', 'Bold', 'Baatar', 'Erdene', 'Davaadorj', 'Bayarsaikhan', 'Otgonbayar']
+    },
+    thai: {
+        male: ['Anan', 'Chai', 'Somchai', 'Niran', 'Kittisak', 'Thanawat', 'Pongsak', 'Wichai', 'Surachai', 'Prasert', 'Arthit', 'Chatchai'],
+        female: ['Mali', 'Siriporn', 'Nattaya', 'Kanya', 'Suda', 'Anong', 'Pim', 'Darunee', 'Rattana', 'Wilai', 'Kamon', 'Nanthana'],
+        last: ['Saetang', 'Saelee', 'Saelim', 'Srisuk', 'Saengchan', 'Suwan', 'Boonmee', 'Somsri', 'Thongchai', 'Kaewmanee', 'Wongchai', 'Chanthong']
+    },
+    malay: {
+        male: ['Amir', 'Hakim', 'Farid', 'Azlan', 'Hafiz', 'Irfan', 'Imran', 'Danish', 'Rizal', 'Faiz', 'Haziq', 'Syafiq'],
+        female: ['Aisyah', 'Nurul', 'Siti', 'Amira', 'Farah', 'Nadia', 'Aina', 'Hafizah', 'Izzah', 'Aqilah', 'Syafiqah', 'Nabila'],
+        last: ['Abdullah', 'Rahman', 'Ismail', 'Ibrahim', 'Hassan', 'Omar', 'Yusof', 'Aziz', 'Osman', 'Hamid', 'Ahmad', 'Zainal']
+    },
+    bahraini: {
+        male: ['Ahmed', 'Ali', 'Hassan', 'Hussain', 'Yusuf', 'Khalid', 'Salman', 'Nasser', 'Faisal', 'Omar', 'Abdullah', 'Hamza'],
+        female: ['Fatima', 'Aisha', 'Mariam', 'Zainab', 'Noor', 'Layla', 'Huda', 'Sara', 'Amal', 'Hessa', 'Dana', 'Reem'],
+        last: ['Al Haddad', 'Al Mansoori', 'Al Noori', 'Al Ansari', 'Al Jaber', 'Al Salman', 'Al Saleh', 'Al Mahdi', 'Al Sayed', 'Al Qassim', 'Al Hamad', 'Al Mubarak']
+    },
+    ugandan: {
+        male: ['Emmanuel', 'Joseph', 'Peter', 'Daniel', 'Isaac', 'Samuel', 'Michael', 'David', 'Moses', 'Andrew', 'Patrick', 'Stephen'],
+        female: ['Grace', 'Sarah', 'Esther', 'Ruth', 'Mary', 'Rebecca', 'Lydia', 'Agnes', 'Joyce', 'Florence', 'Harriet', 'Judith'],
+        last: ['Kato', 'Mugisha', 'Okello', 'Musoke', 'Ssekandi', 'Mukasa', 'Wasswa', 'Kizza', 'Ochieng', 'Ssembatya', 'Kamya', 'Lwanga']
+    },
+    malawian: {
+        male: ['James', 'John', 'Peter', 'Daniel', 'Joseph', 'Samuel', 'Patrick', 'Francis', 'Charles', 'Emmanuel', 'Isaac', 'Paul'],
+        female: ['Grace', 'Mary', 'Ruth', 'Esther', 'Joyce', 'Agnes', 'Mercy', 'Lydia', 'Rose', 'Patricia', 'Dorothy', 'Eunice'],
+        last: ['Banda', 'Phiri', 'Mwale', 'Mbewe', 'Chirwa', 'Kamanga', 'Manda', 'Gondwe', 'Nyirenda', 'Kaunda', 'Tembo', 'Nkhoma']
+    },
     icelandic: {
         male: ['Jón', 'Aron', 'Viktor', 'Emil', 'Magnús', 'Einar', 'Bjarni', 'Kristján', 'Gunnar', 'Ólafur', 'Sigurður', 'Haukur'],
         female: ['Anna', 'Emilía', 'Sara', 'Katrín', 'Elín', 'Sigríður', 'Guðrún', 'Helga', 'Lilja', 'Hildur', 'Ásta', 'Ragnheiður'],
@@ -213,5 +243,20 @@ const NEWGEN_COUNTRY_DISTRIBUTION = Object.freeze([
     { country: 'Chiny', weight: 2, profile: 'chinese' },
     { country: 'Hongkong', weight: 2, profile: 'hongKong' },
     { country: 'Indie', weight: 2, profile: 'indian' },
-    { country: 'Islandia', weight: 1, profile: 'icelandic' }
+    { country: 'Islandia', weight: 1, profile: 'icelandic' },
+    // Small World Cup scenes share under 1% of recruitment between them. Keep
+    // all established weights above unchanged, including the leading nations.
+    { country: 'Mongolia', weight: 1, profile: 'mongolian' },
+    { country: 'Singapur', weight: 1, profile: 'chinese' },
+    { country: 'Tajlandia', weight: 1, profile: 'thai' },
+    { country: 'Malezja', weight: 1, profile: 'malay' },
+    { country: 'Tajwan', weight: 1, profile: 'chinese' },
+    { country: 'Gibraltar', weight: 0.5, profile: 'english' },
+    { country: 'Bahrajn', weight: 0.5, profile: 'bahraini' },
+    { country: 'Trynidad i Tobago', weight: 0.5, profile: 'english' },
+    { country: 'Argentyna', weight: 0.5, profile: 'spanish' },
+    { country: 'Gujana', weight: 0.5, profile: 'english' },
+    { country: 'Bahamy', weight: 0.5, profile: 'english' },
+    { country: 'Uganda', weight: 0.5, profile: 'ugandan' },
+    { country: 'Malawi', weight: 0.5, profile: 'malawian' }
 ]);

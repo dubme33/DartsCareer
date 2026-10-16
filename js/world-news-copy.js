@@ -1,6 +1,6 @@
 // Public editorial copy. Every interpolation comes from newsPublicFacts(); no
 // skill ratings, hidden attributes, fabricated quotations or match chronology.
-function newsCopy(lines,v={}) {return newsSay(...lines).replace(/\{(\w+)\}/g,(_,k)=>v[k]??'').replace(/\b1 places\b/g,'1 place').replace(/\bA (?=(?:8\d*|11|18)–\d)/g,'An ');}
+function newsCopy(lines,v={}) {const text=newsSay(...lines).replace(/\{(\w+)\}/g,(_,k)=>v[k]??'').replace(/\b1 places\b/g,'1 place').replace(/\bA (?=(?:8\d*|11|18)–\d)/g,'An ');return typeof competitionDisplayText==='function'?competitionDisplayText(text):text;}
 function newsEditorialValues(f) {
     return {n:f.actor.name,o:f.opponent?.name||'',t:f.tournament?.name||'',city:f.tournament?.city||'',
         rank:f.ranking||'',old:f.previousRanking||'',opRank:f.opponentRank||'',score:f.score||'',age:f.age??'',
@@ -11,6 +11,8 @@ function newsEditorialValues(f) {
         storyPlayer:f.previewContext?.storylines?.[0]?.person.name||'',youngPlayer:f.previewContext?.young?.[0]?.person.name||''};
 }
 function newsArticleHeadline(f,a,p) {
+    if(f.tournament?.series==='womensWorldMatchplay'&&typeof womensWorldMatchplayNewsHeadline==='function')return womensWorldMatchplayNewsHeadline(f);
+    if(f.tournament?.series==='womensSeries'&&typeof womensSeriesNewsHeadline==='function')return womensSeriesNewsHeadline(f);
     const v=newsEditorialValues(f),key=p.headlineFamily;
     if(['world_run','deep_run'].includes(a.topic)&&f.stage)return newsCopy(f.coverageStage==='reached'?
         ['{n} reaches the last {stage} at {t}','{n} w Top {stage} w {t}','{n} erreicht die letzten {stage} bei {t}','{n} bereikt de laatste {stage} op {t}']:
@@ -107,6 +109,8 @@ function newsArticleHeadline(f,a,p) {
     return newsCopy(tables[p.family]?.[key]||tables.RISE.rise,v);
 }
 function newsArticleDeck(f,a,p) {
+    if(f.tournament?.series==='womensWorldMatchplay'&&typeof womensWorldMatchplayNewsDeck==='function')return womensWorldMatchplayNewsDeck(f);
+    if(f.tournament?.series==='womensSeries'&&typeof womensSeriesNewsDeck==='function')return womensSeriesNewsDeck(f);
     const v=newsEditorialValues(f);
     if(a.topic==='season_review')return newsCopy(['The world champion, the Order of Merit and the major stories of {year}.','Mistrz świata, Order of Merit i najważniejsze historie sezonu {year}.','Der Weltmeister, die Order of Merit und die großen Geschichten von {year}.','De wereldkampioen, de Order of Merit en de grote verhalen van {year}.'],v);
     if(['RESULT','MAJOR','WORLD'].includes(p.family))return newsCopy(f.opponent&&f.score?

@@ -43,7 +43,7 @@
             replay: 'POWTÓRKA', replayOf: 'Zakończenie lega', skip: 'Pomiń powtórkę',
             moment: 'MOMENT MECZU', legWon: 'KONIEC LEGA', maximum: 'Maksimum 180', bigVisit: 'Wysoka kolejka',
             bullFinish: 'Bull na zakończenie', highCheckout: 'Wysoki checkout', bounceOut: 'Bounce-out', robinHood: 'Robin Hood',
-            hundred: '100+', oneForty: '140+', averages: 'ŚREDNIE', matchAverage: 'ŚREDNIA MECZOWA', firstNineAverage: 'ŚREDNIA 9 LOTEK',
+            hundred: '100+', oneForty: '140+', averages: 'ŚREDNIE', matchAverage: 'ŚREDNIA MECZOWA', setAverage: 'ŚREDNIA SETA', firstNineAverage: 'ŚREDNIA 9 LOTEK',
             percentage: 'SKUTECZNOŚĆ', madeAttempts: 'TRAFIONE / PRÓBY', leg: 'LEG', darts: 'lotek'
         },
         en: {
@@ -52,7 +52,7 @@
             replay: 'REPLAY', replayOf: 'Leg-winning dart', skip: 'Skip replay',
             moment: 'MATCH MOMENT', legWon: 'LEG COMPLETE', maximum: 'Maximum 180', bigVisit: 'Big visit',
             bullFinish: 'Bull finish', highCheckout: 'High checkout', bounceOut: 'Bounce-out', robinHood: 'Robin Hood',
-            hundred: '100+', oneForty: '140+', averages: 'AVERAGES', matchAverage: 'MATCH AVERAGE', firstNineAverage: 'FIRST 9 AVERAGE',
+            hundred: '100+', oneForty: '140+', averages: 'AVERAGES', matchAverage: 'MATCH AVERAGE', setAverage: 'SET AVERAGE', firstNineAverage: 'FIRST 9 AVERAGE',
             percentage: 'PERCENTAGE', madeAttempts: 'MADE / ATTEMPTS', leg: 'LEG', darts: 'darts'
         },
         de: {
@@ -61,7 +61,7 @@
             replay: 'WIEDERHOLUNG', replayOf: 'Leg-Dart', skip: 'Wiederholung überspringen',
             moment: 'MATCHMOMENT', legWon: 'LEG BEENDET', maximum: 'Maximum 180', bigVisit: 'Hohe Aufnahme',
             bullFinish: 'Bull-Finish', highCheckout: 'Hohes Checkout', bounceOut: 'Bounce-out', robinHood: 'Robin Hood',
-            hundred: '100+', oneForty: '140+', averages: 'DURCHSCHNITTE', matchAverage: 'MATCH-AVERAGE', firstNineAverage: 'ERSTE 9 DARTS',
+            hundred: '100+', oneForty: '140+', averages: 'DURCHSCHNITTE', matchAverage: 'MATCH-AVERAGE', setAverage: 'SET-AVERAGE', firstNineAverage: 'ERSTE 9 DARTS',
             percentage: 'QUOTE', madeAttempts: 'TREFFER / VERSUCHE', leg: 'LEG', darts: 'Darts'
         },
         nl: {
@@ -70,7 +70,7 @@
             replay: 'HERHALING', replayOf: 'Winnende leg-dart', skip: 'Herhaling overslaan',
             moment: 'WEDSTRIJDMOMENT', legWon: 'LEG AFGELOPEN', maximum: 'Maximum 180', bigVisit: 'Hoge beurt',
             bullFinish: 'Bull-finish', highCheckout: 'Hoge checkout', bounceOut: 'Bounce-out', robinHood: 'Robin Hood',
-            hundred: '100+', oneForty: '140+', averages: 'GEMIDDELDEN', matchAverage: 'WEDSTRIJDGEMIDDELDE', firstNineAverage: 'EERSTE 9 PIJLEN',
+            hundred: '100+', oneForty: '140+', averages: 'GEMIDDELDEN', matchAverage: 'WEDSTRIJDGEMIDDELDE', setAverage: 'SETGEMIDDELDE', firstNineAverage: 'EERSTE 9 PIJLEN',
             percentage: 'PERCENTAGE', madeAttempts: 'RAAK / POGINGEN', leg: 'LEG', darts: 'darts'
         }
     };
@@ -89,7 +89,7 @@
             ? getTVDirectorSettings() : { replays: 'normal', statistics: 'normal' };
     }
     function speed() {
-        return typeof currentMatch !== 'undefined' && currentMatch?.isSpectator
+        return typeof currentMatch !== 'undefined' && (currentMatch?.isSpectator || currentMatch?.careerAutoplay)
             && typeof getSpectatorPlaybackSpeed === 'function' ? Math.max(.5, getSpectatorPlaybackSpeed()) : 1;
     }
     function makeSession(match) {
@@ -243,7 +243,7 @@
     }
     function postImpactDelay() {
         let delay = typeof getMatchBoardAnimationDelay === 'function' ? getMatchBoardAnimationDelay(650) : 650;
-        if (currentMatch?.isSpectator && typeof getSpectatorPlaybackDelay === 'function') {
+        if ((currentMatch?.isSpectator || currentMatch?.careerAutoplay) && typeof getSpectatorPlaybackDelay === 'function') {
             delay = getSpectatorPlaybackDelay(delay, delay);
         }
         return delay;
@@ -284,7 +284,10 @@
     }
     function pumpCards() {
         if (!tvActive() || directorSettings().statistics === 'off' || !session || session.presentationPending || session.replayRunning || cardTimer || !cardQueue.length) return;
-        const card = cardQueue.shift();
+        const queued = cardQueue.shift();
+        // A replay or another card may have delayed this until a new set.
+        const card = queued.kind === 'averages' ? overviewCard('averages') : queued;
+        statCard.dataset.statKind = card.kind;
         statKicker.textContent = card.kicker;
         statTitle.textContent = card.title;
         renderRows(card.rows);
@@ -292,7 +295,7 @@
         statCard.hidden = false;
         requestAnimationFrame(() => statCard.classList.add('is-visible'));
         session.lastCard = card.kind;
-        const minimum = currentMatch?.isSpectator ? 2400 : 4200;
+        const minimum = (currentMatch?.isSpectator || currentMatch?.careerAutoplay) ? 2400 : 4200;
         cardTimer = setTimeout(() => {
             cardTimer = null; statCard.classList.remove('is-visible');
             cardHideTimer = setTimeout(() => { statCard.hidden = true; cardHideTimer = null; pumpCards(); }, 380);
@@ -302,8 +305,15 @@
         const copy = text();
         if (kind === 'checkout') {
             const p1 = checkoutStats('p1'), p2 = checkoutStats('p2');
-            return { kind, kicker: copy.matchStats, title: copy.checkout,
-                rows: [{ label: copy.percentage, p1: p1.rate, p2: p2.rate },
+            const opening = typeof isMatchDoubleIn === 'function' && isMatchDoubleIn(currentMatch);
+            const openingRows = opening ? [{ label: getMatchDoubleInStatsCopy().label,
+                p1: getMatchDoubleInPercentage(currentMatch, 'p1'), p2: getMatchDoubleInPercentage(currentMatch, 'p2') },
+                { label: getMatchDoubleInStatsCopy().attempts, ...Object.fromEntries(['p1', 'p2'].map(side => {
+                    const data = getMatchDoubleInStats(currentMatch, side);
+                    return [side, data ? `${data.hits}/${data.attempts}` : '—'];
+                })) }] : [];
+            return { kind, kicker: copy.matchStats, title: opening ? 'DOUBLE-IN / DOUBLE-OUT' : copy.checkout,
+                rows: [...openingRows, { label: copy.percentage, p1: p1.rate, p2: p2.rate },
                     { label: copy.madeAttempts, p1: p1.hits, p2: p2.hits }] };
         }
         if (kind === 'visits') {
@@ -316,6 +326,8 @@
             const p1 = averageStats('p1'), p2 = averageStats('p2');
             return { kind, kicker: copy.matchStats, title: copy.averages,
                 rows: [{ label: copy.matchAverage, p1: p1.match, p2: p2.match },
+                    ...(currentMatch?.matchFormat?.type === 'sets' && typeof getMatchSetAverageText === 'function'
+                        ? [{ label: copy.setAverage, p1: getMatchSetAverageText(currentMatch, 'p1'), p2: getMatchSetAverageText(currentMatch, 'p2') }] : []),
                     { label: copy.firstNineAverage, p1: p1.firstNine, p2: p2.firstNine }] };
         }
         return { kind: '180', kicker: copy.matchStats, title: copy.oneEighties,
@@ -393,9 +405,16 @@
         screen.classList.remove('tv-director-hold');
         hideMomentBanner();
         const actions = state.deferredActions.splice(0);
-        actions.forEach(entry => queueMicrotask(() => {
-            if (typeof currentMatch !== 'undefined' && currentMatch === entry.match) entry.action();
-        }));
+        if (actions.length) queueMicrotask(() => {
+            const run = () => actions.forEach(entry => {
+                if (typeof currentMatch !== 'undefined' && currentMatch === entry.match) entry.action();
+            });
+            if (typeof currentMatch !== 'undefined' && currentMatch === state.match
+                && (currentMatch.isSpectator || currentMatch.careerAutoplay) && currentMatch.spectatorPaused
+                && typeof scheduleSpectatorPlaybackAction === 'function') {
+                window.aiTimeout = scheduleSpectatorPlaybackAction(run, 0, 0);
+            } else run();
+        });
     }
     function deferMatchAction(action) {
         const state = ensureSession();
@@ -556,10 +575,10 @@
         }
         let delay = callerFinished ? 120
             : (typeof getMatchBoardAnimationDelay === 'function' ? getMatchBoardAnimationDelay(620) : 620);
-        if (!callerFinished && currentMatch?.isSpectator && typeof getSpectatorPlaybackDelay === 'function') {
+        if (!callerFinished && (currentMatch?.isSpectator || currentMatch?.careerAutoplay) && typeof getSpectatorPlaybackDelay === 'function') {
             delay = getSpectatorPlaybackDelay(delay, delay);
         }
-        const minimum = callerFinished ? 80 : (currentMatch?.isSpectator ? 25 : 450);
+        const minimum = callerFinished ? 80 : ((currentMatch?.isSpectator || currentMatch?.careerAutoplay) ? 25 : 450);
         replayCueTimer = setTimeout(() => {
             replayCueTimer = null;
             if (!tvActive() || session !== state || currentMatch !== state.match || !state.presentationPending) { releasePresentation(state); return; }
@@ -662,6 +681,11 @@
             state.completedVisits++;
         }
 
+        if (event.skippedPresentation) {
+            if (event.visitComplete) state.visitHits[side] = [];
+            return;
+        }
+
         let highlight = tvActive() && directorSettings().replays !== 'off' ? replayPayload(event) : null;
         if (highlight) {
             state.replayCandidates++;
@@ -724,7 +748,7 @@
     }
 
     function previewSelectedAim() {
-        if (!tvActive() || !currentMatch || currentMatch.isSpectator || currentMatch.turn !== 'p1') return;
+        if (!tvActive() || !currentMatch || (currentMatch.isSpectator || currentMatch.careerAutoplay) || currentMatch.turn !== 'p1') return;
         const sectorValue = Number(document.getElementById('aim-sector')?.value);
         const multiplierValue = Number(document.getElementById('aim-multiplier')?.value);
         const aim = sectorValue === 50 ? { sector: 25, mult: 2 } : { sector: sectorValue, mult: multiplierValue };

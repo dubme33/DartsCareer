@@ -70,6 +70,7 @@ function isWorldChampionshipCountryGroup(candidate, group) {
 function getWorldChampionshipPlayerAge(candidate, referenceDate) {
     const date = referenceDate instanceof Date ? referenceDate : new Date(referenceDate);
     const year = Number.isNaN(date.getTime()) ? 2026 : date.getFullYear();
+    if (typeof getWomensAgeBirthContext === 'function') candidate=getWomensAgeBirthContext(candidate,new Date(year,date.getMonth()||0,date.getDate()||1));
     return Number.isInteger(candidate?.birthYear) ? year - candidate.birthYear : null;
 }
 
@@ -102,13 +103,25 @@ function getWorldChampionshipSideTourRanking(candidates, type) {
             || compareWorldChampionshipOom(first, second));
 }
 
-function buildWorldChampionshipQualification(candidates, referenceDate = (typeof currentDate !== 'undefined' ? currentDate : new Date(2026, 11, 1))) {
+function buildWorldChampionshipQualification(candidates, referenceDate = (typeof currentDate !== 'undefined' ? currentDate : new Date(2026, 11, 1)), tournament = null) {
     const ranked = getWorldChampionshipQualificationCandidates(candidates);
     const selected = [];
     const selectedKeys = new Set();
     const categories = [];
 
     const addCategory = (key, label, count, pool, predicate = () => true) => {
+        const override = tournament?.editorNativeRoutes?.find(route => route.nativeKey === key);
+        if (override && typeof getTournamentEditorNativeRoutePool === 'function') {
+            const routePool = getTournamentEditorNativeRoutePool(tournament, override, ranked, referenceDate);
+            const players = routePool.filter(candidate => !selectedKeys.has(getWorldChampionshipPlayerKey(candidate)))
+                .slice(0, Math.min(count, override.places));
+            players.forEach(candidate => { selected.push(candidate); selectedKeys.add(getWorldChampionshipPlayerKey(candidate)); });
+            categories.push({ key: `native-${key}`, label: getTournamentEditorNativeRouteLabel(override),
+                requested: override.places, playerIds: players.map(getWorldChampionshipPlayerKey),
+                shortfall: Math.max(0, override.places - players.length), editorRoute: override });
+            count -= override.places;
+            if (count <= 0) return players;
+        }
         const additions = [];
         for (const candidate of pool) {
             const candidateKey = getWorldChampionshipPlayerKey(candidate);
@@ -137,7 +150,13 @@ function buildWorldChampionshipQualification(candidates, referenceDate = (typeof
         return age >= 16 && age <= 18;
     });
     addCategory('india', 'Najlepszy zawodnik z Indii spoza Top 80 OOM', 1, outsideTop80, candidate => isWorldChampionshipCountry(candidate, 'Indie'));
-    addCategory('women', 'Cztery najlepsze kobiety spoza Top 80 OOM', 4, outsideTop80, isWorldChampionshipWoman);
+    const nativeWomensSeries=typeof getWomensSeriesQualificationPlayers==='function'&&typeof tournamentDatabase!=='undefined'&&tournamentDatabase.some(e=>isWomensSeriesTournament(e));
+    if(nativeWomensSeries&&!tournament?.editorNativeRoutes?.some(r=>r.nativeKey==='women')){
+        categories.push({key:'women',label:"Women's Series",requested:3,playerIds:[],shortfall:3});
+    }else if(nativeWomensSeries){
+        const count=tournament?.editorNativeRoutes?.find(r=>r.nativeKey==='women')?.places||3;
+        addCategory('women', "Women's Series: trzy najwyżej sklasyfikowane niezakwalifikowane zawodniczki",count,getWomensSeriesQualificationPlayers(referenceDate.getFullYear(),ranked),isWorldChampionshipWoman);
+    }else addCategory('women', 'Cztery najlepsze kobiety spoza Top 80 OOM', 4, outsideTop80, isWorldChampionshipWoman);
     addCategory('china', 'Najlepszy zawodnik z Chin spoza Top 80 OOM', 1, outsideTop80, candidate => isWorldChampionshipCountry(candidate, 'Chiny'));
     addCategory('japan', 'Najlepszy zawodnik z Japonii spoza Top 80 OOM', 1, outsideTop80, candidate => isWorldChampionshipCountry(candidate, 'Japonia'));
     addCategory('asia', 'Siedmiu najlepszych pozostałych zawodników z Azji', 7, outsideTop80, candidate => (
@@ -177,7 +196,7 @@ function buildWorldChampionshipQualification(candidates, referenceDate = (typeof
         );
     }
 
-    return {
+    const result = {
         version: WORLD_CHAMPIONSHIP_QUALIFICATION_VERSION,
         year: referenceDate instanceof Date ? referenceDate.getFullYear() : new Date(referenceDate).getFullYear(),
         playerIds: selected.slice(0, WORLD_CHAMPIONSHIP_FIELD_SIZE).map(getWorldChampionshipPlayerKey),
@@ -186,6 +205,9 @@ function buildWorldChampionshipQualification(candidates, referenceDate = (typeof
         complete: selected.length >= WORLD_CHAMPIONSHIP_FIELD_SIZE,
         shortfall: Math.max(0, WORLD_CHAMPIONSHIP_FIELD_SIZE - selected.length)
     };
+    const youthResult=typeof applyWorldYouthWorldQualification === 'function'?applyWorldYouthWorldQualification(result,referenceDate,tournament):result;
+    const womensResult=typeof applyWomensWorldMatchplayWorldQualification==='function'?applyWomensWorldMatchplayWorldQualification(youthResult,referenceDate,tournament,ranked):youthResult;
+    return typeof applyWomensSeriesWorldQualification==='function'?applyWomensSeriesWorldQualification(womensResult,referenceDate,tournament,ranked):womensResult;
 }
 
 function resolveWorldChampionshipPlayerKeys(keys, candidates) {
@@ -197,16 +219,30 @@ function resolveWorldChampionshipPlayerKeys(keys, candidates) {
 function getWorldChampionshipQualificationField(tournament, candidates, referenceDate = (typeof currentDate !== 'undefined' ? currentDate : new Date(2026, 11, 1))) {
     const year = referenceDate instanceof Date ? referenceDate.getFullYear() : new Date(referenceDate).getFullYear();
     const existing = tournament?.worldChampionshipQualification;
-    if (existing?.version === WORLD_CHAMPIONSHIP_QUALIFICATION_VERSION && existing.year === year) {
+    if(tournament?.worldChampionshipDrawVersion&&existing?.year===year)return resolveWorldChampionshipPlayerKeys(existing.playerIds,candidates);
+    let routeSignature = JSON.stringify(tournament?.editorNativeRoutes || []);
+    if(typeof womensSeriesSeason==='function')routeSignature+=`|ws:${JSON.stringify(womensSeriesSeason(year,false)?.finalRanking||[])}`;
+    const wwm=typeof getWomensWorldMatchplayWorldEdition==='function'?getWomensWorldMatchplayWorldEdition(year):null;
+    if(wwm?.champion)routeSignature+=`|wwm:${JSON.stringify([wwm.champion,Boolean(wwm.seniorWorldDeclined),wwm.seniorReplacementWinner||null,wwm.seniorWorldRoute])}`;
+    const youth = typeof getWorldYouthEdition==='function'?getWorldYouthEdition(year):null;
+    if(youth?.champion&&tournament?.worldChampionshipDrawVersion&&existing?.year===year)
+        return resolveWorldChampionshipPlayerKeys(existing.playerIds,candidates);
+    if(youth?.champion){
+        const otherRoutes=buildWorldChampionshipQualification(candidates,referenceDate,{...tournament,worldYouthIgnoreSlot:true});
+        routeSignature += `|youth:${JSON.stringify([youth.champion,Boolean(youth.seniorWorldDeclined),youth.seniorReplacementWinner||null,otherRoutes.playerIds.includes(youth.champion)])}`;
+    }
+    if (existing?.version === WORLD_CHAMPIONSHIP_QUALIFICATION_VERSION && existing.year === year
+        && (existing.routeSignature || '[]') === routeSignature) {
         const resolved = resolveWorldChampionshipPlayerKeys(existing.playerIds, candidates);
         if (resolved.length === WORLD_CHAMPIONSHIP_FIELD_SIZE) return resolved;
     }
 
-    const qualification = buildWorldChampionshipQualification(candidates, referenceDate);
+    const qualification = buildWorldChampionshipQualification(candidates, referenceDate, tournament);
     if (tournament) {
         tournament.worldChampionshipQualification = {
             version: qualification.version,
             year: qualification.year,
+            routeSignature,
             playerIds: [...qualification.playerIds],
             categories: qualification.categories.map(category => ({ ...category, playerIds: [...category.playerIds] })),
             complete: qualification.complete,

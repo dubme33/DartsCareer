@@ -40,6 +40,7 @@
     }
 
     function isFloorTournament(tournament) {
+        if(tournament?.specialType==='womensSeries')return true;
         if (!tournament) return true;
         if (tournament.noCrowd === true || tournament.noWalkons === true) return true;
         if (typeof isFloorTournamentWithoutWalkons === 'function') {

@@ -13,6 +13,8 @@ function getCareerEditorEvent(value) {
         ? tournamentDatabase.find(event => event.name === value || event.sourceName === value) : null) : value;
 }
 function getCareerEditorTourId(event) {
+    if(typeof isWomensWorldMatchplayTournament==='function'&&isWomensWorldMatchplayTournament(event))return 'womensWorldMatchplay';
+    if (typeof isWomensSeriesTournament === 'function' && isWomensSeriesTournament(event)) return 'womensSeries';
     if (!event) return 'other';
     if (typeof getCalendarTournamentCycle === 'function') {
         const id = getCalendarTournamentCycle(event);
@@ -43,6 +45,7 @@ function isCareerEditorTourRankingEnabled(id) {
             && tournamentDatabase.some(event => getCareerEditorTourId(event) === id));
 }
 function hasCareerTourEntryOverride(value) {
+    if (typeof isWomensSeriesTournament === 'function' && isWomensSeriesTournament(value)) return false;
     const event = getCareerEditorEvent(value);
     if (event?.isDoubles || event?.specialType === 'worldCup'
         || typeof isEditorTeamTournament === 'function' && isEditorTeamTournament(event)) return false;
@@ -53,7 +56,8 @@ function getCareerTourFieldSize(event) {
     return hasCareerTourEntryOverride(event) ? getCareerEditorTour(event).fieldSize : Number(event?.editorFieldSize) || 32;
 }
 function getCareerEditorCard(id) {
-    if (id === 'pdc') return { id: 'pdc', name: getCareerCalendarEditorState().pdc?.name || 'PDC Tour Card', tier: 0 };
+    if (id === 'pdc') return isCareerPdcCardEnabled()
+        ? { id: 'pdc', name: getCareerCalendarEditorState().pdc?.name || 'PDC Tour Card', tier: 0 } : null;
     return getCareerCalendarEditorState().cards.find(card => card.id === id);
 }
 function hasCareerEditorCard(candidate, id, date = currentDate) {
@@ -70,7 +74,10 @@ function hasCareerEditorCard(candidate, id, date = currentDate) {
     });
 }
 function isCareerEditorAccessEligible(event, candidate, date = currentDate) {
-    if (typeof isTournamentEditorGenderEligible === 'function' && !isTournamentEditorGenderEligible(event, candidate)) return false;
+    if (typeof isPdcRestrictedEventEligible === 'function' && !isPdcRestrictedEventEligible(event, candidate, date)) return false;
+    if(typeof isWomensSeriesTournament==='function'&&isWomensSeriesTournament(event)){
+        if(!isWomensSeriesWoman(candidate))return false;
+    }else if (typeof isTournamentEditorGenderEligible === 'function' && !isTournamentEditorGenderEligible(event, candidate)) return false;
     if (Array.isArray(candidate?.players)) return candidate.players.every(member => isCareerEditorAccessEligible(event, member, date));
     const tour = getCareerEditorTour(event);
     if (tour?.removed) return false;
@@ -91,14 +98,19 @@ function getCareerTourEntryGroups(event, candidates, date = currentDate, options
         players: ranked.slice(0, tour.fieldSize), label: tour.name, confirmed: true }];
 }
 function getCareerTourPrizeMoney(candidate, id, year = currentDate.getFullYear()) {
+    if(id==='womensSeries'&&typeof getWomensSeriesPrizeMoney==='function')return getWomensSeriesPrizeMoney(candidate,year);
     return Math.max(0, Number(candidate?.editorTourRankings?.[id]?.[year]) || 0);
 }
 function getCareerTourRanking(id, candidates = getTournamentEditorCandidates(), year = currentDate.getFullYear()) {
+    if(id==='womensSeries'&&typeof getWomensSeriesOrderOfMerit==='function')return getWomensSeriesOrderOfMerit(candidates,{includeZero:true,year});
     return [...candidates].filter(candidate => candidate && !candidate.isBye && !candidate.retired)
         .sort((a, b) => getCareerTourPrizeMoney(b, id, year) - getCareerTourPrizeMoney(a, id, year)
             || String(getTournamentEditorPlayerKey(a)).localeCompare(String(getTournamentEditorPlayerKey(b))));
 }
 function awardCareerTourPrizeMoney(candidate, amount, event, countTowardsRankings = true) {
+    if(typeof isWomensWorldMatchplayTournament==='function'&&isWomensWorldMatchplayTournament(event))return true;
+    if (typeof isWomensSeriesTournament === 'function' && isWomensSeriesTournament(event)) return true;
+    if (typeof isWorldYouthTournament === 'function' && isWorldYouthTournament(event)) return true;
     const tour = getCareerEditorTour(event);
     if (!tour || tour.ranking === 'native') return false;
     if (tour.ranking === 'own' && countTowardsRankings && event?.rankingOverride !== false && !tour.removed) {
@@ -129,11 +141,72 @@ function awardCareerEditorSeasonCards(candidates, completedYear) {
     return true;
 }
 function getCareerPdcCardSetting(key, fallback) {
+    if (!isCareerPdcCardEnabled() && ['oomPlaces', 'qschoolPlaces', 'secondaryPlaces'].includes(key)) return 0;
     const value = getCareerCalendarEditorState().pdc?.[key];
     return Number.isInteger(value) ? value : fallback;
 }
 function getCareerPdcCardTotal() {
     return getCareerPdcCardSetting('oomPlaces', 64) + getCareerPdcCardSetting('qschoolPlaces', 64);
+}
+function isCareerPdcCardEnabled() { return getCareerCalendarEditorState().pdc?.removed !== true; }
+function getCareerEditorAllPlayers() {
+    // Keep every object, including retired players and duplicate legacy references.
+    return [...new Set([...(typeof pdcPlayers !== 'undefined' ? pdcPlayers : []),
+        ...(typeof player !== 'undefined' && player?.name ? [player] : [])])].filter(candidate => candidate && !candidate.isBye);
+}
+function invalidateCareerEditorRankingSelections() {
+    if (typeof invalidateMainOrderOfMeritRefreshCache === 'function') invalidateMainOrderOfMeritRefreshCache();
+    if (typeof invalidateProTourOrderOfMeritRefreshCache === 'function') invalidateProTourOrderOfMeritRefreshCache();
+    if (typeof invalidatePlayerRankingCache === 'function') invalidatePlayerRankingCache();
+    if (typeof tournamentDatabase === 'undefined') return;
+    for (const event of tournamentDatabase) {
+        const hasResults = event.completed || (event.matchHistory?.blocks || []).some(block => block?.matches?.length)
+            || Boolean(String(event.historyLogs || '').trim());
+        if (hasResults) continue;
+        delete event.worldChampionshipQualification;
+        delete event.ukOpenQualification;
+        const crown = event.crownMastersQualification;
+        const qualifierPlayed = tournamentDatabase.some(qualifier => qualifier.qualifierFor === event.name
+            && (qualifier.completed || (qualifier.matchHistory?.blocks || []).some(block => block?.matches?.length)));
+        if (crown && !crown.completed && !crown.qualifiedPlayerIds?.length && !qualifierPlayed) delete event.crownMastersQualification;
+    }
+}
+function resetCareerEditorPrizeMoney() {
+    const candidates = getCareerEditorAllPlayers();
+    for (const candidate of candidates) {
+        for (const field of ['prizeMoney', 'proTourPrizeMoney', 'pcPrizeMoney', 'europeanTourPrizeMoney',
+            'challengeTourPrizeMoney', 'developmentTourPrizeMoney', 'previousChallengeTourPrizeMoney', 'previousDevelopmentTourPrizeMoney']) {
+            candidate[field] = 0;
+        }
+        candidate.mainPrizeHistory = [];
+        candidate.mainOomHistoryVersion = MAIN_ORDER_OF_MERIT_VERSION;
+        candidate.proTourPrizeHistory = [];
+        candidate.proTourRankingVersion = PRO_TOUR_ORDER_OF_MERIT_VERSION;
+        candidate.historyMain = {};
+        candidate.historyPT = {};
+        candidate.editorTourRankings = {};
+        candidate.womensSeriesPrizeMoney = 0;
+        for(const entry of candidate.womensSeriesPrizeHistory||[])entry.rankingAmount=0;
+        delete candidate.playerEditorRankingAdjustments;
+    }
+    invalidateCareerEditorRankingSelections();
+    return candidates.length;
+}
+function enforceCareerEditorPdcCardRemoval() {
+    if (isCareerPdcCardEnabled()) return false;
+    const cycleYear = getPdcTourCardCycleYear(currentDate);
+    getCareerEditorAllPlayers().forEach(candidate => clearPdcTourCard(candidate, cycleYear));
+    invalidateCareerEditorRankingSelections();
+    return true;
+}
+function removeCareerEditorPdcCard() {
+    const state = getCareerCalendarEditorState();
+    state.pdc = { name: 'PDC Tour Card', durationYears: 2, oomPlaces: 64, qschoolPlaces: 64, secondaryPlaces: 2,
+        ...state.pdc, removed: true };
+    enforceCareerEditorPdcCardRemoval();
+    // Explicit editor requirements must not point at a deleted definition.
+    state.tours.forEach(tour => { if (tour.requiredCardId === 'pdc') { tour.entry = 'open'; tour.requiredCardId = null; } });
+    tournamentDatabase.forEach(event => { if (event.editorRequiredCardId === 'pdc') delete event.editorRequiredCardId; });
 }
 function normalizeCareerCalendarConfiguration(raw) {
     if (raw == null) return null;
@@ -150,8 +223,9 @@ function normalizeCareerCalendarConfiguration(raw) {
         awardTourId: card.awardTourId == null ? null : str(card.awardTourId, 1000), awardPlaces: int(card.awardPlaces || 0, 0, 256) }));
     const cardIds = new Set(['pdc']);
     for (const card of cards) { if (cardIds.has(card.id)) invalid(); cardIds.add(card.id); }
+    if (raw.pdc?.removed === true) cardIds.delete('pdc');
     const tours = raw.tours.map(tour => {
-        const builtInIds = ['major', 'proTour', 'playersChampionship', 'europeanTour', 'challengeTour', 'developmentTour', 'worldSeries', 'premierLeague', 'worldCup', 'qualifier', 'other'];
+        const builtInIds = ['major', 'proTour', 'playersChampionship', 'europeanTour', 'challengeTour', 'developmentTour', 'womensSeries', 'womensWorldMatchplay', 'worldSeries', 'premierLeague', 'worldCup', 'qualifier', 'other'];
         if (!builtInIds.includes(tour.id)) {
             if (typeof tour.id !== 'string' || !tour.id.startsWith('custom:')) invalid();
             let decoded;
@@ -181,8 +255,9 @@ function normalizeCareerCalendarConfiguration(raw) {
     if (new Set(customNames).size !== customNames.length) invalid();
     if (cards.some(card => card.awardTourId && !tours.some(tour => tour.id === card.awardTourId && tour.ranking === 'own' && !tour.removed))) invalid();
     let pdc;
+    if (raw.pdc?.removed != null && typeof raw.pdc.removed !== 'boolean') invalid();
     if (raw.pdc) pdc = { name: str(raw.pdc.name, 80), durationYears: int(raw.pdc.durationYears, 1, 10),
         oomPlaces: int(raw.pdc.oomPlaces, 0, 256), qschoolPlaces: int(raw.pdc.qschoolPlaces, 0, 256),
-        secondaryPlaces: int(raw.pdc.secondaryPlaces, 0, 64) };
+        secondaryPlaces: int(raw.pdc.secondaryPlaces, 0, 64), ...(raw.pdc.removed === true ? { removed: true } : {}) };
     return { tours, cards, ...(pdc ? { pdc } : {}), emptyCalendar: raw.emptyCalendar === true };
 }

@@ -25,6 +25,10 @@ function resumeBlockedWalkonMusic() {
     return matchIntroCurrentEntrance?.resumeMusic?.() || false;
 }
 
+function ensureCareerAutoplayIntro() {
+    return matchIntroCurrentEntrance?.ensureAutoplay?.() || false;
+}
+
 let matchIntroCountryAliases = null;
 
 function getMatchIntroEnglishCountry(country) {
@@ -58,6 +62,14 @@ function getMatchIntroCountryAnnouncement(country) {
     const article = ['Netherlands', 'USA', 'Czech Republic', 'Philippines',
         'Bahamas', 'Gambia', 'United Arab Emirates'].includes(english) ? 'the ' : '';
     return `from ${article}${english}... `;
+}
+
+function getMatchIntroNicknameAnnouncement(candidate) {
+    // Share the walk-on card's resolver, including mod/editor overrides and
+    // intentionally empty nicknames. The entrance uses its existing TTS voice.
+    const nickname = typeof getPlayerNickname === 'function' ? getPlayerNickname(candidate) : '';
+    if (!nickname) return '';
+    return /[.!?]$/.test(nickname) ? `${nickname} ` : `${nickname}! `;
 }
 
 function releaseMatchWalkonAudio(audio) {
@@ -154,6 +166,8 @@ function startCrowd() {
         }
 
         function isFloorTournamentWithoutWalkons(tournament) {
+            if(tournament?.specialType==='womensSeries')return true;
+            if (typeof isWorldYouthTournament === 'function' && isWorldYouthTournament(tournament)) return tournament.worldYouthPhase !== 'final';
             if (!tournament) return false;
             if (tournament.noWalkons === true) return true;
             const name = `${tournament.name || ''} ${tournament.sourceName || ''}`.toLocaleLowerCase('pl');
@@ -213,10 +227,22 @@ function startCrowd() {
                     }
                 }
             }
+            const names = [candidate?.name, candidate?.sourceName].filter(Boolean);
+            const hasPersonalMusic = names.some(name => Boolean(moddedAssets?.music?.[name]));
+            if (!candidate?.walkon && !hasPersonalMusic && typeof acquireRandomModWalkonAsset === 'function') {
+                try {
+                    const music = await acquireRandomModWalkonAsset(moddedAssets);
+                    if (music.url) return music;
+                    music.release();
+                } catch (error) {
+                    console.warn('Nie udało się odczytać losowego walk-onu z moda.', error);
+                }
+            }
             return { url: getMatchWalkonAudioSource(candidate), release() {} };
         }
 
         function playMatchIntro(p1Name, p2Name) {
+            if (typeof initializeMatchCaller === 'function') initializeMatchCaller();
             cancelMatchIntro();
             const tournament = typeof activeTournament !== 'undefined' ? activeTournament : null;
             const allTournamentWalkons = typeof areWalkonsEnabledInAllTournaments === 'function'
@@ -257,12 +283,12 @@ function startCrowd() {
             const secondCountryEn = getMatchIntroCountryAnnouncement(secondCandidate?.country);
             
             let u1 = hasSpeechSynthesis
-                ? new SpeechSynthesisUtterance(`Ladies and gentlemen, please welcome... ${firstCountryEn}${firstName}!`)
+                ? new SpeechSynthesisUtterance(`Ladies and gentlemen, please welcome... ${firstCountryEn}${getMatchIntroNicknameAnnouncement(firstCandidate)}${firstName}!`)
                 : {};
             u1.lang = 'en-GB'; u1.pitch = 0.85; u1.rate = 0.9; u1.volume = 1.0 * globalVolume;
             
             let u2 = hasSpeechSynthesis
-                ? new SpeechSynthesisUtterance(`And his opponent... ${secondCountryEn}${secondName}!`)
+                ? new SpeechSynthesisUtterance(`And his opponent... ${secondCountryEn}${getMatchIntroNicknameAnnouncement(secondCandidate)}${secondName}!`)
                 : {};
             u2.lang = 'en-GB'; u2.pitch = 0.8; u2.rate = 0.9; u2.volume = 1.0 * globalVolume;
             
@@ -318,7 +344,7 @@ function startCrowd() {
                 const playbackFailed = error => {
                     if (!isEntranceActive()) return;
                     playAttemptPending = false;
-                    if (error?.name === 'NotAllowedError') {
+                    if (error?.name === 'NotAllowedError' && !currentMatch?.careerAutoplay) {
                         // The file is ready, but Safari requires a fresh tap.
                         // Keep this entrance on screen; skipping still works.
                         waitingForGesture = true;
@@ -340,6 +366,7 @@ function startCrowd() {
                 }
                 utterance.onend = async () => {
                     if (!isEntranceActive() || musicStarted) return;
+                    clearTimeout(walkonTimeout);
                     musicStarted = true;
                     music = await acquireMatchWalkonAudio(candidate);
                     if (!isEntranceActive()) { music.release(); return; }
@@ -360,6 +387,18 @@ function startCrowd() {
                     }
                 };
                 utterance.onerror = utterance.onend;
+                entrance.ensureAutoplay = () => {
+                    if (!isEntranceActive()) return false;
+                    if (waitingForGesture) tryPlayMusic();
+                    else if (!musicStarted) {
+                        // Some browsers expose speech synthesis without delivering
+                        // completion events. Automated play must still reach the board.
+                        clearTimeout(walkonTimeout);
+                        walkonTimeout = setTimeout(() => utterance.onend(), 15000);
+                    }
+                    return true;
+                };
+                if (currentMatch?.careerAutoplay) entrance.ensureAutoplay();
                 if (hasSpeechSynthesis) {
                     try { window.speechSynthesis.speak(utterance); }
                     catch (_error) { utterance.onend(); }
@@ -389,13 +428,14 @@ function startCrowd() {
             let skipBtn = document.getElementById('t-btn-skip-walkon');
             if(skipBtn) skipBtn.style.display = 'none';
 
+            const hasCallerSystem = typeof playMatchCallerEvent === 'function';
             let audioSrc = moddedAssets.sounds["game_on"] || 'sounds/game_on.wav';
-            let gameOnAudio = new Audio(audioSrc);
-            gameOnAudio.volume = 1.0 * globalVolume; 
+            let gameOnAudio = hasCallerSystem ? null : new Audio(audioSrc);
+            if (gameOnAudio) gameOnAudio.volume = 1.0 * globalVolume;
 
             matchIntroFinishTimeout = setTimeout(() => {
                 if (!isCurrent()) return;
-                let playPromise = gameOnAudio.play();
+                let playPromise = hasCallerSystem ? playMatchCallerEvent('game_on') : gameOnAudio.play();
                 
                 if (playPromise !== undefined) {
                     playPromise.catch(e => {

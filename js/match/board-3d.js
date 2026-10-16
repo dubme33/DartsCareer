@@ -31,6 +31,8 @@
     let cameraView = readPreference('dartsCareer.boardCamera', 'side') === 'front' ? 'front' : 'side';
     let THREE, renderer, scene, camera, dartFactory;
     let boardFace, defaultBoardTexture, modBoardTexture = null, skinSource = null;
+    let surroundFace, surroundRim, modSurroundTexture = null, surroundSkinSource = null;
+    const surroundPanels = [];
     let loading = false, failed = false, initialization = null;
     let failureReason = null;
     let seenDarts = [], animations = [], queueUntil = 0, frameId = null;
@@ -51,10 +53,10 @@
     function active() { return mode === '3d' && !!renderer && !failed; }
     function visible() { return matchScreen.classList.contains('active') && !document.hidden; }
     function spectatorSpeed() {
-        return typeof currentMatch !== 'undefined' && currentMatch?.isSpectator
+        return typeof currentMatch !== 'undefined' && (currentMatch?.isSpectator || currentMatch?.careerAutoplay)
             && typeof getSpectatorPlaybackSpeed === 'function' ? getSpectatorPlaybackSpeed() : 1;
     }
-    function paused() { return typeof currentMatch !== 'undefined' && currentMatch?.isSpectator && currentMatch.spectatorPaused; }
+    function paused() { return typeof currentMatch !== 'undefined' && (currentMatch?.isSpectator || currentMatch?.careerAutoplay) && currentMatch.spectatorPaused; }
     function track(resource) { resources.add(resource); return resource; }
 
     function refreshUI() {
@@ -150,6 +152,57 @@
         return mesh;
     }
 
+    // These opaque parts share a material and never move relative to the board.
+    // Keep every triangle, normal and UV, but submit them in a single draw call.
+    function batchStaticMeshes(meshes) {
+        const parts = meshes.map(mesh => {
+            mesh.updateMatrix();
+            return { attributes: { ...mesh.geometry.attributes }, index: mesh.geometry.index,
+                count: mesh.geometry.getAttribute('position').count, matrix: mesh.matrix.clone(),
+                normalMatrix: new THREE.Matrix3().getNormalMatrix(mesh.matrix) };
+        });
+        // Reuse the first objects: Three's geometry/mesh constructors generate
+        // UUIDs using Math.random, which must not advance the gameplay stream.
+        const batch = meshes[0], geometry = batch.geometry, vector = new THREE.Vector3();
+        let vertices = 0, indices = 0;
+        parts.forEach(part => { vertices += part.count; indices += part.index.count; });
+        for (const name of Object.keys(parts[0].attributes)) {
+            const source = parts[0].attributes[name];
+            const values = new source.array.constructor(vertices * source.itemSize);
+            let offset = 0;
+            parts.forEach(part => {
+                const attribute = part.attributes[name];
+                values.set(attribute.array, offset); offset += attribute.array.length;
+            });
+            const attribute = new THREE.BufferAttribute(values, source.itemSize, source.normalized);
+            if (name === 'position' || name === 'normal') {
+                let vertex = 0;
+                parts.forEach(part => {
+                    const original = part.attributes[name];
+                    for (let i = 0; i < original.count; i++) {
+                        vector.fromBufferAttribute(original, i);
+                        if (name === 'position') vector.applyMatrix4(part.matrix); else vector.applyNormalMatrix(part.normalMatrix);
+                        attribute.setXYZ(vertex++, vector.x, vector.y, vector.z);
+                    }
+                });
+            }
+            geometry.setAttribute(name, attribute);
+        }
+        const index = vertices > 65535 ? new Uint32Array(indices) : new Uint16Array(indices);
+        let vertexOffset = 0, indexOffset = 0;
+        parts.forEach(part => {
+            for (const value of part.index.array) index[indexOffset++] = value + vertexOffset;
+            vertexOffset += part.count;
+        });
+        geometry.setIndex(new THREE.BufferAttribute(index, 1));
+        geometry.computeBoundingSphere();
+        const oldGeometries = new Set(meshes.map(mesh => mesh.geometry));
+        meshes.slice(1).forEach(mesh => { scene.remove(mesh); });
+        oldGeometries.forEach(old => { if (old !== geometry) { resources.delete(old); old.dispose(); } });
+        batch.position.set(0, 0, 0); batch.rotation.set(0, 0, 0); batch.scale.set(1, 1, 1); batch.updateMatrix();
+        return batch;
+    }
+
     function createScene() {
         renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, powerPreference: 'high-performance' });
         renderer.setPixelRatio(Math.min(Math.max(window.devicePixelRatio || 1, 1), 2));
@@ -184,10 +237,17 @@
             const panel = addMesh(track(new THREE.RingGeometry(1.65, 1.91, 8, 1,
                 i * Math.PI / 4 + .18, .38)), surroundPanel);
             panel.position.z = -.049;
+            surroundPanels.push(panel);
         }
-        const surroundRim = addMesh(track(new THREE.TorusGeometry(2.07, .014, 6, 128)),
+        const panelBatch = batchStaticMeshes(surroundPanels);
+        surroundPanels.splice(0, surroundPanels.length, panelBatch);
+        surroundRim = addMesh(track(new THREE.TorusGeometry(2.07, .014, 6, 128)),
             material({ color: 0x262c2e, roughness: .95 }));
         surroundRim.position.z = -.05;
+        surroundFace = addMesh(track(new THREE.CircleGeometry(2.1, 128)),
+            material({ color: 0xffffff, roughness: .98, transparent: true, alphaTest: .01 }));
+        surroundFace.position.z = -.047; surroundFace.receiveShadow = true; surroundFace.visible = false;
+        refreshSurroundSkin();
         const boardBody = addMesh(track(new THREE.CylinderGeometry(170 / 130, 170 / 130, .16, 96)), material({ color: 0x111415, roughness: .87 }));
         boardBody.rotation.x = Math.PI / 2; boardBody.position.z = -.08; boardBody.castShadow = true;
         const { texture, bump } = boardTextures();
@@ -211,6 +271,8 @@
             const middle = (130 + outerBull) / 2;
             blade.position.set(middle / 130 * Math.cos(angle), middle / 130 * Math.sin(angle), spiderDetail.faceZ);
         }
+        const spiderBatch = batchStaticMeshes(spiderMeshes);
+        spiderMeshes.splice(0, spiderMeshes.length, spiderBatch);
         dartFactory = window.dartModel.createFactory(THREE, { detail: 'match' });
         updateCamera();
     }
@@ -233,6 +295,23 @@
         // one prevents parallax from drawing a second wire over doubles and trebles.
         spiderMeshes.forEach(mesh => { mesh.visible = !surface; });
         refreshUI(); requestRender();
+    }
+
+    function refreshSurroundSkin() {
+        if (!surroundFace || !renderer) return;
+        const surface = window.matchSurroundSkin?.getCanvas() || null;
+        if (surface === surroundSkinSource) return;
+        if (modSurroundTexture) { resources.delete(modSurroundTexture); modSurroundTexture.dispose(); modSurroundTexture = null; }
+        surroundSkinSource = surface;
+        if (surface) {
+            modSurroundTexture = track(new THREE.CanvasTexture(surface));
+            modSurroundTexture.colorSpace = THREE.SRGBColorSpace;
+            modSurroundTexture.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+        }
+        surroundFace.material.map = modSurroundTexture; surroundFace.material.needsUpdate = true;
+        surroundFace.visible = !!surface;
+        surroundPanels.forEach(mesh => { mesh.visible = !surface; }); surroundRim.visible = !surface;
+        requestRender();
     }
 
     function prepareDartLoadouts() {
@@ -278,7 +357,8 @@
         const tilt = Math.sin(data.x * .37 + data.y * .23);
         const robinHoodContact = data.robinHood && data.collision?.contact;
         group.position.set(x, y, robinHoodContact ? robinHoodContact[2] : .008);
-        const pose = presentation?.pose || data.dartPose || { x: -.34 - tilt * .045, y: .08 + tilt * .025, z: tilt * .22 };
+        const pose = presentation?.pose || data.dartPose || window.dartPhysics?.basePose(data, data.dartStyle)
+            || { x: -.34 - tilt * .045, y: .08 + tilt * .025, z: tilt * .22 };
         group.rotation.set(pose.x, pose.y, pose.z);
         // Slide the whole dart along its axis: 7 mm of point sits inside the sisal.
         // Both generated and photographic boards use this same physical face.
@@ -600,6 +680,7 @@
         dartFactory?.dispose(); dartFactory = null; renderer = null; scene = null; camera = null;
         preparedMatch = null; preparedStyles = null; preparedDarts = [];
         boardFace = null; defaultBoardTexture = null; modBoardTexture = null; skinSource = null; spiderMeshes.length = 0; replayShot = null;
+        surroundFace = null; surroundRim = null; modSurroundTexture = null; surroundSkinSource = null; surroundPanels.length = 0;
         stage.replaceChildren(); refreshUI(); drawDartboard();
     }
 
@@ -771,6 +852,7 @@
                 triangles: renderer?.info.render.triangles,
                 geometries: renderer?.info.memory.geometries, textures: renderer?.info.memory.textures,
                 boardSkin: skinSource ? window.matchBoardSkin.getState().name : null, boardSurfaceZ: boardFace?.position.z,
+                surroundSkin: surroundSkinSource ? window.matchSurroundSkin.getState().name : null,
                 spider: { source: skinSource ? 'photographic' : 'generated', generated: spiderMeshes.length,
                     generatedVisible: spiderMeshes.filter(mesh => mesh.visible).length, ...spiderDetail },
                 viewport: renderer ? renderer.getSize(new THREE.Vector2()).toArray() : null,
@@ -790,6 +872,7 @@
     window.getMatchBoardAnimationDelay = delay => window.matchBoard3D.animationDelay(delay);
     window.refreshMatchBoardViewTranslations = refreshUI;
     window.addEventListener('dartboard-skin-change', refreshSkin);
+    window.addEventListener('surround-skin-change', refreshSurroundSkin);
     buttons.two.addEventListener('click', () => setView('2d'));
     buttons.three.addEventListener('click', () => setView('3d'));
     buttons.camera.addEventListener('click', () => {

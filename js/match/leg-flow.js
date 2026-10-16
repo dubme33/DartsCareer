@@ -75,7 +75,8 @@ function checkAchievements(type, data = null) {
                     const message = typeof trAchievementUi === 'function'
                         ? trAchievementUi('unlockedAlert', { title, amount })
                         : `🏆 ODBLOKOWANO OSIĄGNIĘCIE!\n\n${title}\nOtrzymujesz bonus: £${amount}`;
-                    alert(message);
+                    if (currentMatch?.careerAutoplay) logThrow(message, 'system');
+                    else alert(message);
                     newlyUnlocked = true;
                 }
             });
@@ -126,13 +127,14 @@ function checkAchievements(type, data = null) {
 
        function handleCompletedLeg(isP1, playerName) {
             resetMatchThrowGrouping(currentMatch);
+            if (typeof ensureMatchSetAverage === 'function') ensureMatchSetAverage(currentMatch);
             const st = currentMatch.stats;
             const wasSuddenDeath = Boolean(currentMatch.suddenDeath);
             // --- SPRAWDZANIE 9-DARTERA ---
             if (isP1 && !currentMatch.isSpectator && st.p1LegDarts === 9 && (!currentMatch.isDoubles || isCareerPlayerThrowing(true))) {
                 if (!currentMatch.interviewFacts) currentMatch.interviewFacts = {};
                 currentMatch.interviewFacts.nineDarter = true;
-                setTimeout(() => triggerNineDarterAlert(), 1500);
+                if (!currentMatch.careerAutoplay) setTimeout(() => triggerNineDarterAlert(), 1500);
                 checkAchievements('9darter');
             }
             // -----------------------------
@@ -298,6 +300,7 @@ function checkAchievements(type, data = null) {
                 if (setWasWon) {
                     currentMatch.p1Legs = 0;
                     currentMatch.p2Legs = 0;
+                    if (typeof beginMatchSetAverage === 'function') beginMatchSetAverage(currentMatch);
                 }
 
                 // Sety zaczynają się naprzemiennie; legi zmieniają stronę w obrębie seta.
@@ -335,8 +338,10 @@ function checkAchievements(type, data = null) {
             const throwingSide = isP1 ? 'p1' : 'p2';
             if (currentMatch.turn !== throwingSide || currentMatch.dartsThrown >= 3
                 || currentMatch.isTurnLocked || currentMatch.isDartInFlight) return;
+            if (typeof ensureMatchSetAverage === 'function') ensureMatchSetAverage(currentMatch);
 
             // Resolve the physical hit before checkout, bust, statistics and report handling.
+            const skipPresentation = (currentMatch.isSpectator || currentMatch.careerAutoplay) && currentMatch.spectatorSkipThrow === true;
             // Direct/programmatic throws use the same solver as player, AI and fast visits.
             if (typeof dartPhysics !== 'undefined' && !result?.physicsResolved && typeof getDartboardHitPoint === 'function') {
                 const point = result?.boardPoint || getDartboardHitPoint(result?.bouncedSector ?? hitSec,
@@ -368,7 +373,7 @@ function checkAchievements(type, data = null) {
                 if (result.knockedOutDartIndices?.length) drawnDarts = drawnDarts
                     .filter(dart => !result.knockedOutDartIndices.includes(dart.visitDartIndex));
                 if (typeof recordMatchBounceOut === 'function') recordMatchBounceOut(isP1, result);
-                if (typeof showBounceOutFeedback === 'function') showBounceOutFeedback(result);
+                if (!skipPresentation && typeof showBounceOutFeedback === 'function') showBounceOutFeedback(result);
                 if (result.knockedOutDartIndices?.length && typeof drawDartboard === 'function') drawDartboard();
             }
 
@@ -382,6 +387,8 @@ function checkAchievements(type, data = null) {
                     ? getCurrentSinglesMatchPlayerName(isP1)
                     : (isP1 ? player.name : currentMatch.opponent.name));
             let logType = isP1 ? 'hit' : 'ai';
+            if (typeof recordMatchDoubleInDart === 'function') recordMatchDoubleInDart(currentMatch, isP1,
+                currentScore, { ...(result || {}), sector: hitSec, mult: hitMult }, scoringVisit);
             
             if (activeTournament && activeTournament.format === 'DIDO' && currentScore === 501) {
                 if (hitMult !== 2) {
@@ -392,7 +399,7 @@ function checkAchievements(type, data = null) {
 
             currentTurnScore += points;
             if (!bounced && typeof addDartToCanvas === 'function') addDartToCanvas(hitSec, hitMult, isP1 ? '#f1c40f' : '#ecf0f1', targetSec, targetMult, result, isP1 ? 'p1' : 'p2');
-            if (result?.robinHood && typeof showRobinHoodFeedback === 'function') showRobinHoodFeedback();
+            if (!skipPresentation && result?.robinHood && typeof showRobinHoodFeedback === 'function') showRobinHoodFeedback();
             if (result?.collision && !result?.robinHood && typeof getDartCollisionText === 'function')
                 logThrow(`↗ ${playerName}: ${getDartCollisionText(result)}`, logType);
 
@@ -521,12 +528,24 @@ function checkAchievements(type, data = null) {
                     throwingMatch.pendingImpactAction = action;
                     return;
                 }
+                if ((throwingMatch.isSpectator || throwingMatch.careerAutoplay) && throwingMatch.spectatorPaused
+                    && typeof scheduleSpectatorPlaybackAction === 'function') {
+                    window.aiTimeout = scheduleSpectatorPlaybackAction(action, 0, 0, action === aiTurn ? 'throw' : 'flow');
+                    return;
+                }
                 if (window.matchTVDirector?.deferMatchAction?.(action)) return;
                 action();
             };
             const revealThrowAtImpact = () => {
                 if (currentMatch !== throwingMatch) return;
                 throwingMatch.isDartInFlight = false;
+                if (skipPresentation) {
+                    throwingMatch.spectatorSkippedDarts = (throwingMatch.spectatorSkippedDarts || 0) + 1;
+                    // The director also records 100+/140+ visits when TV is off.
+                    try { window.matchTVDirector?.onThrow?.({ ...matchThrowEvent, skippedPresentation: true }); }
+                    catch (_error) { /* Optional graphics cannot interrupt omitted scoring. */ }
+                    return;
+                }
                 if (typeof playDartHitSound === 'function') {
                     try { playDartHitSound(matchThrowEvent); }
                     catch (_error) { /* An optional sound cannot interrupt match scoring. */ }
@@ -550,7 +569,7 @@ function checkAchievements(type, data = null) {
                 if (typeof pendingAction === 'function') queueMicrotask(() => runAfterImpact(pendingAction));
             };
             throwingMatch.isDartInFlight = true;
-            const waitsForImpact = typeof window !== 'undefined'
+            const waitsForImpact = !skipPresentation && typeof window !== 'undefined'
                 && window.matchBoard3D?.onNextImpact?.(revealThrowAtImpact);
             if (!waitsForImpact) revealThrowAtImpact();
 
@@ -574,7 +593,7 @@ function checkAchievements(type, data = null) {
                 } else if (typeof scheduleSpectatorPlaybackAction === 'function') {
                     window.aiTimeout = scheduleSpectatorPlaybackAction(advanceTurn, turnDelay, spectatorTurnDelay);
                 } else window.aiTimeout = setTimeout(advanceTurn, turnDelay);
-            } else if (currentMatch.isSpectator || !isP1 || (currentMatch.isDoubles && !isCareerPlayerThrowing(isP1))) {
+            } else if (currentMatch.isSpectator || currentMatch.careerAutoplay || !isP1 || (currentMatch.isDoubles && !isCareerPlayerThrowing(isP1))) {
                 clearTimeout(window.aiTimeout); // Czyścimy przed kolejnym rzutem
                 const aiDelay = typeof getMatchTVAiThrowDelay === 'function' ? getMatchTVAiThrowDelay(650) : 650;
                 const spectatorAiDelay = typeof getMatchBoardAnimationDelay === 'function'
@@ -583,13 +602,14 @@ function checkAchievements(type, data = null) {
                 if (typeof window !== 'undefined' && window.matchTVDirector?.deferMatchAction?.(continueAi)) {
                     window.aiTimeout = null;
                 } else if (typeof scheduleSpectatorPlaybackAction === 'function') {
-                    window.aiTimeout = scheduleSpectatorPlaybackAction(continueAi, aiDelay, spectatorAiDelay);
+                    window.aiTimeout = scheduleSpectatorPlaybackAction(continueAi, aiDelay, spectatorAiDelay, 'throw');
                 } else window.aiTimeout = setTimeout(continueAi, aiDelay);
             }
         }
 
         function endTurn() {
             if (!currentMatch || currentMatch.isFinishing) return;
+            const skipPresentation = (currentMatch.isSpectator || currentMatch.careerAutoplay) && currentMatch.spectatorSkipThrow === true;
             resetMatchThrowGrouping(currentMatch);
             let wasP1 = currentMatch.turn === 'p1';
             
@@ -609,7 +629,7 @@ function checkAchievements(type, data = null) {
                 const boardClearDelay = typeof getSpectatorPlaybackDelay === 'function'
                     ? getSpectatorPlaybackDelay(500, 500)
                     : 500;
-                setTimeout(() => { drawDartboard(); }, boardClearDelay);
+                if (!skipPresentation) setTimeout(() => { drawDartboard(); }, boardClearDelay);
                 if (currentMatch.p1Score === 0 || currentMatch.p2Score === 0) return;
 
                 if (currentMatch.vsAI) {
@@ -624,13 +644,18 @@ function checkAchievements(type, data = null) {
                             const requireDelay = typeof getSpectatorPlaybackDelay === 'function'
                                 ? getSpectatorPlaybackDelay(1500, 1800)
                                 : 1500;
-                            setTimeout(() => announceRequire(currentMatch.p1Score), requireDelay);
+                            const requiringMatch = currentMatch;
+                            const requiredScore = currentMatch.p1Score;
+                            setTimeout(() => {
+                                if (currentMatch === requiringMatch && !requiringMatch.spectatorPaused) announceRequire(requiredScore);
+                            }, requireDelay);
                         }
                     } else { currentMatch.p2TurnStartScore = currentMatch.p2Score; }
-                    if (currentMatch.isSpectator) {
+                    if (currentMatch.isSpectator || currentMatch.careerAutoplay) {
                         clearTimeout(window.aiTimeout);
+                        const matchForTurn = currentMatch;
                         const continueMatch = () => {
-                            if (currentMatch?.isSpectator) setTurnUI();
+                            if (currentMatch === matchForTurn) setTurnUI();
                         };
                         if (typeof scheduleSpectatorPlaybackAction === 'function') {
                             window.aiTimeout = scheduleSpectatorPlaybackAction(continueMatch, 0, 1800);
@@ -644,9 +669,9 @@ function checkAchievements(type, data = null) {
             };
 
             let callerCompletion = null;
-            if (currentMatch.p1Score > 0 && currentMatch.p2Score > 0) callerCompletion = announceAudio(announcedScore);
+            if (!skipPresentation && currentMatch.p1Score > 0 && currentMatch.p2Score > 0) callerCompletion = announceAudio(announcedScore);
             let replayWaitsForCaller = false;
-            if (typeof window !== 'undefined' && window.matchTVDirector?.onCaller) {
+            if (!skipPresentation && typeof window !== 'undefined' && window.matchTVDirector?.onCaller) {
                 try {
                     replayWaitsForCaller = window.matchTVDirector.onCaller(callerCompletion, {
                         side: wasP1 ? 'p1' : 'p2', visitScore: announcedScore

@@ -10,9 +10,13 @@
     const unit = vector => mul(vector, 1 / (Math.hypot(...vector) || 1));
     const anchor = point => [(point.x - 170) / 130, (170 - point.y) / 130, .008];
 
-    function basePose(point) {
+    function basePose(point, dartStyle = point.dartStyle) {
         const tilt = Math.sin(point.x * .37 + point.y * .23);
-        return { x: -.34 - tilt * .045, y: .08 + tilt * .025, z: tilt * .22 };
+        const angle = dartStyle?.dartEntryAngle;
+        const custom = Number.isFinite(angle) && angle >= -10 && angle <= 45;
+        // Positive user angles raise the tail; Three.js X rotation has the opposite sign.
+        return { x: custom ? -angle * Math.PI / 180 - tilt * .015 : -.34 - tilt * .045,
+            y: .08 + tilt * .025, z: tilt * .22 };
     }
     // Euler XYZ, shared with Three.js. Roll does not change the longitudinal axis.
     function direction(pose) {
@@ -82,7 +86,8 @@
         return { obstacle: obstacle.index, contact: add(origin, mul(axis, .30)), normal: unit(sub(tail, otherTail)), part: 'flight', severity: .18 };
     }
     function resolve(result, point, darts = [], random = Math.random, allowBounce = true, dartStyle = null) {
-        const pose = basePose(point), previous = obstacles(darts);
+        const pose = basePose(point, dartStyle), previous = obstacles(darts);
+        const maxTilt = Number.isFinite(dartStyle?.dartEntryAngle) && dartStyle.dartEntryAngle >= -10 && dartStyle.dartEntryAngle <= 45 ? .7 : -.17;
         const initial = { ...result, boardPoint: { ...point }, dartPose: pose, physicsResolved: true,
             ...(dartStyle ? { dartStyle } : {}) };
         if (result.bounceOut || !previous.length) return initial;
@@ -111,7 +116,7 @@
             for (const spread of [.18, .32, .46, .62, .8]) for (const offset of angles) {
                 const angle = away + offset;
                 const finalPoint = { x: point.x + Math.cos(angle) * displacement, y: point.y - Math.sin(angle) * displacement };
-                const finalPose = { x: clamp(pose.x - Math.sin(angle) * spread, -1, -.17),
+                const finalPose = { x: clamp(pose.x - Math.sin(angle) * spread, -1, maxTilt),
                     y: clamp(pose.y + Math.cos(angle) * spread, -.85, .85), z: pose.z + Math.sin(angle) * .20 };
                 if (!separated(finalPoint, finalPose, previous)) continue;
                 const hit = field(finalPoint);

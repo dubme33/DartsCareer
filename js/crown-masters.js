@@ -35,6 +35,8 @@ function getCrownMastersSearchableName(tournamentOrName) {
 }
 
 function isCrownMastersTournament(tournamentOrName = (typeof activeTournament !== 'undefined' ? activeTournament : null)) {
+    if(typeof isWomensWorldMatchplayTournament==='function'&&isWomensWorldMatchplayTournament(tournamentOrName))return false;
+    if(typeof isWomensSeriesTournament==='function'&&isWomensSeriesTournament(tournamentOrName))return false;
     if (typeof hasTournamentEditorQualification === 'function' && hasTournamentEditorQualification(tournamentOrName)) return false;
     if (typeof hasCareerTourEntryOverride === 'function' && hasCareerTourEntryOverride(tournamentOrName)) return false;
     const tournament = getCrownMastersCalendarTournament(tournamentOrName);
@@ -45,6 +47,7 @@ function isCrownMastersTournament(tournamentOrName = (typeof activeTournament !=
 }
 
 function isCrownMastersQualifierTournament(tournamentOrName = (typeof activeTournament !== 'undefined' ? activeTournament : null)) {
+    if(typeof isWomensWorldMatchplayTournament==='function'&&isWomensWorldMatchplayTournament(tournamentOrName))return false;
     if (typeof hasTournamentEditorQualification === 'function' && hasTournamentEditorQualification(tournamentOrName)) return false;
     if (typeof hasCareerTourEntryOverride === 'function' && hasCareerTourEntryOverride(tournamentOrName)) return false;
     const tournament = getCrownMastersCalendarTournament(tournamentOrName);

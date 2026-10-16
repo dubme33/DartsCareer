@@ -99,6 +99,7 @@ function getWorldCupQualifierLabel(event) {
 }
 
 function getTournamentDisplayName(tournament) {
+    if (tournament?.qSchoolStage && typeof getPdcQSchoolDisplayName === 'function') return getPdcQSchoolDisplayName(tournament);
     const name = typeof tournament === 'string' ? tournament : tournament?.name;
     if (tournament && typeof tournament === 'object' && typeof isContinentalQualifierTournament === 'function' && isContinentalQualifierTournament(tournament)) {
         return getContinentalQualifierDisplayName(tournament);
@@ -111,7 +112,7 @@ function getTournamentDisplayName(tournament) {
         name === WORLD_CUP_TOURNAMENT_NAME || name === WORLD_CUP_LEGACY_NAME || tournamentDatabase.some(candidate => candidate.specialType === 'worldCup' && candidate.name === name)) {
         return getWorldCupTournamentDisplayName();
     }
-    return name || '';
+    return typeof competitionDisplayName === 'function' ? competitionDisplayName(tournament) : name || '';
 }
 
 const WORLD_CUP_AUTOMATIC_NATIONS = [
@@ -157,12 +158,15 @@ const WORLD_CUP_KNOCKOUT_SEED_ORDER = [
 ];
 
 function isWorldCupTournament(tournament = activeTournament) {
+    if(typeof isWomensWorldMatchplayTournament==='function'&&isWomensWorldMatchplayTournament(tournament))return false;
+    if(typeof isWomensSeriesTournament==='function'&&isWomensSeriesTournament(tournament))return false;
     if (typeof hasTournamentEditorQualification === 'function' && hasTournamentEditorQualification(tournament)) return false;
     return Boolean(tournament && (tournament.specialType === 'worldCup' ||
         tournament.name === WORLD_CUP_TOURNAMENT_NAME || tournament.name === WORLD_CUP_LEGACY_NAME));
 }
 
 function isWorldCupQualifierTournament(tournament = activeTournament) {
+    if(typeof isWomensWorldMatchplayTournament==='function'&&isWomensWorldMatchplayTournament(tournament))return false;
     if (typeof hasTournamentEditorQualification === 'function' && hasTournamentEditorQualification(tournament)) return false;
     return Boolean(tournament && (tournament.specialType === 'worldCupQualifiers' ||
         tournament.name === WORLD_CUP_QUALIFIER_TOURNAMENT_NAME));
@@ -1216,7 +1220,8 @@ function canSpectateWorldCupMatch(match) {
 function renderWorldCupWatchControl(match) {
     if (!canSpectateWorldCupMatch(match)) return '';
     const index = getCurrentWorldCupStageMatches().indexOf(match);
-    return index < 0 ? '' : `<button type="button" class="btn-sign world-cup-watch-btn" onclick="startSpectatingWorldCupMatch(${index})">👁 ${t('t-btn-watch-match')}</button>`;
+    return index < 0 ? '' : `<div class="spectator-watch-actions"><button type="button" class="btn-sign world-cup-watch-btn" onclick="startSpectatingWorldCupMatch(${index})">👁 ${t('t-btn-watch-match')}</button>
+        <button type="button" class="btn-sign spectator-watch-highlights" onclick="startSpectatingWorldCupMatch(${index}, true)" title="${escapeHtml(t('t-spectator-highlights-help'))}">🎬 ${t('t-btn-watch-highlights')}</button></div>`;
 }
 
 function renderWorldCupMiniMatch(firstCountry, score, secondCountry, match = null) {
@@ -1425,7 +1430,7 @@ function startWorldCupPendingMatch() {
     startWorldCupMatch(match);
 }
 
-function startSpectatingWorldCupMatch(index) {
+function startSpectatingWorldCupMatch(index, highlights = false) {
     if (typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy()) return false;
     if (currentMatch || !Number.isInteger(index)) return false;
     const match = getCurrentWorldCupStageMatches()[index];
@@ -1439,6 +1444,7 @@ function startSpectatingWorldCupMatch(index) {
         isDoubles: true,
         worldCupMatchId: match.id,
         spectatorWorldCupMatchId: match.id,
+        spectatorHighlights: highlights === true,
         worldCupStage: match.stage,
         worldCupTeamP1: team1,
         worldCupTeamP2: team2,

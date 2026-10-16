@@ -14,7 +14,8 @@ const CAREER_CALENDAR_EDITOR_TEXT = {
         holders: 'Posiadacze karty', cardHint: 'Karty własne są przyznawane liderom wybranego rankingu na kolejny sezon. Możesz także przydzielać je ręcznie. Karta wyższego poziomu daje dostęp, gdy wymagany typ akceptuje wyższe poziomy.',
         pdcHint: 'Karta PDC zachowuje kwalifikacje Q-School i reguły gry. Zmienione limity działają od następnego cyklu kart; ręczny skład działa od razu.',
         oom: 'Karty z głównego OOM', qschool: 'Karty z Q-School', secondary: 'Karty z każdego cyklu młodzieżowego / Challenge Tour',
-        roundMode: 'Legi osobno dla każdej rundy', roundHint: 'Legi potrzebne do wygrania meczu. 0 oznacza wbudowany format tej rundy.', final: 'Finał', semi: 'Półfinał', quarter: 'Ćwierćfinał', last: 'Ostatnia {count}',
+        roundMode: 'Legi i sety osobno dla każdej rundy', roundHint: 'Wybierz format i liczbę legów lub setów potrzebnych do wygrania każdej rundy. Przy setach ustaw także legi do wygrania seta. „Według zasad turnieju” zachowuje wbudowany format rundy.',
+        roundFormat: 'Format rundy', roundAuto: 'Według zasad turnieju', roundLegs: 'Legi', roundSets: 'Sety', roundLegsPerSet: 'Legi do wygrania seta', final: 'Finał', semi: 'Półfinał', quarter: 'Ćwierćfinał', last: 'Ostatnia {count}',
         search: 'Szukaj zawodników…', tourCardHint: 'Dodatkowa karta obowiązuje zarówno gracza, jak i zawodników AI. Ustawienia cyklu mogą wymagać innej karty.',
         tourRuleHint: 'Otwarty cykl, karta i stały skład ustalają uczestników całego cyklu, zastępując kwalifikacje poszczególnych turniejów. Własne grupy i ligi zachowują swój format. Ranking własny nie zasila innych rankingów.',
         configPack: 'Pakiet zawiera również ustawienia cykli i kart; ich import zastąpi obecne ustawienia. Posiadacze kart i wyniki rankingowe pozostaną danymi tej kariery.'
@@ -34,7 +35,8 @@ const CAREER_CALENDAR_EDITOR_TEXT = {
         holders: 'Card holders', cardHint: 'Custom cards are awarded to the chosen tour ranking leaders for the next season. You can also assign them manually. A higher-tier card grants access when the required type accepts higher tiers.',
         pdcHint: 'The PDC card keeps Q-School and game qualification rules. New limits take effect next card cycle; manual holders change immediately.',
         oom: 'Main OOM card places', qschool: 'Q-School card places', secondary: 'Card places from each Development / Challenge Tour',
-        roundMode: 'Legs per round', roundHint: 'Legs needed to win a match. 0 uses that round’s built-in format.', final: 'Final', semi: 'Semi-final', quarter: 'Quarter-final', last: 'Last {count}',
+        roundMode: 'Legs and sets per round', roundHint: 'Choose the format and legs or sets needed to win each round. For sets, also choose the legs needed to win a set. “Use tournament rules” keeps the round’s built-in format.',
+        roundFormat: 'Round format', roundAuto: 'Use tournament rules', roundLegs: 'Legs', roundSets: 'Sets', roundLegsPerSet: 'Legs to win a set', final: 'Final', semi: 'Semi-final', quarter: 'Quarter-final', last: 'Last {count}',
         search: 'Search players…', tourCardHint: 'The additional card applies to your player and AI entrants. Tour rules may require a different card.',
         tourRuleHint: 'Open, card and fixed-field tours determine entrants across the tour, replacing individual event qualification. Custom groups and leagues retain their format. A separate ranking does not feed other rankings.',
         configPack: 'This pack also contains tour and card settings; importing it replaces current settings. Card holders and ranking results remain career data.'
@@ -57,7 +59,8 @@ CAREER_CALENDAR_EDITOR_TEXT.de = {
     cardHint: 'Eigene Karten werden für die nächste Saison an die besten Spieler der gewählten Rangliste vergeben. Du kannst sie auch manuell vergeben. Höhere Stufen gelten, wenn die erforderliche Karte sie akzeptiert.',
     pdcHint: 'Die PDC-Karte behält Q-School und die Spielregeln. Neue Limits gelten ab dem nächsten Kartenzyklus; manuelle Inhaber gelten sofort.',
     oom: 'Karten über den Haupt-OOM', qschool: 'Karten über Q-School', secondary: 'Karten je Development / Challenge Tour',
-    roundMode: 'Legs je Runde', roundHint: 'Legs zum Matchsieg. 0 nutzt das integrierte Rundenformat.', final: 'Finale', semi: 'Halbfinale', quarter: 'Viertelfinale', last: 'Letzte {count}',
+    roundMode: 'Legs und Sets je Runde', roundHint: 'Wähle das Format und die Legs oder Sets zum Sieg jeder Runde. Lege bei Sets auch die Legs zum Satzgewinn fest. „Turnierregeln verwenden“ behält das integrierte Rundenformat.',
+    roundFormat: 'Rundenformat', roundAuto: 'Turnierregeln verwenden', roundLegs: 'Legs', roundSets: 'Sets', roundLegsPerSet: 'Legs zum Satzgewinn', final: 'Finale', semi: 'Halbfinale', quarter: 'Viertelfinale', last: 'Letzte {count}',
     search: 'Spieler suchen…', tourCardHint: 'Die zusätzliche Karte gilt für deinen Spieler und KI-Spieler. Die Tourregeln können eine andere Karte verlangen.',
     tourRuleHint: 'Offene Touren, Kartentouren und feste Felder bestimmen die Teilnehmer der Tour und ersetzen einzelne Qualifikationsregeln. Eigene Gruppen und Ligen behalten ihr Format. Eigene Ranglisten zählen nicht zu anderen Ranglisten.',
     configPack: 'Dieses Paket enthält Tour- und Karteneinstellungen und ersetzt die aktuellen Einstellungen. Karteninhaber und Ranglistenergebnisse bleiben Karrieredaten.',
@@ -78,15 +81,52 @@ CAREER_CALENDAR_EDITOR_TEXT.nl = {
     cardHint: 'Eigen kaarten gaan voor het volgende seizoen naar de leiders van de gekozen ranglijst. Je kunt ze ook handmatig toewijzen. Hogere niveaus gelden wanneer de vereiste kaart ze accepteert.',
     pdcHint: 'De PDC-kaart behoudt Q-School en de spelregels. Nieuwe limieten gelden vanaf de volgende kaartcyclus; handmatige kaarthouders gelden meteen.',
     oom: 'Kaarten via de hoofd-OOM', qschool: 'Kaarten via Q-School', secondary: 'Kaarten per Development / Challenge Tour',
-    roundMode: 'Legs per ronde', roundHint: 'Legs voor een wedstrijdzege. 0 gebruikt het ingebouwde rondeformaat.', final: 'Finale', semi: 'Halve finale', quarter: 'Kwartfinale', last: 'Laatste {count}',
+    roundMode: 'Legs en sets per ronde', roundHint: 'Kies het formaat en de legs of sets om elke ronde te winnen. Kies bij sets ook de legs om een set te winnen. “Toernooiregels gebruiken” behoudt het ingebouwde rondeformaat.',
+    roundFormat: 'Rondeformaat', roundAuto: 'Toernooiregels gebruiken', roundLegs: 'Legs', roundSets: 'Sets', roundLegsPerSet: 'Legs om een set te winnen', final: 'Finale', semi: 'Halve finale', quarter: 'Kwartfinale', last: 'Laatste {count}',
     search: 'Spelers zoeken…', tourCardHint: 'De extra kaart geldt voor jouw speler en AI-spelers. Tourregels kunnen een andere kaart vereisen.',
     tourRuleHint: 'Open tours, kaarttours en vaste velden bepalen de deelnemers van de tour en vervangen kwalificatieregels per toernooi. Eigen groepen en competities behouden hun formaat. Eigen ranglijsten tellen niet mee voor andere ranglijsten.',
     configPack: 'Dit pakket bevat tour- en kaartinstellingen en vervangt de huidige instellingen. Kaarthouders en ranglijstresultaten blijven carrièregegevens.',
     managedHint: 'Tour {name}: {size} spelers. Stel het veld en de deelnameregels hierboven in bij “Tours beheren”.'
 };
+const CAREER_EDITOR_WORLD_RESET_TEXT = {
+    pl: {
+        resetMoney: 'Wyzeruj pieniądze rankingowe wszystkich zawodników',
+        resetMoneyConfirm: 'Wyzerować pieniądze rankingowe wszystkich zawodników, także gracza i emerytowanych? Usunięte zostaną kwoty OOM, ProTour, Players Championship, European Tour, Challenge Tour, Development Tour i własnych cykli oraz historie wypłat rankingowych. Budżet gracza, tytuły, wyniki i rankingi punktowe zostaną zachowane. Tej operacji nie można cofnąć w edytorze.',
+        moneyReset: 'Wyzerowano pieniądze rankingowe {count} zawodników.',
+        pdcRemoveConfirm: 'Usunąć kartę {name} i odebrać ją wszystkim zawodnikom? Karty nie będą przyznawane przez OOM, Q-School ani Challenge / Development Tour. Cykle z wymogiem tej karty staną się otwarte, a dodatkowy wymóg w turniejach zostanie usunięty. Pozostałe wbudowane zasady turniejów możesz zmienić osobno.',
+        pdcRemoved: 'Karta PDC została usunięta. Automatyczne przyznawanie kart PDC i wbudowane Q-School są wyłączone.',
+        configPack: 'Pakiet zawiera ustawienia cykli i kart; import zastąpi obecne ustawienia. Wyniki rankingowe i posiadacze istniejących kart pozostają danymi kariery. Import usuniętej karty PDC odbierze ją wszystkim zawodnikom.'
+    },
+    en: {
+        resetMoney: 'Clear ranking prize money for all players',
+        resetMoneyConfirm: 'Clear ranking prize money for every player, including your player and retired players? OOM, ProTour, Players Championship, European Tour, Challenge Tour, Development Tour and custom tour amounts and ranking payment histories will be cleared. Your budget, titles, results and points rankings will be kept. This action cannot be undone in the editor.',
+        moneyReset: 'Ranking prize money cleared for {count} players.',
+        pdcRemoveConfirm: 'Remove {name} and revoke it from every player? OOM, Q-School and Challenge / Development Tour will stop awarding PDC cards. Tours requiring this card will become open and additional event requirements will be removed. You can edit other built-in event rules separately.',
+        pdcRemoved: 'The PDC card has been removed. Automatic PDC card awards and built-in Q-School are disabled.',
+        configPack: 'This pack contains tour and card settings; importing it replaces current settings. Ranking results and holders of existing cards remain career data. Importing a removed PDC card revokes it from all players.'
+    },
+    de: {
+        resetMoney: 'Ranglistenpreisgeld aller Spieler zurücksetzen',
+        resetMoneyConfirm: 'Ranglistenpreisgeld aller Spieler einschließlich deines Spielers und zurückgetretener Spieler löschen? Beträge und Auszahlungshistorien für OOM, ProTour, Players Championship, European Tour, Challenge Tour, Development Tour und eigene Tours werden gelöscht. Budget, Titel, Ergebnisse und Punkteranglisten bleiben erhalten. Diese Aktion kann im Editor nicht rückgängig gemacht werden.',
+        moneyReset: 'Ranglistenpreisgeld von {count} Spielern zurückgesetzt.',
+        pdcRemoveConfirm: '{name} entfernen und allen Spielern entziehen? OOM, Q-School und Challenge / Development Tour vergeben keine PDC-Karten mehr. Tours mit dieser Kartenpflicht werden offen und zusätzliche Turnieranforderungen werden entfernt. Andere integrierte Turnierregeln kannst du separat ändern.',
+        pdcRemoved: 'Die PDC-Karte wurde entfernt. Automatische PDC-Kartenvergabe und integrierte Q-School sind deaktiviert.',
+        configPack: 'Dieses Paket ersetzt die Tour- und Karteneinstellungen. Ranglistenergebnisse und Inhaber bestehender Karten bleiben Karrieredaten. Beim Import einer entfernten PDC-Karte wird sie allen Spielern entzogen.'
+    },
+    nl: {
+        resetMoney: 'Rankingprijzengeld van alle spelers wissen',
+        resetMoneyConfirm: 'Rankingprijzengeld van alle spelers wissen, inclusief je eigen speler en gestopte spelers? Bedragen en uitbetalingshistorie van OOM, ProTour, Players Championship, European Tour, Challenge Tour, Development Tour en eigen tours worden gewist. Budget, titels, resultaten en puntenranglijsten blijven behouden. Deze actie kan niet worden teruggedraaid in de editor.',
+        moneyReset: 'Rankingprijzengeld van {count} spelers gewist.',
+        pdcRemoveConfirm: '{name} verwijderen en bij alle spelers intrekken? OOM, Q-School en Challenge / Development Tour kennen geen PDC-kaarten meer toe. Tours met deze kaartplicht worden open en aanvullende toernooivereisten worden verwijderd. Andere ingebouwde toernooiregels kun je apart aanpassen.',
+        pdcRemoved: 'De PDC-kaart is verwijderd. Automatische PDC-kaarttoekenning en ingebouwde Q-School zijn uitgeschakeld.',
+        configPack: 'Dit pakket vervangt tour- en kaartinstellingen. Rankingresultaten en houders van bestaande kaarten blijven carrièregegevens. Bij import van een verwijderde PDC-kaart wordt deze bij alle spelers ingetrokken.'
+    }
+};
+for (const [language, text] of Object.entries(CAREER_EDITOR_WORLD_RESET_TEXT)) Object.assign(CAREER_CALENDAR_EDITOR_TEXT[language], text);
 function trCareerEditor(key, params = {}) {
     const text = CAREER_CALENDAR_EDITOR_TEXT[typeof currentLang === 'string' ? currentLang : 'pl'] || CAREER_CALENDAR_EDITOR_TEXT.en;
-    return String(text[key] || key).replace(/\{(\w+)\}/g, (_, field) => String(params[field] ?? ''));
+    const value = String(text[key] || key).replace(/\{(\w+)\}/g, (_, field) => String(params[field] ?? ''));
+    return typeof competitionDisplayText === 'function' ? competitionDisplayText(value) : value;
 }
 function careerEditorHtml(value) { return String(value ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])); }
 function careerEditorOptions(items, selected = '') {
@@ -130,13 +170,30 @@ function renderCareerCalendarManager() {
     const panel = document.getElementById('career-calendar-manager');
     if (!panel) return;
     const tours = careerEditorTourChoices();
-    const cards = [['pdc', getCareerEditorCard('pdc').name], ...getCareerCalendarEditorState().cards.map(card => [card.id, card.name])];
-    panel.innerHTML = `<div class="career-editor-toolbar"><div><h3>${careerEditorHtml(trCareerEditor('manage'))}</h3><p>${careerEditorHtml(trCareerEditor('manageHint'))}</p></div><button type="button" id="te-clear-calendar" onclick="clearCareerEditorCalendar()">${careerEditorHtml(trCareerEditor('clear'))}</button></div>
+    const cards = careerEditorCardChoices(), defaultCard = isCareerPdcCardEnabled() ? 'pdc' : '';
+    panel.innerHTML = `<div class="career-editor-toolbar"><div><h3>${careerEditorHtml(trCareerEditor('manage'))}</h3><p>${careerEditorHtml(trCareerEditor('manageHint'))}</p></div><div class="career-editor-actions"><button type="button" id="ce-reset-prize-money" class="ce-danger" onclick="clearCareerEditorPrizeMoney()">${careerEditorHtml(trCareerEditor('resetMoney'))}</button><button type="button" id="te-clear-calendar" onclick="clearCareerEditorCalendar()">${careerEditorHtml(trCareerEditor('clear'))}</button></div></div>
         <div class="career-editor-managers"><details id="ce-tours"><summary>${careerEditorHtml(trCareerEditor('tours'))}</summary><select id="ce-tour-select" aria-label="${careerEditorHtml(trCareerEditor('tours'))}" onchange="populateCareerTourManager(this.value)">${careerEditorOptions([['', trCareerEditor('newTour')], ...tours])}</select><div id="ce-tour-form"></div></details>
-        <details id="ce-cards"><summary>${careerEditorHtml(trCareerEditor('cards'))}</summary><select id="ce-card-select" aria-label="${careerEditorHtml(trCareerEditor('cards'))}" onchange="populateCareerCardManager(this.value)">${careerEditorOptions([['', trCareerEditor('newCard')], ...cards], 'pdc')}</select><div id="ce-card-form"></div></details></div><p id="ce-status" role="status"></p>`;
+        <details id="ce-cards"><summary>${careerEditorHtml(trCareerEditor('cards'))}</summary>${defaultCard ? '' : `<p>${careerEditorHtml(trCareerEditor('pdcRemoved'))}</p>`}<select id="ce-card-select" aria-label="${careerEditorHtml(trCareerEditor('cards'))}" onchange="populateCareerCardManager(this.value)">${careerEditorOptions([['', trCareerEditor('newCard')], ...cards], defaultCard)}</select><div id="ce-card-form"></div></details></div><p id="ce-status" role="status"></p>`;
     populateCareerTourManager('');
-    populateCareerCardManager('pdc');
+    populateCareerCardManager(defaultCard);
     refreshCareerEditorEventCards();
+    if (typeof refreshTournamentEditorTourRankingOptions === 'function') refreshTournamentEditorTourRankingOptions();
+}
+function careerEditorCardChoices() {
+    const pdc = getCareerEditorCard('pdc');
+    return [...(pdc ? [['pdc', pdc.name]] : []), ...getCareerCalendarEditorState().cards.map(card => [card.id, card.name])];
+}
+function isCareerEditorWorldResetBlocked() {
+    return typeof activeTournament !== 'undefined' && Boolean(activeTournament)
+        || typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy();
+}
+async function clearCareerEditorPrizeMoney() {
+    if (isCareerEditorWorldResetBlocked()) { setCareerEditorStatus(trTournamentEditor('inUse'), true); return false; }
+    if (!confirm(trCareerEditor('resetMoneyConfirm'))) return false;
+    const count = resetCareerEditorPrizeMoney();
+    if (typeof renderTournamentEditorList === 'function') renderTournamentEditorList();
+    await persistCareerEditorSettings(trCareerEditor('moneyReset', { count }));
+    return true;
 }
 function refreshCareerCalendarManagerTranslations() {
     const panel = document.getElementById('career-calendar-manager');
@@ -147,7 +204,12 @@ function refreshCareerCalendarManagerTranslations() {
     renderCareerCalendarManager();
     for (const id of ['ce-tour-select', 'ce-card-select']) {
         const saved = values.find(value => value.id === id);
-        if (saved) { document.getElementById(id).value = saved.value; (id === 'ce-tour-select' ? populateCareerTourManager : populateCareerCardManager)(saved.value); }
+        if (saved) {
+            const select = document.getElementById(id);
+            select.value = saved.value;
+            // A loaded career or imported pack may have removed the old selection.
+            (id === 'ce-tour-select' ? populateCareerTourManager : populateCareerCardManager)(select.value);
+        }
     }
     values.forEach(saved => {
         const node = document.getElementById(saved.id);
@@ -162,7 +224,7 @@ function populateCareerTourManager(id) {
     const saved = getCareerCalendarEditorState().tours.find(tour => tour.id === id);
     const tour = saved || { id, name: new Map(careerEditorTourChoices()).get(id) || '', ranking: id && !id.startsWith('custom:') ? 'native' : 'own', entry: 'native', fieldSize: 32, playerKeys: [] };
     const options = careerEditorOptions([['native', trCareerEditor('nativeRanking')], ['own', trCareerEditor('ownRanking')], ['none', trCareerEditor('noRanking')]], tour.ranking);
-    const cards = [['pdc', getCareerEditorCard('pdc').name], ...getCareerCalendarEditorState().cards.map(card => [card.id, card.name])];
+    const cards = careerEditorCardChoices();
     document.getElementById('ce-tour-form').innerHTML = `<form onsubmit="saveCareerTourManager(event)"><div class="tournament-editor-fields">
         ${careerEditorLabel('name', `<input id="ce-tour-name" value="${careerEditorHtml(tour.name)}" maxlength="80" required>`)}
         ${careerEditorLabel('ranking', `<select id="ce-tour-ranking">${options}</select>`)}
@@ -208,6 +270,9 @@ async function saveCareerTourManager(event) {
         const cards = state.cards.map(card => card.awardTourId === id && tour.ranking !== 'own'
             ? { ...card, awardTourId: null, awardPlaces: 0 } : card);
         const configuration = normalizeCareerCalendarConfiguration({ ...state, cards, tours: [...state.tours.filter(item => item.id !== id), tour] });
+        const projectedEvents = tournamentDatabase.map(candidate => id.startsWith('custom:') && events.includes(candidate)
+            ? { ...candidate, editorTourName: name } : candidate);
+        projectedEvents.forEach(candidate => validateTournamentEditorEventTourLinks(candidate, projectedEvents, configuration.tours));
         const leagueUpdates = typeof prepareEditorLeagueTourUpdate === 'function' ? prepareEditorLeagueTourUpdate(events, tour) : [];
         state.tours = configuration.tours;
         state.cards = configuration.cards;
@@ -248,6 +313,8 @@ function removeCareerEditorEvents(events) {
             || [...removed].some(root => event.editorLeagueParentKey === tournamentEditorKey(root)))) { removed.add(event); changed = true; } });
     }
     if ([...removed].some(isTournamentEditorActive)) throw new Error(trTournamentEditor('inUse'));
+    const remaining = tournamentDatabase.filter(event => !removed.has(event));
+    remaining.forEach(event => validateTournamentEditorEventTourLinks(event, remaining));
     const keys = new Set(player.tournamentEditorDeletedKeys || []);
     removed.forEach(event => keys.add(tournamentEditorKey(event)));
     player.tournamentEditorDeletedKeys = [...keys];
@@ -311,7 +378,7 @@ function populateCareerCardManager(id) {
         ${pdc ? careerEditorLabel('oom', careerEditorNumber('ce-card-oom', card.oomPlaces, 0, 256)) + careerEditorLabel('qschool', careerEditorNumber('ce-card-qschool', card.qschoolPlaces, 0, 256)) + careerEditorLabel('secondary', careerEditorNumber('ce-card-secondary', card.secondaryPlaces, 0, 64))
         : careerEditorLabel('tier', careerEditorNumber('ce-card-tier', card.tier, 1, 100)) + careerEditorLabel('awardTour', `<select id="ce-card-award-tour">${careerEditorOptions([['', trCareerEditor('manual')], ...awardTours], card.awardTourId)}</select>`) + careerEditorLabel('awardPlaces', careerEditorNumber('ce-card-award-places', card.awardPlaces, 0, 256)) + `<label class="te-checkbox te-wide"><input id="ce-card-higher" type="checkbox"${card.acceptHigher ? ' checked' : ''}><span>${careerEditorHtml(trCareerEditor('higher'))}</span></label>`}</div>
         ${careerEditorLabel('holders', `<input type="search" placeholder="${careerEditorHtml(trCareerEditor('search'))}" oninput="filterCareerEditorPlayers(this, 'ce-card-holders')"><select id="ce-card-holders" multiple size="8">${careerEditorPlayerOptions(holders)}</select>`)}
-        <p>${careerEditorHtml(trCareerEditor(pdc ? 'pdcHint' : 'cardHint'))}</p><div class="career-editor-actions"><button type="submit">${careerEditorHtml(trCareerEditor('save'))}</button>${id && !pdc ? `<button type="button" class="ce-danger" onclick="removeCareerEditorCard()">${careerEditorHtml(trCareerEditor('removeCard'))}</button>` : ''}</div></form>`;
+        <p>${careerEditorHtml(trCareerEditor(pdc ? 'pdcHint' : 'cardHint'))}</p><div class="career-editor-actions"><button type="submit">${careerEditorHtml(trCareerEditor('save'))}</button>${id ? `<button type="button" id="ce-remove-card" class="ce-danger" onclick="removeCareerEditorCard()">${careerEditorHtml(trCareerEditor('removeCard'))}</button>` : ''}</div></form>`;
 }
 async function saveCareerCardManager(event) {
     event?.preventDefault();
@@ -338,8 +405,9 @@ async function saveCareerCardManager(event) {
         const year = currentDate.getFullYear();
         getTournamentEditorCandidates().forEach(candidate => {
             if (id === 'pdc') {
-                if (keys.has(getTournamentEditorPlayerKey(candidate))) setPdcTourCard(candidate, candidate.tourCardSource || 'editor', year);
-                else clearPdcTourCard(candidate, getPdcTourCardCycleYear(currentDate));
+                const selected = keys.has(getTournamentEditorPlayerKey(candidate));
+                if (selected && candidate.hasTourCard !== true) setPdcTourCard(candidate, 'editor', year);
+                else if (!selected && candidate.hasTourCard === true) clearPdcTourCard(candidate, year);
             } else {
                 candidate.editorCards = (candidate.editorCards || []).filter(held => held.id !== id);
                 if (keys.has(getTournamentEditorPlayerKey(candidate))) grantCareerEditorCard(candidate, card, year);
@@ -355,9 +423,17 @@ async function saveCareerCardManager(event) {
 }
 async function removeCareerEditorCard() {
     const id = document.getElementById('ce-card-select').value, card = getCareerEditorCard(id);
-    if (!id || id === 'pdc' || !card) return false;
-    if (typeof activeTournament !== 'undefined' && activeTournament) { setCareerEditorStatus(trTournamentEditor('inUse'), true); return false; }
+    if (!id || !card) return false;
+    if (isCareerEditorWorldResetBlocked()) { setCareerEditorStatus(trTournamentEditor('inUse'), true); return false; }
     const state = getCareerCalendarEditorState();
+    if (id === 'pdc') {
+        if (!confirm(trCareerEditor('pdcRemoveConfirm', { name: card.name }))) return false;
+        removeCareerEditorPdcCard();
+        renderCareerCalendarManager();
+        document.getElementById('ce-cards').open = true;
+        await persistCareerEditorSettings(trCareerEditor('pdcRemoved'));
+        return true;
+    }
     if (state.tours.some(tour => !tour.removed && tour.requiredCardId === id) || tournamentDatabase.some(event => event.editorRequiredCardId === id)) {
         setCareerEditorStatus(trCareerEditor('usedCard'), true); return false;
     }
@@ -372,7 +448,7 @@ function refreshCareerEditorEventCards() {
     const select = document.getElementById('te-required-card');
     if (!select) return;
     const value = select.value;
-    select.innerHTML = careerEditorOptions([['', trCareerEditor('none')], ['pdc', getCareerEditorCard('pdc').name], ...getCareerCalendarEditorState().cards.map(card => [card.id, card.name])], value);
+    select.innerHTML = careerEditorOptions([['', trCareerEditor('none')], ...careerEditorCardChoices()], value);
     document.getElementById('te-required-card-label').textContent = trCareerEditor('card');
     document.getElementById('te-required-card-hint').textContent = trCareerEditor('tourCardHint');
 }
@@ -382,15 +458,52 @@ function renderTournamentEditorRoundFormats(event) {
     const rounds = [256, 128, 64, 32, 16, 8, 4, 2];
     if (event?.specialType === 'ukOpen') rounds.splice(1, 0, 160, 96);
     if (event?.specialType === 'continentalQualifier' && event.qualifierPath === 'card') rounds.splice(2, 0, 80, 40, 20, 10);
-    wrap.innerHTML = `<p>${careerEditorHtml(trCareerEditor('roundHint'))}</p><div class="tournament-editor-prize-grid">${rounds.map(round => {
+    // Keep any imported round overrides visible, including special non-power-of-two rounds.
+    for (const round of Object.keys(event?.editorMatchFormat?.rounds || {}).map(Number)) {
+        if (!rounds.includes(round)) rounds.push(round);
+    }
+    rounds.sort((first, second) => second - first);
+    wrap.innerHTML = `<p class="tournament-editor-hint" data-round-text="roundHint"></p><div class="te-round-format-grid">${rounds.map(round => {
         const native = event && typeof getTournamentMatchFormat === 'function'
             ? getTournamentMatchFormat({ ...event, editorMatchFormat: null }, round) : { type: 'legs', legsToWin: 6 };
-        const saved = event?.editorMatchFormat?.type === 'rounds' ? event.editorMatchFormat.rounds[round]?.legsToWin || 0
-            : event?.editorMatchFormat?.type === 'legs' ? event.editorMatchFormat.legsToWin : native.type === 'legs' ? native.legsToWin : 0;
-        const label = round === 2 ? trCareerEditor('final') : round === 4 ? trCareerEditor('semi') : round === 8 ? trCareerEditor('quarter') : trCareerEditor('last', { count: round });
-        return `<label><span>${careerEditorHtml(label)}</span><input id="te-round-${round}" data-round="${round}" type="number" min="0" max="30" step="1" value="${saved}"></label>`;
+        const saved = event?.editorMatchFormat?.type === 'rounds' ? event.editorMatchFormat.rounds[round]
+            : ['legs', 'sets'].includes(event?.editorMatchFormat?.type) ? event.editorMatchFormat : null;
+        const mode = saved?.type || 'auto', match = saved || native;
+        const count = match.type === 'sets' ? match.setsToWin : match.legsToWin;
+        return `<fieldset class="te-round-format" data-round="${round}"><legend></legend><div class="te-round-format-fields">
+            <label><span data-round-text="roundFormat"></span><select id="te-round-mode-${round}" onchange="updateTournamentEditorRoundFields(this.closest('fieldset'))">${careerEditorOptions([['auto', trCareerEditor('roundAuto')], ['legs', trCareerEditor('roundLegs')], ['sets', trCareerEditor('roundSets')]], mode)}</select></label>
+            <label class="te-round-count"><span></span><input id="te-round-${round}" type="number" min="1" max="${mode === 'sets' ? 15 : 30}" step="1" value="${count || 3}"></label>
+            <label class="te-round-set-legs"><span data-round-text="roundLegsPerSet"></span><input id="te-round-legs-per-set-${round}" type="number" min="1" max="7" step="1" value="${match.legsPerSet || 3}"></label>
+        </div></fieldset>`;
     }).join('')}</div>`;
+    refreshTournamentEditorRoundTranslations();
     updateTournamentEditorRoundVisibility();
+}
+function updateTournamentEditorRoundFields(row) {
+    if (!row) return;
+    const mode = row.querySelector('select').value;
+    const inactive = document.getElementById('te-round-formats').hidden || row.hidden;
+    row.querySelector('select').disabled = inactive;
+    const count = row.querySelector('.te-round-count'), legs = row.querySelector('.te-round-set-legs');
+    count.hidden = mode === 'auto';
+    count.querySelector('span').textContent = trTournamentEditor(mode === 'sets' ? 'setsToWin' : 'legsToWin');
+    count.querySelector('input').max = mode === 'sets' ? '15' : '30';
+    count.querySelector('input').disabled = inactive || mode === 'auto';
+    legs.hidden = mode !== 'sets';
+    legs.querySelector('input').disabled = inactive || mode !== 'sets';
+}
+function refreshTournamentEditorRoundTranslations() {
+    document.querySelectorAll('#te-round-formats [data-round-text]').forEach(node => {
+        node.textContent = trCareerEditor(node.dataset.roundText);
+    });
+    document.querySelectorAll('#te-round-formats .te-round-format').forEach(row => {
+        const round = Number(row.dataset.round);
+        row.querySelector('legend').textContent = trCareerEditor(round === 2 ? 'final' : round === 4 ? 'semi' : round === 8 ? 'quarter' : 'last', { count: round });
+        [...row.querySelector('select').options].forEach(option => {
+            option.textContent = trCareerEditor(option.value === 'auto' ? 'roundAuto' : option.value === 'sets' ? 'roundSets' : 'roundLegs');
+        });
+        updateTournamentEditorRoundFields(row);
+    });
 }
 function getTournamentEditorProposedTourEvent() {
     const cycle = document.getElementById('te-cycle')?.value;
@@ -402,7 +515,10 @@ function updateTournamentEditorRoundVisibility() {
     const managed = hasCareerTourEntryOverride(event);
     const known = managed || tournamentEditorCreating || event.isEditorTournament || document.getElementById('te-qualification-mode')?.value === 'custom';
     const size = managed ? getCareerTourFieldSize(event) : Number(document.getElementById('te-field-size')?.value) || 256;
-    document.querySelectorAll('#te-round-formats input[data-round]').forEach(input => { input.closest('label').hidden = known && Number(input.dataset.round) > size; });
+    document.querySelectorAll('#te-round-formats .te-round-format').forEach(row => {
+        row.hidden = known && Number(row.dataset.round) > size;
+        updateTournamentEditorRoundFields(row);
+    });
 }
 function updateTournamentEditorManagedTourFields() {
     const event = getTournamentEditorProposedTourEvent(), managed = hasCareerTourEntryOverride(event);
@@ -421,14 +537,21 @@ function updateTournamentEditorManagedTourFields() {
 }
 function getTournamentEditorRoundFormatData() {
     const rounds = {};
-    document.querySelectorAll('#te-round-formats input[data-round]').forEach(input => {
-        if (input.closest('label').hidden) return;
-        const value = Number(input.value);
-        if (!input.value.trim() || !Number.isInteger(value) || value < 0 || value > 30) throw new Error(trTournamentEditor('invalidNumbers'));
-        if (value) rounds[input.dataset.round] = { type: 'legs', legsToWin: value };
+    document.querySelectorAll('#te-round-formats .te-round-format').forEach(row => {
+        if (row.hidden) return;
+        const mode = row.querySelector('select').value;
+        if (mode === 'auto') return;
+        if (!['legs', 'sets'].includes(mode)) throw new Error(trTournamentEditor('invalidNumbers'));
+        const integer = (selector, maximum) => {
+            const input = row.querySelector(selector), value = Number(input.value);
+            if (!input.value.trim() || !Number.isInteger(value) || value < 1 || value > maximum) throw new Error(trTournamentEditor('invalidNumbers'));
+            return value;
+        };
+        rounds[row.dataset.round] = mode === 'sets'
+            ? { type: 'sets', setsToWin: integer('.te-round-count input', 15), legsPerSet: integer('.te-round-set-legs input', 7) }
+            : { type: 'legs', legsToWin: integer('.te-round-count input', 30) };
     });
-    if (!Object.keys(rounds).length) throw new Error(trTournamentEditor('invalidNumbers'));
-    return { type: 'rounds', rounds };
+    return Object.keys(rounds).length ? { type: 'rounds', rounds } : null;
 }
 function refreshCareerTourRankingButtons() {
     const mapping = { 'btn-rank-pt': 'proTour', 'btn-rank-pc': 'playersChampionship', 'btn-rank-et': 'europeanTour', 'btn-rank-challenge-tour': 'challengeTour', 'btn-rank-development-tour': 'developmentTour', 'btn-rank-gdl': 'premierLeague', 'btn-rank-world-masters': 'worldSeries' };

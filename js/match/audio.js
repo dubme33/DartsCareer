@@ -22,6 +22,7 @@ function playDartHitSound(throwEvent = {}) {
 }
 
 function announceAudio(event, playerName = "") {
+            if (typeof playMatchCallerEvent === 'function') return playMatchCallerEvent(event, playerName);
             let soundKey = "";
             if (event === 180) soundKey = "180";
             else if (event === 'win_match') soundKey = "game_shot_match";
@@ -38,10 +39,10 @@ function announceAudio(event, playerName = "") {
             return playCallerClip(source, event, playerName, Boolean(modSource));
         }
 
-        function playCallerClip(source, event, playerName, isModded) {
+        function playCallerClip(source, event, playerName, isModded, playback = null) {
             return new Promise(resolve => {
                 let audio;
-                try { audio = new Audio(source); }
+                try { audio = playback?.audio || new Audio(source); }
                 catch (_error) { playRobotCaller(event, playerName).then(resolve); return; }
 
                 audio.volume = 1.0 * globalVolume;
@@ -52,6 +53,7 @@ function announceAudio(event, playerName = "") {
                     clearTimeout(timeout);
                     audio.onended = null;
                     audio.onerror = null;
+                    audio.onloadedmetadata = null;
                 };
                 const finish = () => {
                     if (settled) return;
@@ -70,6 +72,13 @@ function announceAudio(event, playerName = "") {
 
                 audio.onended = finish;
                 audio.onerror = () => useRobotCaller(new Error('Caller audio could not be decoded'));
+                if (playback?.startTime > 0) {
+                    const seek = () => {
+                        try { audio.currentTime = playback.startTime; return true; }
+                        catch (_error) { return false; }
+                    };
+                    if (!seek()) audio.onloadedmetadata = seek;
+                }
                 try {
                     const started = audio.play();
                     if (started && typeof started.catch === 'function') started.catch(useRobotCaller);
@@ -89,6 +98,9 @@ function announceAudio(event, playerName = "") {
                 if (event === 180) {
                     utterance.text = "ONE HUNDRED AND EIGHTY!!!";
                     utterance.pitch = 1.6; utterance.rate = 1.1;
+                } else if (event === 'game_on' || event === 'require') {
+                    utterance.text = event === 'game_on' ? 'Game on!' : 'You require';
+                    utterance.pitch = 1.1; utterance.rate = 0.9;
                 } else if (event === 'win_match') {
                     utterance.text = `Game shot, and the match! ${playerName}`;
                     utterance.pitch = 1.1; utterance.rate = 0.9;
@@ -116,6 +128,7 @@ function announceAudio(event, playerName = "") {
         }
 
         function announceRequire(score) {
+            if (typeof playMatchCallerRequire === 'function') return playMatchCallerRequire(score);
             let reqSrc = moddedAssets.sounds["require"] || 'sounds/require.wav';
             let requireAudio = new Audio(reqSrc);
             requireAudio.volume = 1.0 * globalVolume;

@@ -39,7 +39,7 @@ body.match-tv-active { overflow: hidden !important; }
     border-radius: 0;
     background: var(--broadcast-stage-bg);
 }
-#screen-match.match-tv-mode > :not(.match-layout):not(#spectator-speed-controls):not(#career-walkon-stage):not(#walkon-arena) { display: none !important; }
+#screen-match.match-tv-mode > :not(.match-layout):not(#spectator-speed-controls):not(#career-autoplay-controls):not(#career-walkon-stage):not(#walkon-arena) { display: none !important; }
 #screen-match.match-tv-mode > .match-layout { display: block; width: 100%; height: 100%; margin: 0; }
 #screen-match.match-tv-mode .match-stats,
 #screen-match.match-tv-mode .dart-info,
@@ -179,19 +179,28 @@ body.match-tv-active { overflow: hidden !important; }
     width: min(340px, calc(100% - 44px - var(--checkout-space, 0px)));
     margin: 0;
 }
-#screen-match.match-tv-mode.tv-spectator #spectator-speed-controls {
-    position: fixed;
-    z-index: 5004;
-    top: max(16px, env(safe-area-inset-top));
-    left: 50%;
-    display: flex !important;
-    width: auto;
+#screen-match.match-tv-mode .board-view-controls > #career-autoplay-controls,
+#screen-match.match-tv-mode .board-view-controls > #spectator-speed-controls {
+    position: static;
+    flex-basis: 100%;
+    width: 100%;
+    max-width: 100%;
     margin: 0;
-    transform: translateX(-50%);
-    background: #0c2036ed;
+    transform: none;
+    padding: 6px 0 0;
+    gap: 6px;
+    border: 0;
+    border-top: 1px solid #4d687c;
+    border-radius: 0;
+    background: transparent;
 }
-
 /* Live broadcast identity, director cards and leg-ending replay. */
+#screen-match.match-tv-mode .board-view-controls > #career-autoplay-controls {
+    flex-basis: auto;
+    width: auto;
+    padding: 0;
+    border: 0;
+}
 .tv-watermark,
 .tv-stat-card,
 .tv-moment-banner,
@@ -254,12 +263,17 @@ body.match-tv-active { overflow: hidden !important; }
 .tv-stat-portrait img { position: absolute; z-index: 1; inset: 0; width: 100%; height: 100%; object-fit: contain; object-position: center bottom; filter: drop-shadow(0 8px 10px #000a); }
 .tv-stat-portrait img.is-missing { display: none; }
 .tv-stat-initial { position: absolute; inset: 0; display: grid; place-items: center; color: #ffffff45; font: 900 26px/1 Arial, sans-serif; }
+.tv-stat-initial[hidden] { display: none; }
 .tv-stat-copy { align-self: center; min-width: 0; padding: 8px 2px; }
 .tv-stat-kicker { display: block; padding-bottom: 4px; color: var(--broadcast-secondary); font-size: 9px; font-weight: 900; letter-spacing: .12em; }
 .tv-stat-card h3 { margin: 0; padding: 0; border: 0; color: #fff; text-align: center; font: 900 17px/1.1 Arial, sans-serif; text-wrap: balance; text-transform: uppercase; }
 .tv-stat-body { display: grid; align-content: center; }
 .tv-stat-row { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.8fr) minmax(0, 1fr); align-items: center; gap: 3px; min-height: 34px; padding: 4px 0; font: 800 10px/1.12 Arial, sans-serif; }
 .tv-stat-row + .tv-stat-row { border-top: 1px solid #ffffff18; }
+@media (min-width: 601px) {
+    /* Leave room for values such as 180.00 beside the player portraits. */
+    .tv-stat-card[data-stat-kind="averages"] .tv-stat-row { grid-template-columns: minmax(0, 1.25fr) minmax(0, 1.5fr) minmax(0, 1.25fr); }
+}
 .tv-stat-label { min-width: 0; color: #dce7f3; text-align: center; overflow-wrap: anywhere; }
 .tv-stat-value { min-width: 0; color: #f4f6f7; text-align: center; font-size: 17px; font-weight: 900; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .tv-stat-row strong.is-accent { color: var(--broadcast-secondary); }
@@ -394,7 +408,16 @@ body.match-tv-active { overflow: hidden !important; }
     visibility: visible;
     pointer-events: auto;
 }
-#screen-match.match-tv-mode.tv-spectator.tv-replay-running #spectator-speed-controls > :not(.spectator-exit-btn) { display: none; }
+#screen-match.match-tv-mode.tv-spectator.tv-replay-running #spectator-speed-controls > :not(.spectator-exit-btn):not(.spectator-pause-btn) { display: none; }
+#screen-match.match-tv-mode.tv-spectator.tv-replay-running .board-view-controls {
+    opacity: 1 !important;
+    visibility: visible;
+    pointer-events: auto;
+    background: transparent;
+    border-color: transparent;
+    box-shadow: none;
+}
+#screen-match.match-tv-mode.tv-spectator.tv-replay-running .board-view-controls > :not(#spectator-speed-controls) { display: none !important; }
 #screen-match.match-tv-mode.tv-replay-running .match-board-view { right: 0; }
 
 #screen-match.match-tv-mode .tv-replay-stinger {
@@ -595,6 +618,8 @@ body.match-tv-active { overflow: hidden !important; }
 .match-post-stats-player > strong { display: grid; flex: 1; place-items: center; min-height: 50px; padding: 8px 10px 2px; font-size: clamp(15px, 1.7vw, 22px); font-weight: 900; line-height: 1.05; text-transform: uppercase; overflow-wrap: anywhere; }
 .match-post-stats-score { padding: 0 10px 10px; color: #fff; font-size: clamp(36px, 4vw, 54px); font-weight: 900; line-height: 1; }
 .match-post-stats-table { display: grid; grid-template-rows: repeat(6, minmax(0, 1fr)); align-self: stretch; gap: 4px; }
+.match-post-stats-table.has-double-in { grid-template-rows: repeat(7, minmax(0, 1fr)); }
+#match-post-stats-double-in[hidden] { display: none; }
 .match-post-stats-row { display: grid; grid-template-columns: minmax(66px, 1fr) minmax(105px, 1.25fr) minmax(66px, 1fr); align-items: stretch; min-height: 47px; gap: 4px; text-align: center; }
 .match-post-stats-row strong { display: grid; place-items: center; padding: 4px; background: var(--broadcast-accent, #e32636); color: var(--broadcast-accent-text, #fff); font-size: clamp(18px, 2vw, 26px); font-weight: 900; font-variant-numeric: tabular-nums; }
 .match-post-stats-row span { display: grid; place-items: center; padding: 4px; color: #f4f7fb; font-size: clamp(9px, 1.02vw, 13px); font-weight: 900; letter-spacing: .03em; line-height: 1.12; text-transform: uppercase; }
@@ -615,9 +640,9 @@ body.match-tv-active { overflow: hidden !important; }
     .broadcast-nine { width: 28px; font-size: 16px; }
     #screen-match.match-tv-mode .match-board-view,
     #screen-match.match-tv-mode.tv-spectator .match-board-view { inset: 0 0 56% 0; height: auto; }
-    #screen-match.match-tv-mode .match-board-view[data-view="2d"] { box-sizing: border-box; padding-top: 56px; }
+    #screen-match.match-tv-mode .match-board-view[data-view="2d"] { box-sizing: border-box; padding-top: var(--tv-toolbar-bottom, 56px); }
     #screen-match.match-tv-mode .match-board-view[data-view="2d"] .dartboard-surround { width: min(94vw, calc(44svh - 90px)); }
-    #screen-match.match-tv-mode .match-board #dartboard-3d { height: calc(100% - 56px); margin-top: 56px; }
+    #screen-match.match-tv-mode .match-board #dartboard-3d { height: calc(100% - var(--tv-toolbar-bottom, 56px)); margin-top: var(--tv-toolbar-bottom, 56px); }
     #screen-match.match-tv-mode .board-view-controls { top: max(6px, env(safe-area-inset-top)); right: max(6px, env(safe-area-inset-right)); max-width: calc(100% - 12px); padding: 4px; }
     #screen-match.match-tv-mode .board-view-controls button { min-height: 33px; padding: 4px 7px; font-size: 11px; }
     #screen-match.match-tv-mode .aim-controls { top: 56%; left: max(8px, env(safe-area-inset-left)); right: max(8px, env(safe-area-inset-right)); width: auto; max-height: calc(44svh - 64px - env(safe-area-inset-bottom)); padding: 7px; gap: 4px; }
@@ -634,13 +659,14 @@ body.match-tv-active { overflow: hidden !important; }
     #screen-match.match-tv-mode .match-actions #t-btn-sim-visit { min-height: 48px; }
     #screen-match.match-tv-mode .broadcast-scoreboard { right: 8px; bottom: 45%; transform: translateY(-8px); }
     #screen-match.match-tv-mode.tv-spectator .broadcast-scoreboard { bottom: max(8px, env(safe-area-inset-bottom)); transform: none; }
-    #screen-match.match-tv-mode.tv-spectator #spectator-speed-controls { top: calc(44% + 10px); width: max-content; max-width: calc(100% - 16px); flex-wrap: wrap; gap: 5px; padding: 6px; }
+    #screen-match.match-tv-mode.tv-spectator #spectator-speed-controls { flex-wrap: wrap; gap: 5px; }
     #screen-match.match-tv-mode.tv-spectator .spectator-speed-label { display: none; }
     #screen-match.match-tv-mode.tv-spectator .spectator-speed-buttons { flex-wrap: nowrap; gap: 3px; }
     #screen-match.match-tv-mode.tv-spectator .spectator-pause-btn,
+    #screen-match.match-tv-mode.tv-spectator .spectator-highlights-btn,
     #screen-match.match-tv-mode.tv-spectator .spectator-speed-btn,
     #screen-match.match-tv-mode.tv-spectator .spectator-exit-btn { min-width: 34px; padding: 5px; font-size: 11px; }
-    #screen-match.match-tv-mode .tv-watermark { top: 50px; left: 7px; transform: scale(.78); transform-origin: top left; }
+    #screen-match.match-tv-mode .tv-watermark { top: var(--tv-toolbar-bottom, 56px); left: 7px; transform: scale(.78); transform-origin: top left; }
     #screen-match.match-tv-mode .tv-stat-card {
         top: auto; right: 8px; bottom: calc(56% + 8px); left: 8px; width: auto;
         transform: translateY(8px) scale(.98);
@@ -728,7 +754,13 @@ body.match-tv-active { overflow: hidden !important; }
     #screen-match.match-tv-mode .match-actions #throw-btn { min-height: 44px; font-size: 14px; }
     #screen-match.match-tv-mode .match-actions #t-btn-sim-visit { min-height: 44px; }
     #screen-match.match-tv-mode .broadcast-scoreboard { right: 10px; bottom: 8px; }
-    #screen-match.match-tv-mode.tv-spectator #spectator-speed-controls { top: 7px; padding: 5px; }
+    #screen-match.match-tv-mode.tv-spectator #spectator-speed-controls { gap: 5px; }
+    #screen-match.match-tv-mode.tv-spectator .spectator-speed-label { display: none; }
+    #screen-match.match-tv-mode.tv-spectator .spectator-pause-btn,
+    #screen-match.match-tv-mode.tv-spectator .spectator-highlights-btn,
+    #screen-match.match-tv-mode.tv-spectator .spectator-speed-btn,
+    #screen-match.match-tv-mode.tv-spectator .spectator-exit-btn { min-width: 30px; padding: 5px; font-size: 11px; }
+    #screen-match.match-tv-mode.tv-spectator .spectator-speed-buttons { gap: 3px; }
     #screen-match.match-tv-mode .tv-watermark { top: 8px; left: 10px; }
     #screen-match.match-tv-mode .tv-stat-card { top: auto; right: 10px; bottom: 170px; left: auto; width: 308px; }
     .tv-stat-main { grid-template-columns: 46px minmax(0, 1fr) 46px; min-height: 100px; }

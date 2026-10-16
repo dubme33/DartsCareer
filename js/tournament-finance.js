@@ -129,6 +129,7 @@ function getTournamentPrizePreview(tournament) {
     const slam = !editorRules && !qualifier && /grand slam|champion's slam/.test(text);
     const challengeTour = typeof isChallengeTourTournament === 'function' && isChallengeTourTournament(event);
     const developmentTour = typeof isDevelopmentTourTournament === 'function' && isDevelopmentTourTournament(event);
+    const womensSeries = typeof isWomensSeriesTournament === 'function' && isWomensSeriesTournament(event);
     const rows = [];
     if (qualifier && !crownMastersQualifier) return { event, rows, rankings: [], qualifier: true, team: false };
     if (team) {
@@ -137,7 +138,7 @@ function getTournamentPrizePreview(tournament) {
         let openingRound = 32;
         if (editorRules || event.isEditorTournament) openingRound = event.editorFieldSize || 32;
         else if (league) openingRound = playoffs ? 4 : 8;
-        else if (challengeTour || developmentTour) openingRound = 256;
+        else if (challengeTour || developmentTour || womensSeries) openingRound = 256;
         else if (typeof isWorldMastersFinalsTournament === 'function' && isWorldMastersFinalsTournament(event)) openingRound = 32;
         else if (typeof isWorldMastersTournament === 'function' && isWorldMastersTournament(event)) openingRound = 16;
         else if (typeof isUKOpenTournament === 'function' && isUKOpenTournament(event)) openingRound = 160;
@@ -172,7 +173,11 @@ function getTournamentPrizePreview(tournament) {
     const series = typeof isWorldMastersName === 'function' && isWorldMastersName(name)
         && !crownMasters && !crownMastersQualifier;
     const managedTour = typeof getCareerEditorTour === 'function' ? getCareerEditorTour(event) : null;
-    if (managedTour && managedTour.ranking !== 'native') {
+    if (typeof isWorldYouthTournament === 'function' && isWorldYouthTournament(event)) {
+        // Youth remains non-ranking even when assigned to an editor cycle.
+    } else if (womensSeries) {
+        rankings.push((typeof competitionName==='function'?competitionName('womensSeries'):"Women's Pro Circuit") + " OOM");
+    } else if (managedTour && managedTour.ranking !== 'native') {
         if (!managedTour.removed && managedTour.ranking === 'own' && event.rankingOverride !== false) rankings.push(managedTour.name);
     } else if (event.rankingOverride === false) {
         // Explicitly non-ranking events still pay cash, but never enter an OOM.

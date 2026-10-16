@@ -15,8 +15,8 @@ function newsLabel(key) {
         RANKING:['Rankings','Ranking','Rangliste','Ranglijst'],CAREER:['Career','Kariera','Karriere','Carrière'],FORM:['Form & fitness','Forma i zdrowie','Form & Gesundheit','Vorm & gezondheid'],
         MILESTONE:['Milestone','Osiągnięcie','Meilenstein','Mijlpaal'],RECORD:['Records & season','Rekordy i sezon','Rekorde & Saison','Records & seizoen'],
         UPSET:['Upset','Sensacja','Überraschung','Verrassing'],WORLD_CHAMPIONSHIP:['World Championship','Mistrzostwa świata','Weltmeisterschaft','Wereldkampioenschap'],
-        RIVALRY:['Rivalry','Rywalizacja','Rivalität','Rivaliteit'],RETIREMENT:['Retirement','Emerytura','Karriereende','Pensioen'],PREVIEW:['Preview','Zapowiedź','Vorschau','Voorbeschouwing']};
-    return labels[key]?newsSay(...labels[key]):key;
+        RIVALRY:['Rivalry','Rywalizacja','Rivalität','Rivaliteit'],RETIREMENT:['Retirement','Emerytura','Karriereende','Pensioen'],PREVIEW:['Preview','Zapowiedź','Vorschau','Voorbeschouwing'],WOMENS_WORLD_MATCHPLAY:["Women’s World Matchplay","Kobiecy World Matchplay","Women’s World Matchplay","Women’s World Matchplay"],WOMENS_SERIES:["Women's Series",'Kobiecy Cykl PDC',"Women's Series","Women's Series"]};
+    const label=labels[key]?newsSay(...labels[key]):key;return typeof competitionDisplayText==='function'?competitionDisplayText(label):label;
 }
 function getNewsroomArticles() {
     const state=initWorldNews(),all=[...state.entries,...newsRoom().archive];

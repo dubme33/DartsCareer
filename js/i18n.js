@@ -11,6 +11,11 @@ const translations = {
         "t-fname": "Imię:",
         "t-lname": "Nazwisko:",
         "t-age": "Wiek:",
+        "t-player-gender": "Płeć:",
+        "t-player-gender-male": "Mężczyzna",
+        "t-player-gender-female": "Kobieta",
+        "t-dart-entry-angle": "Kąt wbicia lotek:",
+        "t-dart-entry-angle-hint": "0°: poziomo. Wartości ujemne opuszczają tył lotki, dodatnie go unoszą.",
         "t-nat": "Narodowość:",
         "t-pot": "Potencjał:",
         "t-opt-1": "Słaby",
@@ -250,6 +255,8 @@ const translations = {
         "t-keep-practicing": "Praktykuj dalej!",
         "t-perfect-leg": "Idealny leg!",
         "t-nine-darter": "NINE-DARTER!",
+        "t-nine-darter-bonus": "+ £50,000 premii!",
+        "t-nine-darter-close": "NIESAMOWITE!",
         "t-max-180": "Maximum 180!",
         "t-high-checkout": "Wysoki Checkout!",
         "t-low-score": "Słaby wynik",
@@ -319,6 +326,7 @@ const translations = {
         "t-btn-sim-match": "⏭️ Mecz",
         "t-btn-match-back": "Wróć do Menu (Zapisz Postęp)",
         "t-stat-avg-lbl": "Średnia (3 lotki)",
+        "t-stat-set-avg-lbl": "Średnia (bieżący set)",
         "t-stat-f9-lbl": "Średnia (First 9)",
         "t-stat-dbl-lbl": "Skuteczność D",
         "t-stat-leg-avg-lbl": "Średnia (Ten Leg)",
@@ -440,6 +448,12 @@ const translations = {
         "t-spectator-watching": "Oglądasz",
         "t-spectator-speed": "Prędkość symulacji",
         "t-spectator-pause": "Pauza",
+        "t-career-autoplay-watch": "Oglądaj swój mecz",
+        "t-career-autoplay-manual": "Graj ręcznie",
+        "t-career-autoplay-help": "Zawodnik gra automatycznie. Możesz wstrzymać mecz lub wrócić do ręcznych rzutów bez utraty wyniku. Najpierw rozstrzygnij ewentualną otwartą decyzję meczową.",
+        "t-btn-watch-highlights": "Skróty",
+        "t-spectator-highlights-on": "Skróty: wł.",
+        "t-spectator-highlights-help": "Oglądaj próby zamknięcia i całe decydujące legi. Pozostałe punktowanie jest pomijane; wszystkie lotki liczą się do statystyk. Kliknij ponownie, aby oglądać pełny mecz.",
         "t-spectator-resume": "Wznów",
         "t-spectator-exit": "Wyjdź z meczu",
         "t-btn-next-round": "Przejdź do następnej rundy",
@@ -474,6 +488,11 @@ const translations = {
         "t-fname": "First Name:",
         "t-lname": "Last Name:",
         "t-age": "Age:",
+        "t-player-gender": "Gender:",
+        "t-player-gender-male": "Male",
+        "t-player-gender-female": "Female",
+        "t-dart-entry-angle": "Dart entry angle:",
+        "t-dart-entry-angle-hint": "0°: horizontal. Negative values lower the tail; positive values raise it.",
         "t-nat": "Nationality:",
         "t-pot": "Potential:",
         "t-opt-1": "Weak",
@@ -713,6 +732,8 @@ const translations = {
         "t-keep-practicing": "Keep practicing!",
         "t-perfect-leg": "Perfect leg!",
         "t-nine-darter": "NINE-DARTER!",
+        "t-nine-darter-bonus": "+ £50,000 bonus!",
+        "t-nine-darter-close": "AMAZING!",
         "t-max-180": "Maximum 180!",
         "t-high-checkout": "High Checkout!",
         "t-low-score": "Low score",
@@ -777,7 +798,7 @@ const translations = {
         "Afganistan": "Afghanistan", "Arabia Saudyjska": "Saudi Arabia", "Armenia": "Armenia", "Azerbejdżan": "Azerbaijan", "Bahrajn": "Bahrain", "Bangladesz": "Bangladesh", "Bhutan": "Bhutan", "Brunei": "Brunei", "Chiny": "China", "Filipiny": "Philippines", "Gruzja": "Georgia", "Hongkong": "Hong Kong", "Indie": "India", "Indonezja": "Indonesia", "Irak": "Iraq", "Iran": "Iran", "Izrael": "Israel", "Japonia": "Japan", "Jemen": "Yemen", "Jordania": "Jordan", "Kambodża": "Cambodia", "Katar": "Qatar", "Kazachstan": "Kazakhstan", "Kirgistan": "Kyrgyzstan", "Korea Południowa": "South Korea", "Korea Północna": "North Korea", "Kuwejt": "Kuwait", "Laos": "Laos", "Liban": "Lebanon", "Malediwy": "Maldives", "Malezja": "Malaysia", "Mjanma": "Myanmar", "Mongolia": "Mongolia", "Nepal": "Nepal", "Oman": "Oman", "Pakistan": "Pakistan", "Palestyna": "Palestine", "Singapur": "Singapore", "Sri Lanka": "Sri Lanka", "Syria": "Syria", "Tadżykistan": "Tajikistan", "Tajlandia": "Thailand", "Tajwan": "Taiwan", "Timor Wschodni": "East Timor", "Turcja": "Turkey", "Turkmenistan": "Turkmenistan", "Uzbekistan": "Uzbekistan", "Wietnam": "Vietnam", "Zjednoczone Emiraty Arabskie": "United Arab Emirates", 
         "Algieria": "Algeria", "Angola": "Angola", "Benin": "Benin", "Botswana": "Botswana", "Burkina Faso": "Burkina Faso", "Burundi": "Burundi", "Czad": "Chad", "Demokratyczna Republika Konga": "Democratic Republic of the Congo", "Dżibuti": "Djibouti", "Egipt": "Egypt", "Erytrea": "Eritrea", "Eswatini": "Eswatini", "Etiopia": "Ethiopia", "Gabon": "Gabon", "Gambia": "Gambia", "Ghana": "Ghana", "Gwinea": "Guinea", "Gwinea Bissau": "Guinea-Bissau", "Gwinea Równikowa": "Equatorial Guinea", "Kamerun": "Cameroon", "Kenia": "Kenya", "Komory": "Comoros", "Kongo": "Congo", "Lesotho": "Lesotho", "Liberia": "Liberia", "Libia": "Libya", "Madagaskar": "Madagascar", "Malawi": "Malawi", "Mali": "Mali", "Maroko": "Morocco", "Mauretania": "Mauritania", "Mauritius": "Mauritius", "Mozambik": "Mozambique", "Namibia": "Namibia", "Niger": "Niger", "Nigeria": "Nigeria", "Republika Środkowoafrykańska": "Central African Republic", "Republika Zielonego Przylądka": "Cape Verde", "RPA": "South Africa", "Rwanda": "Rwanda", "Senegal": "Senegal", "Seszele": "Seychelles", "Sierra Leone": "Sierra Leone", "Somalia": "Somalia", "Sudan": "Sudan", "Sudan Południowy": "South Sudan", "Tanzania": "Tanzania", "Togo": "Togo", "Tunezja": "Tunisia", "Uganda": "Uganda", "Wybrzeże Kości Słoniowej": "Ivory Coast", "Wyspy Świętego Tomasza i Książęca": "Sao Tome and Principe", "Zambia": "Zambia", "Zimbabwe": "Zimbabwe", 
         "Australia": "Australia", "Fidżi": "Fiji", "Kiribati": "Kiribati", "Mikronezja": "Micronesia", "Nauru": "Nauru", "Nowa Zelandia": "New Zealand", "Palau": "Palau", "Papua-Nowa Gwinea": "Papua New Guinea", "Samoa": "Samoa", "Tonga": "Tonga", "Tuvalu": "Tuvalu", "Vanuatu": "Vanuatu", "Wyspy Marshalla": "Marshall Islands", "Wyspy Salomona": "Solomon Islands", 
-        "Anglia": "England", "Szkocja": "Scotland", "Walia": "Wales", "Irlandia Północna": "Northern Ireland",
+        "Anglia": "England", "Wielka Brytania": "United Kingdom", "Szkocja": "Scotland", "Walia": "Wales", "Irlandia Północna": "Northern Ireland",
         "Kraków": "Krakow", "Monachium": "Munich", "Bratysława": "Bratislava", "Antwerpia": "Antwerp", "Budapeszt": "Budapest", "Praga": "Prague", "Bazylea": "Basel", "Londyn": "London",
         "t-btn-skip-walkon": "⏩ Skip Walk-ons",
         "t-aim-sector": "Target sector",
@@ -791,6 +812,7 @@ const translations = {
         "t-btn-sim-match": "⏭️ Match",
         "t-btn-match-back": "Back to Menu (Save Progress)",
         "t-stat-avg-lbl": "Average (3 darts)",
+        "t-stat-set-avg-lbl": "Average (This Set)",
         "t-stat-f9-lbl": "Average (First 9)",
         "t-stat-dbl-lbl": "Doubles %",
         "t-stat-leg-avg-lbl": "Average (This Leg)",
@@ -912,6 +934,12 @@ const translations = {
         "t-spectator-watching": "Watching",
         "t-spectator-speed": "Simulation speed",
         "t-spectator-pause": "Pause",
+        "t-career-autoplay-watch": "Watch your match",
+        "t-career-autoplay-manual": "Play manually",
+        "t-career-autoplay-help": "Your player throws automatically. Pause or return to manual play without losing the score. Resolve any open match decision first.",
+        "t-btn-watch-highlights": "Highlights",
+        "t-spectator-highlights-on": "Highlights: on",
+        "t-spectator-highlights-help": "Watch checkout attempts and complete deciding legs. Routine scoring is skipped; all darts count in the statistics. Click again to watch the full match.",
         "t-spectator-resume": "Resume",
         "t-spectator-exit": "Leave match",
         "t-btn-next-round": "Proceed to next round",
@@ -951,6 +979,11 @@ const translations = {
         "t-fname": "Vorname:",
         "t-lname": "Nachname:",
         "t-age": "Alter:",
+        "t-player-gender": "Geschlecht:",
+        "t-player-gender-male": "Männlich",
+        "t-player-gender-female": "Weiblich",
+        "t-dart-entry-angle": "Einschlagwinkel der Darts:",
+        "t-dart-entry-angle-hint": "0°: waagerecht. Negative Werte senken das hintere Ende, positive heben es.",
         "t-nat": "Nationalität:",
         "t-pot": "Potenzial:",
         "t-opt-1": "Schwach",
@@ -1206,6 +1239,8 @@ const translations = {
         "t-keep-practicing": "Weiter trainieren!",
         "t-perfect-leg": "Perfektes Leg!",
         "t-nine-darter": "NINE-DARTER!",
+        "t-nine-darter-bonus": "+ £50,000 Prämie!",
+        "t-nine-darter-close": "FANTASTISCH!",
         "t-max-180": "Maximum 180!",
         "t-high-checkout": "Hoher Checkout!",
         "t-low-score": "Niedriger Punktestand",
@@ -1226,7 +1261,7 @@ const translations = {
         "Afganistan": "Afghanistan", "Arabia Saudyjska": "Saudi-Arabien", "Armenia": "Armenien", "Azerbejdżan": "Aserbaidschan", "Bahrajn": "Bahrain", "Bangladesz": "Bangladesch", "Bhutan": "Bhutan", "Brunei": "Brunei", "Chiny": "China", "Filipiny": "Philippinen", "Gruzja": "Georgien", "Hongkong": "Hongkong", "Indie": "Indien", "Indonezja": "Indonesien", "Irak": "Irak", "Iran": "Iran", "Izrael": "Israel", "Japonia": "Japan", "Jemen": "Jemen", "Jordania": "Jordanien", "Kambodża": "Kambodscha", "Katar": "Katar", "Kazachstan": "Kasachstan", "Kirgistan": "Kirgisistan", "Korea Południowa": "Südkorea", "Korea Północna": "Nordkorea", "Kuwejt": "Kuwait", "Laos": "Laos", "Liban": "Libanon", "Malediwy": "Malediven", "Malezja": "Malaysia", "Mjanma": "Myanmar", "Mongolia": "Mongolei", "Nepal": "Nepal", "Oman": "Oman", "Pakistan": "Pakistan", "Palestyna": "Palästina", "Singapur": "Singapur", "Sri Lanka": "Sri Lanka", "Syria": "Syrien", "Tadżykistan": "Tadschikistan", "Tajlandia": "Thailand", "Tajwan": "Taiwan", "Timor Wschodni": "Osttimor", "Turcja": "Türkei", "Turkmenistan": "Turkmenistan", "Uzbekistan": "Usbekistan", "Wietnam": "Vietnam", "Zjednoczone Emiraty Arabskie": "Vereinigte Arabische Emirate", 
         "Algieria": "Algerien", "Angola": "Angola", "Benin": "Benin", "Botswana": "Botswana", "Burkina Faso": "Burkina Faso", "Burundi": "Burundi", "Czad": "Tschad", "Demokratyczna Republika Konga": "Demokratische Republik Kongo", "Dżibuti": "Dschibuti", "Egipt": "Ägypten", "Erytrea": "Eritrea", "Eswatini": "Eswatini", "Etiopia": "Äthiopien", "Gabon": "Gabun", "Gambia": "Gambia", "Ghana": "Ghana", "Gwinea": "Guinea", "Gwinea Bissau": "Guinea-Bissau", "Gwinea Równikowa": "Äquatorialguinea", "Kamerun": "Kamerun", "Kenia": "Kenia", "Komory": "Komoren", "Kongo": "Kongo", "Lesotho": "Lesotho", "Liberia": "Liberia", "Libia": "Libyen", "Madagaskar": "Madagaskar", "Malawi": "Malawi", "Mali": "Mali", "Maroko": "Marokko", "Mauretania": "Mauretanien", "Mauritius": "Mauritius", "Mozambik": "Mosambik", "Namibia": "Namibia", "Niger": "Niger", "Nigeria": "Nigeria", "Republika Środkowoafrykańska": "Zentralafrikanische Republik", "Republika Zielonego Przylądka": "Kap Verde", "RPA": "Südafrika", "Rwanda": "Ruanda", "Senegal": "Senegal", "Seszele": "Seychellen", "Sierra Leone": "Sierra Leone", "Somalia": "Somalia", "Sudan": "Sudan", "Sudan Południowy": "Südsudan", "Tanzania": "Tansania", "Togo": "Togo", "Tunezja": "Tunesien", "Uganda": "Uganda", "Wybrzeże Kości Słoniowej": "Elfenbeinküste", "Wyspy Świętego Tomasza i Książęca": "São Tomé und Príncipe", "Zambia": "Sambia", "Zimbabwe": "Simbabwe", 
         "Australia": "Australien", "Fidżi": "Fidschi", "Kiribati": "Kiribati", "Mikronezja": "Mikronesien", "Nauru": "Nauru", "Nowa Zelandia": "Neuseeland", "Palau": "Palau", "Papua-Nowa Gwinea": "Papua-Neuguinea", "Samoa": "Samoa", "Tonga": "Tonga", "Tuvalu": "Tuvalu", "Vanuatu": "Vanuatu", "Wyspy Marshalla": "Marshallinseln", "Wyspy Salomona": "Salomonen", 
-        "Anglia": "England", "Szkocja": "Schottland", "Walia": "Wales", "Irlandia Północna": "Nordirland",
+        "Anglia": "England", "Wielka Brytania": "Vereinigtes Königreich", "Szkocja": "Schottland", "Walia": "Wales", "Irlandia Północna": "Nordirland",
         "Kraków": "Krakau", "Monachium": "München", "Bratysława": "Bratislava", "Antwerpia": "Antwerpen", "Budapeszt": "Budapest", "Praga": "Prag", "Bazylea": "Basel", "Londyn": "London",
         "t-btn-skip-walkon": "⏩ Walk-ons Überspringen",
         "t-aim-sector": "Zielfeld",
@@ -1240,6 +1275,7 @@ const translations = {
         "t-btn-sim-match": "⏭️ Spiel",
         "t-btn-match-back": "Zurück zum Menü (Speichern)",
         "t-stat-avg-lbl": "Durchschnitt (3 Darts)",
+        "t-stat-set-avg-lbl": "Durchschnitt (Dieses Set)",
         "t-stat-f9-lbl": "Durchschnitt (First 9)",
         "t-stat-dbl-lbl": "Doubles-Genauigkeit",
         "t-stat-leg-avg-lbl": "Durchschnitt (Dieses Leg)",
@@ -1361,6 +1397,12 @@ const translations = {
         "t-spectator-watching": "Du siehst",
         "t-spectator-speed": "Simulationsgeschwindigkeit",
         "t-spectator-pause": "Pause",
+        "t-career-autoplay-watch": "Eigenes Spiel ansehen",
+        "t-career-autoplay-manual": "Manuell spielen",
+        "t-career-autoplay-help": "Dein Spieler wirft automatisch. Pausiere oder spiele manuell weiter, ohne den Spielstand zu verlieren. Beantworte zuerst eine eventuell offene Spielentscheidung.",
+        "t-btn-watch-highlights": "Highlights",
+        "t-spectator-highlights-on": "Highlights: an",
+        "t-spectator-highlights-help": "Abschlussversuche und komplette Entscheidungslegs ansehen. Normale Punktewürfe werden übersprungen; alle Darts zählen zur Statistik. Erneut klicken, um das ganze Spiel anzusehen.",
         "t-spectator-resume": "Fortsetzen",
         "t-spectator-exit": "Spiel verlassen",
         "t-btn-next-round": "Zur nächsten Runde",
@@ -1395,6 +1437,11 @@ const translations = {
         "t-fname": "Voornaam:",
         "t-lname": "Achternaam:",
         "t-age": "Leeftijd:",
+        "t-player-gender": "Geslacht:",
+        "t-player-gender-male": "Man",
+        "t-player-gender-female": "Vrouw",
+        "t-dart-entry-angle": "Insteekhoek van de darts:",
+        "t-dart-entry-angle-hint": "0°: horizontaal. Negatieve waarden laten de achterkant zakken; positieve tillen hem op.",
         "t-nat": "Nationaliteit:",
         "t-pot": "Potentieel:",
         "t-opt-1": "Zwak",
@@ -1657,6 +1704,8 @@ const translations = {
         "t-keep-practicing": "Blijf trainen!",
         "t-perfect-leg": "Perfect leg!",
         "t-nine-darter": "NINE-DARTER!",
+        "t-nine-darter-bonus": "+ £50,000 bonus!",
+        "t-nine-darter-close": "ONGELOOFLIJK!",
         "t-max-180": "Maximum 180!",
         "t-high-checkout": "Hoog Checkout!",
         "t-low-score": "Lage score",
@@ -1721,7 +1770,7 @@ const translations = {
         "Afganistan": "Afghanistan", "Arabia Saudyjska": "Saoedi-Arabië", "Armenia": "Armenië", "Azerbejdżan": "Azerbeidzjan", "Bahrajn": "Bahrein", "Bangladesz": "Bangladesh", "Bhutan": "Bhutan", "Brunei": "Brunei", "Chiny": "China", "Filipiny": "Filipijnen", "Gruzja": "Georgië", "Hongkong": "Hongkong", "Indie": "India", "Indonezja": "Indonesië", "Irak": "Irak", "Iran": "Iran", "Izrael": "Israël", "Japonia": "Japan", "Jemen": "Jemen", "Jordania": "Jordanië", "Kambodża": "Cambodja", "Katar": "Qatar", "Kazachstan": "Kazachstan", "Kirgistan": "Kirgizië", "Korea Południowa": "Zuid-Korea", "Korea Północna": "Noord-Korea", "Kuwejt": "Koeweit", "Laos": "Laos", "Liban": "Libanon", "Malediwy": "Malediven", "Malezja": "Maleisië", "Mjanma": "Myanmar", "Mongolia": "Mongolië", "Nepal": "Nepal", "Oman": "Oman", "Pakistan": "Pakistan", "Palestyna": "Palestina", "Singapur": "Singapore", "Sri Lanka": "Sri Lanka", "Syria": "Syrië", "Tadżykistan": "Tadzjikistan", "Tajlandia": "Thailand", "Tajwan": "Taiwan", "Timor Wschodni": "Oost-Timor", "Turcja": "Turkije", "Turkmenistan": "Turkmenistan", "Uzbekistan": "Oezbekistan", "Wietnam": "Vietnam", "Zjednoczone Emiraty Arabskie": "Verenigde Arabische Emiraten", 
         "Algieria": "Algerije", "Angola": "Angola", "Benin": "Benin", "Botswana": "Botswana", "Burkina Faso": "Burkina Faso", "Burundi": "Burundi", "Czad": "Tsjaad", "Demokratyczna Republika Konga": "Democratische Republiek Congo", "Dżibuti": "Djibouti", "Egipt": "Egypte", "Erytrea": "Eritrea", "Eswatini": "Eswatini", "Etiopia": "Ethiopië", "Gabon": "Gabon", "Gambia": "Gambia", "Ghana": "Ghana", "Gwinea": "Guinee", "Gwinea Bissau": "Guinee-Bissau", "Gwinea Równikowa": "Equatoriaal-Guinea", "Kamerun": "Kameroen", "Kenia": "Kenia", "Komory": "Comoren", "Kongo": "Congo", "Lesotho": "Lesotho", "Liberia": "Liberia", "Libia": "Libië", "Madagaskar": "Madagaskar", "Malawi": "Malawi", "Mali": "Mali", "Maroko": "Marokko", "Mauretania": "Mauritanië", "Mauritius": "Mauritius", "Mozambik": "Mozambique", "Namibia": "Namibië", "Niger": "Niger", "Nigeria": "Nigeria", "Republika Środkowoafrykańska": "Centraal-Afrikaanse Republiek", "Republika Zielonego Przylądka": "Kaapverdië", "RPA": "Zuid-Afrika", "Rwanda": "Rwanda", "Senegal": "Senegal", "Seszele": "Seychellen", "Sierra Leone": "Sierra Leone", "Somalia": "Somalië", "Sudan": "Soedan", "Sudan Południowy": "Zuid-Soedan", "Tanzania": "Tanzania", "Togo": "Togo", "Tunezja": "Tunesië", "Uganda": "Oeganda", "Wybrzeże Kości Słoniowej": "Ivoorkust", "Wyspy Świętego Tomasza i Książęca": "Sao Tomé en Principe", "Zambia": "Zambia", "Zimbabwe": "Zimbabwe", 
         "Australia": "Australië", "Fidżi": "Fiji", "Kiribati": "Kiribati", "Mikronezja": "Micronesië", "Nauru": "Nauru", "Nowa Zelandia": "Nieuw-Zeeland", "Palau": "Palau", "Papua-Nowa Gwinea": "Papoea-Nieuw-Guinea", "Samoa": "Samoa", "Tonga": "Tonga", "Tuvalu": "Tuvalu", "Vanuatu": "Vanuatu", "Wyspy Marshalla": "Marshalleilanden", "Wyspy Salomona": "Salomonseilanden", 
-        "Anglia": "Engeland", "Szkocja": "Schotland", "Walia": "Wales", "Irlandia Północna": "Noord-Ierland",
+        "Anglia": "Engeland", "Wielka Brytania": "Verenigd Koninkrijk", "Szkocja": "Schotland", "Walia": "Wales", "Irlandia Północna": "Noord-Ierland",
         "Kraków": "Krakau", "Monachium": "München", "Bratysława": "Bratislava", "Antwerpia": "Antwerpen", "Budapeszt": "Boedapest", "Praga": "Praag", "Bazylea": "Bazel", "Londyn": "Londen",
         "t-btn-skip-walkon": "⏩ Walk-ons overslaan",
         "t-aim-sector": "Vak",
@@ -1735,6 +1784,7 @@ const translations = {
         "t-btn-sim-match": "⏭️ Wedstrijd",
         "t-btn-match-back": "Terug naar menu (Opslaan)",
         "t-stat-avg-lbl": "Gemiddelde (3 pijlen)",
+        "t-stat-set-avg-lbl": "Gemiddelde (Deze Set)",
         "t-stat-f9-lbl": "Gemiddelde (Eerste 9)",
         "t-stat-dbl-lbl": "Doubles %",
         "t-stat-leg-avg-lbl": "Gemiddelde (Deze Leg)",
@@ -1856,6 +1906,12 @@ const translations = {
         "t-spectator-watching": "Je kijkt naar",
         "t-spectator-speed": "Simulatiesnelheid",
         "t-spectator-pause": "Pauze",
+        "t-career-autoplay-watch": "Bekijk je eigen wedstrijd",
+        "t-career-autoplay-manual": "Handmatig spelen",
+        "t-career-autoplay-help": "Je speler gooit automatisch. Pauzeer of speel handmatig verder zonder de stand te verliezen. Rond eerst een eventuele open wedstrijdkeuze af.",
+        "t-btn-watch-highlights": "Hoogtepunten",
+        "t-spectator-highlights-on": "Hoogtepunten: aan",
+        "t-spectator-highlights-help": "Bekijk checkoutpogingen en volledige beslissende legs. Gewone scorebeurten worden overgeslagen; alle darts tellen mee in de statistieken. Klik opnieuw om de hele wedstrijd te bekijken.",
         "t-spectator-resume": "Hervatten",
         "t-spectator-exit": "Wedstrijd verlaten",
         "t-btn-next-round": "Ga naar de volgende ronde",
@@ -1881,7 +1937,8 @@ const translations = {
 };
 // --- FUNKCJA POMOCNICZA DO DYNAMICZNYCH TEKSTÓW ---
         function t(key) {
-            return (translations[currentLang] && translations[currentLang][key]) ? translations[currentLang][key] : key;
+            const text = (translations[currentLang] && translations[currentLang][key]) ? translations[currentLang][key] : key;
+            return typeof competitionDisplayText === 'function' ? competitionDisplayText(text) : text;
         }
         let currentLang = 'pl';
 
@@ -2112,9 +2169,11 @@ const translations = {
             for (const key in dict) {
                 const element = document.getElementById(key);
                 if (element) {
-                    element.innerHTML = dict[key];
+                    element.innerHTML = t(key);
                 }
             }
+            if (typeof refreshCompetitionNameLabels === 'function') refreshCompetitionNameLabels();
+            if (typeof refreshCompetitionNameLabels === 'function') refreshCompetitionNameLabels();
             updateDateDisplay();
             // Odświeżanie aktywnych ekranów
             if(document.getElementById('screen-shop').classList.contains('active')) showShopScreen();
@@ -2147,12 +2206,15 @@ const translations = {
             if(typeof refreshAiDartPackTranslations === 'function') refreshAiDartPackTranslations();
             if(typeof refreshWorldCupTeamEditorTranslations === 'function') refreshWorldCupTeamEditorTranslations();
             if(typeof refreshTournamentEditorTranslations === 'function') refreshTournamentEditorTranslations();
+            if(typeof refreshPdcQSchoolTranslations === 'function') refreshPdcQSchoolTranslations();
             if(typeof refreshAverageRecordsTranslations === 'function') refreshAverageRecordsTranslations();
             if(typeof applyPdcRankingSearch === 'function') applyPdcRankingSearch();
             if(typeof refreshPanelTopBackTranslations === 'function') refreshPanelTopBackTranslations();
             if(typeof refreshCareerDifficultyUI === 'function') refreshCareerDifficultyUI();
             if(typeof refreshCareerWorkUI === 'function') refreshCareerWorkUI();
             if(typeof refreshWalkonSettingsUI === 'function') refreshWalkonSettingsUI();
+            if(typeof refreshCallerSettingsUI === 'function') refreshCallerSettingsUI();
+            if(typeof refreshMatchDoubleInStats === 'function') refreshMatchDoubleInStats();
             if(typeof refreshPlayerNicknameUI === 'function') refreshPlayerNicknameUI();
             if(typeof refreshTournamentWatchSettingsUI === 'function') refreshTournamentWatchSettingsUI();
             if(typeof refreshBounceOutSettingsUI === 'function') refreshBounceOutSettingsUI();

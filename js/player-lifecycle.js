@@ -121,9 +121,18 @@ function getLifecyclePlayerKey(candidate) {
     return `${candidate?.name || ''}|${candidate?.country || ''}`;
 }
 
+const playerLifecycleNameKeyCache = new Map();
 function getLifecyclePlayerNameKey(candidate) {
     const name = typeof candidate === 'string' ? candidate : candidate?.name;
-    return String(name || '').trim().replace(/\s+/g, ' ').toLocaleLowerCase('pl');
+    const text = String(name || '');
+    const cached = playerLifecycleNameKeyCache.get(text);
+    if (cached !== undefined) return cached;
+    const key = text.trim().replace(/\s+/g, ' ').toLocaleLowerCase('pl');
+    if (text.length <= 256) {
+        if (playerLifecycleNameKeyCache.size >= 8192) playerLifecycleNameKeyCache.delete(playerLifecycleNameKeyCache.keys().next().value);
+        playerLifecycleNameKeyCache.set(text, key);
+    }
+    return key;
 }
 
 function getPlayerLifecycleTemplateLookup() {
@@ -434,13 +443,20 @@ function getNewgenStartingOverall(random = Math.random) {
     return 52 + Math.floor(random() * 5);
 }
 
-function createAnnualNewgen(year, existingNames, random = Math.random, countryOverride = null) {
-    const overall = getNewgenStartingOverall(random);
+function createAnnualNewgen(year, existingNames, random = Math.random, countryOverride = null, options = {}) {
+    let overall = getNewgenStartingOverall(random);
     // New professionals can break through later too, not only as teenagers.
-    const age = typeof getAiNewgenEntryAge === 'function' ? getAiNewgenEntryAge(random) : 17 + Math.floor(random() * 19);
-    const scoring = Math.max(40, Math.min(99, overall + (Math.floor(random() * 5) - 1)));
-    const doubles = Math.max(40, Math.min(99, overall + (Math.floor(random() * 5) - 3)));
-    const gender = random() < 0.18 ? 'female' : 'male';
+    const age = Number.isInteger(options.entryAge) ? options.entryAge
+        : typeof getAiNewgenEntryAge === 'function' ? getAiNewgenEntryAge(random) : 17 + Math.floor(random() * 19);
+    let scoring = Math.max(40, Math.min(99, overall + (Math.floor(random() * 5) - 1)));
+    let doubles = Math.max(40, Math.min(99, overall + (Math.floor(random() * 5) - 3)));
+    const gender = options.gender || (random() < 0.18 ? 'female' : 'male');
+    const previousStartingOvr = overall;
+    if (gender === 'female' && typeof getWomensNewgenStartingOverall === 'function') {
+        overall = getWomensNewgenStartingOverall(previousStartingOvr);
+        scoring += overall - previousStartingOvr;
+        doubles += overall - previousStartingOvr;
+    }
     const country = countryOverride || pickNewgenCountry(random);
     const name = createFictionalNewgenName(existingNames, country, gender, random);
     existingNames.add(name);
@@ -485,6 +501,17 @@ function createAnnualNewgen(year, existingNames, random = Math.random, countryOv
         nameGenerationVersion: 2,
         joinedSeason: year
     };
+    if (options.youthRecruit || options.exactEntryAge) {
+        // Exact age on entry (Jan 1); a birthday later that year is not counted early.
+        const month = 1 + Math.floor(random() * 12), day = 5 + Math.floor(random() * 24);
+        candidate.birthYear = year - age - 1;
+        candidate.birthDate = `${candidate.birthYear}-${String(month).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+        candidate.birthDateSource = 'fictional-simulation';
+        if(options.youthRecruit)candidate.youthRecruit = true;
+    }
+    if (gender === 'female' && typeof getWomensNewgenStartingOverall === 'function') {
+        candidate.womensRatingCalibration = {version:1,generated:true,previousStartingOvr,startingOvr:overall};
+    }
     if (typeof initializeAiDevelopmentCandidate === 'function') initializeAiDevelopmentCandidate(candidate, { referenceDate: new Date(year, 0, 1) });
     return candidate;
 }
@@ -569,10 +596,13 @@ function processAnnualPlayerLifecycle(completedYear) {
     if (player && Array.isArray(player.activeRivalIds) && retiredIds.size) {
         player.activeRivalIds = player.activeRivalIds.filter(id => !retiredIds.has(id));
     }
-    const careerPlayerAge = Number.isInteger(player?.birthYear) ? newSeasonYear - player.birthYear : null;
+    const careerPlayerAge = typeof getPlayerAge === 'function' ? getPlayerAge(player,new Date(newSeasonYear,0,1))
+        : Number.isInteger(player?.birthYear) ? newSeasonYear-player.birthYear : null;
     if (careerPlayerAge !== null) applyCareerAnnualAgeDecline(careerPlayerAge);
 
-    const newgenCount = Math.max(2 + Math.floor(Math.random() * 3), retirements.length);
+    // Three extra debuts beyond the existing intake/replacement floor. Youth and
+    // Women's Series reserves are still assessed by their own population rules.
+    const newgenCount = Math.max(2 + Math.floor(Math.random() * 3), retirements.length) + 3;
     const existingNames = new Set([...pdcPlayers, player].filter(Boolean).map(candidate => candidate.name));
     const newgens = Array.from({ length: newgenCount }, () => createAnnualNewgen(newSeasonYear, existingNames));
     const academyChance = typeof getCareerAcademyNewgenChance === 'function' && player?.country
@@ -583,10 +613,55 @@ function processAnnualPlayerLifecycle(completedYear) {
         newgens.push(academyNewgen);
     }
     pdcPlayers.push(...newgens);
+    newgens.push(...ensureYouthDevelopmentPopulation(new Date(newSeasonYear,0,1), { reason: 'annual', existingNames }));
+    if(typeof ensureWomensSeriesPopulation==='function')newgens.push(...ensureWomensSeriesPopulation(new Date(newSeasonYear,0,1),{reason:'annual',existingNames}));
     if (typeof initializeAllPlayerTraits === 'function') initializeAllPlayerTraits();
 
     state.lastProcessedYear = completedYear;
     sendRetirementSummaryEmail(completedYear, retirements);
     if (typeof renderOpponentOptions === 'function') renderOpponentOptions();
     return { retirements, newgens };
+}
+
+// A reserve before the season starts, not a last-minute Youth draw filler.
+// 192 DT-eligible players leave room for Top 64 promotions, absences and players
+// who earn no DT prize. All recruits use the existing ratings/potential/development.
+const YOUTH_DEVELOPMENT_POPULATION_TARGET = 192;
+
+function ensureYouthDevelopmentPopulation(date = currentDate, { reason = 'career-start', existingNames = null } = {}) {
+    if (!player || !Array.isArray(pdcPlayers) || typeof tournamentDatabase === 'undefined'
+        || !Array.isArray(tournamentDatabase) || typeof getDevelopmentTourEligiblePlayers !== 'function') return [];
+    const events = tournamentDatabase.filter(t=>t.specialType==='developmentTour'&&!t.editorDisabled);
+    if (!events.length || !tournamentDatabase.some(t=>t.specialType==='worldYouth'&&!t.editorDisabled)
+        || typeof isCareerEditorCalendarEmpty === 'function' && isCareerEditorCalendarEmpty()) return [];
+    const year = date.getFullYear();
+    // Loading or a January Q-School result must not create another cohort.
+    // The reserve is assessed once per season, before rankings start to move.
+    if (player.youthPopulationHistory?.[year]?.version === 1) return [];
+    const firstDate = Math.min(...events.map(t=>new Date(year,t.month,t.day).getTime()));
+    // Never change a played edition or seed a new population midway through its tour.
+    if (reason!=='annual' && events.some(t=>t.completed) || date.getTime()>firstDate || player.worldYouthEditions?.[year]) return [];
+    const candidates = ()=>[...pdcPlayers,player].filter(Boolean);
+    const eligibleBefore = getDevelopmentTourEligiblePlayers(candidates(),date).length;
+    const names = existingNames || new Set(candidates().map(p=>p.name));
+    const recruits = [];
+    // A very small edited pool can change its zero-money Top 64 while recruits
+    // arrive. Recompute the actual eligible pool instead of assuming each joins DT.
+    // At most 64 entrants can be withheld by the main Top64. Tiny follow-up
+    // batches may each replace an adult there, so two passes are insufficient.
+    for(let pass=0;pass<=DEVELOPMENT_TOUR_OOM_CUTOFF;pass++){
+        const deficit = Math.max(0,YOUTH_DEVELOPMENT_POPULATION_TARGET-getDevelopmentTourEligiblePlayers(candidates(),date).length);
+        if(!deficit)break;
+        const batch=Array.from({length:deficit},()=>createAnnualNewgen(year,names,Math.random,null,
+            {entryAge:17+Math.floor(Math.random()*4),youthRecruit:true}));
+        pdcPlayers.push(...batch);recruits.push(...batch);
+    }
+    if (recruits.length && typeof invalidatePlayerRankingCache === 'function') invalidatePlayerRankingCache();
+    player.youthPopulationHistory ||= {};
+    if (!player.youthPopulationHistory[year] || recruits.length) player.youthPopulationHistory[year] = {
+        version:1,year,reason,target:YOUTH_DEVELOPMENT_POPULATION_TARGET,eligibleBefore,
+        eligibleAfter:getDevelopmentTourEligiblePlayers(candidates(),date).length,
+        recruitIds:[...(player.youthPopulationHistory[year]?.recruitIds||[]),...recruits.map(p=>p.id)]
+    };
+    return recruits;
 }

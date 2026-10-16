@@ -96,6 +96,13 @@ const NEWS_ARTICLE_BLUEPRINTS = Object.freeze({
         ['age','context ranking history narrative consequence','age','age']
     ]
 });
+function newsPublicPersonName(person) {
+    if (String(person?.id || '').startsWith('team:')) {
+        const country = person.country || person.id.slice(5);
+        return typeof getWorldCupCountryName === 'function' ? getWorldCupCountryName(country) : (person.name || country);
+    }
+    return person?.name || '';
+}
 function newsPublicFacts(a) {
     const raw=a.data?.facts||a.data||{},f={};
     const keys=['actor','opponent','previous','tournament','age','ranking','previousRanking','worldTitles','knownMajorTitles','knownTitles',
@@ -106,11 +113,16 @@ function newsPublicFacts(a) {
         'winnerRankBefore','runnerRank','previousStoryDate','storylineStage','storylineType','season','coverageStage'];
     for(const k of keys)if(raw[k]!==undefined)f[k]=newsClone(raw[k]);
     if(raw.historicalPeak)f.historicalPeak={ranking:newsRank(raw.historicalPeak.ranking),year:newsNumber(raw.historicalPeak.year)};
-    if(!f.actor)f.actor={id:'',name:f.country||'Darts',country:f.country||''};
+    if(!f.actor)f.actor={id:'',name:f.country&&typeof getWorldCupCountryName==='function'?getWorldCupCountryName(f.country):f.country||'Darts',country:f.country||''};
     if(!f.year&&Number.isFinite(a.timestamp))f.year=new Date(a.timestamp).getFullYear();
-    for(const k of ['actor','opponent','previous','defender','champion','no1'])if(f[k])f[k]=newsPerson(f[k]);
+    for(const k of ['actor','opponent','previous','defender','champion','no1'])if(f[k]){
+        f[k]=newsPerson(f[k]);
+        if(f[k])f[k].name=newsPublicPersonName(f[k]);
+    }
     if(f.tournament){f.tournament=newsTournamentSnapshot(f.tournament);
-        if(typeof getTournamentDisplayName==='function')f.tournament.name=getTournamentDisplayName(f.tournament);}
+        if(typeof getTournamentDisplayName==='function')f.tournament.name=getTournamentDisplayName(f.tournament);
+        if(typeof WORLD_CUP_TOURNAMENT_NAME==='string'&&f.tournament.name===WORLD_CUP_TOURNAMENT_NAME
+            &&typeof WORLD_CUP_TRANSLATIONS==='object')f.tournament.name=trWorldCup('tournamentName');}
     newsSanitizeCoverageFacts(f);
     if(a.type==='ranking'&&!f.ranking)f.ranking=1;
     if(a.type==='youth'&&typeof f.stage==='string')f.stage={semifinal:4,quarterfinal:8,final:2}[f.stage]||null;

@@ -12,6 +12,7 @@
             barrelPattern: 'Grip na całym barrelu', barrelAccentColor: 'Drugi kolor barrela', barrelAccentStyle: 'Rozmieszczenie koloru',
             flightAccentColor: 'Drugi kolor piórek', flightPattern: 'Nadruk piórek', tipLength: 'Długość grota',
             tipStyle: 'Wykończenie grota', shaftLength: 'Długość shafta', shaftStyle: 'Materiał shafta',
+            customColor: 'Dowolny kolor', catalogueColor: 'Przywróć kolor z katalogu',
             flightSystem: 'System shafta i piórka', integratedColor: 'Kolor zintegrowanego systemu',
             integratedHint: 'Shaft i piórko tworzą jedną część we wspólnym kolorze. Kształt i nadruk wybierzesz w zakładce Piórka.',
             barrel: 'Barrel', flights: 'Piórka', shaft: 'Shaft', point: 'Grot', tryOn: 'Przymierz',
@@ -33,6 +34,7 @@
             flightShape: 'Flight shape', barrelPattern: 'Grip on the whole barrel', barrelAccentColor: 'Barrel accent colour', barrelAccentStyle: 'Colour placement',
             flightAccentColor: 'Flight accent colour', flightPattern: 'Flight print', tipLength: 'Point length',
             tipStyle: 'Point finish', shaftLength: 'Shaft length', shaftStyle: 'Shaft material',
+            customColor: 'Custom colour', catalogueColor: 'Restore catalogue colour',
             flightSystem: 'Shaft and flight system', integratedColor: 'Integrated system colour',
             integratedHint: 'Shaft and flight form one piece in a shared colour. Choose the shape and print in the Flights tab.',
             barrel: 'Barrel', flights: 'Flights', shaft: 'Shaft', point: 'Point', tryOn: 'Try on',
@@ -54,6 +56,7 @@
             flightShape: 'Flight-Form', barrelPattern: 'Grip auf dem ganzen Barrel', barrelAccentColor: 'Zweite Barrel-Farbe', barrelAccentStyle: 'Farbverteilung',
             flightAccentColor: 'Zweite Flight-Farbe', flightPattern: 'Flight-Druck', tipLength: 'Spitzenlänge',
             tipStyle: 'Spitzenoberfläche', shaftLength: 'Schaftlänge', shaftStyle: 'Schaftmaterial',
+            customColor: 'Eigene Farbe', catalogueColor: 'Katalogfarbe wiederherstellen',
             flightSystem: 'Schaft- und Flight-System', integratedColor: 'Farbe des integrierten Systems',
             integratedHint: 'Schaft und Flight bilden ein Teil in derselben Farbe. Form und Druck findest du unter Flights.',
             barrel: 'Barrel', flights: 'Flights', shaft: 'Schaft', point: 'Spitze', tryOn: 'Anprobieren',
@@ -75,6 +78,7 @@
             flightShape: 'Flightvorm', barrelPattern: 'Grip op de hele barrel', barrelAccentColor: 'Tweede barrelkleur', barrelAccentStyle: 'Kleurverdeling',
             flightAccentColor: 'Tweede flightkleur', flightPattern: 'Flightopdruk', tipLength: 'Puntlengte',
             tipStyle: 'Puntafwerking', shaftLength: 'Shaftlengte', shaftStyle: 'Shaftmateriaal',
+            customColor: 'Eigen kleur', catalogueColor: 'Cataloguskleur herstellen',
             flightSystem: 'Shaft- en flightsysteem', integratedColor: 'Kleur geïntegreerd systeem',
             integratedHint: 'Shaft en flight vormen één onderdeel in dezelfde kleur. Kies de vorm en opdruk onder Flights.',
             barrel: 'Barrel', flights: 'Flights', shaft: 'Shaft', point: 'Punt', tryOn: 'Voorbeeld',
@@ -88,6 +92,56 @@
             artworkInvalid: 'Kan de afbeelding niet laden. Kies een PNG-, JPG- of WebP-bestand van maximaal 5 MB.'
         }
     };
+    const entryAngleText = {
+        pl: ['Kąt wbicia lotek', '0°: poziomo. Wartości ujemne opuszczają tył lotki, dodatnie go unoszą. Dotyczy kolejnych rzutów.'],
+        en: ['Dart entry angle', '0°: horizontal. Negative values lower the tail; positive values raise it. Applies to subsequent throws.'],
+        de: ['Einschlagwinkel der Darts', '0°: waagerecht. Negative Werte senken das hintere Ende, positive heben es. Gilt für die nächsten Würfe.'],
+        nl: ['Insteekhoek van de darts', '0°: horizontaal. Negatieve waarden laten de achterkant zakken; positieve tillen hem op. Geldt voor volgende worpen.']
+    };
+    // Stable database identities: Van Veen, Ratajski, Barry and Owen.
+    // Independent newgens and custom profiles must never inherit a namesake's stance.
+    const entryAngleTemplates = new Map([[1, -2], [20, 7], [58, -2], [60, -2]]);
+    function entryAngleTranslation(index) {
+        return (entryAngleText[typeof currentLang === 'string' ? currentLang : 'pl'] || entryAngleText.pl)[index];
+    }
+    function getDartEntryAngleForPlayer(candidate) {
+        if (Number.isInteger(candidate?.dartEntryAngle) && candidate.dartEntryAngle >= -10 && candidate.dartEntryAngle <= 45)
+            return candidate.dartEntryAngle;
+        if (!candidate || candidate.isNewgen || candidate.editorCreated || candidate.kind === 'custom') return null;
+        if (isCareerPlayer(candidate) && !candidate.sourceName && !Number.isInteger(candidate.defaultTemplateIndex)) return null;
+        const index = typeof getLifecycleTemplateIndex === 'function' ? getLifecycleTemplateIndex(candidate)
+            : Number.isInteger(candidate.defaultTemplateIndex) ? candidate.defaultTemplateIndex : null;
+        return entryAngleTemplates.get(index) ?? null;
+    }
+    function withDartEntryAngle(loadout, candidate) {
+        const angle = getDartEntryAngleForPlayer(candidate);
+        return angle === null ? loadout : Object.freeze({ ...loadout, dartEntryAngle: angle });
+    }
+    function dartEntryAnglePreview(angle) {
+        const safe = Number.isInteger(Number(angle)) && Number(angle) >= -10 && Number(angle) <= 45 ? Number(angle) : 20;
+        return `<svg viewBox="0 0 220 120" aria-hidden="true" focusable="false">
+            <path d="M25 10v100" stroke="#a8bacb" stroke-width="10"/><path d="M25 65v20" stroke="#cf3448" stroke-width="10"/>
+            <path d="M30 75h180" stroke="#a8bacb" stroke-dasharray="4 4" opacity=".45"/>
+            <g transform="translate(30 75) rotate(${-safe})"><path d="M-5 0h35" stroke="#dce5ea" stroke-width="3"/>
+            <rect x="30" y="-5" width="55" height="10" rx="4" fill="#c1a35f"/>
+            <path d="M85 0h40" stroke="#becddd" stroke-width="5"/>
+            <path d="M125 0l17-14h26v28h-26z" fill="#58b995" stroke="#e3f5ee"/></g></svg>`;
+    }
+    function updateDartEntryAngleControl(control) {
+        if (!control) return;
+        const field = control.closest('.dart-entry-angle');
+        if (!field) return;
+        field.querySelector('output').textContent = `${Number(control.value)}°`;
+        field.querySelector('[data-entry-angle-preview]').innerHTML = dartEntryAnglePreview(control.value);
+    }
+    function setDartEntryAngle(value) {
+        const angle = Number(value);
+        if (typeof player === 'undefined' || !player || !Number.isInteger(angle) || angle < -10 || angle > 45) return false;
+        player.dartEntryAngle = angle;
+        notifyChange('dartEntryAngle');
+        if (typeof saveGame === 'function') saveGame(true);
+        return true;
+    }
 
     const item = (id, price, color, names) => Object.freeze({ id, price, color, names: Object.freeze(names) });
     const catalogue = Object.freeze({
@@ -219,7 +273,10 @@
         shaftLength: Object.freeze([
             item('35', 0, null, ['35 mm — intermediate', '35 mm — intermediate', '35 mm — intermediate', '35 mm — intermediate']),
             item('28', 200, null, ['28 mm — krótki', '28 mm — short', '28 mm — kurz', '28 mm — kort']),
-            item('41', 240, null, ['41 mm — długi', '41 mm — long', '41 mm — lang', '41 mm — lang'])
+            item('41', 240, null, ['41 mm — długi', '41 mm — long', '41 mm — lang', '41 mm — lang']),
+            item('50', 280, null, ['50 mm', '50 mm', '50 mm', '50 mm']),
+            item('55', 300, null, ['55 mm', '55 mm', '55 mm', '55 mm']),
+            item('65', 320, null, ['65 mm — bardzo długi', '65 mm — extra long', '65 mm — extra lang', '65 mm — extra lang'])
         ]),
         shaftStyle: Object.freeze([
             item('nylon', 0, null, ['Nylon', 'Nylon', 'Nylon', 'Nylon']),
@@ -245,6 +302,9 @@
         ])
     });
     const categoryKeys = Object.freeze(Object.keys(catalogue));
+    const customColorFields = Object.freeze(['barrelColor', 'barrelAccentColor', 'shaftColor', 'tipColor',
+        'flightColor', 'flightAccentColor', 'integratedColor']);
+    const validCustomColor = value => typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value);
     const defaults = Object.freeze({ ...Object.fromEntries(categoryKeys.map(key => [key, catalogue[key][0].id])), tipLength: '30' });
     const parts = Object.freeze({ barrel: ['barrelShape', 'barrelPattern', 'barrelColor', 'barrelAccentColor', 'barrelAccentStyle'],
         flights: ['flightShape', 'flightColor', 'flightAccentColor', 'flightPattern'],
@@ -274,8 +334,14 @@
         const owned = previous.owned && typeof previous.owned === 'object' ? previous.owned : {};
         const artwork = typeof root.dartModel?.validFlightArtwork === 'function' && root.dartModel.validFlightArtwork(previous.flightArtwork)
             ? previous.flightArtwork : null;
-        const normalized = { version: 5, selected: {}, owned: {}, flightArtwork: artwork,
+        const customColors = previous.customColors && typeof previous.customColors === 'object' && !Array.isArray(previous.customColors)
+            ? previous.customColors : {};
+        const normalized = { version: 5, selected: {}, owned: {}, customColors: {}, flightArtwork: artwork,
             flightArtworkName: artwork ? String(previous.flightArtworkName || '').slice(0, 60) : '' };
+        customColorFields.forEach(field => {
+            if (Object.hasOwn(customColors, field) && validCustomColor(customColors[field]))
+                normalized.customColors[field] = customColors[field].toLowerCase();
+        });
         categoryKeys.forEach(category => {
             const validIds = new Set(catalogue[category].map(entry => entry.id));
             const migrate = id => category === 'tipLength' ? ({ '32': '30', '38': '40', '45': '50' }[id] || id) : id;
@@ -318,16 +384,24 @@
         const hash = hashIdentity(candidate);
         const picks = {};
         categoryKeys.forEach((category, index) => {
-            const list = catalogue[category];
+            // Adding a selectable length must not reroll existing AI equipment.
+            const list = category === 'shaftLength' ? catalogue[category].filter(entry => ['28', '35', '41'].includes(entry.id)) : catalogue[category];
             const mixed = Math.imul(hash ^ Math.imul(index + 3, 0x9e3779b1), 0x85ebca6b) >>> 0;
             picks[category] = list[mixed % list.length].id;
         });
         return picks;
     }
 
-    function buildLoadout(selections, source, owner) {
+    function buildLoadout(selections, source, owner, trying = {}) {
         const values = Object.fromEntries(categoryKeys.map(category => [category, findItem(category, selections[category])]));
+        if (source === 'career') customColorFields.forEach(field => {
+            const color = owner?.dartCustomization?.customColors?.[field];
+            if (validCustomColor(color) && !Object.hasOwn(trying, field))
+                values[field] = { ...values[field], id: 'custom', color };
+        });
         const integrated = values.flightSystem.id !== 'separate';
+        const shaftLength = root.dartModel.shaftLengths(values.flightSystem.id).includes(Number(values.shaftLength.id))
+            ? Number(values.shaftLength.id) : Number(defaults.shaftLength);
         const shaft = integrated ? values.integratedColor : values.shaftColor;
         const flight = integrated ? values.integratedColor : values.flightColor;
         return Object.freeze({
@@ -349,7 +423,7 @@
             flightPattern: values.flightPattern.id,
             flightArtwork: source === 'career' ? owner?.dartCustomization?.flightArtwork || null : null,
             tipLength: Number(values.tipLength.id), tipStyle: values.tipStyle.id,
-            shaftLength: Number(values.shaftLength.id), shaftStyle: values.shaftStyle.id,
+            shaftLength, shaftStyle: values.shaftStyle.id,
             ownerKey: String(owner?.id || owner?.sourceName || owner?.name || '')
         });
     }
@@ -370,7 +444,7 @@
                 ? raw[field].toLowerCase() : base[field];
         }
         result.tipLength = [26, 30, 35, 40, 50].includes(Number(raw.tipLength)) ? Number(raw.tipLength) : base.tipLength;
-        result.shaftLength = [28, 35, 41].includes(Number(raw.shaftLength)) ? Number(raw.shaftLength) : base.shaftLength;
+        result.shaftLength = root.dartModel.shaftLengths(result.flightSystem).includes(Number(raw.shaftLength)) ? Number(raw.shaftLength) : base.shaftLength;
         result.barrelLength = Number.isInteger(Number(raw.barrelLength)) && Number(raw.barrelLength) >= 35
             && Number(raw.barrelLength) <= 55 ? Number(raw.barrelLength) : base.barrelLength;
         result.weightGrams = Number.isInteger(Number(raw.weightGrams)) && Number(raw.weightGrams) >= 12
@@ -399,13 +473,13 @@
     function getDartLoadoutForPlayer(candidate) {
         if (isCareerPlayer(candidate)) {
             const state = normalizeDartCustomization(player);
-            return buildLoadout(state.selected, 'career', player);
+            return withDartEntryAngle(buildLoadout(state.selected, 'career', player), player);
         }
-        if (candidate?.aiDartAppearance) return Object.freeze({
+        if (candidate?.aiDartAppearance) return withDartEntryAngle(Object.freeze({
             ...root.dartModel.normalize(normalizeAiDartAppearance(candidate.aiDartAppearance)),
             source: 'opponent', ownerKey: String(candidate.id || candidate.sourceName || candidate.name || '')
-        });
-        return buildLoadout(aiSelections(candidate), 'opponent', candidate);
+        }), candidate);
+        return withDartEntryAngle(buildLoadout(aiSelections(candidate), 'opponent', candidate), candidate);
     }
 
     function getMatchParticipant(side) {
@@ -491,11 +565,16 @@
         if (typeof drawDartboard === 'function') drawDartboard();
     }
 
+    function isDartOptionCompatible(category, id, selections) {
+        return category !== 'shaftLength' || root.dartModel.shaftLengths(selections.flightSystem).includes(Number(id));
+    }
+
     function equipDartCustomization(category, id) {
         if (typeof player === 'undefined' || !catalogue[category]) return false;
         const state = normalizeDartCustomization(player);
-        if (!state.owned[category].includes(id) || !findItem(category, id)) return false;
+        if (!state.owned[category].includes(id) || !findItem(category, id) || !isDartOptionCompatible(category, id, state.selected)) return false;
         state.selected[category] = id;
+        if (customColorFields.includes(category)) delete state.customColors[category];
         if (category === 'barrelPattern') state.selected.gripZones = { front: id, middle: id, rear: id };
         notifyChange(category);
         if (typeof showShopScreen === 'function') showShopScreen();
@@ -507,7 +586,7 @@
         if (typeof player === 'undefined' || !catalogue[category]) return false;
         const state = normalizeDartCustomization(player);
         const product = findItem(category, id);
-        if (!product || product.id !== id) return false;
+        if (!product || product.id !== id || !isDartOptionCompatible(category, id, state.selected)) return false;
         if (state.owned[category].includes(id)) return equipDartCustomization(category, id);
         const budget = Math.max(0, Number(player.budget) || 0);
         if (budget < product.price) {
@@ -519,11 +598,24 @@
         player.budget = budget - product.price;
         state.owned[category].push(id);
         state.selected[category] = id;
+        if (customColorFields.includes(category)) delete state.customColors[category];
         if (category === 'barrelPattern') state.selected.gripZones = { front: id, middle: id, rear: id };
         if (typeof updateHub === 'function') updateHub();
         notifyChange(category);
         if (typeof showShopScreen === 'function') showShopScreen();
         if (typeof saveGame === 'function') saveGame(true);
+        return true;
+    }
+
+    function setDartCustomColor(category, value, persist = true) {
+        if (typeof player === 'undefined' || !customColorFields.includes(category)
+            || (value !== null && !validCustomColor(value))) return false;
+        const state = normalizeDartCustomization(player);
+        if (value === null) delete state.customColors[category];
+        else state.customColors[category] = value.toLowerCase();
+        notifyChange(category);
+        refreshPreview();
+        if (persist && typeof saveGame === 'function') saveGame(true);
         return true;
     }
 
@@ -628,10 +720,14 @@
         const host = document.getElementById('dart-kit-preview');
         if (!host) return;
         const state = normalizeDartCustomization(player);
+        if (previewSelection?.shaftLength && !isDartOptionCompatible('shaftLength', previewSelection.shaftLength, { ...state.selected, ...previewSelection })) {
+            delete previewSelection.shaftLength;
+            if (!Object.keys(previewSelection).length) previewSelection = null;
+        }
         const selections = { ...state.selected, ...(previewSelection || {}) };
         if (previewSelection?.barrelPattern) selections.gripZones = { front: previewSelection.barrelPattern,
             middle: previewSelection.barrelPattern, rear: previewSelection.barrelPattern };
-        const loadout = buildLoadout(selections, 'career', player);
+        const loadout = buildLoadout(selections, 'career', player, previewSelection || {});
         const integrated = loadout.flightSystem !== 'separate';
         document.querySelectorAll('[data-dart-category]').forEach(section => {
             const category = section.dataset.dartCategory;
@@ -647,9 +743,28 @@
             .replace('{barrel}', loadout.barrelLength).replace('{shaft}', loadout.shaftLength).replace('{weight}', loadout.weightGrams)
             + (integrated ? ` · ${nameOf(findItem('flightSystem', loadout.flightSystem))}` : '');
         document.querySelectorAll('.dart-option').forEach(option => {
+            option.hidden = !isDartOptionCompatible(option.dataset.category, option.dataset.item, selections);
             const trying = previewSelection?.[option.dataset.category] === option.dataset.item;
             option.classList.toggle('trying', trying);
             option.querySelector('.dart-try-button')?.setAttribute('aria-pressed', String(trying));
+            if (customColorFields.includes(option.dataset.category)) {
+                const selected = !state.customColors[option.dataset.category] && state.selected[option.dataset.category] === option.dataset.item;
+                option.classList.toggle('selected', selected);
+                const owned = state.owned[option.dataset.category].includes(option.dataset.item);
+                const button = option.querySelector('button:not(.dart-try-button)');
+                button.disabled = selected;
+                button.textContent = selected ? tr('selected') : owned ? tr('owned')
+                    : `${tr('buy')} £${findItem(option.dataset.category, option.dataset.item).price.toLocaleString('en-GB')}`;
+                button.setAttribute('aria-label', `${button.textContent}: ${tr(option.dataset.category)} — ${nameOf(findItem(option.dataset.category, option.dataset.item))}`);
+            }
+        });
+        document.querySelectorAll('[data-custom-color]').forEach(input => {
+            const field = input.dataset.customColor;
+            input.value = loadout[field];
+            input.nextElementSibling.textContent = loadout[field].toUpperCase();
+        });
+        document.querySelectorAll('[data-custom-color-reset]').forEach(button => {
+            button.disabled = !state.customColors[button.dataset.customColorReset];
         });
         root.dartPreview?.mount(host, loadout, tr('rotate'));
     }
@@ -657,6 +772,8 @@
     function previewDartCustomization(category, id) {
         const product = catalogue[category]?.find(entry => entry.id === id);
         if (!product) return false;
+        const selections = { ...normalizeDartCustomization(player).selected, ...(previewSelection || {}) };
+        if (!isDartOptionCompatible(category, id, selections)) return false;
         previewSelection = { ...previewSelection, [category]: id };
         refreshPreview();
         return true;
@@ -705,6 +822,14 @@
                     <button type="button" id="dart-preview-reset" class="dart-preview-reset" onclick="resetDartCustomizationPreview()" hidden>${escapeHtml(tr('reset'))}</button>
                 </div>
                 <div class="dart-customizer-controls">
+                    <section class="dart-entry-angle">
+                        <label class="dart-dimension" for="dart-entry-angle">${escapeHtml(entryAngleTranslation(0))}
+                            <span class="dart-dimension-input"><input id="dart-entry-angle" type="range" min="-10" max="45" step="1"
+                                value="${getDartEntryAngleForPlayer(player) ?? 20}" oninput="updateDartEntryAngleControl(this)" onchange="setDartEntryAngle(this.value)"/>
+                                <output for="dart-entry-angle">${getDartEntryAngleForPlayer(player) ?? 20}°</output></span></label>
+                        <p>${escapeHtml(entryAngleTranslation(1))}</p>
+                        <div data-entry-angle-preview>${dartEntryAnglePreview(getDartEntryAngleForPlayer(player) ?? 20)}</div>
+                    </section>
                     <nav class="dart-part-tabs" aria-label="${escapeHtml(tr('title'))}">${Object.keys(parts).map(part => `<button type="button" data-dart-tab="${part}" aria-pressed="${activePart === part}" onclick="selectDartCustomizationPart('${part}')">${escapeHtml(tr(part))}</button>`).join('')}</nav>`;
         Object.entries(parts).forEach(([part, categories]) => {
             html += `<div class="dart-customizer-categories" data-dart-part="${part}" ${activePart === part ? '' : 'hidden'}>`;
@@ -734,13 +859,25 @@
                 ${state.flightArtwork ? `<button type="button" onclick="removeDartFlightArtwork()">${escapeHtml(tr('artworkRemove'))}</button>` : ''}
                 </div></section>`;
             categories.forEach(category => {
-                html += `<section class="dart-customizer-category" data-dart-category="${category}"><h5>${escapeHtml(tr(category))}</h5><div class="dart-customizer-options">`;
+                html += `<section class="dart-customizer-category" data-dart-category="${category}"><h5>${escapeHtml(tr(category))}</h5>`;
+                if (customColorFields.includes(category)) html += `<div class="dart-color-picker">
+                    <label for="dart-color-${category}">${escapeHtml(tr('customColor'))}</label>
+                    <div class="dart-color-picker-row"><input type="color" id="dart-color-${category}" data-custom-color="${category}"
+                        value="${state.customColors[category] || findItem(category, state.selected[category]).color}"
+                        aria-label="${escapeHtml(tr(category))}: ${escapeHtml(tr('customColor'))}"
+                        oninput="setDartCustomColor('${category}',this.value,false)" onchange="setDartCustomColor('${category}',this.value)"/>
+                        <output for="dart-color-${category}"></output>
+                        <button type="button" data-custom-color-reset="${category}" onclick="setDartCustomColor('${category}',null)">${escapeHtml(tr('catalogueColor'))}</button>
+                    </div></div>`;
+                html += '<div class="dart-customizer-options">';
                 catalogue[category].forEach(product => {
+                    const selectedId = category === 'shaftLength' && !isDartOptionCompatible(category, state.selected[category], state.selected)
+                        ? defaults.shaftLength : state.selected[category];
                     const selected = category === 'barrelPattern'
                         ? ['front', 'middle', 'rear'].every(zone => state.selected.gripZones[zone] === product.id)
-                        : state.selected[category] === product.id;
+                        : selectedId === product.id && !state.customColors[category];
                     const owned = state.owned[category].includes(product.id);
-                    const action = selected ? '' : owned
+                    const action = owned
                         ? `onclick="equipDartCustomization('${category}','${product.id}')"`
                         : `onclick="buyDartCustomization('${category}','${product.id}')"`;
                     const label = selected ? tr('selected') : owned ? tr('owned') : `${tr('buy')} £${product.price.toLocaleString('en-GB')}`;
@@ -767,6 +904,10 @@
     root.dartCustomizationPreviewMarkup = previewMarkup;
     root.normalizeDartCustomization = normalizeDartCustomization;
     root.getDartLoadoutForPlayer = getDartLoadoutForPlayer;
+    root.getDartEntryAngleForPlayer = getDartEntryAngleForPlayer;
+    root.setDartEntryAngle = setDartEntryAngle;
+    root.updateDartEntryAngleControl = updateDartEntryAngleControl;
+    root.dartEntryAnglePreview = dartEntryAnglePreview;
     root.getMatchDartLoadout = getMatchDartLoadout;
     root.buyDartCustomization = buyDartCustomization;
     root.equipDartCustomization = equipDartCustomization;
@@ -775,6 +916,7 @@
     root.resetDartCustomizationPreview = resetDartCustomizationPreview;
     root.selectDartCustomizationPart = selectDartCustomizationPart;
     root.setDartDimension = setDartDimension;
+    root.setDartCustomColor = setDartCustomColor;
     root.setDartGripZone = setDartGripZone;
     root.uploadDartFlightArtwork = uploadDartFlightArtwork;
     root.removeDartFlightArtwork = removeDartFlightArtwork;

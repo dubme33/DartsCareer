@@ -8,6 +8,8 @@ const CALENDAR_FILTER_CYCLE_ORDER = Object.freeze([
     'worldSeries',
     'challengeTour',
     'developmentTour',
+    'womensSeries',
+    'womensWorldMatchplay',
     'worldCup',
     'qualifier',
     'other'
@@ -26,7 +28,7 @@ const CALENDAR_FILTER_TRANSLATIONS = Object.freeze({
         worldSeries: 'Global Masters (World Series)',
         challengeTour: 'Rising Stars Circuit (Challenge Tour)',
         developmentTour: 'Future Champions Circuit (Development Tour)',
-        worldCup: 'Puchar Narodów', other: 'Pozostałe turnieje'
+        womensWorldMatchplay: 'Kobiecy World Matchplay', womensSeries: "Women's Series — Kobiecy Cykl PDC", worldCup: 'Puchar Narodów', other: 'Pozostałe turnieje'
     },
     en: {
         title: '🔎 Filter calendar',
@@ -40,7 +42,7 @@ const CALENDAR_FILTER_TRANSLATIONS = Object.freeze({
         worldSeries: 'Global Masters (World Series)',
         challengeTour: 'Rising Stars Circuit (Challenge Tour)',
         developmentTour: 'Future Champions Circuit (Development Tour)',
-        worldCup: 'World Cup', other: 'Other tournaments'
+        womensWorldMatchplay: "Women's World Matchplay", womensSeries: "Women's Series", worldCup: 'World Cup', other: 'Other tournaments'
     },
     de: {
         title: '🔎 Kalender filtern',
@@ -54,7 +56,7 @@ const CALENDAR_FILTER_TRANSLATIONS = Object.freeze({
         worldSeries: 'Global Masters (World Series)',
         challengeTour: 'Rising Stars Circuit (Challenge Tour)',
         developmentTour: 'Future Champions Circuit (Development Tour)',
-        worldCup: 'World Cup', other: 'Andere Turniere'
+        womensWorldMatchplay: "Women's World Matchplay", womensSeries: "Women's Series", worldCup: 'World Cup', other: 'Andere Turniere'
     },
     nl: {
         title: '🔎 Kalender filteren',
@@ -68,7 +70,7 @@ const CALENDAR_FILTER_TRANSLATIONS = Object.freeze({
         worldSeries: 'Global Masters (World Series)',
         challengeTour: 'Rising Stars Circuit (Challenge Tour)',
         developmentTour: 'Future Champions Circuit (Development Tour)',
-        worldCup: 'World Cup', other: 'Andere toernooien'
+        womensWorldMatchplay: "Women's World Matchplay", womensSeries: "Women's Series", worldCup: 'World Cup', other: 'Andere toernooien'
     }
 });
 
@@ -82,7 +84,7 @@ function trCalendarFilter(key, replacements = {}) {
     Object.entries(replacements).forEach(([name, value]) => {
         text = text.replaceAll(`{${name}}`, String(value));
     });
-    return text;
+    return typeof competitionDisplayText === 'function' ? competitionDisplayText(text) : text;
 }
 
 function escapeCalendarFilterHtml(value) {
@@ -111,6 +113,8 @@ function getCalendarTournamentFilterKey(tournament) {
 
 function getCalendarTournamentCycle(tournament) {
     if (!tournament || typeof tournament !== 'object') return 'other';
+    if(typeof isWomensWorldMatchplayTournament==='function'&&isWomensWorldMatchplayTournament(tournament))return 'womensWorldMatchplay';
+    if (typeof isWomensSeriesTournament==='function'&&isWomensSeriesTournament(tournament))return 'womensSeries';
     if (tournament.editorCycle === 'custom' && String(tournament.editorTourName || '').trim()) {
         return `custom:${encodeURIComponent(tournament.editorTourName.trim().replace(/\s+/g, ' ').toLocaleLowerCase())}`;
     }

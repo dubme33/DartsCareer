@@ -192,7 +192,7 @@ function getPlayerCareerTitleData(tournamentOrName) {
         key: normalizePlayerCareerTitle(sourceName || name),
         name,
         sourceName,
-        specialType: tournament?.specialType || '',
+        specialType: typeof isWomensWorldMatchplayTournament==='function'&&isWomensWorldMatchplayTournament(tournament)?'womensWorldMatchplay':tournament?.specialType || '',
         worldMastersEvent: tournament?.worldMastersEvent || ''
     };
 }
@@ -440,7 +440,7 @@ function getPlayerProfileCareerTitles(candidate) {
         ...title,
         winsByYear: { ...(title.winsByYear || {}) }
     }));
-    getHistoricalPlayerCareerTitles(candidate).forEach(historicalTitle => {
+    [...getHistoricalPlayerCareerTitles(candidate), ...(typeof getWorldYouthHistoricalTitles === 'function'?getWorldYouthHistoricalTitles(candidate):[])].forEach(historicalTitle => {
         upsertPlayerCareerTitle(
             combined,
             getPlayerCareerTitleData(historicalTitle),
@@ -487,6 +487,8 @@ function getPlayerCareerTitleDisplayName(title) {
 
 function getPlayerCareerTitleSeries(title) {
     const tournament = getPlayerCareerTitleTournament(title);
+    if(typeof isWomensWorldMatchplayTournament==='function'&&isWomensWorldMatchplayTournament(tournament))return typeof competitionName==='function'?competitionName('womensWorldMatchplay'):"Women's Global Matchplay";
+    if (typeof isWomensSeriesTournament==='function'&&isWomensSeriesTournament(tournament))return typeof competitionName==='function'?competitionName('womensSeries'):"Women's Pro Circuit";
     const names = `${tournament.name} ${tournament.sourceName || ''} ${tournament.specialType || ''}`;
     // Finals and qualifiers stay separate from the series win counters.
     if (/final|play[\s-]*off|qualifier|kwalifikac|q-school|qschool/i.test(names)) return null;
@@ -573,6 +575,8 @@ function renderPlayerCareerTitles(candidate) {
 }
 
 function recordSeasonTournamentResult(candidate, tournament, details = {}) {
+    if(typeof isWomensWorldMatchplayTournament==='function'&&isWomensWorldMatchplayTournament(tournament))details={...details,countTowardsRankings:false};
+    if (typeof isWomensSeriesTournament === 'function' && isWomensSeriesTournament(tournament)) details={...details,countTowardsRankings:false};
     if (!candidate || candidate.isBye || !tournament || !tournament.name) return null;
 
     const stats = initPlayerSeasonStats(candidate);
@@ -586,6 +590,7 @@ function recordSeasonTournamentResult(candidate, tournament, details = {}) {
     const isDevelopmentTourEvent = typeof isDevelopmentTourTournament === 'function'
         && isDevelopmentTourTournament(tournament);
     const rankingPrizeMoney = details.countTowardsRankings === false || isChallengeTourEvent || isDevelopmentTourEvent
+        || (typeof isWorldYouthTournament === 'function' && isWorldYouthTournament(tournament))
         ? 0
         : prizeMoney;
     const timestamp = (typeof currentDate !== 'undefined' && currentDate instanceof Date)
@@ -633,6 +638,9 @@ function recordSeasonTournamentResult(candidate, tournament, details = {}) {
 }
 
 function getRankingPosition(candidate, type) {
+    if(type==='womensSeries'&&typeof getWomensSeriesOrderOfMerit==='function'){
+        const index=getWomensSeriesOrderOfMerit(getCareerProfilePlayers()).findIndex(p=>samePlayer(p,candidate));return index<0?null:index+1;
+    }
     if (type === 'developmentTour' && typeof getDevelopmentTourOrderOfMerit === 'function') {
         const index = getDevelopmentTourOrderOfMerit(getCareerProfilePlayers())
             .findIndex(row => samePlayer(row, candidate));
@@ -704,6 +712,7 @@ function renderSeasonResult(result) {
     const stage = result.stage && (result.tournament === 'Puchar Narodów' || result.tournament === 'World Cup of Darts') && typeof getWorldCupSeasonResultStage === 'function'
         ? getWorldCupSeasonResultStage(result.stage)
         : (['groupSecond', 'groupThird'].includes(result.stage) ? trPlayerProfile(result.stage)
+            : result.stage==='groupFourth' && typeof worldYouthText==='function' ? worldYouthText('groupFourth')
             : result.stage || getSeasonResultStage(result.round, result.won));
     let prizeText = result.prizeMoney > 0 ? `£${result.prizeMoney.toLocaleString('en-GB')}` : trPlayerProfile('noPrize');
     if (result.prizeTax > 0 && Number.isFinite(result.netPrizeMoney)) {
@@ -730,7 +739,7 @@ function openPlayerProfile(playerId, rankingType = 'main') {
     const overall = Math.round(Number(selectedPlayer.ovr ?? selectedPlayer.overall) || 0);
     const tourCardExpirySeason = Number(selectedPlayer.tourCardExpiryYear) - 1;
     const tourCardMarkup = selectedPlayer.hasTourCard === true
-        ? `<p style="display:inline-block; margin:8px 0 0; padding:5px 10px; border-radius:14px; background:#8e44ad; color:white; font-size:12px; font-weight:bold;">🎫 ${trPlayerProfile('tourCardHolder')}${Number.isInteger(tourCardExpirySeason) ? ` · ${trPlayerProfile('tourCardValid', { year: tourCardExpirySeason })}` : ''}</p>`
+        ? `<p style="display:inline-block; margin:8px 0 0; padding:5px 10px; border-radius:14px; background:#8e44ad; color:white; font-size:12px; font-weight:bold;">🎫 ${typeof getPdcTourCardLabel === 'function' ? escapeHtml(getPdcTourCardLabel(selectedPlayer)) : trPlayerProfile('tourCardHolder')}</p>`
         : '';
     const rankings = [
         [trPlayerProfile('orderOfMerit'), getRankingPosition(selectedPlayer, 'main')],
@@ -764,6 +773,9 @@ function openPlayerProfile(playerId, rankingType = 'main') {
             ${tourCardMarkup}
         </div>
         ${careerTitlesMarkup}
+        ${typeof renderWomensWorldMatchplayHonours === 'function' ? renderWomensWorldMatchplayHonours(selectedPlayer) : ''}
+        ${typeof renderWorldYouthHonours === 'function' ? renderWorldYouthHonours(selectedPlayer) : ''}
+        ${typeof renderWomensSeriesHonours === 'function' ? renderWomensSeriesHonours(selectedPlayer) : ''}
     </section>
     <section class="profile-stat-grid">
         ${rankingMarkup}

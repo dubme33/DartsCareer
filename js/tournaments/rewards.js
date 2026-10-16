@@ -36,6 +36,9 @@ function getTournamentForPrizeRules(name) {
 
 function getPrizeMoney(tName, round, won) {
     const tournament = getTournamentForPrizeRules(tName);
+    if (typeof isWomensWorldMatchplayTournament === 'function' && isWomensWorldMatchplayTournament(tournament || tName)) return getWomensWorldMatchplayPrize(round,won,tournament);
+    if (typeof isWomensSeriesTournament === 'function' && isWomensSeriesTournament(tournament || tName)) return getWomensSeriesPrize(round,won,tournament);
+    if (typeof isWorldYouthTournament === 'function' && isWorldYouthTournament(tournament || tName)) return getWorldYouthPrize(won && Number(round)===2?'winner':String(round),tournament);
     if (typeof isTournamentEditorQualifier === 'function' && isTournamentEditorQualifier(tournament)) return 0;
     const prizeKey = won && Number(round) === 2 ? 'winner' : String(round);
     const customPrize = tournament?.editorPrizes?.[prizeKey];
@@ -145,6 +148,25 @@ function payCareerTournamentPrizeMoney(candidate, amount, tournament) {
             tName = String(tName || '');
             const tournament = getTournamentForPrizeRules(tName);
             const ruleName = String(tournament?.sourceName || tName);
+            if(typeof isWomensWorldMatchplayTournament==='function'&&isWomensWorldMatchplayTournament(tournament||tName)){
+                if(!claimWomensWorldMatchplayPrize(p,amount,tournament))return;
+                payCareerTournamentPrizeMoney(p,amount,tName);
+                if(typeof recordSeasonArchivePrize==='function')recordSeasonArchivePrize(p,amount,tName,{countTowardsRankings:false});
+                return;
+            }
+            if (typeof isWomensSeriesTournament === 'function' && isWomensSeriesTournament(tournament || tName)) {
+                if (!claimWomensSeriesPrize(p,amount,tournament)) return;
+                payCareerTournamentPrizeMoney(p,amount,tName);
+                if (typeof recordSeasonArchivePrize === 'function') recordSeasonArchivePrize(p,amount,tName,{countTowardsRankings:false});
+                return;
+            }
+            const youth = typeof isWorldYouthTournament === 'function' && isWorldYouthTournament(tournament || tName);
+            if (youth) {
+                if (!claimWorldYouthPrize(p,amount,tournament)) return;
+                payCareerTournamentPrizeMoney(p,amount,tName);
+                if (typeof recordSeasonArchivePrize === 'function') recordSeasonArchivePrize(p,amount,tName,{countTowardsRankings:false});
+                return;
+            }
             const isChallengeTourEvent = typeof isChallengeTourTournament === 'function'
                 && isChallengeTourTournament(tournament || tName);
             const isDevelopmentTourEvent = typeof isDevelopmentTourTournament === 'function'

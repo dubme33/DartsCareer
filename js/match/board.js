@@ -5,6 +5,7 @@ function getPrefix(m) { return m === 1 ? "" : (m === 2 ? "D" : "T"); }
         }
 
         function drawDartboard() {
+            if (typeof currentMatch !== 'undefined' && (currentMatch?.isSpectator || currentMatch?.careerAutoplay) && currentMatch.spectatorSkipThrow) return;
             if (typeof window !== 'undefined' && window.matchBoard3D?.sync(drawnDarts)) return;
             const canvas = document.getElementById('dartboard'); const ctx = canvas.getContext('2d');
             const cx = canvas.width / 2, cy = canvas.height / 2;

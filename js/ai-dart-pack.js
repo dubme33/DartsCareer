@@ -65,6 +65,11 @@ function normalizeAiDartPackEntry(raw) {
         sourceName: playerPackString(raw.sourceName, 120, true),
         name: playerPackString(raw.name, 120, true), country: playerPackString(raw.country, 80, true),
         appearance: normalizeAiDartAppearance(raw.appearance) };
+    if (Object.prototype.hasOwnProperty.call(raw, 'dartEntryAngle')) {
+        if (raw.dartEntryAngle !== null && (!Number.isInteger(raw.dartEntryAngle)
+            || raw.dartEntryAngle < -10 || raw.dartEntryAngle > 45)) throw aiDartPackError('invalid');
+        entry.dartEntryAngle = raw.dartEntryAngle;
+    }
     if (raw.kind === 'newgen') entry.id = playerPackString(raw.id, 120, true);
     entry.key = raw.kind === 'newgen' ? `newgen:${entry.id}`
         : playerPackKey({ ...entry, editorCreated: entry.kind === 'custom' });
@@ -90,7 +95,9 @@ function createAiDartPackEntry(candidate) {
         ? 'template' : candidate.editorCreated ? 'custom' : 'source';
     const entry = { kind, defaultTemplateIndex: kind === 'template' ? index : null,
         sourceName: candidate.sourceName || candidate.name, name: candidate.name, country: candidate.country,
-        appearance: getAiDartAppearanceForPlayer(candidate) };
+        appearance: getAiDartAppearanceForPlayer(candidate),
+        dartEntryAngle: Number.isInteger(candidate.dartEntryAngle) && candidate.dartEntryAngle >= -10
+            && candidate.dartEntryAngle <= 45 ? candidate.dartEntryAngle : null };
     if (kind === 'newgen') entry.id = candidate.id;
     entry.key = kind === 'newgen' ? `newgen:${entry.id}`
         : playerPackKey({ ...entry, editorCreated: kind === 'custom' });
@@ -112,7 +119,9 @@ function planAiDartPackImport(pack, choices = {}, database = pdcPlayers) {
         const target = match.target || null;
         const reason = match.reason || (isPlayerPackCareer(entry, target) ? 'career'
             : !target || isPlayerEditorDeleted(target) ? 'missing' : null);
-        const same = !reason && JSON.stringify(getAiDartAppearanceForPlayer(target)) === JSON.stringify(entry.appearance);
+        const same = !reason && JSON.stringify(getAiDartAppearanceForPlayer(target)) === JSON.stringify(entry.appearance)
+            && (!Object.prototype.hasOwnProperty.call(entry, 'dartEntryAngle')
+                || (target.dartEntryAngle ?? null) === entry.dartEntryAngle);
         const action = reason || same ? 'skip' : choices[entry.key] === 'skip' ? 'skip' : 'replace';
         return { entry, target, reason, same, action, available: reason || same ? ['skip'] : ['replace', 'skip'] };
     });
@@ -227,7 +236,13 @@ async function applyStagedAiDartPack() {
     const rows = planAiDartPackImport(stagedAiDartPack, aiDartPackChoices);
     const selected = rows.filter(row => row.action === 'replace' && row.target && !row.reason && !row.same);
     if (!selected.length) { setAiDartPackStatus(trAiDartPack('noChanges'), true); return false; }
-    for (const row of selected) row.target.aiDartAppearance = normalizeAiDartAppearance(row.entry.appearance);
+    for (const row of selected) {
+        row.target.aiDartAppearance = normalizeAiDartAppearance(row.entry.appearance);
+        if (Object.prototype.hasOwnProperty.call(row.entry, 'dartEntryAngle')) {
+            if (row.entry.dartEntryAngle === null) delete row.target.dartEntryAngle;
+            else row.target.dartEntryAngle = row.entry.dartEntryAngle;
+        }
+    }
     cancelAiDartPackImport();
     const current = typeof playerEditorCreating !== 'undefined' && !playerEditorCreating
         && typeof getPlayerEditorCandidate === 'function' ? getPlayerEditorCandidate() : null;

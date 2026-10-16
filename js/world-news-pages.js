@@ -56,7 +56,7 @@ function getWorldNewsCountryLabel(country) {
     return typeof label==='string'&&label.trim()?label:raw;
 }
 function newsAvatar(person,side='') {
-    const resolved=resolveWorldNewsPlayerImage(person?.id,person),name=person?.name||'DWN';
+    const resolved=resolveWorldNewsPlayerImage(person?.id,person),name=newsPublicPersonName(person)||'DWN';
     const initials=name.split(/\s+/).filter(Boolean).slice(0,2).map(n=>[...n][0]).join('').toUpperCase();
     const fallback=`<svg viewBox="0 0 300 280" aria-hidden="true" focusable="false"><circle cx="150" cy="95" r="44"/><path d="M38 280c4-78 44-123 112-123s108 45 112 123Z"/><text x="150" y="240" text-anchor="middle">${escapeHtml(initials)}</text></svg>`;
     const portrait=resolved.src?`<div class="dwn-portrait-image" data-portrait-mode="foreground"><img src="${escapeHtml(resolved.src)}" alt="${escapeHtml(name)}" loading="lazy" onload="this.closest('.dwn-avatar').classList.add('portrait-ready')" onerror="this.hidden=true;this.closest('.dwn-avatar').classList.remove('portrait-ready')"></div>`:'';
@@ -114,8 +114,9 @@ function newsHandleBrowserRoute() {
 if(typeof window!=='undefined'&&window.addEventListener){window.addEventListener('hashchange',newsHandleBrowserRoute);window.addEventListener('popstate',newsHandleBrowserRoute);}
 function newsPlayerLink(person) {
     if(!person?.name)return '';
-    if(!newsStablePlayer(person.id))return `<span>${escapeHtml(person.name)}</span>`;
-    return `<button class="world-news-profile" type="button" data-player-id="${escapeHtml(person.id)}" onclick="openDwnPlayer(this.dataset.playerId)">${escapeHtml(person.name)} <span aria-hidden="true">↗</span></button>`;
+    const name=newsPublicPersonName(person);
+    if(!newsStablePlayer(person.id))return `<span>${escapeHtml(name)}</span>`;
+    return `<button class="world-news-profile" type="button" data-player-id="${escapeHtml(person.id)}" onclick="openDwnPlayer(this.dataset.playerId)">${escapeHtml(name)} <span aria-hidden="true">↗</span></button>`;
 }
 function openDwnPlayer(id) {
     const p=newsStablePlayer(id);if(!p||typeof openPlayerProfile!=='function')return false;
@@ -168,10 +169,11 @@ function renderNewsroomSidebar() {
 }
 function renderWorldNewsTournamentHub(items) {
     const node=document.getElementById('world-news-tournament-hub');if(!node)return;
-    const major=items.find(a=>(a.data.facts||a.data).tournament?.major),f=major&&(major.data.facts||major.data);
+    const major=items.find(a=>(a.data.facts||a.data).tournament?.major),f=major&&newsPublicFacts(major);
     node.hidden=worldNewsSection!=='TOURNAMENT'||!f;if(node.hidden)return;
-    const winner=items.find(a=>a.canonicalKey===`${f.eventKey}:result`),preview=items.find(a=>a.canonicalKey===`${f.eventKey}:preview`);
-    node.innerHTML=`<p class="news-kicker">${escapeHtml(newsLabel('MAJOR'))}</p><h2>${escapeHtml(f.tournament.name)}</h2><p>${escapeHtml(worldNewsDate(major.timestamp))}${winner?' · '+escapeHtml(newsUi('completed'))+': '+escapeHtml(winner.data.facts.actor.name):preview?.data.facts.defender?' · '+escapeHtml(newsSay('Defending champion','Obrońca tytułu','Titelverteidiger','Titelverdediger'))+': '+escapeHtml(preview.data.facts.defender.name):''}</p>`;
+    const eventKey=(major.data.facts||major.data).eventKey;
+    const winner=items.find(a=>a.canonicalKey===`${eventKey}:result`),preview=items.find(a=>a.canonicalKey===`${eventKey}:preview`);
+    node.innerHTML=`<p class="news-kicker">${escapeHtml(newsLabel('MAJOR'))}</p><h2>${escapeHtml(f.tournament.name)}</h2><p>${escapeHtml(worldNewsDate(major.timestamp))}${winner?' · '+escapeHtml(newsUi('completed'))+': '+escapeHtml(newsPublicFacts(winner).actor.name):preview?.data.facts.defender?' · '+escapeHtml(newsSay('Defending champion','Obrońca tytułu','Titelverteidiger','Titelverdediger'))+': '+escapeHtml(newsPublicFacts(preview).defender.name):''}</p>`;
 }
 function renderWorldNewsPortal() {
     const list=document.getElementById('world-news-list');if(!list)return;

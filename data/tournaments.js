@@ -1,6 +1,6 @@
 const tournamentDatabase = [
     // --- STYCZEŃ (Miesiąc 0) ---
-    { name: "Pro Card Trials", month: 0, day: 5, endDay: 11, format: "legs", minOvr: 0, city: "Milton Keynes", country: "Anglia", specialType: "pdcQSchool", cycleStartYear: 2026, cycleEveryYears: 2 },
+    { name: "Pro Card Trials", month: 0, day: 5, endDay: 11, format: "legs", minOvr: 0, city: "Milton Keynes", country: "Anglia", specialType: "pdcQSchool", cycleStartYear: 2026, cycleEveryYears: 1 },
     { name: "Desert Masters", month: 0, day: 15, endDay: 16, format: "legs", minOvr: 0, city: "Sakhir", country: "Bahrajn", specialType: "worldMasters", worldMastersEvent: "desert" },
     { name: "Arabian Masters", month: 0, day: 19, endDay: 20, format: "legs", minOvr: 0, city: "Rijad", country: "Arabia Saudyjska", specialType: "worldMasters", worldMastersEvent: "arabian" },
     { name: "Crown Masters Qualifier", month: 0, day: 28, format: "sets", minOvr: 0, city: "Milton Keynes", country: "Anglia", specialType: "classicMastersQualifier", qualifierFor: "Crown Masters", qualifyingPlaces: 8 },
@@ -83,6 +83,7 @@ const tournamentDatabase = [
     { name: "Pro Players Cup 24", month: 6, day: 7, format: "legs", minOvr: 0, city: "Leicester", country: "Anglia" },
     { name: "Continental Tour 10 - Qualifiers", month: 6, day: 8, format: "legs", minOvr: 0, city: "Leverkusen", country: "Niemcy", specialType: "continentalQualifier", qualifierFor: "Continental Tour 10" },
     { name: "Continental Tour 10", month: 6, day: 10, endDay: 12, format: "legs", minOvr: 55, city: "Leverkusen", country: "Niemcy" },
+    { name: "Women's Global Matchplay", sourceName: "PDC Women's World Matchplay", specialType: "womensWorldMatchplay", womensWorldMatchplay: true, tournamentId: "pdc-womens-world-matchplay", month: 6, day: 26, format: "legs", minOvr: 0, city: "Blackpool", country: "Anglia", venue: "Winter Gardens", session: "afternoon", rankingOverride: false },
     { name: "Global Matchplay", month: 6, day: 18, endDay: 26, format: "legs", minOvr: 65, city: "Blackpool", country: "Anglia" },
     { name: "Pro Players Cup 25", month: 6, day: 28, format: "legs", minOvr: 0, city: "Hildesheim", country: "Niemcy" },
     { name: "Pro Players Cup 26", month: 6, day: 29, format: "legs", minOvr: 0, city: "Hildesheim", country: "Niemcy" },
@@ -157,7 +158,8 @@ CHALLENGE_TOUR_2026_SCHEDULE.forEach(([number, month, day, city]) => {
 
 // Fikcyjny odpowiednik PDC Development Tour. Oryginalne pięć zjazdów
 // zachowuje swoje miasta, a 24 imprezy są rozłożone na najbliższe wolne dni
-// z zachowaniem kolejności, bez nakładania ich na istniejący kalendarz gry.
+// z zachowaniem kolejności. Ostatni zjazd używa rzeczywistych dat: dwa turnieje
+// 3 października i dwa 4 października, przed Youth 5 października.
 const DEVELOPMENT_TOUR_2026_SCHEDULE = Object.freeze([
     [1, 1, 7, 'Leicester'], [2, 1, 8, 'Leicester'], [3, 1, 11, 'Leicester'],
     [4, 1, 23, 'Leicester'], [5, 2, 4, 'Leicester'],
@@ -167,7 +169,7 @@ const DEVELOPMENT_TOUR_2026_SCHEDULE = Object.freeze([
     [14, 5, 23, 'Milton Keynes'], [15, 5, 24, 'Milton Keynes'],
     [16, 6, 30, 'Hildesheim'], [17, 6, 31, 'Hildesheim'], [18, 7, 1, 'Hildesheim'],
     [19, 7, 2, 'Hildesheim'], [20, 7, 3, 'Hildesheim'],
-    [21, 8, 16, 'Wigan'], [22, 8, 21, 'Wigan'], [23, 9, 19, 'Wigan'], [24, 9, 20, 'Wigan']
+    [21, 9, 3, 'Wigan'], [22, 9, 3, 'Wigan'], [23, 9, 4, 'Wigan'], [24, 9, 4, 'Wigan']
 ]);
 
 DEVELOPMENT_TOUR_2026_SCHEDULE.forEach(([number, month, day, city]) => {
@@ -304,8 +306,9 @@ const PDC_2026_CALENDAR_FIELDS = [
 ];
 
 function findPdc2026CalendarEntry(calendar, template) {
+    const sourceName = template.sourceName || template.name;
     return calendar.find(tournament => tournament.name === template.name)
-        || calendar.find(tournament => tournament.sourceName === template.name)
+        || calendar.find(tournament => (tournament.sourceName || tournament.name) === sourceName)
         || (template.worldMastersEvent
             ? calendar.find(tournament => tournament.worldMastersEvent === template.worldMastersEvent)
             : null)
@@ -318,7 +321,7 @@ function findPdc2026CalendarEntry(calendar, template) {
             : null);
 }
 
-function syncPdc2026TournamentCalendar(calendar = tournamentDatabase, referenceDate = null) {
+function syncPdc2026TournamentCalendar(calendar = tournamentDatabase, referenceDate = null, options = {}) {
     if (typeof isCareerEditorCalendarEmpty === 'function' && isCareerEditorCalendarEmpty()) return calendar;
     if (!Array.isArray(calendar)) return calendar;
     const parsedReferenceDate = referenceDate ? new Date(referenceDate) : null;
@@ -331,7 +334,8 @@ function syncPdc2026TournamentCalendar(calendar = tournamentDatabase, referenceD
     for (let index = calendar.length - 1; index >= 0; index--) {
         const tournament = calendar[index];
         if (tournament?.specialType === 'pdcTourCardQualifier'
-            && tournament.qualifierFor === 'Global Darts Championship') {
+            && tournament.qualifierFor === 'Global Darts Championship'
+            && !tournament.worldYouthVacancy) {
             calendar.splice(index, 1);
         }
     }
@@ -339,7 +343,7 @@ function syncPdc2026TournamentCalendar(calendar = tournamentDatabase, referenceD
     PDC_2026_CALENDAR_TEMPLATE.forEach(template => {
         if (typeof getCareerEditorTourId === 'function' && getCareerCalendarEditorState().tours.some(tour => tour.id === getCareerEditorTourId(template) && tour.removed)) return;
         if (typeof player !== 'undefined' && Array.isArray(player?.tournamentEditorDeletedKeys)
-            && player.tournamentEditorDeletedKeys.includes(template.name)) return;
+            && player.tournamentEditorDeletedKeys.some(key => key === template.name || key === template.sourceName)) return;
         let tournament = findPdc2026CalendarEntry(calendar, template);
         if (!tournament) {
             const templateTimestamp = referenceTimestamp === null ? null
@@ -358,12 +362,21 @@ function syncPdc2026TournamentCalendar(calendar = tournamentDatabase, referenceD
         }
 
         // Career-editor changes belong to the save, not to the template migration.
-        if (tournament.editorModified === true) return;
+        if (tournament.editorModified === true || tournament.qSchoolStage) return;
+        // The Youth closing weekend must not move a played/active old DT event,
+        // or move a pending legacy event behind the current career date.
+        const loadedActive = Object.prototype.hasOwnProperty.call(options,'activeTournament') ? options.activeTournament
+            : typeof activeTournament !== 'undefined' ? activeTournament : null;
+        const closingDevelopment = template.specialType === 'developmentTour' && template.developmentTourEvent >= 21;
+        const keepClosingDate = closingDevelopment && (tournament.completed
+            || tournament.matchHistory || tournament.historyLogs
+            || loadedActive?.specialType === 'developmentTour' && loadedActive.developmentTourEvent === template.developmentTourEvent
+            || referenceTimestamp !== null && new Date(parsedReferenceDate.getFullYear(),template.month,template.day).getTime() < referenceTimestamp);
 
         // Mod z prawdziwymi nazwami przechowuje bazową nazwę w sourceName.
         // Migracja ma poprawić daty i zasady turnieju, ale nie może cofnąć
         // nazwy wyświetlanej ani zerwać odnośnika kwalifikacji do głównej imprezy.
-        const hasDisplayNameOverride = tournament.sourceName === template.name
+        const hasDisplayNameOverride = tournament.sourceName === (template.sourceName || template.name)
             && tournament.name !== template.name;
         const displayName = hasDisplayNameOverride ? tournament.name : null;
         const linkedMainTournament = template.qualifierFor
@@ -374,13 +387,14 @@ function syncPdc2026TournamentCalendar(calendar = tournamentDatabase, referenceD
             : null);
 
         PDC_2026_CALENDAR_FIELDS.forEach(field => {
+            if(keepClosingDate && (field==='month'||field==='day'))return;
             if (Object.prototype.hasOwnProperty.call(template, field)) tournament[field] = template[field];
             else delete tournament[field];
         });
 
         if (hasDisplayNameOverride) {
             tournament.name = displayName;
-            tournament.sourceName = template.name;
+            tournament.sourceName = template.sourceName || template.name;
         }
         if (template.qualifierFor && displayQualifierFor) {
             tournament.qualifierFor = displayQualifierFor;
@@ -395,3 +409,16 @@ function syncPdc2026TournamentCalendar(calendar = tournamentDatabase, referenceD
 
 // --- BAZA OSIĄGNIĘĆ ---
         
+
+// Non-ranking Youth championship: main stage and a separately scheduled final.
+for (const [name,worldYouthPhase,month,day,city] of [['World Youth Championship','main',9,5,'Wigan'],['World Youth Championship Final','final',10,29,'Minehead']]) {
+    tournamentDatabase.push({name:name.replace("World Youth Championship","Future Stars Championship"),sourceName:name,specialType:'worldYouth',worldYouthPhase,month,day,city,country:'Anglia',format:'legs',minOvr:0,rankingOverride:false});
+}
+
+// Six Women's Series weekends, two independent events each day.
+for(const [camp,month,day,city,country] of [[0,1,7,'Hildesheim','Niemcy'],[1,2,21,'Wigan','Anglia'],[2,4,16,'Leicester','Anglia'],[3,5,20,'Wigan','Anglia'],[4,7,22,'Leicester','Anglia'],[5,9,10,'Wigan','Anglia']]){
+ for(let local=0;local<4;local++){
+  const number=camp*4+local+1,name=`PDC Women's Series ${number}`;
+  tournamentDatabase.push({name:name.replace("PDC Women's Series","Women's Pro Circuit"),sourceName:name,specialType:'womensSeries',womensSeriesEvent:number,month,day:day+Math.floor(local/2),city,country,format:'legs',minOvr:0,rankingOverride:false,womensSeriesCalendarYear:2026});
+ }
+}

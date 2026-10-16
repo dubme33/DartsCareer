@@ -2,6 +2,11 @@
 (function (root) {
     'use strict';
     const scale = 1 / 170;
+    const standardShaftLengths = Object.freeze([28, 35, 41]);
+    const separateShaftLengths = Object.freeze([...standardShaftLengths, 50, 55, 65]);
+    function shaftLengths(flightSystem = 'separate') {
+        return flightSystem === 'separate' ? separateShaftLengths : standardShaftLengths;
+    }
     const profiles = {
         straight: [[0, 1.2], [1, 1.65], [4, 3.05], [6, 3.2], [44, 3.2], [48, 2.65], [50, 2.4]],
         torpedo: [[0, 1.2], [2, 2.1], [8, 3.55], [15, 3.8], [23, 3.7], [37, 3.1], [47, 2.5], [50, 2.4]],
@@ -86,8 +91,8 @@
             [zone, gripPatterns.has(zones[zone]) ? zones[zone] : a.barrelPattern]));
         const pointLength = ({ 32: 30, 38: 40, 45: 50 })[Number(a.tipLength)] || Number(a.tipLength);
         a.tipLength = [26, 30, 35, 40, 50].includes(pointLength) ? pointLength : 30;
-        a.shaftLength = [28, 35, 41].includes(Number(a.shaftLength)) ? Number(a.shaftLength) : 35;
         if (!['separate', 'integrated-solid', 'integrated-clear', 'integrated-ribbed', 'integrated-frosted'].includes(a.flightSystem)) a.flightSystem = 'separate';
+        a.shaftLength = shaftLengths(a.flightSystem).includes(Number(a.shaftLength)) ? Number(a.shaftLength) : 35;
         if (!validFlightArtwork(a.flightArtwork)) a.flightArtwork = null;
         if (a.flightSystem !== 'separate') a.shaftColor = a.flightColor = a.integratedColor;
         return a;
@@ -528,6 +533,6 @@
         }).catch(error => { libraryPromise = null; throw error; });
         return libraryPromise;
     }
-    root.dartModel = Object.freeze({ normalize, dimensions, radiusAt, cutAt, gripCutAt, profiles, outlines, scale, createFactory, loadThree, studioEnvironment, drawFlight,
+    root.dartModel = Object.freeze({ normalize, dimensions, shaftLengths, radiusAt, cutAt, gripCutAt, profiles, outlines, scale, createFactory, loadThree, studioEnvironment, drawFlight,
         validFlightArtwork, registerFlightArtwork });
 })(typeof window !== 'undefined' ? window : globalThis);

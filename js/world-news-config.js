@@ -9,4 +9,4 @@ const DARTS_NEWS_CONFIG = Object.freeze({ schema: 4, configVersion: 'news-editor
     observationFreshDays: 14, repeatTopicDays: 45, rankingCheckDays: 7,
     coverageMatchLimit: 128, coverageHistoryEvents: 12, articleRouteLimit: 8, relatedLimit: 4,
     categories: ['TOURNAMENT','BREAKING','RANKING','CAREER','FORM','MILESTONE','RECORD',
-        'UPSET','WORLD_CHAMPIONSHIP','RIVALRY','RETIREMENT','PREVIEW'] });
+        'UPSET','WORLD_CHAMPIONSHIP','RIVALRY','RETIREMENT','PREVIEW','WOMENS_SERIES','WOMENS_WORLD_MATCHPLAY'] });

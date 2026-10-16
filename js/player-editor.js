@@ -924,8 +924,7 @@ function savePlayerEditor(event) {
     applyPlayerEditorTraits(candidate, values);
     if (playerEditorPhotoChanged) candidate.photo = playerEditorPendingPhoto || '';
     if (playerEditorWalkonChanged) candidate.walkon = playerEditorPendingWalkon || null;
-    if (typeof applyAiDartEditorToCandidate === 'function'
-        && !(typeof player !== 'undefined' && candidate === player)) applyAiDartEditorToCandidate(candidate);
+    if (typeof applyAiDartEditorToCandidate === 'function') applyAiDartEditorToCandidate(candidate);
     if (typeof enforcePlayerRatingLimits === 'function') enforcePlayerRatingLimits(candidate);
     if (wasCreated) pdcPlayers.push(candidate);
     if (typeof normalizePlayerIds === 'function') normalizePlayerIds(pdcPlayers, typeof player !== 'undefined' ? player : null);

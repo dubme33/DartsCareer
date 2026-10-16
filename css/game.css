@@ -257,6 +257,7 @@
         .spectator-speed-label { color: #bdc3c7; font-size: 13px; font-weight: bold; }
         .spectator-speed-buttons { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
         .spectator-pause-btn,
+        .spectator-highlights-btn,
         .spectator-speed-btn,
         .spectator-exit-btn {
             min-width: 44px;
@@ -274,6 +275,15 @@
         .spectator-pause-btn.paused { border-color: #2ecc71; background: var(--accent-green); }
         .spectator-speed-btn:hover { border-color: var(--accent-green); transform: translateY(-1px); }
         .spectator-speed-btn.active { background: var(--accent-green); border-color: #2ecc71; box-shadow: 0 0 8px rgba(39, 174, 96, 0.45); }
+        .spectator-highlights-btn { border-color: #b78ed8; background: #513166; }
+        .spectator-highlights-btn.active { border-color: #e1b8ff; background: #79469b; }
+        .spectator-highlights-btn:hover { border-color: #e1b8ff; }
+        .career-autoplay-controls { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 10px auto; }
+        .career-autoplay-controls button { padding: 9px 12px; border: 1px solid #b78ed8; border-radius: 6px; background: #513166; color: #fff; font-size: 13px; cursor: pointer; }
+        .career-autoplay-controls button:disabled { opacity: .5; cursor: default; }
+        .spectator-watch-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; }
+        .spectator-watch-actions .btn-sign { background: #8e44ad; margin: 0; min-width: 120px; }
+        .spectator-watch-actions .spectator-watch-highlights { background: #513166; }
         .spectator-exit-btn { border-color: #e57373; background: #7b2530; }
         .spectator-exit-btn:hover { border-color: #ffabab; transform: translateY(-1px); }
         
@@ -1243,11 +1253,15 @@
         .world-cup-mini-away { text-align: left; }
         .world-cup-mini-match strong { color: #ecf0f1; }
         .world-cup-mini-match-watchable { row-gap: 4px; padding: 3px 0; }
+        .world-cup-mini-match > .spectator-watch-actions { grid-column: 1 / -1; justify-self: end; max-width: 100%; }
+        .world-cup-mini-match .spectator-watch-actions .btn-sign { font-size: 11px; }
         .world-cup-mini-match .world-cup-watch-btn { grid-column: 1 / -1; justify-self: end; background: #8e44ad; font-size: 11px; }
         .world-cup-mini-match .world-cup-watch-btn:hover { background: #a569bd; }
         .bracket-match .world-cup-watch-btn { background: #8e44ad; }
         .bracket-match .world-cup-watch-btn:hover { background: #a569bd; }
         .grand-slam-group-match { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; padding: 3px 0; font-size: 11px; color: #bdc3c7; }
+        .grand-slam-group-match .spectator-watch-actions { margin-left: auto; max-width: 100%; }
+        .grand-slam-group-match .spectator-watch-actions .btn-sign { font-size: 11px; }
         .grand-slam-group-match .grand-slam-watch-btn { margin-left: auto; background: #8e44ad; font-size: 11px; }
         .grand-slam-group-match .grand-slam-watch-btn:hover { background: #a569bd; }
         .score-photo.world-cup-flag-photo { object-fit: contain; padding: 14px; box-sizing: border-box; border-color: var(--accent-green); background: #16213e; }

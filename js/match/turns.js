@@ -1,7 +1,7 @@
 function playerThrow() {
             // Kliknięcia mogą już czekać w kolejce zdarzeń, gdy trzecia lotka
             // kończy podejście. Nie pozwalamy im wejść do logiki punktacji.
-            if (!currentMatch || currentMatch.isFinishing || currentMatch.isSpectator || currentMatch.turn !== 'p1'
+            if (!currentMatch || currentMatch.isFinishing || currentMatch.isSpectator || currentMatch.careerAutoplay || currentMatch.turn !== 'p1'
                 || (typeof isMatchBullOffPending === 'function' && isMatchBullOffPending(currentMatch))
                 || currentMatch.dartsThrown >= 3 || currentMatch.isTurnLocked || currentMatch.isDartInFlight
                 || currentMatch.matchIncidents?.pending) return;
@@ -40,12 +40,13 @@ function playerThrow() {
 
         function throwCareerDart(targetSector, targetMultiplier) {
             if (!currentMatch || currentMatch.isFinishing || currentMatch.turn !== 'p1'
+                || (currentMatch.careerAutoplay && currentMatch.spectatorPaused)
                 || (typeof isMatchBullOffPending === 'function' && isMatchBullOffPending(currentMatch))
                 || currentMatch.dartsThrown >= 3 || currentMatch.isTurnLocked || currentMatch.isDartInFlight
                 || currentMatch.matchIncidents?.pending) return false;
             const score = currentMatch.p1Score;
             const aim = { sector: targetSector, mult: targetMultiplier };
-            if (typeof window !== 'undefined') {
+            if (typeof window !== 'undefined' && !currentMatch.spectatorSkipThrow) {
                 window.matchTVDirector?.onAim({ side: 'p1', aim, score, dartNumber: currentMatch.dartsThrown + 1 });
             }
             const throwStats = getCareerDartStats(aim, score);
@@ -56,7 +57,7 @@ function playerThrow() {
         }
 
         function simulateOneVisit() {
-            if (!currentMatch || currentMatch.isFinishing || currentMatch.isSpectator
+            if (!currentMatch || currentMatch.isFinishing || currentMatch.isSpectator || currentMatch.careerAutoplay
                 || (typeof isMatchBullOffPending === 'function' && isMatchBullOffPending(currentMatch))
                 || currentMatch.turn !== 'p1' || currentMatch.dartsThrown >= 3 || currentMatch.isTurnLocked
                 || currentMatch.isDartInFlight || currentMatch.matchIncidents?.pending
@@ -94,11 +95,24 @@ function playerThrow() {
                 currentMatch.pendingImpactAction = aiTurn;
                 return;
             }
-            if (currentMatch.isSpectator && currentMatch.spectatorPaused) return;
+            if ((currentMatch.isSpectator || currentMatch.careerAutoplay) && currentMatch.spectatorPaused) return;
+            const wasSkipping = currentMatch.spectatorSkipThrow === true;
+            currentMatch.spectatorSkipThrow = typeof shouldSkipSpectatorScoring === 'function'
+                && shouldSkipSpectatorScoring(currentMatch);
+            if (wasSkipping && !currentMatch.spectatorSkipThrow) {
+                updateScores(); updateMatchStatsUI(); updateDartDots(); drawDartboard();
+            }
             const isP1 = currentMatch.turn === 'p1';
             if (!isP1 && currentMatch.turn !== 'p2') return;
-            if (!currentMatch.isDoubles && isP1 && !currentMatch.isSpectator) return;
-            if (currentMatch.isDoubles && isP1 && isCareerPlayerThrowing(true)) return;
+            const careerTurn = isP1 && !currentMatch.isSpectator
+                && (!currentMatch.isDoubles || isCareerPlayerThrowing(true));
+            if (careerTurn) {
+                if (!currentMatch.careerAutoplay) return;
+                const aim = getOptimalAim(currentMatch.p1Score, activeTournament?.format === 'DIDO',
+                    3 - currentMatch.dartsThrown, currentMatch.p2Score, player);
+                if (aim) throwCareerDart(aim.sector, aim.mult);
+                return;
+            }
             
             let score = isP1 ? currentMatch.p1Score : currentMatch.p2Score;
             let isDIDO = activeTournament && activeTournament.format === 'DIDO';
@@ -111,7 +125,7 @@ function playerThrow() {
             const opponentScore = isP1 ? currentMatch.p2Score : currentMatch.p1Score;
             let aim = scoringVisit ? getAiScoringAim(score, isDIDO, dartsLeft, scoringVisit, opponentScore, aiPlayer)
                 : getOptimalAim(score, isDIDO, dartsLeft, opponentScore, aiPlayer);
-            if (typeof window !== 'undefined') {
+            if (typeof window !== 'undefined' && !currentMatch.spectatorSkipThrow) {
                 window.matchTVDirector?.onAim({ side: isP1 ? 'p1' : 'p2', aim, score, dartNumber: currentMatch.dartsThrown + 1 });
             }
             

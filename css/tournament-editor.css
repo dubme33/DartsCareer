@@ -65,12 +65,17 @@
 .tournament-editor-fields .te-checkbox { display: flex; align-items: center; gap: 9px; margin-top: 4px; }
 .tournament-editor-fields .te-checkbox input { width: auto; min-width: 18px; height: 18px; }
 .tournament-editor-hint { margin: 12px 0; color: #a9c5d8; font-size: 12px; line-height: 1.45; }
+.te-round-format-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.te-round-format { min-width: 0; margin: 0; padding: 12px; border: 1px solid #3b5a72; border-radius: 8px; }
+.te-round-format legend { padding: 0 5px; color: #8ed7be; font-size: 13px; font-weight: 800; }
+.te-round-format-fields { display: grid; gap: 10px; }
+#te-round-formats [hidden] { display: none !important; }
 .tournament-editor-prizes { margin: 16px 0 0; padding: 15px; border: 1px solid #3b5a72; border-radius: 8px; }
 .tournament-editor-prizes legend { padding: 0 6px; font-weight: 800; }
 .tournament-editor-prizes p { margin: 0 0 13px; color: #adc4d4; font-size: 12px; }
 .tournament-editor-status { min-height: 22px; margin: 14px 0; color: #9feac3; font-size: 13px; }
 .tournament-editor-status.is-error { color: #ffaaa8; }
-.tournament-editor-actions { justify-content: flex-end; }
+.tournament-editor-actions { justify-content: flex-end; flex-wrap: wrap; }
 .tournament-editor-actions button { padding: 10px 17px; }
 .career-calendar-manager { padding: 18px 26px; border-bottom: 1px solid #365269; background: #0e273b; }
 .career-editor-toolbar { display: flex; justify-content: space-between; align-items: center; gap: 16px; }
@@ -84,7 +89,8 @@
 .career-editor-managers label { display: grid; gap: 6px; color: #cbdde9; font-size: 12px; font-weight: 700; margin-bottom: 9px; }
 .career-editor-managers option { padding: 4px; }
 .career-editor-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
-.career-editor-actions button, #te-clear-calendar { padding: 9px 12px; }
+.career-editor-actions button, #te-clear-calendar { padding: 9px 12px; white-space: normal; }
+.career-editor-toolbar > .career-editor-actions { margin-top: 0; flex: 0 1 380px; }
 .career-editor-managers [hidden], #te-round-formats[hidden], .career-tour-ranking-buttons button[hidden] { display: none !important; }
 #te-clear-calendar, .ce-danger { background: #702735 !important; border-color: #a84a59 !important; }
 #ce-status { color: #9feac3; min-height: 18px; }
@@ -98,6 +104,7 @@
     .career-calendar-manager { padding: 16px; }
     .career-editor-managers { grid-template-columns: minmax(0, 1fr); }
     .career-editor-toolbar { align-items: stretch; flex-direction: column; }
+    .career-editor-toolbar > .career-editor-actions { flex-basis: auto; }
 }
 #tournament-editor-delete { margin-right: auto; background: #702735 !important; border-color: #a84a59 !important; }
 #tournament-editor-save { background: #147755 !important; border-color: #28ad78 !important; }
@@ -113,12 +120,17 @@
 .te-route-qualifier { flex: 2 1 180px; }
 .te-route .te-route-places { flex: 0 1 70px; }
 .te-route button { flex: 0 0 34px; padding: 7px; }
-.te-route-country-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); flex: 1 1 100%; gap: 8px; min-width: 0; padding: 0 0 8px; border-bottom: 1px solid #345269; }
-.te-route-country-fields label { display: grid; gap: 5px; min-width: 0; color: #cbdde9; font-size: 12px; font-weight: 700; }
+.te-route-country-fields, .te-route-tour-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); flex: 1 1 100%; gap: 8px; min-width: 0; padding: 0 0 8px; border-bottom: 1px solid #345269; }
+.te-route-country-fields label, .te-route-tour-fields label { display: grid; gap: 5px; min-width: 0; color: #cbdde9; font-size: 12px; font-weight: 700; }
+.te-route-tour-fields { grid-template-columns: minmax(0, 1fr); }
 .te-qualification [hidden] { display: none !important; }
 #te-prizes-panel[hidden] { display: none !important; }
 #te-routes-label { display: block; margin-top: 15px; font-size: 12px; }
 #te-add-route { padding: 8px 12px; }
+.te-native-route label { display: grid; gap: 5px; flex: 1 1 220px; min-width: 0; color: #cbdde9; font-size: 12px; font-weight: 700; }
+.te-native-route label:has(.te-native-places) { flex: 0 1 95px; }
+#te-native-route-panel { border-top: 1px solid #345269; padding-top: 12px; }
+#te-add-native-route { padding: 8px 12px; }
 .te-team-panel { margin-top: 16px; padding: 15px; border: 1px solid #3b5a72; border-radius: 8px; }
 .te-team-panel[hidden], .te-team-panel [hidden], #te-qualification-panel[hidden] { display: none !important; }
 .te-team-panel h4 { margin: 0 0 5px; }
@@ -167,7 +179,7 @@
     .tournament-editor-form { padding: 16px; }
 }
 @media (max-width: 480px) {
-    .tournament-editor-fields, .tournament-editor-prize-grid, .te-route-country-fields { grid-template-columns: 1fr; }
+    .tournament-editor-fields, .tournament-editor-prize-grid, .te-route-country-fields, .te-round-format-grid { grid-template-columns: 1fr; }
     .tournament-editor-form-heading { flex-wrap: wrap; }
     .tournament-pack-row { align-items: stretch; flex-direction: column; gap: 6px; }
     .tournament-pack-row select { max-width: none; width: 100%; }

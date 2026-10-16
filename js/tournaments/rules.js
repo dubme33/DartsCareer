@@ -1,5 +1,6 @@
 // Wspólna, bezstanowa selekcja dla drabinki i podglądu kwalifikacji.
 function getRankingQualificationGroups(tournament, candidates) {
+    if(typeof isWomensWorldMatchplayTournament==='function'&&isWomensWorldMatchplayTournament(tournament)){const e=freezeWomensWorldMatchplayField(tournament);return [{key:'womensWorldMatchplay',places:8,players:(e?.seeds||[]).map(id=>resolveWomensWorldMatchplayPlayer(id,candidates)).filter(Boolean)}];}
     const name = String(tournament?.name || '').toLowerCase();
     const rank = property => [...candidates].sort((a, b) => (Number(b[property]) || 0) - (Number(a[property]) || 0));
     const group = (key, places, players) => ({ key, places, players });
@@ -77,6 +78,8 @@ const checkoutGuide = {
         }
 
         function getRoundName(r) {
+            if (typeof isWorldYouthTournament === 'function' && isWorldYouthTournament(typeof activeTournament!=='undefined'?activeTournament:null)
+                && getWorldYouthEdition()?.phase==='groups') return worldYouthText('groups');
             if (typeof isUKOpenTournament === 'function'
                 && isUKOpenTournament(typeof activeTournament !== 'undefined' ? activeTournament : null)) {
                 const ukOpenName = typeof getUKOpenRoundName === 'function' ? getUKOpenRoundName(r) : '';
@@ -99,6 +102,9 @@ const checkoutGuide = {
         }
 
         function getTournamentMatchFormat(tournament, round) {
+            if(typeof isWomensWorldMatchplayTournament==='function'&&isWomensWorldMatchplayTournament(tournament))return {type:'legs',legsToWin:Number(round)===2?6:5,winByTwo:false};
+            if (typeof isWomensSeriesTournament === 'function' && isWomensSeriesTournament(tournament)) return {type:'legs',legsToWin:Number(round)>=16?4:5};
+            if (typeof isWorldYouthTournament === 'function' && isWorldYouthTournament(tournament)) return {type:'legs',legsToWin:getWorldYouthEdition()?.phase==='groups'?5:6};
             const roundFormat = tournament?.editorMatchFormat?.type === 'rounds' ? tournament.editorMatchFormat.rounds?.[round] : null;
             if (roundFormat) return { ...roundFormat };
             if (tournament?.editorMatchFormat?.type === 'legs') {
@@ -112,6 +118,7 @@ const checkoutGuide = {
                 return { type: 'legs', legsToWin: 6 };
             }
             const name = tournament ? (tournament.sourceName || tournament.name) : "";
+            if (typeof isWomensSeriesTournament === 'function' && isWomensSeriesTournament(tournament)) return {type:'legs',legsToWin:Number(round)>=16?4:5};
 
             if (typeof isCrownMastersTournament === 'function'
                 && (isCrownMastersTournament(tournament) || isCrownMastersQualifierTournament(tournament))) {
@@ -124,7 +131,7 @@ const checkoutGuide = {
                 return { type: 'legs', legsToWin: 5 };
             }
             if (typeof isPdcQSchoolTournament === 'function' && isPdcQSchoolTournament(tournament)) {
-                return { type: 'legs', legsToWin: 6 };
+                return { type: 'legs', legsToWin: tournament.qSchoolStage === 'first' ? 5 : 6 };
             }
             if (typeof isPdcTourCardQualifierTournament === 'function' && isPdcTourCardQualifierTournament(tournament)) {
                 return { type: 'legs', legsToWin: 6 };

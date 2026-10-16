@@ -1,5 +1,7 @@
 const AI_DART_EDITOR_TEXT = {
     pl: { title: 'Lotki zawodnika AI', hint: 'Ustaw wygląd lotek. Zmiany zapiszesz przyciskiem „Zapisz zmiany” poniżej; nie wpływają na celność.',
+        entryAngle: 'Kąt wbicia lotek', entryAngleHint: '0°: poziomo. Wartości ujemne opuszczają tył lotki, dodatnie go unoszą. Zatwierdź przyciskiem „Zapisz zmiany”.',
+        entryAngleReset: 'Przywróć domyślny kąt', shaftLengthsHint: 'Długości 50, 55 i 65 mm są dostępne przy systemie „Osobny shaft i piórko”.',
         barrel: 'Barrel i grip', point: 'Grot', shaft: 'Shaft i system', flights: 'Piórka',
         barrelShape: 'Kształt barrela', barrelPattern: 'Grip bazowy', barrelLength: 'Długość barrela', weightGrams: 'Waga lotki',
         barrelColor: 'Kolor barrela', barrelAccentColor: 'Drugi kolor barrela', barrelAccentStyle: 'Rozmieszczenie koloru',
@@ -13,6 +15,8 @@ const AI_DART_EDITOR_TEXT = {
         artworkReady: 'Grafika jest gotowa. Zapisz zmiany zawodnika.', artworkError: 'Wybierz poprawny obraz PNG, JPG lub WebP do 5 MB.',
         editReady: 'Wygląd jest gotowy. Zapisz zmiany zawodnika.', preview: 'Podgląd lotki zawodnika AI' },
     en: { title: 'AI player darts', hint: 'Set the dart appearance. Use “Save changes” below to keep it; accuracy is unchanged.',
+        entryAngle: 'Dart entry angle', entryAngleHint: '0°: horizontal. Negative values lower the tail; positive values raise it. Confirm with “Save changes”.',
+        entryAngleReset: 'Restore default angle', shaftLengthsHint: 'Lengths of 50, 55 and 65 mm are available with “Separate shaft and flight”.',
         barrel: 'Barrel and grip', point: 'Point', shaft: 'Shaft and system', flights: 'Flights',
         barrelShape: 'Barrel shape', barrelPattern: 'Base grip', barrelLength: 'Barrel length', weightGrams: 'Dart weight',
         barrelColor: 'Barrel colour', barrelAccentColor: 'Barrel accent colour', barrelAccentStyle: 'Colour placement',
@@ -26,6 +30,8 @@ const AI_DART_EDITOR_TEXT = {
         artworkReady: 'Artwork is ready. Save the player changes.', artworkError: 'Choose a valid PNG, JPG or WebP image up to 5 MB.',
         editReady: 'Appearance is ready. Save the player changes.', preview: 'AI player dart preview' },
     de: { title: 'Darts des KI-Spielers', hint: 'Gestalte die Darts. Mit „Änderungen speichern“ unten übernehmen; die Präzision bleibt gleich.',
+        entryAngle: 'Einschlagwinkel der Darts', entryAngleHint: '0°: waagerecht. Negative Werte senken das hintere Ende, positive heben es. Mit „Änderungen speichern“ bestätigen.',
+        entryAngleReset: 'Standardwinkel wiederherstellen', shaftLengthsHint: '50, 55 und 65 mm sind mit „Schaft und Flight getrennt“ verfügbar.',
         barrel: 'Barrel und Grip', point: 'Spitze', shaft: 'Schaft und System', flights: 'Flights',
         barrelShape: 'Barrel-Form', barrelPattern: 'Basis-Grip', barrelLength: 'Barrel-Länge', weightGrams: 'Dartgewicht',
         barrelColor: 'Barrel-Farbe', barrelAccentColor: 'Zweite Barrel-Farbe', barrelAccentStyle: 'Farbverteilung',
@@ -39,6 +45,8 @@ const AI_DART_EDITOR_TEXT = {
         artworkReady: 'Motiv ist bereit. Spieleränderungen speichern.', artworkError: 'Bitte ein gültiges PNG-, JPG- oder WebP-Bild bis 5 MB wählen.',
         editReady: 'Darstellung ist bereit. Spieleränderungen speichern.', preview: 'Vorschau der KI-Darts' },
     nl: { title: 'Darts van AI-speler', hint: 'Pas het uiterlijk aan. Bewaar het met “Wijzigingen opslaan” hieronder; de nauwkeurigheid blijft gelijk.',
+        entryAngle: 'Insteekhoek van de darts', entryAngleHint: '0°: horizontaal. Negatieve waarden laten de achterkant zakken; positieve tillen hem op. Bevestig met “Wijzigingen opslaan”.',
+        entryAngleReset: 'Standaardhoek herstellen', shaftLengthsHint: '50, 55 en 65 mm zijn beschikbaar met “Losse shaft en flight”.',
         barrel: 'Barrel en grip', point: 'Punt', shaft: 'Shaft en systeem', flights: 'Flights',
         barrelShape: 'Barrelvorm', barrelPattern: 'Basisgrip', barrelLength: 'Barrellengte', weightGrams: 'Dartgewicht',
         barrelColor: 'Barrelkleur', barrelAccentColor: 'Tweede barrelkleur', barrelAccentStyle: 'Kleurverdeling',
@@ -65,6 +73,9 @@ let aiDartEditorPending = null;
 let aiDartEditorChanged = false;
 let aiDartEditorReset = false;
 let aiDartEditorGeneration = 0;
+let aiDartEditorEntryAnglePending = 20;
+let aiDartEditorEntryAngleChanged = false;
+let aiDartEditorEntryAngleReset = false;
 
 function trAiDartEditor(key) {
     const lang = typeof currentLang === 'string' && AI_DART_EDITOR_TEXT[currentLang] ? currentLang : 'pl';
@@ -86,6 +97,37 @@ function setAiDartEditorStatus(message = '', error = false) {
     element.textContent = message;
     element.classList.toggle('is-error', error);
 }
+function renderAiDartEntryAngleControl() {
+    const host = document.getElementById('player-editor-dart-entry-angle');
+    if (!host) return;
+    host.innerHTML = `<div class="dart-entry-angle">
+        <label class="dart-dimension" for="player-editor-entry-angle">${aiDartEditorEscape(trAiDartEditor('entryAngle'))}
+            <span class="dart-dimension-input"><input id="player-editor-entry-angle" type="range" min="-10" max="45" step="1"
+                value="${aiDartEditorEntryAnglePending}" aria-describedby="player-editor-entry-angle-hint"
+                oninput="updateDartEntryAngleControl(this)" onchange="changeAiDartEntryAngle(this.value)">
+                <output for="player-editor-entry-angle">${aiDartEditorEntryAnglePending}°</output></span></label>
+        <p id="player-editor-entry-angle-hint">${aiDartEditorEscape(trAiDartEditor('entryAngleHint'))}</p>
+        <div data-entry-angle-preview>${dartEntryAnglePreview(aiDartEditorEntryAnglePending)}</div>
+        <button type="button" class="dart-preview-reset" onclick="resetAiDartEntryAngle()">${aiDartEditorEscape(trAiDartEditor('entryAngleReset'))}</button>
+    </div>`;
+}
+function changeAiDartEntryAngle(value) {
+    const angle = Number(value);
+    if (!Number.isInteger(angle) || angle < -10 || angle > 45) return false;
+    aiDartEditorEntryAnglePending = angle;
+    aiDartEditorEntryAngleChanged = true;
+    aiDartEditorEntryAngleReset = false;
+    if (typeof setPlayerEditorStatus === 'function') setPlayerEditorStatus(trAiDartEditor('editReady'));
+    return true;
+}
+function resetAiDartEntryAngle() {
+    const candidate = getAiDartEditorCandidate();
+    aiDartEditorEntryAnglePending = getDartEntryAngleForPlayer({ ...candidate, dartEntryAngle: undefined }) ?? 20;
+    aiDartEditorEntryAngleChanged = true;
+    aiDartEditorEntryAngleReset = true;
+    renderAiDartEntryAngleControl();
+    if (typeof setPlayerEditorStatus === 'function') setPlayerEditorStatus(trAiDartEditor('editReady'));
+}
 function aiDartFieldValue(field) {
     if (['front', 'middle', 'rear'].includes(field)) return aiDartEditorPending.gripZones[field];
     return aiDartEditorPending[field];
@@ -104,7 +146,8 @@ function aiDartEditorControl(field) {
                 onchange="changeAiDartSetting('${field}',this.value)"></label>`;
     }
     const category = ['front', 'middle', 'rear'].includes(field) ? 'barrelPattern' : field;
-    const items = dartCustomizationCatalogue[category];
+    const items = dartCustomizationCatalogue[category].filter(item => category !== 'shaftLength'
+        || dartModel.shaftLengths(aiDartEditorPending.flightSystem).includes(Number(item.id)));
     const langIndex = { pl: 0, en: 1, de: 2, nl: 3 }[typeof currentLang === 'string' ? currentLang : 'pl'] ?? 0;
     return `<label data-ai-dart-field="${field}"><span>${label}</span><select onchange="changeAiDartSetting('${field}',this.value)">
         ${items.map(item => `<option value="${item.id}" ${String(value) === item.id ? 'selected' : ''}>${aiDartEditorEscape(item.names[langIndex] || item.names[0])}</option>`).join('')}
@@ -115,7 +158,8 @@ function renderAiDartEditorControls() {
     if (!host || !aiDartEditorPending) return;
     host.innerHTML = AI_DART_EDITOR_GROUPS.map(group => `<div class="ai-dart-control-group">
         <h5>${aiDartEditorEscape(trAiDartEditor(group.title))}</h5><div class="ai-dart-control-grid">
-        ${group.fields.map(aiDartEditorControl).join('')}</div></div>`).join('');
+        ${group.fields.map(aiDartEditorControl).join('')}</div>${group.title === 'shaft'
+            ? `<p class="dart-integrated-hint">${aiDartEditorEscape(trAiDartEditor('shaftLengthsHint'))}</p>` : ''}</div>`).join('');
     const integrated = aiDartEditorPending.flightSystem !== 'separate';
     for (const field of ['shaftStyle', 'shaftColor', 'integratedColor']) {
         const label = host.querySelector(`[data-ai-dart-field="${field}"]`);
@@ -141,6 +185,10 @@ function populateAiDartEditor(candidate) {
     aiDartEditorGeneration++;
     const career = candidate && typeof player !== 'undefined' && (candidate === player
         || Boolean(candidate.id && player?.id && candidate.id === player.id));
+    aiDartEditorEntryAnglePending = getDartEntryAngleForPlayer(getAiDartEditorCandidate(candidate)) ?? 20;
+    aiDartEditorEntryAngleChanged = false;
+    aiDartEditorEntryAngleReset = false;
+    renderAiDartEntryAngleControl();
     section.hidden = !!career;
     if (career) { aiDartEditorPending = null; return; }
     aiDartEditorPending = getAiDartAppearanceForPlayer(getAiDartEditorCandidate(candidate));
@@ -223,10 +271,16 @@ function removeAiDartArtwork() {
     return true;
 }
 function applyAiDartEditorToCandidate(candidate) {
-    if (!candidate || !aiDartEditorChanged) return false;
-    if (aiDartEditorReset) delete candidate.aiDartAppearance;
-    else candidate.aiDartAppearance = normalizeAiDartAppearance(aiDartEditorPending);
-    return true;
+    if (!candidate) return false;
+    if (aiDartEditorEntryAngleChanged) {
+        if (aiDartEditorEntryAngleReset) delete candidate.dartEntryAngle;
+        else candidate.dartEntryAngle = aiDartEditorEntryAnglePending;
+    }
+    if (aiDartEditorPending && aiDartEditorChanged) {
+        if (aiDartEditorReset) delete candidate.aiDartAppearance;
+        else candidate.aiDartAppearance = normalizeAiDartAppearance(aiDartEditorPending);
+    }
+    return aiDartEditorEntryAngleChanged || Boolean(aiDartEditorPending && aiDartEditorChanged);
 }
 function refreshAiDartEditorTranslations() {
     if (typeof document === 'undefined' || !document.getElementById('ai-dart-editor-title')) return;
@@ -234,6 +288,7 @@ function refreshAiDartEditorTranslations() {
         'ai-dart-editor-artwork-label': 'artwork', 'ai-dart-editor-artwork-remove': 'removeArtwork',
         'ai-dart-editor-reset': 'reset', 'ai-dart-editor-reset-view': 'resetView' };
     for (const [id, key] of Object.entries(ids)) document.getElementById(id).textContent = trAiDartEditor(key);
+    renderAiDartEntryAngleControl();
     if (aiDartEditorPending) { renderAiDartEditorControls(); refreshAiDartEditorPreview(); }
 }
 if (typeof document !== 'undefined') refreshAiDartEditorTranslations();

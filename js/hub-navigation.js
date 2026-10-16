@@ -164,7 +164,8 @@ function isHubTournamentRelevant(tournament) {
     const qSchool = typeof isPdcQSchoolTournament === 'function'
         ? isPdcQSchoolTournament(tournament)
         : tournament.specialType === 'pdcQSchool';
-    if (qSchool && player.hasTourCard === true) return false;
+    if (qSchool && (typeof isCareerPlayerEligibleForPdcQSchoolDay === 'function'
+        ? !isCareerPlayerEligibleForPdcQSchoolDay(tournament) : player.hasTourCard === true)) return false;
 
     const cardQualifier = typeof isPdcTourCardQualifierTournament === 'function'
         ? isPdcTourCardQualifierTournament(tournament)

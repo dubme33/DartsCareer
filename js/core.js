@@ -12,7 +12,7 @@
                 "Niemcy": "de", "Norwegia": "no", "Polska": "pl", "Portugalia": "pt", "Rosja": "ru",
                 "Rumunia": "ro", "San Marino": "sm", "Serbia": "rs", "Słowacja": "sk", 
                 "Słowenia": "si", "Szkocja": "gb-sct", "Szwajcaria": "ch", "Szwecja": "se", 
-                "Walia": "gb-wls", "Watykan": "va", "Węgry": "hu", "Włochy": "it", "Ukraina": "ua"
+                "Walia": "gb-wls", "Wielka Brytania": "gb", "Watykan": "va", "Węgry": "hu", "Włochy": "it", "Ukraina": "ua"
             },
             "Ameryka Północna": {
                 "Antigua i Barbuda": "ag", "Bahamy": "bs", "Barbados": "bb", "Belize": "bz", 
@@ -123,8 +123,9 @@
         }
 
         function getPlayerAge(candidate, referenceDate = currentDate) {
-            const birthYear = candidate?.birthYear;
             const date = referenceDate instanceof Date ? referenceDate : new Date(referenceDate);
+            const birthYear = (typeof getWomensAgeBirthContext === 'function'
+                ? getWomensAgeBirthContext(candidate, date) : candidate)?.birthYear;
 
             if (!Number.isInteger(birthYear) || Number.isNaN(date.getTime())) return null;
             return date.getFullYear() - birthYear;
@@ -200,14 +201,24 @@
             'adam leeke': 'adam leak'
         });
 
+        // Cache strings, not player objects: edits and save imports remain visible immediately.
+        const playerIdentityPartCache = new Map();
         function normalizePlayerIdentityPart(value) {
-            return String(value || '')
+            const text = String(value || '');
+            const cached = playerIdentityPartCache.get(text);
+            if (cached !== undefined) return cached;
+            const normalized = text
                 .trim()
                 .normalize('NFD')
                 .replace(/[\u0300-\u036f]/g, '')
                 .replace(/ł/gi, 'l')
                 .replace(/\s+/g, ' ')
                 .toLocaleLowerCase('pl');
+            if (text.length <= 256) {
+                if (playerIdentityPartCache.size >= 8192) playerIdentityPartCache.delete(playerIdentityPartCache.keys().next().value);
+                playerIdentityPartCache.set(text, normalized);
+            }
+            return normalized;
         }
 
         function getCanonicalPlayerIdentityKey(candidate) {

@@ -260,6 +260,8 @@ function finishFastForwardedTournament({ announceWinner = false } = {}) {
         grandSlamState.phase = 'completed';
     }
     recordSeasonTournamentResult(winner, completedTournament, { round: 2, prizeMoney: winnerPrize, won: true });
+    if (typeof completeWomensSeriesTournament === 'function') completeWomensSeriesTournament(completedTournament,winner);
+                if(typeof completeWomensWorldMatchplayTournament==='function')completeWomensWorldMatchplayTournament(completedTournament,winner);
     awardGlobalLeaguePlayoffPlacementPrizes(completedTournament);
 
     if (announceWinner) {
@@ -283,6 +285,8 @@ function finishFastForwardedTournament({ announceWinner = false } = {}) {
 }
 
 function finishFastForwardedSpecialTournament(outcome) {
+    if(outcome==='calendarSession')return concludeCalendarSessionPause();
+    if (outcome === 'worldYouth') { concludeWorldYouthEvent(); return true; }
     if (outcome === 'emptyEditorTournament') return closeEmptyEditorTournament({ preservePlayedRounds: true });
     const bracketModal = document.getElementById('bracket-modal');
     if (bracketModal) bracketModal.style.display = 'none';
@@ -330,10 +334,49 @@ async function simulateRemainingTournament(options = {}) {
             && options?.withdrawCareerPlayer !== true)) return false;
 
     return runTournamentSimulation(async () => {
+        // Before any PC match is played a CT reserve can take the withdrawn
+        // player's existing slot. Once play starts, preserve the walkover rules.
+        const unplayedPlayersChampionship = options.withdrawCareerPlayer
+            && typeof isPlayersChampionshipFloorTournament === 'function'
+            && isPlayersChampionshipFloorTournament(activeTournament)
+            && tournamentRound === 128 && tournamentBracket.length === 128
+            && !hasTournamentMatchHistory(tournamentMatchHistory)
+            && !hasTournamentMatchHistory(activeTournament?.matchHistory)
+            && !String(lastTournamentResults || '').trim()
+            && !String(activeTournament?.historyLogs || '').trim()
+            && !Object.keys(activeTournament?.spectatedMatchResults || {}).length;
+        if (unplayedPlayersChampionship) {
+            const withdrawal = replaceCareerPlayerWithPlayersChampionshipReserve(activeTournament, tournamentBracket);
+            if (withdrawal) {
+                tournamentBracket = withdrawal.participants;
+                if (withdrawal.replacement) {
+                    const previousForm = activeTournament.simulationForm;
+                    prepareTournamentSimulationForm([withdrawal.replacement]);
+                    activeTournament.simulationForm = { ...previousForm, ...activeTournament.simulationForm };
+                }
+            }
+        }
+        if (options.withdrawCareerPlayer && activeTournament?.qSchoolStage === 'final') {
+            const edition = getPdcQSchoolEdition(activeTournament.qSchoolYear), zone = activeTournament.qSchoolZone;
+            const region = edition[zone], state = region.finalDays[activeTournament.qSchoolDay];
+            const key = getPdcTourCardPlayerKey(player);
+            // Skipping an unopened draw means absence, not a played 0-6 defeat.
+            // Withdrawal after an actual match remains participation that day.
+            const played = Object.values(state?.matches || {}).some(match => match.p1 === key || match.p2 === key);
+            if (!played && state?.participants.includes(key)) {
+                const row = region.finalRanking[key];
+                if (row) row.days = row.days.filter(day => day !== activeTournament.qSchoolDay);
+                state.attendance = (state.attendance || []).filter(id => id !== key);
+                disqualifyPdcQSchoolRanking(player, edition, zone, 'missed-final-day', activeTournament.qSchoolDay);
+                tournamentBracket = tournamentBracket.map(candidate => isCurrentPlayer(candidate)
+                    ? { name: '(BYE)', isBye: true, country: 'Brak', ovr: 0, overall: 0 } : candidate);
+            }
+        }
         const isSecondaryTour = (typeof isChallengeTourTournament === 'function'
             && isChallengeTourTournament(activeTournament))
             || (typeof isDevelopmentTourTournament === 'function'
-                && isDevelopmentTourTournament(activeTournament));
+                && isDevelopmentTourTournament(activeTournament))
+            || (typeof isWomensSeriesTournament === 'function'&&isWomensSeriesTournament(activeTournament));
         if (options.withdrawCareerPlayer && isSecondaryTour) {
             // Wycofanie następuje po utworzeniu punktu przywracania. W ten sposób
             // odpuszczający gracz nie otrzymuje nagrody za przegraną walkowerem.
@@ -351,6 +394,8 @@ async function simulateRemainingTournament(options = {}) {
 }
 
 function finishHeadlessTournament(specialTournamentOutcome) {
+    if(specialTournamentOutcome==='calendarSession')return concludeCalendarSessionPause();
+    if (specialTournamentOutcome === 'worldYouth') { concludeWorldYouthEvent(); return true; }
     if (specialTournamentOutcome === 'emptyEditorTournament') {
         closeEmptyEditorTournament({ preservePlayedRounds: true });
         return;
@@ -390,6 +435,8 @@ function finishHeadlessTournament(specialTournamentOutcome) {
     awardPrizeMoney(winner, winPrize, activeTournament.name);
     if (typeof completeWorldMastersTournament === 'function') completeWorldMastersTournament(activeTournament, winner);
     recordSeasonTournamentResult(winner, activeTournament, { round: 2, prizeMoney: winPrize, won: true });
+    if (typeof completeWomensSeriesTournament === 'function') completeWomensSeriesTournament(activeTournament,winner);
+                if(typeof completeWomensWorldMatchplayTournament==='function')completeWomensWorldMatchplayTournament(activeTournament,winner);
 
     // Wypłaty za miejsca 5-8 po finałach Play-offs
     if (activeTournament.name.includes("Play-offs")) {

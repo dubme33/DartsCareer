@@ -155,6 +155,20 @@
             document.getElementById(`match-post-stats-label-${key}`).textContent = label;
         }
         const data = match.stats || {};
+        const openingRow = document.getElementById('match-post-stats-double-in');
+        if (openingRow) {
+            const opening = typeof isMatchDoubleIn === 'function' && isMatchDoubleIn(match);
+            openingRow.hidden = !opening;
+            openingRow.parentElement?.classList.toggle('has-double-in', opening);
+            if (opening) {
+                document.getElementById('match-post-stats-label-double-in').textContent = getMatchDoubleInStatsCopy().label;
+                for (const side of ['p1', 'p2']) {
+                    const node = document.getElementById(`match-post-stats-${side}-double-in`);
+                    node.textContent = getMatchDoubleInPercentage(match, side);
+                    node.title = getMatchDoubleInStatsText(match, side);
+                }
+            }
+        }
         for (const side of ['p1', 'p2']) {
             const darts = statNumber(data[`${side}TotalDarts`]);
             const score = Number(match[`${side}Score`]);

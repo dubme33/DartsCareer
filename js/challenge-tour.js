@@ -72,6 +72,9 @@ function getChallengeTourSearchableName(tournamentOrName) {
 }
 
 function isChallengeTourTournament(tournamentOrName = (typeof activeTournament !== 'undefined' ? activeTournament : null)) {
+    if(typeof isWomensWorldMatchplayTournament==='function'&&isWomensWorldMatchplayTournament(tournamentOrName))return false;
+    if (typeof isWomensSeriesTournament === 'function' && isWomensSeriesTournament(tournamentOrName)) return false;
+    if (typeof isWorldYouthTournament === 'function' && isWorldYouthTournament(tournamentOrName)) return false;
     if (tournamentOrName && typeof tournamentOrName === 'object'
         && tournamentOrName.specialType === CHALLENGE_TOUR_TYPE) return true;
     const name = getChallengeTourSearchableName(tournamentOrName);
@@ -96,6 +99,7 @@ function getChallengeTourEligiblePlayers(candidates) {
     const unique = new Map();
     source.forEach(candidate => {
         if (!candidate || candidate.isBye || candidate.hasTourCard === true || !candidate.name) return;
+        if (typeof isPdcParticipationRestricted === 'function' && isPdcParticipationRestricted(candidate)) return;
         if (typeof isRetiredPlayer === 'function' && isRetiredPlayer(candidate)) return;
         const key = candidate.id || `${candidate.sourceName || candidate.name}|${candidate.country || ''}`;
         if (!unique.has(key)) unique.set(key, candidate);

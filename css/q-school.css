@@ -1,0 +1,13 @@
+.qschool-overview { max-width: 1000px; margin: 0 auto; text-align: left; }
+.qschool-overview select { padding: 8px; margin: 6px; max-width: 100%; }
+.qschool-zones, .qschool-days { display: flex; gap: 12px; flex-wrap: wrap; margin: 14px 0; }
+.qschool-zones .action-btn { flex: 1; }
+.qschool-days > div { flex: 1 1 140px; min-width: 0; border: 1px solid var(--border-color); padding: 12px; border-radius: 8px; }
+.qschool-days ul { max-height: 160px; overflow-y: auto; padding-left: 20px; }
+.qschool-overview details { border-top: 1px solid var(--border-color); padding: 14px 0; }
+.qschool-overview summary { cursor: pointer; font-weight: bold; }
+.qschool-table-wrap { overflow-x: auto; max-height: 350px; }
+.qschool-table { border-collapse: collapse; width: 100%; font-size: 13px; }
+.qschool-table th, .qschool-table td { padding: 9px; border-bottom: 1px solid var(--border-color); text-align: left; }
+.qschool-table th { position: sticky; top: 0; background: var(--primary-color, #243746); }
+.qschool-note { color: var(--text-muted, #aab7c4); font-size: 13px; }

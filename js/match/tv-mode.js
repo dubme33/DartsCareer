@@ -7,6 +7,9 @@
     const aiSpeedSelect = document.getElementById('match-tv-ai-speed');
     if (!screen || !button) return;
     const toolbar = screen.querySelector('.board-view-controls');
+    const playbackControls = ['career-autoplay-controls', 'spectator-speed-controls']
+        .map(id => document.getElementById(id)).filter(Boolean)
+        .map(node => ({ node, parent: node.parentNode, next: node.nextSibling }));
     const actions = screen.querySelector('.match-actions');
     const scoreboard = document.getElementById('broadcast-scoreboard');
     const statCard = document.getElementById('tv-stat-card');
@@ -42,18 +45,20 @@
     }
     function aiThrowDelay(normalDelay) {
         const delay = Math.max(0, Number(normalDelay) || 0);
-        if (!active() || currentMatch?.isSpectator) return delay;
+        if (!active() || (currentMatch?.isSpectator || currentMatch?.careerAutoplay)) return delay;
         return Math.max(25, Math.round(delay / aiSpeed));
     }
     function layoutSidebar() {
         layoutFrame = null;
         // Portrait phones have their own stacked layout. In the side rail,
         // measure real heights: translations, zoom and stat rows can all grow.
-        if (!active() || innerWidth <= 600 || !toolbar || !actions || !scoreboard || !statCard) return;
+        if (!active() || !toolbar) return;
         const setSize = (name, value) => {
             const size = `${Math.max(0, value).toFixed(2)}px`;
             if (screen.style.getPropertyValue(name) !== size) screen.style.setProperty(name, size);
         };
+        setSize('--tv-toolbar-bottom', toolbar.getBoundingClientRect().bottom + 6);
+        if (innerWidth <= 600 || !actions || !scoreboard || !statCard) return;
         const gap = innerHeight <= 480 ? 4 : innerHeight <= 680 ? 8 : 12;
         const top = toolbar.getBoundingClientRect().bottom + gap;
         const scoreTop = scoreboard.getBoundingClientRect().top;
@@ -76,10 +81,17 @@
     }
     function refresh() {
         const text = labels(), enabled = active();
+        // Reuse the same controls and handlers; return them to their normal
+        // positions when leaving TV, including after the match ends.
+        if (toolbar) playbackControls.forEach(({ node, parent, next }) => {
+            if (enabled && node.parentNode !== toolbar) toolbar.appendChild(node);
+            else if (!enabled && node.parentNode === toolbar && parent)
+                parent.insertBefore(node, next?.parentNode === parent ? next : null);
+        });
         button.textContent = enabled ? `✕ ${text.close}` : `📺 ${text.open}`;
         button.setAttribute('aria-pressed', String(enabled));
         button.setAttribute('aria-label', enabled ? text.close : text.label);
-        const spectator = Boolean(enabled && typeof currentMatch !== 'undefined' && currentMatch?.isSpectator);
+        const spectator = Boolean(enabled && typeof currentMatch !== 'undefined' && (currentMatch?.isSpectator || currentMatch?.careerAutoplay));
         screen.classList.toggle('tv-spectator', spectator);
         if (aiSpeedControl) {
             aiSpeedControl.hidden = !enabled || spectator;

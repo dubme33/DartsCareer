@@ -302,6 +302,8 @@ function showRoundResults() {
         }
 
         function showCompletedTournamentResults(tournament) {
+            if(typeof isWomensWorldMatchplayTournament==='function'&&isWomensWorldMatchplayTournament(tournament)&&typeof showWomensWorldMatchplay==='function')return showWomensWorldMatchplay('results',tournament.womensWorldMatchplayYear);
+            if (typeof isWorldYouthTournament === 'function' && isWorldYouthTournament(tournament)) return showWorldYouth('overview',tournament.worldYouthYear || currentDate.getFullYear());
             if (typeof updateTournamentEntrySimulationButton === 'function') updateTournamentEntrySimulationButton('t-btn-sim-to-match-results', false);
             const historyHtml = getCompletedTournamentHistoryHtml(tournament);
             if (!historyHtml) return false;
@@ -317,6 +319,7 @@ function showRoundResults() {
         }
 
         function proceedToNextRound() {
+            if(!activeTournament&&typeof concludeCalendarSessionPause==='function')return concludeCalendarSessionPause();
             document.getElementById('results-modal').style.display = 'none';
             showBracket();
         }

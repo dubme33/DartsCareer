@@ -12,7 +12,8 @@ function isTraitQualifier(tournament) {
 }
 
 function getMentalAgeBonus(candidate, date = currentDate) {
-    const age = Number.isInteger(candidate?.birthYear) ? date.getFullYear() - candidate.birthYear : 35;
+    const context=typeof getWomensAgeBirthContext==='function'?getWomensAgeBirthContext(candidate,date):candidate;
+    const age = Number.isInteger(context?.birthYear) ? date.getFullYear() - context.birthYear : 35;
     return Math.max(0, Math.min(20, Math.floor((age - 18) / 2)));
 }
 
@@ -50,7 +51,8 @@ function getInitialMentalTrait(candidate) {
 }
 
 function getTraitAgeBaseline(candidate, date = currentDate) {
-    const age = Number.isInteger(candidate?.birthYear) ? date.getFullYear() - candidate.birthYear : 35;
+    const context=typeof getWomensAgeBirthContext==='function'?getWomensAgeBirthContext(candidate,date):candidate;
+    const age = Number.isInteger(context?.birthYear) ? date.getFullYear() - context.birthYear : 35;
     return Math.max(20, 82 - Math.max(0, Math.min(age, 35) - 25) - Math.max(0, age - 35) * 2);
 }
 
@@ -73,13 +75,21 @@ function getPlayerTrait(candidate, type) {
 
 function initializePlayerTraits(candidate, reset = false) {
     if (!candidate || candidate.isBye) return null;
-    const previous = !reset && candidate.traits && typeof candidate.traits === 'object' ? candidate.traits : {};
+    let previous = !reset && candidate.traits && typeof candidate.traits === 'object' ? candidate.traits : {};
     const baseline = getTraitAgeBaseline(candidate);
+    const mentalAgeBonus = getMentalAgeBonus(candidate);
+    const calibration=typeof womensAgeCalibrationApplies==='function'&&womensAgeCalibrationApplies(candidate)
+        ? candidate.womensAgeCalibration : null;
+    const defaults=typeof getWomensAgeInitialTraitDefaults==='function'?getWomensAgeInitialTraitDefaults(candidate):null;
+    if(calibration&&!calibration.traitsRebased&&currentDate.getFullYear()>=calibration.effectiveYear){
+        // Rebase age bookkeeping once; retain actual skills and earned XP.
+        previous={...previous,ageBaseline:baseline,mentalAgeBonus};
+        calibration.traitsRebased=true;
+    }
     const validNumber = (value, fallback) => typeof value === 'number' && Number.isFinite(value) ? value : fallback;
     const endurance = Math.round(Math.max(0, Math.min(100,
-        validNumber(previous.endurance, baseline) + baseline - validNumber(previous.ageBaseline, baseline))));
+        validNumber(previous.endurance, defaults?.endurance ?? baseline) + baseline - validNumber(previous.ageBaseline, baseline))));
     const consistency = Math.round(Math.max(0, Math.min(100, validNumber(previous.consistency, getInitialConsistency(candidate)))));
-    const mentalAgeBonus = getMentalAgeBonus(candidate);
     const oldAgeBonus = Math.max(0, Math.min(20, validNumber(previous.mentalAgeBonus, mentalAgeBonus)));
     const savedTitleBonus = Math.max(0, Math.min(20, validNumber(previous.mentalTitleBonus, 0)));
     // Experience already earned is not lost if an older save/mod lacks part of its title history.
@@ -89,7 +99,7 @@ function initializePlayerTraits(candidate, reset = false) {
     const mental = Math.round(Math.max(0, Math.min(100,
         hasPreviousMental
             ? previous.mental + mentalAgeBonus - oldAgeBonus + mentalTitleBonus - oldTitleBonus
-            : 45 + mentalAgeBonus + mentalTitleBonus)));
+            : 45 + (defaults?.mentalAgeBonus ?? mentalAgeBonus) + mentalTitleBonus)));
     const xp = (type, value) => value >= 100 ? 0 : Math.max(0, Math.min(99.9, validNumber(previous[`${type}XP`], 0)));
     const weekly = previous.matchXP || {};
     candidate.traits = {

@@ -90,18 +90,24 @@ function getWorldMastersSeasonYear() {
 }
 
 function isWorldMastersTournament(tournament = activeTournament) {
+    if(typeof isWomensWorldMatchplayTournament==='function'&&isWomensWorldMatchplayTournament(tournament))return false;
+    if(typeof isWomensSeriesTournament==='function'&&isWomensSeriesTournament(tournament))return false;
     if (typeof hasCareerTourEntryOverride === 'function' && hasCareerTourEntryOverride(tournament)) return false;
     if (typeof hasTournamentEditorQualification === 'function' && hasTournamentEditorQualification(tournament)) return false;
     return Boolean(tournament && tournament.specialType === 'worldMasters');
 }
 
 function isWorldMastersFinalsTournament(tournament = activeTournament) {
+    if(typeof isWomensWorldMatchplayTournament==='function'&&isWomensWorldMatchplayTournament(tournament))return false;
+    if(typeof isWomensSeriesTournament==='function'&&isWomensSeriesTournament(tournament))return false;
     if (typeof hasCareerTourEntryOverride === 'function' && hasCareerTourEntryOverride(tournament)) return false;
     if (typeof hasTournamentEditorQualification === 'function' && hasTournamentEditorQualification(tournament)) return false;
     return Boolean(tournament && tournament.specialType === 'worldMastersFinals');
 }
 
 function isWorldMastersFinalsQualifierTournament(tournament = activeTournament) {
+    if(typeof isWomensWorldMatchplayTournament==='function'&&isWomensWorldMatchplayTournament(tournament))return false;
+    if(typeof isWomensSeriesTournament==='function'&&isWomensSeriesTournament(tournament))return false;
     if (typeof hasCareerTourEntryOverride === 'function' && hasCareerTourEntryOverride(tournament)) return false;
     if (typeof hasTournamentEditorQualification === 'function' && hasTournamentEditorQualification(tournament)) return false;
     return Boolean(tournament && tournament.specialType === 'worldMastersFinalsQualifier');

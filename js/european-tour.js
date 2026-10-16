@@ -30,6 +30,8 @@ function getTournamentSourceName(tournamentOrName) {
 }
 
 function isEuropeanTourTournament(tournamentOrName) {
+    if (typeof isWomensSeriesTournament === 'function' && isWomensSeriesTournament(tournamentOrName)) return false;
+    if (typeof isWorldYouthTournament === 'function' && isWorldYouthTournament(tournamentOrName)) return false;
     const name = getEuropeanTourTournamentName(tournamentOrName).toLocaleLowerCase();
     const sourceName = getTournamentSourceName(tournamentOrName).toLocaleLowerCase();
     return sourceName.includes('european tour') || sourceName.includes('continental tour') || sourceName.includes('(et')
@@ -40,6 +42,8 @@ function isEuropeanTourTournament(tournamentOrName) {
 }
 
 function isPlayersChampionshipTournament(tournamentOrName) {
+    if (typeof isWomensSeriesTournament === 'function' && isWomensSeriesTournament(tournamentOrName)) return false;
+    if (typeof isWorldYouthTournament === 'function' && isWorldYouthTournament(tournamentOrName)) return false;
     const name = getTournamentSourceName(tournamentOrName).toLocaleLowerCase();
     const isPlayersChampionship = name.includes('players championship') || name.includes('pro players cup');
     return isPlayersChampionship && !name.includes('final');

@@ -1,0 +1,10 @@
+.world-youth-content { box-sizing:border-box; width:min(960px,96vw); max-width:96vw; min-width:0; max-height:92vh; overflow:auto; padding:18px; text-align:left; }
+.world-youth-content button { padding:8px 10px; border:1px solid var(--border-color); border-radius:5px; background:var(--panel-bg); color:var(--text-color,#ecf0f1); cursor:pointer; }
+.world-youth-content nav,.world-youth-content footer { display:flex; flex-wrap:wrap; gap:8px; margin:12px 0; }
+.world-youth-content nav button[aria-pressed="true"] { outline:2px solid var(--accent-green); }
+.world-youth-content section { padding:8px 0; border-bottom:1px solid var(--border-color); }
+.wyc-table { overflow-x:auto; }
+.wyc-table table { width:100%; border-collapse:collapse; font-variant-numeric:tabular-nums; }
+.wyc-table th,.wyc-table td { text-align:right; padding:5px 8px; white-space:nowrap; }
+.wyc-table th:first-child,.wyc-table td:first-child { text-align:left; }
+@media(max-width:600px) { .world-youth-content { padding:12px; } .wyc-table { font-size:12px; } }

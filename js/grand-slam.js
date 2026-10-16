@@ -1,9 +1,45 @@
 let grandSlamState = null;
 
+// Shared round-robin accounting. The Grand Slam adapter retains its public
+// standings shape and existing tie-break, while Youth adds match statistics.
+function createRoundRobinMatches(size) {
+    const pairs = size === 4 ? [[0,1],[2,3],[0,2],[1,3],[0,3],[1,2]] : [];
+    if (!pairs.length) for (let a = 0; a < size; a++) for (let b = a + 1; b < size; b++) pairs.push([a,b]);
+    return pairs.map(([p1Index,p2Index]) => ({ p1Index,p2Index,played:false,winnerIndex:null,score1:null,score2:null }));
+}
+
+function getRoundRobinStandings(group) {
+    if (!Array.isArray(group?.members)) return [];
+    const rows = group.members.map((_,memberIndex) => ({memberIndex,played:0,wins:0,losses:0,
+        legsWon:0,legsLost:0,points:0,scored:0,darts:0,seedRank:Number(group.seedRanks?.[memberIndex]) || 99}));
+    (group.matches || []).filter(match => match.played).forEach(match => {
+        const a=rows[match.p1Index],b=rows[match.p2Index]; if (!a || !b) return;
+        const s1=Math.max(0,Number(match.score1)||0),s2=Math.max(0,Number(match.score2)||0);
+        a.played++; b.played++; a.legsWon+=s1; a.legsLost+=s2; b.legsWon+=s2; b.legsLost+=s1;
+        if(match.winnerIndex===match.p1Index){a.wins++;b.losses++;a.points+=2;}
+        if(match.winnerIndex===match.p2Index){b.wins++;a.losses++;b.points+=2;}
+        a.scored+=Number(match.p1Scored)||0; b.scored+=Number(match.p2Scored)||0;
+        a.darts+=Number(match.p1Darts)||0; b.darts+=Number(match.p2Darts)||0;
+    });
+    return rows;
+}
+
+function recordRoundRobinMatch(group,index,p1Won,score1,score2,raw=null) {
+    const match=group?.matches?.[index]; if(!match || match.played) return false;
+    Object.assign(match,{played:true,winnerIndex:p1Won?match.p1Index:match.p2Index,
+        score1:Math.max(0,Number(score1)||0),score2:Math.max(0,Number(score2)||0)});
+    if(raw) for(const key of ['p1Scored','p2Scored','p1Darts','p2Darts']) {
+        if(Number.isFinite(raw[key])) match[key]=raw[key];
+    }
+    return true;
+}
+
 const GRAND_SLAM_FORMAT_VERSION = 2;
 const GRAND_SLAM_KNOCKOUT_SEED_ORDER = [1, 16, 8, 9, 4, 13, 5, 12, 2, 15, 7, 10, 3, 14, 6, 11];
 
 function isGrandSlamTournament(tournament = activeTournament) {
+    if(typeof isWomensWorldMatchplayTournament==='function'&&isWomensWorldMatchplayTournament(tournament))return false;
+    if(typeof isWomensSeriesTournament==='function'&&isWomensSeriesTournament(tournament))return false;
     if (typeof hasTournamentEditorQualification === 'function' && hasTournamentEditorQualification(tournament)) return false;
     if (typeof hasCareerTourEntryOverride === 'function' && hasCareerTourEntryOverride(tournament)) return false;
     // Nazwa kwalifikatora z moda również zawiera „Grand Slam”. Typ i
@@ -67,27 +103,8 @@ function createGrandSlamGroupState(participants, tournament = activeTournament) 
 function getGrandSlamGroupStandings(group) {
     if (!group || !Array.isArray(group.members)) return [];
 
-    const standings = group.members.map((candidate, memberIndex) => ({
-        memberIndex,
-        wins: 0,
-        legsWon: 0,
-        legsLost: 0,
-        seedRank: Number(group.seedRanks?.[memberIndex]) || 99
-    }));
-
-    (group.matches || []).filter(match => match.played).forEach(match => {
-        const first = standings[match.p1Index];
-        const second = standings[match.p2Index];
-        if (!first || !second) return;
-        const score1 = Math.max(0, Number(match.score1) || 0);
-        const score2 = Math.max(0, Number(match.score2) || 0);
-        first.legsWon += score1;
-        first.legsLost += score2;
-        second.legsWon += score2;
-        second.legsLost += score1;
-        if (match.winnerIndex === match.p1Index) first.wins++;
-        if (match.winnerIndex === match.p2Index) second.wins++;
-    });
+    const standings = getRoundRobinStandings(group).map(({memberIndex,wins,legsWon,legsLost,seedRank}) =>
+        ({memberIndex,wins,legsWon,legsLost,seedRank}));
 
     return standings.sort((first, second) => second.wins - first.wins
         || (second.legsWon - second.legsLost) - (first.legsWon - first.legsLost)
@@ -103,13 +120,7 @@ function updateGrandSlamGroupStandings(group) {
 
 function recordGrandSlamGroupMatch(groupIndex, matchIndex, p1Won, score1, score2) {
     const group = grandSlamState?.groups?.[groupIndex];
-    const match = group?.matches?.[matchIndex];
-    if (!group || !match || match.played) return false;
-
-    match.played = true;
-    match.winnerIndex = p1Won ? match.p1Index : match.p2Index;
-    match.score1 = Math.max(0, Number(score1) || 0);
-    match.score2 = Math.max(0, Number(score2) || 0);
+    if (!recordRoundRobinMatch(group, matchIndex, p1Won, score1, score2)) return false;
     updateGrandSlamGroupStandings(group);
     return true;
 }
@@ -311,7 +322,7 @@ function startGrandSlamCareerGroupMatch() {
     }
 }
 
-function startSpectatingGrandSlamGroupMatch(groupIndex, matchIndex) {
+function startSpectatingGrandSlamGroupMatch(groupIndex, matchIndex, highlights = false) {
     if (typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy()) return false;
     if (!isGrandSlamGroupStageActive() || currentMatch) return false;
     const group = grandSlamState.groups[groupIndex];
@@ -323,7 +334,7 @@ function startSpectatingGrandSlamGroupMatch(groupIndex, matchIndex) {
     if (typeof isPlayerInjured === 'function' && (isPlayerInjured(p1) || isPlayerInjured(p2))) return false;
     const groupLabel = ({ pl: 'Grupa', en: 'Group', de: 'Gruppe', nl: 'Groep' })[typeof currentLang === 'string' ? currentLang : 'en'] || 'Group';
     return beginSpectatingAiMatch(p1, p2, getGrandSlamGroupMatchFormat(), {
-        spectatorGrandSlamGroupMatch: { groupIndex, matchIndex }
+        spectatorGrandSlamGroupMatch: { groupIndex, matchIndex }, spectatorHighlights: highlights === true
     }, `${activeTournament.name} · ${groupLabel} ${group.label}`);
 }
 
@@ -375,7 +386,8 @@ function renderGrandSlamGroup(group, groupIndex) {
         const p2Flag = typeof getTournamentResultFlag === 'function' ? getTournamentResultFlag(p2) : '';
         const canWatch = !match.played && !p1.isBye && !p2.isBye && !isCurrentPlayer(p1) && !isCurrentPlayer(p2);
         return `<div class="grand-slam-group-match">${escapeHtml(p1.name)}${p1Flag ? ` ${p1Flag}` : ''} <strong>${score}</strong> ${p2Flag ? `${p2Flag} ` : ''}${escapeHtml(p2.name)}
-            ${canWatch ? `<button type="button" class="btn-sign grand-slam-watch-btn" onclick="startSpectatingGrandSlamGroupMatch(${groupIndex}, ${matchIndex})">👁 ${t('t-btn-watch-match')}</button>` : ''}</div>`;
+            ${canWatch ? `<div class="spectator-watch-actions"><button type="button" class="btn-sign grand-slam-watch-btn" onclick="startSpectatingGrandSlamGroupMatch(${groupIndex}, ${matchIndex})">👁 ${t('t-btn-watch-match')}</button>
+                <button type="button" class="btn-sign spectator-watch-highlights" onclick="startSpectatingGrandSlamGroupMatch(${groupIndex}, ${matchIndex}, true)" title="${escapeHtml(t('t-spectator-highlights-help'))}">🎬 ${t('t-btn-watch-highlights')}</button></div>` : ''}</div>`;
     }).join('');
     return `<section style="background:#16213e; border:1px solid #2c3e50; border-radius:6px; padding:9px; margin:6px 0;">
         <h4 style="margin:0 0 5px; color:var(--accent-yellow);">Grupa ${group.label}</h4>${rows}<div style="border-top:1px solid #2c3e50; margin-top:5px; padding-top:4px;">${matches}</div>

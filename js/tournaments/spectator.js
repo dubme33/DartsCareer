@@ -25,6 +25,7 @@ function getSpectatedTournamentMatchResult(p1, p2, round = tournamentRound, cons
         p1Score: stored.p1Score,
         p2Score: stored.p2Score,
         leagueCounted: stored.leagueCounted === true,
+        p1Scored: stored.p1Scored, p2Scored: stored.p2Scored, p1Darts: stored.p1Darts, p2Darts: stored.p2Darts,
         spectated: true
     };
 
@@ -53,13 +54,113 @@ function getCurrentSinglesMatchPlayerName(isP1) {
 const SPECTATOR_PLAYBACK_SPEEDS = Object.freeze([1, 2, 4, 8, 16]);
 let spectatorPendingPlayback = null;
 
+function isMatchPlaybackControlled(match = currentMatch) {
+    return Boolean(match && (match.isSpectator || match.careerAutoplay));
+}
+
+function canStartCareerAutoplay(match = currentMatch) {
+    return Boolean(match?.vsAI && !match.isSpectator && !match.careerAutoplay
+        && !match.isFinishing && !match.matchEnding && !match.matchIncidents?.pending
+        && !(typeof isMatchFinished === 'function' && isMatchFinished(match))
+        && !(typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy())
+        && !(match.bullOff && ['tie', 'result'].includes(match.bullOff.status)));
+}
+
+function startCareerAutoplay(highlights = false) {
+    if (!canStartCareerAutoplay()) return false;
+    const match = currentMatch;
+    match.careerAutoplay = true;
+    match.spectatorPaused = false;
+    match.spectatorPlaybackSpeed = 1;
+    match.spectatorHighlights = highlights === true;
+    match.spectatorSkipThrow = false;
+    if (spectatorPendingPlayback?.match !== match) spectatorPendingPlayback = null;
+    setSpectatorMatchControls(true);
+    if (match.introInProgress && typeof ensureCareerAutoplayIntro === 'function') ensureCareerAutoplayIntro();
+    if (typeof isMatchBullOffPending === 'function' && isMatchBullOffPending(match)) {
+        if (match.bullOff.status === 'pending' && !match.bullOff.waitingForRemoval) scheduleMatchBullAi(match);
+        renderMatchBullOff(match);
+    } else if (!match.introInProgress) setTurnUI();
+    return true;
+}
+
+function stopCareerAutoplay() {
+    if (!currentMatch?.careerAutoplay || currentMatch.isFinishing) return false;
+    const match = currentMatch;
+    match.careerAutoplay = false;
+    match.spectatorPaused = false;
+    match.spectatorSkipThrow = false;
+    const pending = spectatorPendingPlayback;
+    const playerTurn = match.turn === 'p1' && (!match.isDoubles || isCareerPlayerThrowing(true));
+    const playerBullTurn = match.bullOff?.status === 'pending' && match.bullOff.turn === 'p1';
+    let retainedAction = false;
+    if (pending?.match === match) {
+        if (pending.kind === 'throw' && (isMatchBullOffPendingSafe(match) ? playerBullTurn : playerTurn)) {
+            clearTimeout(pending.timerId);
+            spectatorPendingPlayback = null;
+            window.aiTimeout = null;
+        } else {
+            retainedAction = true;
+            if (!pending.timerId) armSpectatorPendingPlayback(pending);
+        }
+    }
+    setSpectatorMatchControls(false);
+    if (!match.isDartInFlight) {
+        updateScores(); updateMatchStatsUI(); updateDartDots(); drawDartboard();
+    }
+    if (isMatchBullOffPendingSafe(match)) {
+        renderMatchBullOff(match);
+        if (!retainedAction && match.bullOff.status === 'pending' && !match.bullOff.waitingForRemoval) scheduleMatchBullAi(match);
+    } else if (!retainedAction && !match.introInProgress) setTurnUI();
+    return true;
+}
+
+function isMatchBullOffPendingSafe(match) {
+    return typeof isMatchBullOffPending === 'function' && isMatchBullOffPending(match);
+}
+
+// Use the live dart engine for the omitted scoring. Never skip a checkout visit
+// or a deciding leg, so every leg/set/match winner is still seen on the board.
+function shouldSkipSpectatorScoring(match = currentMatch) {
+    if (!isMatchPlaybackControlled(match) || !match.spectatorHighlights || match.introInProgress
+        || match.isFinishing || match.matchEnding || match.suddenDeath
+        || (typeof isMatchBullOffPending === 'function' && isMatchBullOffPending(match))) return false;
+    if (!(match.p1Score > 170 && match.p2Score > 170)) return false;
+    // Reveal the last dart of a potential maximum, with the two scored darts
+    // already on the board. TV can replay the complete recorded visit.
+    if (match === currentMatch && match.dartsThrown === 2
+        && typeof currentTurnScore !== 'undefined' && currentTurnScore === 120) return false;
+    const format = match.matchFormat || {};
+    const target = Number(format.type === 'sets' ? format.legsPerSet : format.legsToWin);
+    return !(target > 1 && match.p1Legs >= target - 1 && match.p2Legs >= target - 1);
+}
+
+function setSpectatorHighlights(enabled) {
+    if (!isMatchPlaybackControlled()) return false;
+    currentMatch.spectatorHighlights = enabled === true;
+    if (!currentMatch.spectatorHighlights) {
+        currentMatch.spectatorSkipThrow = false;
+        if (!currentMatch.isDartInFlight) {
+            updateScores(); updateMatchStatsUI(); updateDartDots(); drawDartboard();
+        }
+    }
+    updateSpectatorSpeedControls();
+    return currentMatch.spectatorHighlights;
+}
+
+function toggleSpectatorHighlights() {
+    return setSpectatorHighlights(!currentMatch?.spectatorHighlights);
+}
+
 function getSpectatorPlaybackSpeed() {
     const speed = Number(currentMatch?.spectatorPlaybackSpeed);
     return SPECTATOR_PLAYBACK_SPEEDS.includes(speed) ? speed : 1;
 }
 
 function getSpectatorPlaybackDelay(normalDelay, spectatorBaseDelay = normalDelay) {
-    if (!currentMatch?.isSpectator) return normalDelay;
+    if (!isMatchPlaybackControlled()) return normalDelay;
+    // Yield between omitted darts: pause/exit can interrupt even a long match.
+    if (shouldSkipSpectatorScoring()) return 10;
     return Math.max(25, Math.round(spectatorBaseDelay / getSpectatorPlaybackSpeed()));
 }
 
@@ -82,13 +183,14 @@ function armSpectatorPendingPlayback(pending) {
     return pending.timerId;
 }
 
-function scheduleSpectatorPlaybackAction(callback, normalDelay, spectatorBaseDelay = normalDelay) {
-    if (!currentMatch?.isSpectator) return setTimeout(callback, normalDelay);
+function scheduleSpectatorPlaybackAction(callback, normalDelay, spectatorBaseDelay = normalDelay, kind = 'flow') {
+    if (!isMatchPlaybackControlled()) return setTimeout(callback, normalDelay);
 
     if (spectatorPendingPlayback?.timerId) clearTimeout(spectatorPendingPlayback.timerId);
     const pending = {
         match: currentMatch,
         callback,
+        kind,
         remaining: getSpectatorPlaybackDelay(normalDelay, spectatorBaseDelay),
         startedAt: null,
         timerId: null
@@ -99,7 +201,7 @@ function scheduleSpectatorPlaybackAction(callback, normalDelay, spectatorBaseDel
 }
 
 function setSpectatorPaused(paused) {
-    if (!currentMatch?.isSpectator) return false;
+    if (!isMatchPlaybackControlled()) return false;
     const shouldPause = Boolean(paused);
     if (currentMatch.spectatorPaused === shouldPause) return shouldPause;
 
@@ -116,7 +218,8 @@ function setSpectatorPaused(paused) {
             armSpectatorPendingPlayback(pending);
         }
     } else if (!shouldPause && !currentMatch.introInProgress && typeof setTurnUI === 'function') {
-        setTurnUI();
+        if (isMatchBullOffPendingSafe(currentMatch)) scheduleMatchBullAi(currentMatch);
+        else if (!window.matchTVDirector?.deferMatchAction?.(setTurnUI)) setTurnUI();
     }
 
     updateSpectatorSpeedControls();
@@ -124,7 +227,7 @@ function setSpectatorPaused(paused) {
 }
 
 function toggleSpectatorPause() {
-    if (!currentMatch?.isSpectator) return false;
+    if (!isMatchPlaybackControlled()) return false;
     return setSpectatorPaused(!currentMatch.spectatorPaused);
 }
 
@@ -132,8 +235,24 @@ function updateSpectatorSpeedControls() {
     const controls = document.getElementById('spectator-speed-controls');
     if (!controls) return;
 
-    const spectating = Boolean(currentMatch?.isSpectator);
+    const spectating = isMatchPlaybackControlled();
     controls.style.display = spectating ? 'flex' : 'none';
+    const exitButton = document.getElementById('spectator-exit-btn');
+    if (exitButton) exitButton.style.display = currentMatch?.isSpectator ? '' : 'none';
+    const stopButton = document.getElementById('career-autoplay-stop-btn');
+    if (stopButton) stopButton.style.display = currentMatch?.careerAutoplay ? '' : 'none';
+    const startControls = document.getElementById('career-autoplay-controls');
+    if (startControls) startControls.style.display = currentMatch?.vsAI && !spectating ? 'flex' : 'none';
+    document.querySelectorAll?.('[data-career-autoplay-start]').forEach(button => {
+        button.disabled = !canStartCareerAutoplay();
+        button.title = t('t-career-autoplay-help');
+    });
+    const bullStart = document.getElementById('bull-autoplay-start');
+    const bullControls = document.getElementById('bull-playback-controls');
+    if (bullStart) bullStart.style.display = currentMatch?.isSpectator || currentMatch?.careerAutoplay ? 'none' : 'flex';
+    if (bullControls) bullControls.style.display = spectating ? 'flex' : 'none';
+    const bullStop = document.getElementById('bull-autoplay-stop');
+    if (bullStop) bullStop.style.display = currentMatch?.careerAutoplay ? '' : 'none';
     const pauseButton = document.getElementById('spectator-pause-btn');
     if (pauseButton) {
         const paused = Boolean(currentMatch?.spectatorPaused);
@@ -142,6 +261,19 @@ function updateSpectatorSpeedControls() {
         pauseButton.innerText = `${paused ? '▶' : '⏸'} ${typeof t === 'function' ? t(translationKey) : fallbackLabel}`;
         pauseButton.classList.toggle('paused', paused);
         pauseButton.setAttribute('aria-pressed', String(paused));
+        const bullPause = document.getElementById('bull-playback-pause');
+        if (bullPause) {
+            bullPause.innerText = pauseButton.innerText;
+            bullPause.setAttribute('aria-pressed', String(paused));
+        }
+    }
+    const highlightsButton = document.getElementById('spectator-highlights-btn');
+    if (highlightsButton) {
+        const enabled = Boolean(currentMatch?.spectatorHighlights);
+        highlightsButton.innerText = `🎬 ${t(enabled ? 't-spectator-highlights-on' : 't-btn-watch-highlights')}`;
+        highlightsButton.title = t('t-spectator-highlights-help');
+        highlightsButton.classList.toggle('active', enabled);
+        highlightsButton.setAttribute('aria-pressed', String(enabled));
     }
     if (!spectating || typeof controls.querySelectorAll !== 'function') return;
 
@@ -155,7 +287,7 @@ function updateSpectatorSpeedControls() {
 
 function setSpectatorPlaybackSpeed(speed) {
     const parsedSpeed = Number(speed);
-    if (!currentMatch?.isSpectator || !SPECTATOR_PLAYBACK_SPEEDS.includes(parsedSpeed)) {
+    if (!isMatchPlaybackControlled() || !SPECTATOR_PLAYBACK_SPEEDS.includes(parsedSpeed)) {
         return getSpectatorPlaybackSpeed();
     }
 
@@ -178,6 +310,7 @@ function setSpectatorMatchControls(spectating) {
     if (simulateMatchButton) simulateMatchButton.style.display = spectating ? 'none' : '';
     if (backButton) backButton.style.display = spectating ? 'none' : '';
     updateSpectatorSpeedControls();
+    window.matchTVMode?.refresh?.();
 }
 
 function setSpectatorPlayerPhoto(elementId, candidate, fallbackLabel) {
@@ -195,7 +328,7 @@ function setSpectatorPlayerPhoto(elementId, candidate, fallbackLabel) {
     };
 }
 
-function startSpectatingTournamentMatch(bracketIndex) {
+function startSpectatingTournamentMatch(bracketIndex, highlights = false) {
     if (typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy()) return false;
     if (!activeTournament || currentMatch || !Array.isArray(tournamentBracket)) return false;
     const p1 = tournamentBracket[bracketIndex];
@@ -208,7 +341,7 @@ function startSpectatingTournamentMatch(bracketIndex) {
 
     const matchFormat = getTournamentMatchFormat(activeTournament, tournamentRound);
     return beginSpectatingAiMatch(p1, p2, matchFormat,
-        { spectatorRound: tournamentRound, spectatorMatchIndex: bracketIndex }, getRoundName(tournamentRound));
+        { spectatorRound: tournamentRound, spectatorMatchIndex: bracketIndex, spectatorHighlights: highlights === true }, getRoundName(tournamentRound));
 }
 
 function beginSpectatingAiMatch(p1, p2, matchFormat, matchFields = {}, roundLabel = '') {
@@ -226,6 +359,8 @@ function beginSpectatingAiMatch(p1, p2, matchFormat, matchFields = {}, roundLabe
         opponent: p2,
         spectatorPlaybackSpeed: 1,
         spectatorPaused: false,
+        spectatorHighlights: false,
+        spectatorSkippedDarts: 0,
         p1Score: 501,
         p2Score: 501,
         p1Legs: 0,
@@ -321,7 +456,13 @@ function finishSpectatedTournamentMatch() {
         recordWorldCupTeamAverage(watchedMatch.worldCupTeamP2, Number(p2Average));
         finishWorldCupStateMatch(match, p1Won ? match.team1Id : match.team2Id, p1Score, p2Score);
     } else {
-        if (watchedMatch.spectatorGrandSlamGroupMatch) {
+        if (watchedMatch.spectatorWorldYouthGroupMatch) {
+            const {groupIndex,matchIndex}=watchedMatch.spectatorWorldYouthGroupMatch;
+            if (!recordWorldYouthGroupMatch(groupIndex,matchIndex,p1Won,p1Score,p2Score,
+                {p1Scored:p1Points,p2Scored:p2Points,p1Darts:watchedMatch.stats.p1TotalDarts,p2Darts:watchedMatch.stats.p2TotalDarts})) return false;
+            const edition=getWorldYouthEdition();
+            if(edition.groups.every(g=>g.matches.every(m=>m.played)))completeWorldYouthGroups();
+        } else if (watchedMatch.spectatorGrandSlamGroupMatch) {
             const { groupIndex, matchIndex } = watchedMatch.spectatorGrandSlamGroupMatch;
             if (!recordGrandSlamGroupMatch(groupIndex, matchIndex, p1Won, p1Score, p2Score)) return false;
             completeGrandSlamGroups = areGrandSlamGroupsComplete();
@@ -341,6 +482,7 @@ function finishSpectatedTournamentMatch() {
                 scoreStr: `${winnerScore}:${loserScore}`,
                 p1Score,
                 p2Score,
+                p1Scored: p1Points, p2Scored: p2Points, p1Darts: watchedMatch.stats.p1TotalDarts, p2Darts: watchedMatch.stats.p2TotalDarts,
                 p1Avg: p1Average,
                 p2Avg: p2Average,
                 p1BounceOuts: watchedMatch.stats.p1BounceOuts || 0,
@@ -394,6 +536,7 @@ function exitSpectatingTournamentMatch() {
 
 function returnToSpectatedTournamentOverview(watchedMatch) {
     if (watchedMatch.spectatorWorldCupMatchId) showWorldCupOverview();
+    else if (watchedMatch.spectatorWorldYouthGroupMatch) { if(getWorldYouthEdition()?.phase==='groups')showWorldYouth('groups');else showBracket(); }
     else if (watchedMatch.spectatorGrandSlamGroupMatch && isGrandSlamGroupStageActive()) showGrandSlamGroups();
     else showBracket();
 }

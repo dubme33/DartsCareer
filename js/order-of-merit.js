@@ -26,6 +26,7 @@ function getMainOomRefreshSnapshot(candidate) {
         lastAmount: Number.isFinite(lastAmount) ? lastAmount : null,
         prizeMoney: Number(candidate?.prizeMoney) || 0,
         version: candidate?.mainOomHistoryVersion,
+        pdcOomResetAt: Number(candidate?.pdcOomResetAt) || 0,
         editorAdjustmentAmount: Number(editorAdjustment?.amount) || 0,
         editorAdjustmentAppliedAt: Number(editorAdjustment?.appliedAt) || 0
     };
@@ -44,6 +45,7 @@ function isMainOomRefreshSnapshotCurrent(snapshot, candidate) {
         && snapshot.lastAmount === (Number.isFinite(lastAmount) ? lastAmount : null)
         && snapshot.prizeMoney === (Number(candidate?.prizeMoney) || 0)
         && snapshot.version === candidate?.mainOomHistoryVersion
+        && snapshot.pdcOomResetAt === (Number(candidate?.pdcOomResetAt) || 0)
         && snapshot.editorAdjustmentAmount === (Number(editorAdjustment?.amount) || 0)
         && snapshot.editorAdjustmentAppliedAt === (Number(editorAdjustment?.appliedAt) || 0);
 }
@@ -109,6 +111,9 @@ function getMainOomTournamentSourceName(tournamentOrName) {
 }
 
 function isMainOrderOfMeritRankingTournament(tournamentOrName) {
+    if(typeof isWomensWorldMatchplayTournament==='function'&&isWomensWorldMatchplayTournament(tournamentOrName))return false;
+    if (typeof isWomensSeriesTournament === 'function' && isWomensSeriesTournament(tournamentOrName)) return false;
+    if (typeof isWorldYouthTournament === 'function' && isWorldYouthTournament(tournamentOrName)) return false;
     const editorTournament = typeof tournamentOrName === 'object' ? tournamentOrName
         : (typeof tournamentDatabase !== 'undefined' && Array.isArray(tournamentDatabase)
             ? tournamentDatabase.find(candidate => candidate?.name === tournamentOrName
@@ -479,8 +484,12 @@ function refreshMainOrderOfMerit(candidates, referenceDate) {
             normaliseMainOrderOfMeritHistory(candidate, referenceTime), cutoff, referenceTime
         );
         candidate.mainPrizeHistory = activeEntries;
-        const historyTotal = activeEntries.reduce((total, entry) => total + entry.amount, 0);
-        candidate.prizeMoney = Math.max(0, historyTotal + getMainOomPlayerEditorAdjustment(candidate, referenceTime));
+        const resetAt = Number(candidate.pdcOomResetAt) || 0;
+        const historyTotal = activeEntries.filter(entry => !resetAt || entry.earnedAt >= resetAt)
+            .reduce((total, entry) => total + entry.amount, 0);
+        const adjustment = !resetAt || Number(candidate.playerEditorRankingAdjustments?.main?.appliedAt) >= resetAt
+            ? getMainOomPlayerEditorAdjustment(candidate, referenceTime) : 0;
+        candidate.prizeMoney = Math.max(0, historyTotal + adjustment);
         candidate.mainOomHistoryVersion = MAIN_ORDER_OF_MERIT_VERSION;
     });
 

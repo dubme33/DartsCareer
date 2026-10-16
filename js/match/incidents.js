@@ -461,7 +461,7 @@ function showMatchIncidentResult(message) {
 }
 
 function mayShowMatchIncident(match) {
-    return Boolean(areMatchIncidentsEnabled() && match && match.vsAI && !match.isSpectator && !match.isFinishing && !match.matchEnding
+    return Boolean(areMatchIncidentsEnabled() && match && match.vsAI && !match.isSpectator && !match.careerAutoplay && !match.isFinishing && !match.matchEnding
         && !(typeof isMatchFinished === 'function' && isMatchFinished(match))
         && Number(match.p1Score) > 0 && Number(match.p2Score) > 0
         && !match.introInProgress && !match.isTurnLocked && !match.isDartInFlight

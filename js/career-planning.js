@@ -116,7 +116,7 @@ function trPlanning(key, values = {}) {
     const index = Math.max(0, ['pl', 'en', 'de', 'nl'].indexOf(typeof currentLang === 'string' ? currentLang : 'en'));
     let text = CAREER_PLANNING_TEXT[key]?.[index] || key;
     Object.entries(values).forEach(([name, value]) => { text = text.replaceAll(`{${name}}`, String(value)); });
-    return text;
+    return typeof competitionDisplayText === 'function' ? competitionDisplayText(text) : text;
 }
 
 function getPlanningRouteLabel(key) {
@@ -131,7 +131,7 @@ function getPlanningTournamentKind(tournament) {
     if (typeof isCrownMastersTournament === 'function' && isCrownMastersTournament(tournament)) return 'crownMasters';
     if (isWorldMastersFinalsTournament(tournament)) return 'worldSeries';
     if (isContinentalTourTournament(tournament)) return 'continental';
-    const name = String(tournament.name || '').toLowerCase();
+    const name = String(tournament.sourceName || tournament.name || '').toLowerCase();
     if (name.includes('world darts championship') || name.includes('global darts championship')) return 'worlds';
     if (name.includes('grand slam') || name.includes("champion's slam")) return 'slam';
     if (name.includes('matchplay') || name.includes('grand prix') || name.includes('uk open') || name.includes('british open')
@@ -157,7 +157,10 @@ function buildQualificationPreview(tournament, candidates, referenceDate = curre
                 [event.name, event.sourceName].includes(group.qualifierKey)) : null;
             groups[groups.length - 1].label = group.source === 'country'
                 ? `${typeof t === 'function' ? t(group.country || '') : group.country || ''} · ${trTournamentEditor(group.ranking || 'oom')}`
-                : qualifier?.name || trTournamentEditor(group.source);
+                : group.source === 'tourRanking' ? getTournamentEditorNativeRouteLabel(group)
+                    : qualifier?.name || trTournamentEditor(group.source);
+            if (group.source === 'tourRanking') groups[groups.length - 1].rankingAmounts = Object.fromEntries(
+                group.players.map(candidate => [key(candidate), getCareerTourPrizeMoney(candidate, group.tourId, year)]));
         });
         size = typeof getCareerTourFieldSize === 'function' ? getCareerTourFieldSize(tournament) : tournament.editorFieldSize;
     } else if (kind === 'crownMasters') {
@@ -176,13 +179,19 @@ function buildQualificationPreview(tournament, candidates, referenceDate = curre
     } else if (kind === 'worlds') {
         const saved = tournament.worldChampionshipQualification;
         const locked = saved?.year === year && saved.version === WORLD_CHAMPIONSHIP_QUALIFICATION_VERSION
+            && (saved.routeSignature || '[]') === JSON.stringify(tournament.editorNativeRoutes || [])
             && resolve(saved.playerIds).length === WORLD_CHAMPIONSHIP_FIELD_SIZE;
         if (locked) {
-            if (Array.isArray(saved.categories) && saved.categories.length) saved.categories.forEach(category => add(category.key, category.requested, resolve(category.playerIds), true));
+            if (Array.isArray(saved.categories) && saved.categories.length) saved.categories.forEach(category => {
+                add(category.key, category.requested, resolve(category.playerIds), true);
+                if (category.editorRoute) groups.at(-1).label = getTournamentEditorNativeRouteLabel(category.editorRoute);
+            });
             else add('draw', WORLD_CHAMPIONSHIP_FIELD_SIZE, resolve(saved.playerIds), true);
         } else {
-            buildWorldChampionshipQualification(all, referenceDate).categories
-                .forEach(category => add(category.key, category.requested, resolve(category.playerIds)));
+            buildWorldChampionshipQualification(all, referenceDate, tournament).categories.forEach(category => {
+                add(category.key, category.requested, resolve(category.playerIds));
+                if (category.editorRoute) groups.at(-1).label = getTournamentEditorNativeRouteLabel(category.editorRoute);
+            });
         }
         size = WORLD_CHAMPIONSHIP_FIELD_SIZE;
         note = 'worldsNote';
@@ -404,9 +413,9 @@ function renderPlanningQualification(candidates) {
     const ownKey = getPdcTourCardPlayerKey(player);
     const groups = preview.groups.filter(group => group.places > 0).map((group, index) => {
         const own = group.players.some(p => getPdcTourCardPlayerKey(p) === ownKey);
-        const rows = group.players.map(p => `<li${getPdcTourCardPlayerKey(p) === ownKey ? ' class="planning-me"' : ''}><span>${getFlagImg(p.country)} ${escapeHtml(p.name)}</span><span>OVR ${Math.round(p.ovr ?? p.overall)} · ${planningMoney(p.prizeMoney)}</span></li>`).join('');
+        const rows = group.players.map(p => `<li${getPdcTourCardPlayerKey(p) === ownKey ? ' class="planning-me"' : ''}><span>${getFlagImg(p.country)} ${escapeHtml(p.name)}</span><span>OVR ${Math.round(p.ovr ?? p.overall)} · ${planningMoney(group.rankingAmounts?.[getPdcTourCardPlayerKey(p)] ?? p.prizeMoney)}</span></li>`).join('');
         return `<details class="planning-route"${own || index === 0 ? ' open' : ''}>
-            <summary>${escapeHtml(group.label || getPlanningRouteLabel(group.key))}<span>${group.players.length}/${group.places}${group.confirmed ? ' ✓' : ''}</span></summary>
+            <summary>${escapeHtml(typeof competitionDisplayText==='function'?competitionDisplayText(group.label || getPlanningRouteLabel(group.key)):group.label || getPlanningRouteLabel(group.key))}<span>${group.players.length}/${group.places}${group.confirmed ? ' ✓' : ''}</span></summary>
             ${group.pending ? `<p class="planning-note">${escapeHtml(trPlanning('placesPending'))}</p>` : ''}
             ${rows ? `<ul>${rows}</ul>` : `<p class="planning-note">${escapeHtml(trPlanning('emptyGroup'))}</p>`}</details>`;
     }).join('');

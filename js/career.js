@@ -109,6 +109,10 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
                 player = {
                     ...selectedPlayer,
                     id: selectedPlayer.id,
+                    gender: selectedPlayer.gender || 'male',
+                    womensSeriesEligible: selectedPlayer.womensSeriesEligible,
+                    birthDate: selectedPlayer.birthDate || null,
+                    birthDateSource: selectedPlayer.birthDateSource || null,
                     nickname: typeof getPlayerNickname === 'function' ? getPlayerNickname(selectedPlayer) : (selectedPlayer.nickname || ''),
                     // Zachowujemy powiązanie z wpisem bazowym/moda. Dzięki temu po
                     // ponownym wczytaniu baza nie odtworzy tego samego zawodnika jako AI.
@@ -176,6 +180,9 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
                 unreadMailsCount = 0;
 
                 normalizePlayerIds(pdcPlayers, player);
+                if (typeof ensureYouthDevelopmentPopulation === 'function') ensureYouthDevelopmentPopulation();
+                if (typeof ensureWomensSeriesCalendar === 'function') ensureWomensSeriesCalendar(tournamentDatabase,currentDate);
+                if (typeof ensureWomensSeriesPopulation === 'function') ensureWomensSeriesPopulation();
                 if (typeof initializeAiDevelopmentFoundation === 'function') initializeAiDevelopmentFoundation();
                 if (typeof refreshMainOrderOfMerit === 'function') {
                     refreshMainOrderOfMerit([...pdcPlayers, player], currentDate);
@@ -249,6 +256,11 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
                 nickname: typeof normalizePlayerNickname === 'function'
                     ? normalizePlayerNickname(document.getElementById('player-nickname')?.value) : '',
                 playerEditorNicknameOverride: true,
+                gender: document.getElementById('player-gender')?.value === 'female' ? 'female' : 'male',
+                dartEntryAngle: (() => {
+                    const angle = Number(document.getElementById('player-dart-entry-angle')?.value ?? 20);
+                    return Number.isInteger(angle) && angle >= -10 && angle <= 45 ? angle : 20;
+                })(),
                 country: document.getElementById('nationality').value,
                 birthYear: (currentDate instanceof Date ? currentDate.getFullYear() : 2026) - parseInt(document.getElementById('age').value, 10),
                 careerDebutSeason: currentDate.getFullYear(),
@@ -283,6 +295,9 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
                 calendarFilters: { version: 1, hiddenTournamentKeys: [] }
             };
             if (typeof initializeCareerDifficulty === 'function') initializeCareerDifficulty(player);
+            if (typeof ensureYouthDevelopmentPopulation === 'function') ensureYouthDevelopmentPopulation();
+            if (typeof ensureWomensSeriesCalendar === 'function') ensureWomensSeriesCalendar(tournamentDatabase,currentDate);
+            if (typeof ensureWomensSeriesPopulation === 'function') ensureWomensSeriesPopulation();
             if (typeof initializeAiDevelopmentFoundation === 'function') initializeAiDevelopmentFoundation();
             emails = [];
             unreadMailsCount = 0;
@@ -350,6 +365,7 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
             if (typeof refreshCareerDifficultyUI === 'function') refreshCareerDifficultyUI();
             if (typeof refreshCareerWorkUI === 'function') refreshCareerWorkUI();
             if (typeof refreshWalkonSettingsUI === 'function') refreshWalkonSettingsUI();
+            if (typeof refreshCallerSettingsUI === 'function') refreshCallerSettingsUI();
             if (typeof refreshPlayerNicknameUI === 'function') refreshPlayerNicknameUI();
             if (typeof refreshWorldNewsSettingsUI === 'function') refreshWorldNewsSettingsUI();
             if (typeof refreshTournamentWatchSettingsUI === 'function') refreshTournamentWatchSettingsUI();
@@ -430,6 +446,11 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
         }
 
         function getPendingTournamentForCareerDate(date = currentDate, includeOverdue = false) {
+            if(date instanceof Date&&date.getTime()===currentDate.getTime()&&typeof refreshWorldYouthReplacementQualification==='function')refreshWorldYouthReplacementQualification(date);
+            if(typeof ensureWomensWorldMatchplayCalendar==='function')ensureWomensWorldMatchplayCalendar(tournamentDatabase,date);
+            if(typeof enforceWomensWorldMatchplayCutoff==='function')enforceWomensWorldMatchplayCutoff(date);
+            if(typeof refreshWomensWorldMatchplayReplacementQualification==='function')refreshWomensWorldMatchplayReplacementQualification(date);
+            if(typeof enforceWomensSeriesQualificationDeadline==='function')enforceWomensSeriesQualificationDeadline(date);
             if (!(date instanceof Date) || Number.isNaN(date.getTime())
                 || typeof tournamentDatabase === 'undefined' || !Array.isArray(tournamentDatabase)) return null;
 
@@ -438,18 +459,31 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
             const targetDay = date.getDate();
             return tournamentDatabase
                 .filter(tournament => tournament && tournament.completed !== true
+                    && (typeof calendarTournamentReady!=='function'||calendarTournamentReady(tournament,date))
                     && (typeof isTournamentScheduledForCareerYear !== 'function'
                         || isTournamentScheduledForCareerYear(tournament, careerYear))
                     && (includeOverdue
                         ? tournament.month < targetMonth || (tournament.month === targetMonth && tournament.day <= targetDay)
-                        : tournament.month === targetMonth && tournament.day === targetDay))
-                .sort((first, second) => first.month - second.month || first.day - second.day)[0]
+                        : tournament.month === targetMonth && tournament.day === targetDay
+                            || typeof calendarTournamentSessionScheduledForDate==='function'
+                                &&calendarTournamentSessionScheduledForDate(tournament,date)))
+                .sort((first, second) => (typeof calendarTournamentSessionOrder==='function'&&first.month===date.getMonth()&&second.month===date.getMonth()&&first.day===date.getDate()&&second.day===date.getDate()?calendarTournamentSessionOrder(first)-calendarTournamentSessionOrder(second):0)
+                    || (typeof getParkedCalendarTournament==='function'&&getParkedCalendarTournament(first)?.round===2&&typeof isWomensWorldMatchplayTournament==='function'&&isWomensWorldMatchplayTournament(second)?1:0)
+                    || (typeof getParkedCalendarTournament==='function'&&getParkedCalendarTournament(second)?.round===2&&typeof isWomensWorldMatchplayTournament==='function'&&isWomensWorldMatchplayTournament(first)?-1:0)
+                    || first.month - second.month || first.day - second.day
+                    || (typeof isWomensSeriesTournament==='function'?(isWomensSeriesTournament(second)?1:0)-(isWomensSeriesTournament(first)?1:0):0))[0]
                 || null;
         }
 
         function activateTournamentFromCalendar(tournament) {
             if (!tournament) return null;
+            if(typeof currentMatch!=='undefined'&&currentMatch&&tournament!==activeTournament
+                &&typeof isSeniorWorldMatchplayTournament==='function'
+                &&(isSeniorWorldMatchplayTournament(tournament)||isSeniorWorldMatchplayTournament(activeTournament)
+                    ||isWomensWorldMatchplayTournament(tournament)||isWomensWorldMatchplayTournament(activeTournament)))return null;
+            if(typeof calendarTournamentReady==='function'&&!calendarTournamentReady(tournament))return null;
             activeTournament = tournament;
+            if(typeof resumeCalendarTournamentSession==='function')resumeCalendarTournamentSession(tournament);
             const tournamentDisplayName = typeof getTournamentDisplayName === 'function'
                 ? getTournamentDisplayName(tournament)
                 : tournament.name;
@@ -499,6 +533,9 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
                 return typeof buildEditorTeamField === 'function'
                     ? buildEditorTeamField(tournament).some(team => team.players.some(identity)) : true;
             }
+            if (typeof isWorldYouthTournament === 'function' && isWorldYouthTournament(tournament)) {
+                const edition=getWorldYouthEdition();return tournament.worldYouthPhase==='final'?Boolean(edition?.finalists?.includes(worldYouthKey(careerPlayer))):edition?edition.participants.includes(worldYouthKey(careerPlayer)):isWorldYouthEligible(careerPlayer,currentDate);
+            }
             const isCareerPlayer = candidate => {
                 if (!candidate) return false;
                 if (candidate === careerPlayer) return true;
@@ -524,6 +561,7 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
             }
 
             if (typeof isCareerEditorAccessEligible === 'function' && !isCareerEditorAccessEligible(tournament, careerPlayer, currentDate)) return false;
+            if (typeof isWomensSeriesTournament==='function'&&isWomensSeriesTournament(tournament)) return getWomensSeriesEligiblePlayers(undefined,currentDate,tournament).some(isCareerPlayer);
             if (typeof hasCareerTourEntryOverride === 'function' && hasCareerTourEntryOverride(tournament)) return getTournamentEditorParticipants(tournament, undefined, currentDate).some(isCareerPlayer);
             const name = String(tournament.name || '').toLowerCase();
             if (typeof hasTournamentEditorQualification === 'function' && hasTournamentEditorQualification(tournament)) {
@@ -545,6 +583,7 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
                 return leagueTable.some(row => isCareerPlayer(row.player));
             }
 
+            if(typeof isWomensWorldMatchplayTournament==='function'&&isWomensWorldMatchplayTournament(tournament)){const e=freezeWomensWorldMatchplayField(tournament);return e?.participants.includes(womensSeriesKey(careerPlayer))===true;}
             if (typeof isWorldCupTournament === 'function' && isWorldCupTournament(tournament)) {
                 const teams = typeof worldCupState !== 'undefined' && Array.isArray(worldCupState?.teams)
                     ? worldCupState.teams : [];
@@ -568,7 +607,7 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
             }
 
             if (typeof isPdcQSchoolTournament === 'function' && isPdcQSchoolTournament(tournament)) {
-                return careerPlayer.hasTourCard !== true;
+                return typeof isCareerPlayerEligibleForPdcQSchoolDay === 'function' ? isCareerPlayerEligibleForPdcQSchoolDay(tournament) : player?.hasTourCard !== true;
             }
             if (typeof isChallengeTourTournament === 'function' && isChallengeTourTournament(tournament)) {
                 return careerPlayer.hasTourCard !== true;
@@ -649,6 +688,28 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
             return true;
         }
 
+        function startCareerTournamentDayQueue() {
+            const tournament = activeTournament;
+            const date = currentDate.getTime();
+            const background = typeof shouldAutoSimulateUnwatchedTournament === 'function'
+                && shouldAutoSimulateUnwatchedTournament(tournament);
+            const simulation = startTournament();
+            if (!background) return simulation;
+            const continueToday = completed => {
+                // Completing or parking an AI event must not leave another session
+                // pending until the next day click. Never advance the date here.
+                const parked=typeof getParkedCalendarTournament==='function'&&getParkedCalendarTournament(tournament);
+                if (!completed || (!tournament?.completed&&!parked) || currentDate.getTime() !== date
+                    || (activeTournament && !activeTournament.completed)) return completed;
+                const pending = getPendingTournamentForCareerDate(currentDate);
+                if (!pending) return completed;
+                activateTournamentFromCalendar(pending);
+                return startCareerTournamentDayQueue();
+            };
+            return simulation && typeof simulation.then === 'function'
+                ? simulation.then(continueToday) : continueToday(simulation);
+        }
+
         function advanceDay({ recoverStamina = true } = {}) {
             if (typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy()) return false;
             // Starszy zapis mógł powstać już w dniu turnieju, zanim autosave
@@ -696,6 +757,10 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
             if (currentDate.getMonth() === 11 && currentDate.getDate() === 31
                 && typeof settleSponsorGoals === 'function') {
                 settleSponsorGoals(currentDate.getFullYear());
+            }
+            if (currentDate.getMonth() === 11 && currentDate.getDate() === 31
+                && typeof snapshotPdcTourCardSeason === 'function') {
+                snapshotPdcTourCardSeason([...pdcPlayers, player], currentDate.getFullYear(), player);
             }
             currentDate.setDate(currentDate.getDate() + 1);
             let expiredMailRemoved = false;
@@ -832,12 +897,22 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
                             delete tournament.playersChampionshipReplacements;
                             delete tournament.playersChampionshipPairedWithdrawalKeys;
                             delete tournament.secondaryTourWithdrawals;
+                            delete tournament.womensSeriesState;
+                            delete tournament.womensWorldMatchplayMigrationSkipped;
+                            delete tournament.womensWorldMatchplayCancelled;
+                            delete tournament.calendarSessionParticipants;
+                            delete tournament.calendarSession;
+                            delete tournament.womensSeriesMigrationSkipped;
                             delete tournament.secondaryTourPairedWithdrawalKeys;
                             delete tournament.withdrawalReportEntries;
                             delete tournament.withdrawalReportSent;
                             delete tournament.withdrawalReportSentYear;
                         });
                     }
+                    if (typeof ensurePdcQSchoolCalendar === 'function') ensurePdcQSchoolCalendar(tournamentDatabase, currentDate);
+                    if (typeof ensureWorldYouthCalendar === 'function') ensureWorldYouthCalendar(tournamentDatabase,currentDate);
+                    if (typeof ensureWomensSeriesCalendar === 'function') ensureWomensSeriesCalendar(tournamentDatabase,currentDate);
+                    if(typeof ensureWomensWorldMatchplayCalendar==='function')ensureWomensWorldMatchplayCalendar(tournamentDatabase,currentDate);
                     gdlTable = [];
                     resetAllPlayerSeasonStats(currentDate.getFullYear());
                     if (typeof resetWorldMastersSeason === 'function') resetWorldMastersSeason(currentDate.getFullYear());
@@ -848,6 +923,8 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
                 }
             }
             if (typeof processAiCareerPeriods === 'function') processAiCareerPeriods(currentDate);
+            if (typeof processWomensSeriesEntryCutoffs === 'function') processWomensSeriesEntryCutoffs(currentDate);
+            if (typeof refreshWorldYouthReplacementQualification === 'function') refreshWorldYouthReplacementQualification(currentDate);
             const playerEvents = typeof processDailyPlayerEvents === 'function' ? processDailyPlayerEvents() : null;
             if (typeof recordWorldNewsRankingChange === 'function') recordWorldNewsRankingChange();
             if (typeof processWorldNewsDaily === 'function') processWorldNewsDaily();
@@ -914,7 +991,7 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
                     if (typeof shouldAutoSimulateUnwatchedTournament === 'function') {
                         activateTournamentFromCalendar(todayTournament);
                         if (shouldAutoSaveToday && typeof saveGame === 'function') saveGame(true);
-                        return startTournament();
+                        return startCareerTournamentDayQueue();
                     }
 
                     const isContinentalQualifier = typeof isContinentalQualifierTournament === 'function'
@@ -924,7 +1001,7 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
                         && !getContinentalTourQualifierParticipants(todayTournament).some(isCurrentPlayer);
                     const cardHolderSkipsQSchool = typeof isPdcQSchoolTournament === 'function'
                         && isPdcQSchoolTournament(todayTournament)
-                        && player?.hasTourCard === true;
+                        && (typeof isCareerPlayerEligibleForPdcQSchoolDay === 'function' ? !isCareerPlayerEligibleForPdcQSchoolDay(todayTournament) : player?.hasTourCard === true);
                     const cardHolderSkipsChallengeTour = typeof isChallengeTourTournament === 'function'
                         && isChallengeTourTournament(todayTournament)
                         && player?.hasTourCard === true;
@@ -950,7 +1027,7 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
                         // konieczności wybierania opcji „Odpuść”.
                         activateTournamentFromCalendar(todayTournament);
                         if (shouldAutoSaveToday && typeof saveGame === 'function') saveGame(true);
-                        return startTournament();
+                        return startCareerTournamentDayQueue();
                     }
 
                     // minOvr było dawnym skrótem kwalifikacji. Obecna obsada jest
@@ -1518,6 +1595,8 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
         }
 
         let currentPdcRankingType = 'main';
+        const pdcRankingSearchKeyCache = new WeakMap();
+        const pdcRankingMoneyFormatter = new Intl.NumberFormat('en-GB');
 
         function normalizePdcRankingSearch(value) {
             return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
@@ -1533,8 +1612,18 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
             const rows = list.querySelectorAll('.ranking-player-row');
             let matches = 0;
             rows.forEach(row => {
-                row.hidden = !normalizePdcRankingSearch(row.dataset.playerName).includes(query);
-                if (!row.hidden) matches++;
+                let hidden = false;
+                if (query) {
+                    const name = row.dataset.playerName;
+                    let cached = pdcRankingSearchKeyCache.get(row);
+                    if (!cached || cached.name !== name) {
+                        cached = { name, key: normalizePdcRankingSearch(name) };
+                        pdcRankingSearchKeyCache.set(row, cached);
+                    }
+                    hidden = !cached.key.includes(query);
+                }
+                if (row.hidden !== hidden) row.hidden = hidden;
+                if (!hidden) matches++;
             });
             const clear = document.getElementById('pdc-search-clear');
             if (clear) clear.hidden = !input.value;
@@ -1559,6 +1648,7 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
         }
 
         function showPdcRankings(type = 'main') {
+            if(type==='womensSeries'&&typeof showWomensSeriesCycle==='function'){showWomensSeriesCycle('ranking');return;}
             if (typeof refreshCareerTourRankingButtons === 'function') refreshCareerTourRankingButtons();
             const managedRankingIds = { protour: 'proTour', pc: 'playersChampionship', europeanTour: 'europeanTour', challengeTour: 'challengeTour', developmentTour: 'developmentTour', gdl: 'premierLeague', worldMasters: 'worldSeries' };
             if (managedRankingIds[type] && typeof isCareerEditorTourRankingEnabled === 'function' && !isCareerEditorTourRankingEnabled(managedRankingIds[type])) type = 'main';
@@ -1718,7 +1808,9 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
                     : (p.europeanTourPrizeMoney || 0);
                 else displayMoney = p.prizeMoney;
 
-                let formattedPrize = displayMoney.toLocaleString('en-GB');
+                let formattedPrize = typeof displayMoney === 'number' || typeof displayMoney === 'bigint'
+                    ? pdcRankingMoneyFormatter.format(displayMoney)
+                    : displayMoney.toLocaleString('en-GB');
                 let displayOvr = Math.round(p.ovr); 
                 const tourCardBadge = p.hasTourCard === true
                     ? `<span title="${escapeHtml(typeof getPdcTourCardLabel === 'function' ? getPdcTourCardLabel(p) : 'Posiadacz karty PDC')}" style="display:inline-block; margin-left:6px; padding:2px 6px; border-radius:10px; background:#8e44ad; color:white; font-size:10px; font-weight:bold;">PDC CARD</span>`

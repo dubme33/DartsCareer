@@ -20,6 +20,7 @@ function startMatch(vsAI) {
                     p2TotalDarts: 0, p2AccumulatedScore: 0, p2First9Score: 0, p2First9Darts: 0, p2LegDarts: 0, p2HighCheckout: 0, p2DoubleAttempts: 0, p2DoubleHits: 0, p2OneEighties: 0, p2HundredPlus: 0, p2OneFortyPlus: 0
                 }
             };
+            if (typeof initializeMatchCaller === 'function') initializeMatchCaller();
             if (vsAI && typeof prepareMatchBullOff === 'function') {
                 prepareMatchBullOff(currentMatch, player, currentMatch.opponent);
             }
@@ -103,7 +104,17 @@ function startMatch(vsAI) {
         function updateMatchStatsUI() {
             if (!currentMatch.stats) return;
             if (typeof refreshMatchBounceOutStats === 'function') refreshMatchBounceOutStats();
+            if (typeof refreshMatchDoubleInStats === 'function') refreshMatchDoubleInStats();
             let s = currentMatch.stats;
+            const isSetMatch = currentMatch.matchFormat?.type === 'sets';
+            for (const id of ['t-stat-set-avg-lbl', 'stat-set-avg', 'stat-opp-set-avg']) {
+                const node = document.getElementById(id);
+                if (node) node.hidden = !isSetMatch;
+            }
+            if (isSetMatch && typeof getMatchSetAverageText === 'function') {
+                document.getElementById('stat-set-avg').innerText = getMatchSetAverageText(currentMatch, 'p1');
+                document.getElementById('stat-opp-set-avg').innerText = getMatchSetAverageText(currentMatch, 'p2');
+            }
             
             let p1TotalPts = s.p1AccumulatedScore + (501 - currentMatch.p1Score);
             document.getElementById('stat-avg').innerText = formatStat(p1TotalPts, s.p1TotalDarts);
@@ -150,6 +161,9 @@ function startMatch(vsAI) {
         }
 
         function setTurnUI() {
+            if (typeof setSpectatorMatchControls === 'function') {
+                setSpectatorMatchControls(Boolean(currentMatch && (currentMatch.isSpectator || currentMatch.careerAutoplay)));
+            }
             if (!currentMatch?.isDartInFlight && typeof refreshMatchBroadcastScoreboard === 'function') {
                 refreshMatchBroadcastScoreboard();
             }
@@ -157,13 +171,15 @@ function startMatch(vsAI) {
             // Intro/UI refreshes must not cancel the pending end of a visit or checkout.
             if (currentMatch?.isTurnLocked) {
                 const careerThrowStillFlying = currentMatch.isDartInFlight && currentMatch.turn === 'p1'
-                    && !currentMatch.isSpectator
+                    && !currentMatch.isSpectator && !currentMatch.careerAutoplay
                     && (!currentMatch.isDoubles || isCareerPlayerThrowing(true));
                 document.getElementById('throw-btn').disabled = !careerThrowStillFlying;
                 const lockedVisitButton = document.getElementById('t-btn-sim-visit');
                 if (lockedVisitButton) lockedVisitButton.disabled = true;
                 return;
             }
+            if ((currentMatch?.isSpectator || currentMatch?.careerAutoplay)
+                && (currentMatch.spectatorPaused || currentMatch.introInProgress)) return;
             clearTimeout(window.aiTimeout); // Usuwamy stare opóźnienia
             const visitButton = document.getElementById('t-btn-sim-visit');
             if (typeof isMatchBullOffPending === 'function' && isMatchBullOffPending(currentMatch)) {
@@ -178,7 +194,7 @@ function startMatch(vsAI) {
                 return;
             }
             
-            const playerControlsP1 = !currentMatch.isSpectator
+            const playerControlsP1 = !currentMatch.isSpectator && !currentMatch.careerAutoplay
                 && (!currentMatch.isDoubles || isCareerPlayerThrowing(true));
             if (currentMatch.turn === 'p1' && playerControlsP1) {
                 document.getElementById('score-col-player').classList.add('active-turn'); document.getElementById('score-col-ai').classList.remove('active-turn');
@@ -194,7 +210,7 @@ function startMatch(vsAI) {
                 if (visitButton) visitButton.disabled = true;
                 const aiDelay = typeof getMatchTVAiThrowDelay === 'function' ? getMatchTVAiThrowDelay(1200) : 1200;
                 if (typeof scheduleSpectatorPlaybackAction === 'function') {
-                    window.aiTimeout = scheduleSpectatorPlaybackAction(aiTurn, aiDelay, 900);
+                    window.aiTimeout = scheduleSpectatorPlaybackAction(aiTurn, aiDelay, 900, 'throw');
                 } else window.aiTimeout = setTimeout(aiTurn, aiDelay);
             }
         }
@@ -222,6 +238,9 @@ function startMatch(vsAI) {
                 && typeof buildPostMatchPressConferenceContext === 'function'
                 ? buildPostMatchPressConferenceContext(match, activeTournament, tournamentRound) : null;
             const presentReport = result => {
+                if (result !== false && currentMatch !== match && typeof setSpectatorMatchControls === 'function') {
+                    setSpectatorMatchControls(Boolean(currentMatch && (currentMatch.isSpectator || currentMatch.careerAutoplay)));
+                }
                 if (result !== false && currentMatch !== match && typeof publishCompletedMatchReport === 'function') {
                     publishCompletedMatchReport(postMatchReport);
                 }
@@ -328,6 +347,7 @@ function startMatch(vsAI) {
                     finishEditorTeamTournamentMatch();
                     return;
                 }
+                if (currentMatch.worldYouthGroupMatch && typeof finishWorldYouthCareerGroupMatch === 'function') { finishWorldYouthCareerGroupMatch(isP1Winner,currentMatch); return; }
                 if (typeof isGrandSlamCareerGroupMatch === 'function' && isGrandSlamCareerGroupMatch(currentMatch)) {
                     const grandSlamOutcome = finishGrandSlamCareerGroupMatch(isP1Winner, currentMatch);
                     currentMatch = null;
@@ -347,6 +367,8 @@ function startMatch(vsAI) {
                 }
                 const specialTournamentOutcome = yield* iterateTournamentRound(isP1Winner);
 
+                if(specialTournamentOutcome==='calendarSession')return concludeCalendarSessionPause();
+                if (specialTournamentOutcome === 'worldYouth') { concludeWorldYouthEvent(); return; }
                 if (specialTournamentOutcome === true) {
                     currentMatch = null;
                     document.getElementById('bracket-modal').style.display = 'none';
@@ -418,6 +440,7 @@ function startMatch(vsAI) {
                     awardPrizeMoney(winner, winPrize, activeTournament.name); 
                     if (typeof completeWorldMastersTournament === 'function') completeWorldMastersTournament(activeTournament, winner);
                     recordSeasonTournamentResult(winner, activeTournament, { round: 2, prizeMoney: winPrize, won: true });
+                    if(typeof completeWomensWorldMatchplayTournament==='function')completeWomensWorldMatchplayTournament(activeTournament,winner);
 
                     // Wypłaty za miejsca 5-8 po finałach Play-offs!
                     if (activeTournament.name.includes("Play-offs")) {

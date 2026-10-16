@@ -164,7 +164,7 @@ function pullFirstMatchBullDart(match) {
     state.waitingForRemoval = true;
     state.message = trMatchBull('bull');
     renderMatchBullOff(match);
-    matchBullRemovalTimer = setTimeout(() => {
+    matchBullRemovalTimer = scheduleMatchBullPlayback(() => {
         matchBullRemovalTimer = null;
         if (currentMatch !== match || state.status !== 'pending') return;
         clearMatchBullBoardDarts();
@@ -252,7 +252,7 @@ function renderMatchBullOff(match = currentMatch) {
         text(`match-bull-${side}-result`).textContent = dart ? trMatchBull(dart.ring) : '—';
     }
     refreshMatchBullBoardView();
-    const playerTurn = !match.isSpectator && state.status === 'pending' && state.turn === 'p1'
+    const playerTurn = !(match.isSpectator || match.careerAutoplay) && state.status === 'pending' && state.turn === 'p1'
         && !state.waitingForRemoval;
     text('match-bull-prompt').textContent = state.message || (state.status === 'result' ? ''
         : playerTurn ? trMatchBull('yourTurn') : trMatchBull('waiting', { name: state.names[state.turn] }));
@@ -261,6 +261,7 @@ function renderMatchBullOff(match = currentMatch) {
     button.hidden = !playerTurn;
     button.disabled = !playerTurn;
     if (playerTurn && !text('match-bull-off').hidden) button.focus();
+    if (typeof updateSpectatorSpeedControls === 'function') updateSpectatorSpeedControls();
 }
 function showMatchBullOff(match = currentMatch) {
     if (isMatchBullOffPending(match) && (!isMatchBullOffEnabled() || match.bullOff.status === 'skipped')) {
@@ -299,19 +300,23 @@ function skipMatchBullOff(match = currentMatch) {
     } else setTurnUI();
     return true;
 }
+function scheduleMatchBullPlayback(callback, delay, kind = 'flow') {
+    return typeof scheduleSpectatorPlaybackAction === 'function'
+        ? scheduleSpectatorPlaybackAction(callback, delay, delay, kind) : setTimeout(callback, delay);
+}
 function scheduleMatchBullAi(match) {
     clearTimeout(matchBullTimer);
     const state = match.bullOff;
-    if (state.status !== 'pending' || state.turn === 'p1' && !match.isSpectator) return;
-    matchBullTimer = setTimeout(() => {
+    if (state.waitingForRemoval || state.status !== 'pending' || state.turn === 'p1' && !(match.isSpectator || match.careerAutoplay)) return;
+    matchBullTimer = scheduleMatchBullPlayback(() => {
         if (currentMatch === match && state.status === 'pending') advanceMatchBullOff(match);
-    }, 650);
+    }, 650, 'throw');
 }
 function advanceMatchBullOff(match = currentMatch) {
     if (!match || currentMatch !== match || match.bullOff?.status !== 'pending'
-        || match.bullOff.waitingForRemoval) return false;
+        || match.bullOff.waitingForRemoval || ((match.isSpectator || match.careerAutoplay) && match.spectatorPaused)) return false;
     const state = match.bullOff, side = state.turn;
-    if (side === 'p1' && !match.isSpectator && !document.getElementById('match-bull-off').hidden
+    if (side === 'p1' && !(match.isSpectator || match.careerAutoplay) && !document.getElementById('match-bull-off').hidden
         && state.throws.p1) return false;
     state.message = '';
     const dart = rollMatchBullDart(state.skills[side]);
@@ -342,7 +347,7 @@ function advanceMatchBullOff(match = currentMatch) {
         state.first = state.first === 'p1' ? 'p2' : 'p1';
         state.turn = state.first;
         renderMatchBullOff(match);
-        matchBullTimer = setTimeout(() => {
+        matchBullTimer = scheduleMatchBullPlayback(() => {
             if (currentMatch !== match || state.status !== 'tie') return;
             state.status = 'pending';
             state.throws = { p1: null, p2: null };
@@ -357,7 +362,7 @@ function advanceMatchBullOff(match = currentMatch) {
     state.status = 'result';
     state.message = trMatchBull('winner', { name: state.names[winner] });
     renderMatchBullOff(match);
-    matchBullTimer = setTimeout(() => {
+    matchBullTimer = scheduleMatchBullPlayback(() => {
         if (currentMatch !== match || state.status !== 'result') return;
         match.startingPlayer = winner;
         match.turn = winner;

@@ -39,10 +39,12 @@ function initializeAiDevelopmentCandidate(candidate, { referenceDate = currentDa
     const config = AI_DEVELOPMENT_FOUNDATION_CONFIG, rating = Number(candidate.baseOvr ?? candidate.ovr ?? candidate.overall);
     if (!Number.isFinite(rating)) return;
     const random = getAiDevelopmentAttributeRandom(candidate, 'attributes');
+    const potentialRating = typeof getWomensRatingInitialOverall === 'function'
+        ? getWomensRatingInitialOverall(candidate, rating) : rating;
     if (!Number.isFinite(candidate.potential) || candidate.potential < config.potential.min || candidate.potential > config.potential.max) {
-        const floor = Math.min(config.potential.max, Math.max(rating,
+        const floor = Math.min(config.potential.max, Math.max(potentialRating,
             Number(candidate.aiDevelopmentSummary?.after) || rating, config.potential.minimumGenerated));
-        const bias = Math.max(-1, Math.min(1, (rating - config.potential.ratingReference) / config.potential.ratingRange));
+        const bias = Math.max(-1, Math.min(1, (potentialRating - config.potential.ratingReference) / config.potential.ratingRange));
         const bands = config.potential.bands.map((band, index) => ({ ...band,
             weight: floor <= band.max ? band.weight * Math.exp(bias * index * config.potential.ratingBias) : 0 }));
         let roll = random() * bands.reduce((sum, band) => sum + band.weight, 0);

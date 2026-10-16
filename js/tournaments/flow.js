@@ -173,6 +173,7 @@ function comparePlayersChampionshipReserveOrder(first, second) {
 
 function isPlayersChampionshipFloorTournament(tournament) {
     if (!tournament) return false;
+    if(typeof isWomensSeriesTournament==='function'&&isWomensSeriesTournament(tournament))return true;
     const name = `${tournament.name || ''} ${tournament.sourceName || ''}`.toLocaleLowerCase('pl');
     return (name.includes('players championship') || name.includes('pro players cup'))
         && !name.includes('final');
@@ -277,6 +278,40 @@ function buildPlayersChampionshipField(cardHolders, replacementPoolOrRandom = []
     };
 }
 
+function replaceCareerPlayerWithPlayersChampionshipReserve(tournament, participants, candidates) {
+    if (!isPlayersChampionshipFloorTournament(tournament)
+        || (typeof isWomensSeriesTournament === 'function' && isWomensSeriesTournament(tournament))
+        || (typeof hasTournamentEditorQualification === 'function' && hasTournamentEditorQualification(tournament))
+        || (typeof hasCareerTourEntryOverride === 'function' && hasCareerTourEntryOverride(tournament))
+        || !participants.some(isCurrentPlayer)) return null;
+
+    const source = Array.isArray(candidates) ? candidates : getPdcTourCardPlayers(true);
+    const occupiedKeys = new Set(participants.map(getTournamentWithdrawalPlayerKey).filter(Boolean));
+    const reserves = typeof getChallengeTourEligiblePlayers === 'function'
+        ? getChallengeTourEligiblePlayers(source)
+        : source.filter(candidate => candidate && !candidate.isBye && candidate.hasTourCard !== true);
+    const replacement = reserves.filter(candidate => !isCurrentPlayer(candidate)
+        && !occupiedKeys.has(getTournamentWithdrawalPlayerKey(candidate))
+        && (typeof isPlayerAvailableForPlay !== 'function' || isPlayerAvailableForPlay(candidate))
+        && (typeof isCareerEditorAccessEligible !== 'function'
+            || isCareerEditorAccessEligible(tournament, candidate, currentDate)))
+        .sort(comparePlayersChampionshipReserveOrder)[0];
+
+    if (replacement) {
+        tournament.playersChampionshipReplacements = [...new Set([
+            ...(tournament.playersChampionshipReplacements || []), replacement.id || replacement.name
+        ])];
+    }
+    // Keep the 128 draw slots even when no eligible CT reserve remains.
+    // A bye must not earn withdrawal prize money for the career player.
+    return {
+        replacement,
+        participants: participants.map(candidate => isCurrentPlayer(candidate)
+            ? replacement || { name: '(BYE)', isBye: true, country: 'Brak', ovr: 0, overall: 0 }
+            : candidate)
+    };
+}
+
 function getSecondaryTourWithdrawalType(tournament) {
     if (typeof hasTournamentEditorQualification === 'function' && hasTournamentEditorQualification(tournament)) return '';
     if (typeof isChallengeTourTournament === 'function' && isChallengeTourTournament(tournament)) return 'challengeTour';
@@ -362,6 +397,8 @@ function getDefaultTournamentSeedCandidates() {
 }
 
 function tournamentHidesSeedNumbers(tournament) {
+    if(typeof isWomensWorldMatchplayTournament==='function'&&isWomensWorldMatchplayTournament(tournament))return false;
+    if (typeof isWomensSeriesTournament === 'function' && isWomensSeriesTournament(tournament)) return true;
     if (typeof hasTournamentEditorQualification === 'function' && hasTournamentEditorQualification(tournament)) return true;
     if (!tournament) return true;
     const name = `${tournament.name || ''} ${tournament.sourceName || ''}`.toLocaleLowerCase('pl');
@@ -382,6 +419,7 @@ function tournamentUsesWorldChampionshipSeeds(tournament) {
 }
 
 function getTournamentSeedCount(tournament) {
+    if(typeof isWomensWorldMatchplayTournament==='function'&&isWomensWorldMatchplayTournament(tournament))return 8;
     return tournamentUsesWorldChampionshipSeeds(tournament) ? 32 : 16;
 }
 
@@ -472,6 +510,7 @@ function setTournamentSeedPlayerKeys(tournament, keys) {
 
 function prepareTournamentSeedNumbers(tournament, candidates, participants) {
     if (!tournament) return [];
+    if(typeof isWomensWorldMatchplayTournament==='function'&&isWomensWorldMatchplayTournament(tournament))return setTournamentSeedPlayerKeys(tournament,(womensWorldMatchplayEdition()?.seeds||[]).map(id=>getTournamentSeedPlayerKey(resolveWomensWorldMatchplayPlayer(id))));
     if (tournamentHidesSeedNumbers(tournament)) {
         delete tournament.bracketSeedPlayerKeys;
         return [];
@@ -595,6 +634,9 @@ function skipActiveTournament() {
         function startTournament() {
             if (typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy()) return false;
             if (!activeTournament) return;
+            const nativeWomensWorldMatchplay=typeof isWomensWorldMatchplayTournament==='function'&&isWomensWorldMatchplayTournament(activeTournament);
+            const nativeWomensSeries=nativeWomensWorldMatchplay||typeof isWomensSeriesTournament==='function'&&isWomensSeriesTournament(activeTournament);
+            if(!currentMatch&&tournamentBracket?.length>1&&typeof parkCalendarTournamentAfterRound==='function'&&parkCalendarTournamentAfterRound(activeTournament)==='calendarSession')return concludeCalendarSessionPause();
             if (typeof recordWorldNewsPreview === 'function') recordWorldNewsPreview(activeTournament);
             const injuredCareerPlayer = typeof isPlayerInjured === 'function' && isPlayerInjured(player);
             if (injuredCareerPlayer) {
@@ -602,13 +644,15 @@ function skipActiveTournament() {
                 if (currentMatch?.isTournament) currentMatch = null;
             }
             if (currentMatch && currentMatch.isTournament && currentMatch.p1Score !== undefined) {
+                if(typeof resumeWomensSeriesSavedMatch==='function'&&resumeWomensSeriesSavedMatch())return;
                 if (typeof chargeTournamentParticipationStamina === 'function') {
                     chargeTournamentParticipationStamina(activeTournament);
                 }
                 showScreen('screen-match'); return;
             }
-            if (typeof isEditorSeasonLeague === 'function' && isEditorSeasonLeague(activeTournament)) return startEditorSeasonLeague();
-            if (typeof isEditorTeamTournament === 'function' && (isEditorTeamTournament(activeTournament)
+            if (typeof isWorldYouthTournament === 'function' && isWorldYouthTournament(activeTournament)) return startWorldYouthTournament();
+            if (!nativeWomensSeries && typeof isEditorSeasonLeague === 'function' && isEditorSeasonLeague(activeTournament)) return startEditorSeasonLeague();
+            if (!nativeWomensSeries && typeof isEditorTeamTournament === 'function' && (isEditorTeamTournament(activeTournament)
                 || typeof isEditorGroupTournament === 'function' && isEditorGroupTournament(activeTournament))) {
                 return startEditorTeamTournament();
             }
@@ -640,13 +684,15 @@ function skipActiveTournament() {
             if (tournamentBracket && tournamentBracket.length > 1 && typeof repairCareerTournamentBracket === 'function') {
                 tournamentBracket = repairCareerTournamentBracket(tournamentBracket);
             }
-            if (tournamentBracket && tournamentBracket.length > 1 && typeof repairRetiredTournamentBracket === 'function') {
+            if (!nativeWomensWorldMatchplay && tournamentBracket && tournamentBracket.length > 1 && typeof repairRetiredTournamentBracket === 'function') {
                 tournamentBracket = repairRetiredTournamentBracket(tournamentBracket, activeTournament);
             }
             // A saved opening draw may have been prepared before an injury.
             // Rebuild it while results are still empty, so each event can draw
             // its eligible reserves instead of inheriting a permanent BYE.
             const injuredUnplayedOpeningDraw = tournamentBracket?.length > 1
+                && !nativeWomensWorldMatchplay
+                && !activeTournament?.qSchoolStage
                 && typeof isPlayerInjured === 'function'
                 && tournamentBracket.some(candidate => candidate && !candidate.isBye && isPlayerInjured(candidate))
                 && !(typeof hasTournamentMatchHistory === 'function'
@@ -667,7 +713,7 @@ function skipActiveTournament() {
                     }
                 }
             }
-            if (tournamentBracket?.length > 1 && typeof repairInjuredTournamentBracket === 'function') {
+            if (tournamentBracket?.length > 1 && !nativeWomensWorldMatchplay && !activeTournament?.qSchoolStage && !(typeof isWorldYouthTournament === 'function' && isWorldYouthTournament(activeTournament)) && typeof repairInjuredTournamentBracket === 'function') {
                 tournamentBracket = repairInjuredTournamentBracket(tournamentBracket);
             }
             if (tournamentBracket?.length && closeEmptyEditorTournament({ preservePlayedRounds: true })) return true;
@@ -790,9 +836,9 @@ function skipActiveTournament() {
             }
 
             let tName = activeTournament.name;
-            const editorRules = (typeof hasTournamentEditorQualification === 'function' && hasTournamentEditorQualification(activeTournament))
-                || (typeof hasCareerTourEntryOverride === 'function' && hasCareerTourEntryOverride(activeTournament));
-            let tNameLow = editorRules ? '' : String(activeTournament.sourceName || tName).toLowerCase();
+            const editorRules = !nativeWomensSeries && ((typeof hasTournamentEditorQualification === 'function' && hasTournamentEditorQualification(activeTournament))
+                || (typeof hasCareerTourEntryOverride === 'function' && hasCareerTourEntryOverride(activeTournament)));
+            let tNameLow = editorRules || nativeWomensSeries ? '' : String(activeTournament.sourceName || tName).toLowerCase();
             let tournamentDisplayName = typeof getTournamentDisplayName === 'function'
                 ? getTournamentDisplayName(activeTournament)
                 : tName;
@@ -849,10 +895,20 @@ function skipActiveTournament() {
 
             let participants = [];
 
+            const isWomensSeriesEvent = typeof isWomensSeriesTournament === 'function' && isWomensSeriesTournament(activeTournament);
+
             // --- 1. WYBÓR UCZESTNIKÓW I ROZMIAR DRABINKI ---
             
             // Finały Play-offs
-            if (editorRules) {
+            if (nativeWomensWorldMatchplay) {
+                participants = initializeWomensWorldMatchplayDraw(activeTournament);
+                tournamentRound = 8;
+                if(participants.length!==8){activeTournament.completed=true;activeTournament.womensWorldMatchplayCancelled=true;const e=womensWorldMatchplayEdition();e.phase='cancelled';e.diagnostics.push('qualification-unavailable');activeTournament=null;tournamentBracket=[];updateHub();saveGame(true);return false;}
+            } else if (isWomensSeriesEvent) {
+                processWomensSeriesEntryCutoffs(currentDate);
+                participants = prepareSecondaryTourWithdrawals(activeTournament,getWomensSeriesEligiblePlayers(availablePlayers,currentDate,activeTournament));
+                tournamentRound = getPdcQSchoolOpeningRound(participants.length);
+            } else if (editorRules) {
                 participants = getTournamentEditorParticipants(activeTournament, allPlayers, currentDate);
                 tournamentRound = typeof getCareerTourFieldSize === 'function' ? getCareerTourFieldSize(activeTournament) : activeTournament.editorFieldSize;
             } else if (activeTournament.isEditorTournament === true) {
@@ -913,7 +969,7 @@ function skipActiveTournament() {
 
             } else if (isQSchoolEvent) {
                 participants = typeof getPdcQSchoolParticipants === 'function'
-                    ? getPdcQSchoolParticipants(availablePlayers)
+                    ? getPdcQSchoolParticipants(availablePlayers, activeTournament)
                     : nonCardPlayers;
                 tournamentRound = typeof getPdcQSchoolOpeningRound === 'function'
                     ? getPdcQSchoolOpeningRound(participants.length)
@@ -1059,7 +1115,12 @@ function skipActiveTournament() {
                 : participants.some(isCurrentPlayer));
             
             if (isSkippingTournament && playerInTournament) {
-                if (isUKOpenEvent && typeof removeUKOpenParticipant === 'function') {
+                const playersChampionshipWithdrawal = replaceCareerPlayerWithPlayersChampionshipReserve(
+                    activeTournament, participants, allPlayers);
+                if (playersChampionshipWithdrawal) {
+                    participants = playersChampionshipWithdrawal.participants;
+                    playerInTournament = false;
+                } else if (isUKOpenEvent && typeof removeUKOpenParticipant === 'function') {
                     removeUKOpenParticipant(activeTournament, player, allPlayers);
                     participants = getUKOpenOpeningParticipants(activeTournament, allPlayers, currentDate);
                     playerInTournament = false;
@@ -1069,7 +1130,7 @@ function skipActiveTournament() {
                     // zamiast dopisywać nieuprawnionego zawodnika z ProTouru.
                     const replacementRanking = (editorRules || isQSchoolEvent || isTourCardQualifierEvent || isContinentalQualifier
                         || isWorldMastersFinalsQualifier || isCrownMastersQualifier
-                        || isChallengeTourEvent || isDevelopmentTourEvent)
+                        || isChallengeTourEvent || isDevelopmentTourEvent || isWomensSeriesEvent || nativeWomensWorldMatchplay)
                         ? []
                         : [...nonCardPlayers, ...(isEuropeanChampionship ? etRanked : ptRanked)];
                     const replacement = replacementRanking.find(p => !participants.includes(p) && !isCurrentPlayer(p));
@@ -1110,7 +1171,7 @@ function skipActiveTournament() {
                 // Dotyczy zarówno kwalifikacji dla posiadaczy kart, jak i ścieżek
                 // regionalnych. Pełna symulacja zachowuje wyniki i rezerwowych.
                 isHeadlessSim = true;
-            } else if ((isChallengeTourEvent || isDevelopmentTourEvent) && !playerInTournament) {
+            } else if ((isChallengeTourEvent || isDevelopmentTourEvent || isWomensSeriesEvent) && !playerInTournament) {
                 // Gracz niespełniający zasad cyklu nie zatrzymuje kalendarza.
                 // Całe wydarzenie uprawnionych zawodników rozgrywamy w tle.
                 isHeadlessSim = true;
@@ -1149,12 +1210,16 @@ function skipActiveTournament() {
                     tournamentRound = 16;
                 }
 
-                if (typeof isCareerEditorAccessEligible === 'function') participants = participants.map(candidate => candidate?.isBye
+                if (!nativeWomensWorldMatchplay && typeof isCareerEditorAccessEligible === 'function') participants = participants.map(candidate => candidate?.isBye
                     || isCareerEditorAccessEligible(activeTournament, candidate, currentDate) ? candidate
                     : { name: '(BYE)', isBye: true, country: 'Brak', ovr: 0, overall: 0 });
 
                 // --- 2. LOSOWANIE / ROZSTAWIENIE ---
-                if (editorRules) {
+                if (isWomensSeriesEvent) {
+                    participants = buildPdcQSchoolDraw(participants);
+                    tournamentRound = participants.length;
+                    initializeWomensSeriesDraw(activeTournament,participants);
+                } else if (editorRules) {
                     participants = buildTournamentEditorDraw(activeTournament, participants);
                 } else if (isUKOpenEvent) {
                     participants = typeof buildUKOpenStageDraw === 'function'
@@ -1184,8 +1249,9 @@ function skipActiveTournament() {
                         : shuffle(participants);
                     tournamentRound = participants.length;
                 } else if (isQSchoolEvent) {
+                    if (typeof registerPdcQSchoolDayAttendance === 'function') registerPdcQSchoolDayAttendance(activeTournament, participants);
                     participants = typeof buildPdcQSchoolDraw === 'function'
-                        ? buildPdcQSchoolDraw(participants)
+                        ? buildPdcQSchoolDraw(participants, Math.random, activeTournament.qSchoolStage === 'first' ? 32 : 128)
                         : shuffle(participants);
                     tournamentRound = participants.length;
                     activeTournament.qSchoolDrawVersion = typeof PDC_QSCHOOL_DRAW_VERSION === 'number'
@@ -1273,6 +1339,8 @@ function skipActiveTournament() {
                     // initializeGrandSlamTournament() w drabince Last 16.
                     participants = tournamentBracket;
 
+                } else if (nativeWomensWorldMatchplay) {
+                    participants = initializeWomensWorldMatchplayDraw(activeTournament);
                 } else if (tNameLow.includes("matchplay") || tNameLow.includes("grand prix")) {
                     let seeds = participants.slice(0, 16);
                     let unseeded = shuffle(participants.slice(16));
@@ -1306,12 +1374,13 @@ function skipActiveTournament() {
                     participants = draw;
                 }
 
-                if (!editorRules && typeof applyTournamentEditorNativeQualifierDraw === 'function') {
+                if (!nativeWomensWorldMatchplay && !editorRules && typeof applyTournamentEditorNativeQualifierDraw === 'function') {
                     participants = applyTournamentEditorNativeQualifierDraw(activeTournament, participants,
                         [...pdcPlayers, player], currentDate);
                 }
-                tournamentBracket = typeof repairInjuredTournamentBracket === 'function'
+                tournamentBracket = !nativeWomensWorldMatchplay && typeof repairInjuredTournamentBracket === 'function'
                     ? repairInjuredTournamentBracket(participants) : participants;
+                if(typeof isCalendarSessionTournament==='function'&&isCalendarSessionTournament(activeTournament))activeTournament.calendarSessionParticipants ||= tournamentBracket.filter(p=>!p.isBye).map(p=>p.id);
 
                 return true;
             }
@@ -1367,7 +1436,8 @@ function skipActiveTournament() {
             if (typeof updateHub === 'function') updateHub();
             if (typeof saveGame === 'function') saveGame(true);
             if (showOutcome && typeof getPdcTourCardOutcomeMessage === 'function') {
-                alert(getPdcTourCardOutcomeMessage(player));
+                alert(qSchoolTournament.qSchoolStage && typeof getPdcQSchoolDayOutcomeMessage === 'function'
+                    ? getPdcQSchoolDayOutcomeMessage(qSchoolTournament, player) : getPdcTourCardOutcomeMessage(player));
             }
             return { playerQualified, tournament: qSchoolTournament };
         }
@@ -1414,6 +1484,9 @@ function skipActiveTournament() {
         
 
        function showBracket() {
+            if (typeof isWorldYouthTournament === 'function' && isWorldYouthTournament(activeTournament) && getWorldYouthEdition()?.phase === 'groups') return showWorldYouth('groups');
+            const qSchoolOverview = document.getElementById('qschool-bracket-overview');
+            if (qSchoolOverview) qSchoolOverview.hidden = activeTournament?.specialType !== 'pdcQSchool';
             document.getElementById('t-btn-play-match').onclick = closeBracketAndPlay;
             document.getElementById('t-btn-sim-round').onclick = simulateNextRound;
             const simulateTournamentButton = document.getElementById('t-btn-sim-tournament');
@@ -1446,7 +1519,8 @@ function skipActiveTournament() {
                         <small style="color:#bdc3c7;">${t('t-avg-short')} ${watchedResult.p1Avg} – ${watchedResult.p2Avg}</small>
                     </div>`
                     : (canWatchMatch
-                        ? `<button class="btn-sign" onclick="startSpectatingTournamentMatch(${i})" style="background:#8e44ad; margin:0; min-width:155px;">👁 ${t('t-btn-watch-match')}</button>`
+                        ? `<div class="spectator-watch-actions"><button class="btn-sign" onclick="startSpectatingTournamentMatch(${i})">👁 ${t('t-btn-watch-match')}</button>
+                            <button class="btn-sign spectator-watch-highlights" onclick="startSpectatingTournamentMatch(${i}, true)" title="${escapeHtml(t('t-spectator-highlights-help'))}">🎬 ${t('t-btn-watch-highlights')}</button></div>`
                         : '');
                 
                 if (isPlayerMatch) isPlayerInRound = true;
@@ -1483,6 +1557,12 @@ function skipActiveTournament() {
         function simulateNextRound() {
             if (typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy()) return false;
             const specialTournamentOutcome = advanceTournament(false);
+            if(specialTournamentOutcome==='calendarSession')return concludeCalendarSessionPause();
+
+            if (specialTournamentOutcome === 'worldYouth') {
+                document.getElementById('bracket-modal').style.display = 'none';
+                concludeWorldYouthEvent(); return;
+            }
 
             if (specialTournamentOutcome === 'editorQualifier') {
                 document.getElementById('bracket-modal').style.display = 'none';
@@ -1532,6 +1612,8 @@ function skipActiveTournament() {
                 awardPrizeMoney(winner, winPrize, activeTournament.name);
                 if (typeof completeWorldMastersTournament === 'function') completeWorldMastersTournament(activeTournament, winner);
                 recordSeasonTournamentResult(winner, activeTournament, { round: 2, prizeMoney: winPrize, won: true });
+                if (typeof completeWomensSeriesTournament === 'function') completeWomensSeriesTournament(activeTournament,winner);
+                if(typeof completeWomensWorldMatchplayTournament==='function')completeWomensWorldMatchplayTournament(activeTournament,winner);
 
                 // Wypłaty za miejsca 5-8 po finałach Play-offs!
                 if (activeTournament.name.includes("Play-offs")) {
@@ -1568,7 +1650,9 @@ function skipActiveTournament() {
             
             if (opponent && opponent.isBye) {
                 alert(t('t-alert-bye'));
-                advanceTournament(true);
+                const outcome = advanceTournament(true);
+                if(outcome==='calendarSession')return concludeCalendarSessionPause();
+                if (outcome === 'worldYouth') { concludeWorldYouthEvent(); return; }
                 showRoundResults(); // Pokaże symulację rywali
                 return;
             }
@@ -1729,7 +1813,8 @@ function skipActiveTournament() {
         accumulatedScores[side] * 3 / Math.max(1, totalDarts[side]))).toFixed(2);
     const p1Avg = getMatchAverage(0), p2Avg = getMatchAverage(1);
     const result = { p1Avg, p2Avg, p1Score: isSets ? p1Sets : p1Legs, p2Score: isSets ? p2Sets : p2Legs,
-        p1LegsWon, p2LegsWon };
+        p1LegsWon, p2LegsWon, p1Scored: accumulatedScores[0], p2Scored: accumulatedScores[1],
+        p1Darts: totalDarts[0], p2Darts: totalDarts[1] };
     if (typeof getQuickSimulatedMatchStats === 'function') {
         Object.assign(result, getQuickSimulatedMatchStats(p1Ratings, p2Ratings, result));
     }
@@ -1809,7 +1894,7 @@ function skipActiveTournament() {
         }
 
         function* iterateTournamentRound(playerAdvancing = true) {
-            if (typeof repairInjuredTournamentBracket === 'function') {
+            if (!(typeof isWomensWorldMatchplayTournament==='function'&&isWomensWorldMatchplayTournament(activeTournament)) && !activeTournament?.qSchoolStage && !(typeof isWorldYouthTournament === 'function' && isWorldYouthTournament(activeTournament)) && typeof repairInjuredTournamentBracket === 'function') {
                 const repaired = repairInjuredTournamentBracket(tournamentBracket);
                 if (repaired !== tournamentBracket) repaired.forEach((candidate, index) => { tournamentBracket[index] = candidate; });
             }
@@ -1828,7 +1913,8 @@ function skipActiveTournament() {
                 && isCrownMastersQualifierTournament(activeTournament);
             const isUKOpenEvent = typeof isUKOpenTournament === 'function'
                 && isUKOpenTournament(activeTournament);
-            const isSecondaryTourEvent = isChallengeTourEvent || isDevelopmentTourEvent;
+            const isWomensSeriesEvent = typeof isWomensSeriesTournament === 'function' && isWomensSeriesTournament(activeTournament);
+            const isSecondaryTourEvent = isChallengeTourEvent || isDevelopmentTourEvent || isWomensSeriesEvent;
             const isEditorQualifier = typeof isTournamentEditorQualifier === 'function' && isTournamentEditorQualifier(activeTournament);
             const usesEditorDraw = activeTournament?.isEditorTournament === true
                 || (typeof hasTournamentEditorQualification === 'function' && hasTournamentEditorQualification(activeTournament))
@@ -1880,13 +1966,22 @@ function skipActiveTournament() {
                 let countPrizeTowardsRankings = !isSecondaryTourEvent;
                 
                 // ZMIANA: Deklaracja wyników na samej górze pętli, aby były widoczne dla tabeli GDL!
-                let matchWScore = 6, matchLScore = 0;
+                let matchWScore = activeTournament?.qSchoolStage === 'first' ? 5 : 6, matchLScore = 0;
                 let leagueResultAlreadyCounted = false;
 
-                if (p1.isBye) { nextRoundBracket.push(p2); yield; continue; }
-                if (p2.isBye) { nextRoundBracket.push(p1); yield; continue; }
+                if ((p1.isBye || p2.isBye) && typeof recordWorldYouthKnockoutMatch === 'function' && isWorldYouthTournament(activeTournament)) {
+                    const bothBye = p1.isBye && p2.isBye;
+                    recordWorldYouthKnockoutMatch(activeTournament,tournamentRound,p1,p2,{
+                        winner:p1.isBye?p2:p1,p1Score:p1.isBye?0:6,p2Score:p2.isBye?0:6,walkover:true,
+                        ...(bothBye?{p1Score:0,p2Score:0}:{})
+                    });
+                }
+                if (p1.isBye) { if(isWomensSeriesEvent)recordWomensSeriesBye(activeTournament,tournamentRound,p2);nextRoundBracket.push(p2); yield; continue; }
+                if (p2.isBye) { if(isWomensSeriesEvent)recordWomensSeriesBye(activeTournament,tournamentRound,p1);nextRoundBracket.push(p1); yield; continue; }
 
-                if (isCurrentPlayer(p1) || isCurrentPlayer(p2)) {
+                const simulateYouthCareerMatch = typeof isWorldYouthTournament === 'function' && isWorldYouthTournament(activeTournament)
+                    && activeTournament.worldYouthSimulateCareer === true && !currentMatch;
+                if ((isCurrentPlayer(p1) || isCurrentPlayer(p2)) && !simulateYouthCareerMatch) {
                     if (playerAdvancing) {
                         winner = isCurrentPlayer(p1) ? p1 : p2;
                         loser = isCurrentPlayer(p1) ? p2 : p1;
@@ -1895,7 +1990,12 @@ function skipActiveTournament() {
                         loser = isCurrentPlayer(p1) ? p1 : p2;
                     }
                     nextRoundBracket.push(winner);
+                    if(isWomensSeriesEvent)recordWomensSeriesMatch(activeTournament,tournamentRound,p1,p2,{winner,loser,
+                        p1Score:currentMatch?(isCurrentPlayer(p1)?currentMatch.p1Legs:currentMatch.p2Legs):winner===p1?getTournamentMatchFormat(activeTournament,tournamentRound).legsToWin:0,
+                        p2Score:currentMatch?(isCurrentPlayer(p2)?currentMatch.p1Legs:currentMatch.p2Legs):winner===p2?getTournamentMatchFormat(activeTournament,tournamentRound).legsToWin:0,
+                        walkover:!currentMatch?.stats});
                     countPrizeTowardsRankings = !isSecondaryTourEvent && !isContinentalAutomaticOpeningLoss(loser);
+                    if(typeof recordWomensWorldMatchplayMatch==='function')recordWomensWorldMatchplayMatch(activeTournament,tournamentRound,p1,p2,{winner,p1Score:currentMatch?(isCurrentPlayer(p1)?currentMatch.p1Legs:currentMatch.p2Legs):winner===p1?getTournamentMatchFormat(activeTournament,tournamentRound).legsToWin:0,p2Score:currentMatch?(isCurrentPlayer(p2)?currentMatch.p1Legs:currentMatch.p2Legs):winner===p2?getTournamentMatchFormat(activeTournament,tournamentRound).legsToWin:0,walkover:!currentMatch?.stats});
                     if (!isNonPrizeQualifier) {
                         awardPrizeMoney(loser, prize, activeTournament.name, { countTowardsRankings: countPrizeTowardsRankings });
                     }
@@ -1917,6 +2017,19 @@ function skipActiveTournament() {
                         lAvg = isCurrentPlayer(loser) ? p1Avg : p2Avg;
                     }
 
+                    if (isQSchoolEvent && typeof recordPdcQSchoolMatch === 'function') {
+                        const careerFirst = isCurrentPlayer(p1), stats = currentMatch?.stats;
+                        const careerPoints = stats ? stats.p1AccumulatedScore + (501 - currentMatch.p1Score) : null;
+                        const opponentPoints = stats ? stats.p2AccumulatedScore + (501 - currentMatch.p2Score) : null;
+                        recordPdcQSchoolMatch(activeTournament, tournamentRound, p1, p2, {
+                            winner, p1Score: winner === p1 ? matchWScore : matchLScore,
+                            p2Score: winner === p2 ? matchWScore : matchLScore,
+                            p1Scored: careerFirst ? careerPoints : opponentPoints,
+                            p2Scored: careerFirst ? opponentPoints : careerPoints,
+                            p1Darts: stats ? (careerFirst ? stats.p1TotalDarts : stats.p2TotalDarts) : null,
+                            p2Darts: stats ? (careerFirst ? stats.p2TotalDarts : stats.p1TotalDarts) : null
+                        });
+                    }
                     // Oficjalny mecz z tym samym przeciwnikiem buduje historię H2H i może stworzyć rywalizację.
                     const playedOpponent = isCurrentPlayer(p1) ? p2 : p1;
                     if (currentMatch && currentMatch.isTournament && currentMatch.stats && samePlayer(currentMatch.opponent, playedOpponent)) {
@@ -1975,6 +2088,10 @@ function skipActiveTournament() {
                         ? resolveTournamentAiMatch(p1, p2, format, tournamentRound)
                         : simulateAImatch(p1, p2, format);
                     leagueResultAlreadyCounted = matchRes.leagueCounted === true;
+                    if(isWomensSeriesEvent)recordWomensSeriesMatch(activeTournament,tournamentRound,p1,p2,matchRes);
+                    if(typeof recordWomensWorldMatchplayMatch==='function')recordWomensWorldMatchplayMatch(activeTournament,tournamentRound,p1,p2,matchRes);
+                    if (typeof recordWorldYouthKnockoutMatch === 'function') recordWorldYouthKnockoutMatch(activeTournament,tournamentRound,p1,p2,matchRes);
+                    if (isQSchoolEvent && typeof recordPdcQSchoolMatch === 'function') recordPdcQSchoolMatch(activeTournament, tournamentRound, p1, p2, matchRes);
                     
                     winner = matchRes.winner; 
                     loser = matchRes.loser;
@@ -1985,6 +2102,7 @@ function skipActiveTournament() {
 
                     nextRoundBracket.push(winner);
                     countPrizeTowardsRankings = !isSecondaryTourEvent && !isContinentalAutomaticOpeningLoss(loser);
+                    if(typeof recordWomensWorldMatchplayMatch==='function')recordWomensWorldMatchplayMatch(activeTournament,tournamentRound,p1,p2,{winner,p1Score:currentMatch?(isCurrentPlayer(p1)?currentMatch.p1Legs:currentMatch.p2Legs):winner===p1?getTournamentMatchFormat(activeTournament,tournamentRound).legsToWin:0,p2Score:currentMatch?(isCurrentPlayer(p2)?currentMatch.p1Legs:currentMatch.p2Legs):winner===p2?getTournamentMatchFormat(activeTournament,tournamentRound).legsToWin:0,walkover:!currentMatch?.stats});
                     if (!isNonPrizeQualifier) {
                         awardPrizeMoney(loser, prize, activeTournament.name, { countTowardsRankings: countPrizeTowardsRankings });
                     }
@@ -2037,6 +2155,8 @@ function skipActiveTournament() {
                     }
                 }
 
+                if(typeof recordWomensWorldMatchplayMatch==='function')recordWomensWorldMatchplayMatch(activeTournament,tournamentRound,p1,p2,{winner,p1Score:winner===p1?matchWScore:matchLScore,p2Score:winner===p2?matchWScore:matchLScore});
+                if (typeof recordWorldYouthKnockoutMatch === 'function') recordWorldYouthKnockoutMatch(activeTournament,tournamentRound,p1,p2,{winner,p1Score:winner===p1?matchWScore:matchLScore,p2Score:winner===p2?matchWScore:matchLScore});
                 if (isContinentalQualifier && typeof recordContinentalQualifierFinalLoser === 'function') {
                     recordContinentalQualifierFinalLoser(activeTournament, loser, tournamentRound);
                 }
@@ -2067,6 +2187,11 @@ function skipActiveTournament() {
                 tournamentBracket = nextRoundBracket;
                 tournamentRound /= 2;
             }
+            if(typeof advanceWomensWorldMatchplayStage==='function')advanceWomensWorldMatchplayStage(activeTournament);
+            if(typeof parkCalendarTournamentAfterRound==='function'){const held=parkCalendarTournamentAfterRound();if(held)return held;}
+            if (typeof isWorldYouthTournament === 'function' && isWorldYouthTournament(activeTournament)) {
+                const outcome=advanceWorldYouthStage();if(outcome)return outcome;
+            }
             if (isEditorQualifier && tournamentBracket.length <= activeTournament.editorQualification.qualifyingPlaces) {
                 completeTournamentEditorQualifier(activeTournament, tournamentBracket);
                 return 'editorQualifier';
@@ -2085,8 +2210,12 @@ function skipActiveTournament() {
                 }
                 return 'worldMastersFinalsQualifier';
             }
-            if (isQSchoolEvent && tournamentRound === 64) {
-                if (typeof completePdcQSchool === 'function') {
+            if (isQSchoolEvent && (activeTournament.qSchoolStage
+                ? tournamentRound <= (activeTournament.qSchoolStage === 'first' ? 16 : 2)
+                : tournamentRound === 64)) {
+                if (activeTournament.qSchoolStage && typeof completePdcQSchoolDay === 'function') {
+                    completePdcQSchoolDay(activeTournament, tournamentBracket);
+                } else if (typeof completePdcQSchool === 'function') {
                     completePdcQSchool(activeTournament, tournamentBracket, currentDate);
                 }
                 return 'pdcQSchool';
@@ -2114,7 +2243,7 @@ function skipActiveTournament() {
             if (typeof isPlayerInjured === 'function' && isPlayerInjured(player)) {
                 return typeof showPlayerInjuryBlocked === 'function' ? showPlayerInjuryBlocked() : false;
             }
-            if (typeof repairInjuredTournamentBracket === 'function') tournamentBracket = repairInjuredTournamentBracket(tournamentBracket);
+            if (!(typeof isWomensWorldMatchplayTournament==='function'&&isWomensWorldMatchplayTournament(activeTournament)) && !activeTournament?.qSchoolStage && !(typeof isWorldYouthTournament === 'function' && isWorldYouthTournament(activeTournament)) && typeof repairInjuredTournamentBracket === 'function') tournamentBracket = repairInjuredTournamentBracket(tournamentBracket);
             let opponent = null;
             for(let i = 0; i < tournamentBracket.length; i += 2) {
                 if(isCurrentPlayer(tournamentBracket[i])) opponent = tournamentBracket[i+1];

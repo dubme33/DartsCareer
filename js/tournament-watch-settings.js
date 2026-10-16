@@ -62,6 +62,7 @@ function getTournamentWatchEntries() {
 }
 
 function getTournamentWatchGroup(tournament) {
+    if(typeof isWomensSeriesTournament==='function'&&isWomensSeriesTournament(tournament))return 9;
     const editorGroups = { major: 0, playersChampionship: 1, europeanTour: 2,
         challengeTour: 3, developmentTour: 4, premierLeague: 5, worldSeries: 6,
         qualifier: 7, proTour: 8, other: 9, custom: 9 };

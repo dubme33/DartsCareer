@@ -38,6 +38,9 @@
         if (requested) return requested;
         if (!match?.isTournament && !tournament) return 'default';
         const name = tournamentText(tournament);
+        if(tournament?.specialType==='womensSeries')return 'development-tour';
+        if (tournament?.specialType === 'worldYouth') return tournament.worldYouthPhase === 'final'
+            ? 'players-championship-finals' : 'development-tour';
         if (/(world|global)\s+darts\s+championship/.test(name)) return 'world-championship';
         if (/premier\s+league|global\s+darts\s+league/.test(name)) return 'premier-league';
         if (/matchplay/.test(name)) return 'world-matchplay';

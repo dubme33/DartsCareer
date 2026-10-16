@@ -34,7 +34,7 @@
     }
     let cachedDarts = [], cachedPositions = [], cachedPresentations = [];
     function presentDarts(darts) {
-        const positions = darts.map(data => [data.x, data.y, data.dartPose?.x, data.dartPose?.y, data.dartPose?.z].join(','));
+        const positions = darts.map(data => [data.x, data.y, data.dartPose?.x, data.dartPose?.y, data.dartPose?.z, data.dartStyle?.dartEntryAngle].join(','));
         if (darts.length === cachedDarts.length && darts.every((data, index) => data === cachedDarts[index] && positions[index] === cachedPositions[index])) return cachedPresentations;
         const previous = [], physics = root.dartPhysics;
         const presentations = darts.map(data => {
@@ -49,7 +49,8 @@
                         const angle = away + offset;
                         const candidate = { x: point.x + Math.cos(angle) * distance, y: point.y + Math.sin(angle) * distance };
                         if (!sameField(candidate, expected, physics)) continue;
-                        const adjusted = { x: Math.max(-1, Math.min(-.17, pose.x + Math.sin(angle) * spread)),
+                        const maxTilt = Number.isFinite(data.dartStyle?.dartEntryAngle) && data.dartStyle.dartEntryAngle >= -10 && data.dartStyle.dartEntryAngle <= 45 ? .7 : -.17;
+                        const adjusted = { x: Math.max(-1, Math.min(maxTilt, pose.x + Math.sin(angle) * spread)),
                             y: Math.max(-.85, Math.min(.85, pose.y + Math.cos(angle) * spread)), z: pose.z };
                         if (!physics.separated(candidate, adjusted, previous)) continue;
                         presentation = { point: candidate, pose: adjusted }; break search;

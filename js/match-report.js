@@ -188,6 +188,8 @@ function createCompletedMatchReport(match, isP1 = true, candidate = player, tour
         average: totalDarts > 0 && accumulated !== null ? (accumulated + 501 - match[side + 'Score']) / totalDarts * 3 : null,
         first9: first9Darts > 0 && first9Score !== null ? first9Score / first9Darts * 3 : null,
         doubleHits: measured('DoubleHits'), doubleAttempts: measured('DoubleAttempts'), oneEighties: measured('OneEighties'),
+        ...(typeof isMatchDoubleIn === 'function' && isMatchDoubleIn(match, tournament)
+            ? { doubleIn: JSON.parse(JSON.stringify(getMatchDoubleInStats(match, side) || { complete: false })) } : {}),
         bounceOuts: measured('BounceOuts'), complete: match.reportDarts?.complete === true,
         detail: match.reportDarts?.complete === true ? JSON.parse(JSON.stringify(match.reportDarts[side])) : null,
         baseline: getMatchReportBaseline(canonical) };
@@ -237,6 +239,8 @@ function renderMatchReport(report) {
         ${card('average', number(report.average), compared(report.average, baseline.average, baseline.averageCount))}
         ${card('first9', number(report.first9), compared(report.first9, baseline.first9, baseline.first9Count))}
         ${card('checkout', report.doubleAttempts === null ? '—' : accuracy(report.doubleHits, report.doubleAttempts), compared(rate, previousRate, baseline.checkoutCount, true))}
+        ${report.doubleIn && typeof getMatchDoubleInStatsCopy === 'function' ? card(getMatchDoubleInStatsCopy().label,
+            report.doubleIn.complete ? accuracy(report.doubleIn.hits, report.doubleIn.attempts) : '—') : ''}
         ${card('maximums', report.oneEighties ?? '—')}
         ${card('matchDarts', detail ? accuracy(detail.matchHits, detail.matchAttempts) : '—', detail ? tr('missed', { count: detail.matchAttempts - detail.matchHits }) : '')}
         ${card('pressure', detail ? accuracy(detail.pressureHits, detail.pressureAttempts) : '—')}

@@ -45,10 +45,10 @@ function applyModPlayerNickname(candidate, modPlayer) {
 }
 
 const PLAYER_NICKNAME_TEXT = Object.freeze({
-    pl: { label: 'Pseudonim (opcjonalnie):', hint: 'Do 48 znaków. Pseudonim pojawi się na planszy walk-onu.', settings: 'Twój pseudonim', save: 'Zapisz pseudonim', saved: 'Pseudonim zapisany.', empty: 'Pseudonim usunięty.' },
-    en: { label: 'Nickname (optional):', hint: 'Up to 48 characters. Your nickname appears on the walk-on card.', settings: 'Your nickname', save: 'Save nickname', saved: 'Nickname saved.', empty: 'Nickname removed.' },
-    de: { label: 'Spitzname (optional):', hint: 'Bis zu 48 Zeichen. Dein Spitzname erscheint auf der Walk-on-Karte.', settings: 'Dein Spitzname', save: 'Spitzname speichern', saved: 'Spitzname gespeichert.', empty: 'Spitzname entfernt.' },
-    nl: { label: 'Bijnaam (optioneel):', hint: 'Maximaal 48 tekens. Je bijnaam verschijnt op de walk-onkaart.', settings: 'Je bijnaam', save: 'Bijnaam opslaan', saved: 'Bijnaam opgeslagen.', empty: 'Bijnaam verwijderd.' }
+    pl: { label: 'Pseudonim (opcjonalnie):', hint: 'Do 48 znaków. Pseudonim pojawi się na planszy walk-onu i zostanie wypowiedziany przed imieniem i nazwiskiem.', settings: 'Twój pseudonim', save: 'Zapisz pseudonim', saved: 'Pseudonim zapisany.', empty: 'Pseudonim usunięty.' },
+    en: { label: 'Nickname (optional):', hint: 'Up to 48 characters. Your nickname appears on the walk-on card and is announced before your name.', settings: 'Your nickname', save: 'Save nickname', saved: 'Nickname saved.', empty: 'Nickname removed.' },
+    de: { label: 'Spitzname (optional):', hint: 'Bis zu 48 Zeichen. Dein Spitzname erscheint auf der Walk-on-Karte und wird vor deinem Namen angesagt.', settings: 'Dein Spitzname', save: 'Spitzname speichern', saved: 'Spitzname gespeichert.', empty: 'Spitzname entfernt.' },
+    nl: { label: 'Bijnaam (optioneel):', hint: 'Maximaal 48 tekens. Je bijnaam verschijnt op de walk-onkaart en wordt vóór je naam omgeroepen.', settings: 'Je bijnaam', save: 'Bijnaam opslaan', saved: 'Bijnaam opgeslagen.', empty: 'Bijnaam verwijderd.' }
 });
 
 function getPlayerNicknameText() {

@@ -20,6 +20,10 @@ const TOURNAMENT_EDITOR_QUALIFICATION_TEXT = {
     invalidCountries: ['Nieznany kraj zawodników: {countries}. Użyj nazw krajów z listy ścieżek krajowych. Aby dopuścić wszystkie kraje, pozostaw pole puste.', 'Unknown player country: {countries}. Use country names from the country-route list. To allow all countries, leave this field blank.', 'Unbekanntes Spielerland: {countries}. Verwende Ländernamen aus der Länderweg-Liste. Für alle Länder das Feld leer lassen.', 'Onbekend spelersland: {countries}. Gebruik landnamen uit de landenroute-lijst. Laat het veld leeg om alle landen toe te laten.'],
     routes: ['Ścieżki i liczba miejsc', 'Routes and places', 'Wege und Plätze', 'Routes en plaatsen'],
     routeSource: ['Źródło uczestników', 'Entrant source', 'Teilnehmerquelle', 'Deelnemersbron'],
+    tourRanking: ['Liderzy rankingu cyklu', 'Cycle ranking leaders', 'Führende der Zyklusrangliste', 'Leiders van de cyclusranking'],
+    selectTourRanking: ['Wybierz cykl z własnym rankingiem', 'Select a cycle with its own ranking', 'Zyklus mit eigener Rangliste wählen', 'Kies een cyclus met eigen ranking'],
+    tourRouteHint: ['Wybierz cykl z własnym rankingiem sezonowym. Wszystkie jego wydarzenia muszą zakończyć się przed tym turniejem. Awansują najwyżej sklasyfikowani uprawnieni zawodnicy z bieżącego roku; miejsca przechodzą na kolejnych, a braki pozostają wolnymi losami.', 'Select a cycle with its own seasonal ranking. All its events must finish before this tournament. The highest eligible players in the current year qualify; places roll down and shortfalls remain BYEs.', 'Wähle einen Zyklus mit eigener Saisonrangliste. Alle Veranstaltungen müssen vor diesem Turnier enden. Die bestplatzierten berechtigten Spieler des aktuellen Jahres qualifizieren sich; Plätze rücken nach, fehlende Spieler ergeben Freilose.', 'Kies een cyclus met een eigen seizoensranking. Alle evenementen moeten vóór dit toernooi eindigen. De hoogst gerangschikte beschikbare spelers van het huidige jaar kwalificeren zich; plaatsen schuiven door en tekorten blijven BYEs.'],
+    invalidTourRoute: ['Cykl kwalifikacyjny musi istnieć, mieć własny ranking i przynajmniej jedno wydarzenie. Wszystkie jego wydarzenia muszą zakończyć się przed turniejem docelowym. Najpierw zmień zależną ścieżkę, jeśli chcesz usunąć cykl lub jego ranking.', 'The qualifying cycle must exist, have its own ranking and contain at least one event. All its events must finish before the target tournament. Change the dependent route first before removing the cycle or its ranking.', 'Der Qualifikationszyklus muss existieren, eine eigene Rangliste und mindestens eine Veranstaltung haben. Alle Veranstaltungen müssen vor dem Zielturnier enden. Ändere zuerst den abhängigen Weg, bevor du Zyklus oder Rangliste entfernst.', 'De kwalificatiecyclus moet bestaan, een eigen ranking en minstens één evenement hebben. Alle evenementen moeten vóór het doeltoernooi eindigen. Wijzig eerst de afhankelijke route voordat je de cyclus of ranking verwijdert.'],
     routePlaces: ['Liczba miejsc', 'Places', 'Plätze', 'Plaatsen'],
     countryRoute: ['Kraj zawodnika', 'Player country', 'Spielerland', 'Spelersland'],
     routeCountry: ['Reprezentowany kraj', 'Represented country', 'Vertretenes Land', 'Vertegenwoordigd land'],
@@ -78,13 +82,28 @@ function getTournamentEditorRouteCountries(savedCountry = '') {
         (typeof t === 'function' ? t(first) : first).localeCompare(typeof t === 'function' ? t(second) : second));
 }
 
+function populateTournamentEditorTourRankingOptions(select, selected = select.value) {
+    select.replaceChildren();
+    appendTournamentEditorOption(select, '', trTournamentEditor('selectTourRanking'));
+    const tours = typeof getCareerCalendarEditorState === 'function' ? getCareerCalendarEditorState().tours : [];
+    tours.filter(tour => !tour.removed && tour.ranking === 'own')
+        .forEach(tour => appendTournamentEditorOption(select, tour.id, tour.name));
+    if (selected && ![...select.options].some(option => option.value === selected))
+        appendTournamentEditorOption(select, selected, tours.find(tour => tour.id === selected)?.name || selected);
+    select.value = selected || '';
+}
+
+function refreshTournamentEditorTourRankingOptions() {
+    document.querySelectorAll('.te-route-tour, .te-native-tour').forEach(select => populateTournamentEditorTourRankingOptions(select));
+}
+
 function addTournamentEditorRoute(route = { source: 'oom', places: 8 }) {
     const row = document.createElement('div');
     row.className = 'te-route';
     const source = document.createElement('select');
     source.className = 'te-route-source';
     source.setAttribute('aria-label', trTournamentEditor('routeSource'));
-    Object.keys(TOURNAMENT_EDITOR_RANKINGS).concat('country', 'qualifier').forEach(key =>
+    Object.keys(TOURNAMENT_EDITOR_RANKINGS).concat('tourRanking', 'country', 'qualifier').forEach(key =>
         appendTournamentEditorOption(source, key, trTournamentEditor(key === 'country' ? 'countryRoute' : key)));
     source.value = route.source;
     const qualifier = document.createElement('select');
@@ -95,6 +114,16 @@ function addTournamentEditorRoute(route = { source: 'oom', places: 8 }) {
         && event.editorQualification.targetKey === tournamentEditorKey(tournamentEditorSelected)).forEach(event =>
         appendTournamentEditorOption(qualifier, tournamentEditorKey(event), event.name));
     qualifier.value = route.qualifierKey || '';
+    const tourFields = document.createElement('div'); tourFields.className = 'te-route-tour-fields';
+    const tourLabel = document.createElement('label'), tourText = document.createElement('span');
+    tourText.dataset.teRouteText = 'selectTourRanking'; tourText.textContent = trTournamentEditor('selectTourRanking');
+    const tour = document.createElement('select'); tour.className = 'te-route-tour';
+    tour.setAttribute('aria-label', trTournamentEditor('selectTourRanking'));
+    populateTournamentEditorTourRankingOptions(tour, route.tourId);
+    tourLabel.append(tourText, tour);
+    const tourHint = document.createElement('p'); tourHint.className = 'tournament-editor-hint';
+    tourHint.dataset.teRouteText = 'tourRouteHint'; tourHint.textContent = trTournamentEditor('tourRouteHint');
+    tourFields.append(tourLabel, tourHint);
     const countryFields = document.createElement('div');
     countryFields.className = 'te-route-country-fields';
     const countryLabel = document.createElement('label');
@@ -128,9 +157,10 @@ function addTournamentEditorRoute(route = { source: 'oom', places: 8 }) {
     const update = () => {
         qualifier.hidden = source.value !== 'qualifier';
         countryFields.hidden = source.value !== 'country';
+        tourFields.hidden = source.value !== 'tourRanking';
     };
     source.addEventListener('change', update); update();
-    row.append(source, qualifier, places, remove, countryFields);
+    row.append(source, qualifier, places, remove, countryFields, tourFields);
     tournamentEditorElement('te-routes').appendChild(row);
 }
 
@@ -146,10 +176,13 @@ function updateTournamentEditorQualificationFields() {
     tournamentEditorElement('te-qualifying-places-wrap').hidden = !qualifier;
     tournamentEditorElement('te-qualifier-hint').hidden = !qualifier;
     tournamentEditorElement('te-prizes-panel').hidden = !teamEvent && custom && qualifier;
-    tournamentEditorElement('te-ranking').disabled = !teamEvent && custom && qualifier;
+    const youth = typeof isWorldYouthTournament === 'function' && isWorldYouthTournament(tournamentEditorSelected);
+    tournamentEditorElement('te-ranking').disabled = youth || !teamEvent && custom && qualifier;
+    if (youth) tournamentEditorElement('te-ranking').checked = false;
     tournamentEditorElement('te-field-size').disabled = !custom && !tournamentEditorCreating
         && tournamentEditorSelected?.isEditorTournament !== true;
     tournamentEditorElement('te-field-size-wrap').hidden = tournamentEditorElement('te-field-size').disabled;
+    if (typeof updateTournamentEditorNativeRouteFields === 'function') updateTournamentEditorNativeRouteFields();
 }
 
 function updateTournamentEditorFieldSize() {
@@ -185,11 +218,14 @@ function populateTournamentEditorQualification(tournament) {
     target.value = rules?.targetKey || '';
     tournamentEditorElement('te-routes').replaceChildren();
     (rules?.routes || [{ source: 'oom', places: tournament?.editorFieldSize || 32 }]).forEach(addTournamentEditorRoute);
+    if (typeof populateTournamentEditorNativeRoutes === 'function') populateTournamentEditorNativeRoutes(tournament);
     refreshTournamentEditorQualificationTranslations();
     updateTournamentEditorQualificationFields();
 }
 
 function refreshTournamentEditorQualificationTranslations() {
+    refreshTournamentEditorTourRankingOptions();
+    if (typeof refreshTournamentEditorNativeRouteTranslations === 'function') refreshTournamentEditorNativeRouteTranslations();
     const fields = { 'te-qualification-title': 'qualification', 'te-qualification-mode-label': 'qualificationMode',
         'te-qualification-hint': 'qualificationHint', 'te-event-kind-label': 'eventKind', 'te-target-label': 'targetEvent',
         'te-qualifying-places-label': 'qualifyingPlaces', 'te-qualifier-hint': 'qualifierHint', 'te-card-rule-label': 'cardRule',
@@ -215,6 +251,7 @@ function refreshTournamentEditorQualificationTranslations() {
         row.querySelector('.te-route-source').setAttribute('aria-label', trTournamentEditor('routeSource'));
         row.querySelector('.te-route-places').setAttribute('aria-label', trTournamentEditor('routePlaces'));
         row.querySelector('.te-route-qualifier').setAttribute('aria-label', trTournamentEditor('selectQualifier'));
+        row.querySelector('.te-route-tour').setAttribute('aria-label', trTournamentEditor('selectTourRanking'));
         row.querySelector('.te-route-qualifier option[value=""]').textContent = trTournamentEditor('selectQualifier');
         row.querySelector('button').setAttribute('aria-label', trTournamentEditor('removeRoute'));
     });
@@ -229,9 +266,13 @@ function getTournamentEditorQualificationFormData(values) {
     };
     const routes = [...document.querySelectorAll('#te-routes .te-route')].map(row => {
         const source = row.querySelector('.te-route-source').value;
-        if (!Object.hasOwn(TOURNAMENT_EDITOR_RANKINGS, source) && source !== 'qualifier' && source !== 'country') throw new Error(trTournamentEditor('invalidQualification'));
+        if (!Object.hasOwn(TOURNAMENT_EDITOR_RANKINGS, source) && !['qualifier', 'country', 'tourRanking'].includes(source)) throw new Error(trTournamentEditor('invalidQualification'));
         const route = { source, places: integer(row.querySelector('.te-route-places').value, 1, 256) };
         if (source === 'qualifier') route.qualifierKey = row.querySelector('.te-route-qualifier').value;
+        if (source === 'tourRanking') {
+            route.tourId = row.querySelector('.te-route-tour').value;
+            if (!route.tourId) throw new Error(trTournamentEditor('invalidTourRoute'));
+        }
         if (source === 'country') {
             route.country = row.querySelector('.te-route-country').value.trim();
             route.ranking = row.querySelector('.te-route-country-ranking').value;
@@ -263,12 +304,16 @@ function getTournamentEditorQualificationFormData(values) {
 
 function prepareTournamentEditorQualificationUpdate(tournament, values) {
     const proposed = { ...tournament, ...values };
+    const projected = tournamentDatabase.map(event => event === tournament ? proposed : event);
+    if (!tournamentDatabase.includes(tournament)) projected.push(proposed);
+    projected.forEach(event => validateTournamentEditorEventTourLinks(event, projected));
     const rules = values.editorQualification;
     const linked = tournamentDatabase.filter(event => isTournamentEditorQualifier(event)
         && event.editorQualification.targetKey === tournamentEditorKey(tournament));
     if (linked.length && hasTournamentEditorQualification(tournament)
         && (!rules || rules.kind !== 'main')) throw new Error(trTournamentEditor('linkedRules'));
     const rulesChanged = JSON.stringify(tournament?.editorQualification || null) !== JSON.stringify(rules)
+        || JSON.stringify(tournament?.editorNativeRoutes || null) !== JSON.stringify(values.editorNativeRoutes || null)
         || JSON.stringify(tournament?.editorInvitations || null) !== JSON.stringify(values.editorInvitations || null)
         || JSON.stringify(tournament?.editorStructure || null) !== JSON.stringify(values.editorStructure || null)
         || (tournament.editorGender || 'all') !== (values.editorGender || 'all')
@@ -279,6 +324,8 @@ function prepareTournamentEditorQualificationUpdate(tournament, values) {
     if (isTournamentEditorGenderChangeLocked(tournament, values.editorGender)) {
         throw new Error(trTournamentEditor('completedRules'));
     }
+    if (tournament.completed && JSON.stringify(tournament.editorNativeRoutes || null) !== JSON.stringify(values.editorNativeRoutes || null))
+        throw new Error(trTournamentEditor('completedRules'));
     if (rules && rules.kind === 'main' && linked.some(event => rules.routes.filter(route =>
         route.source === 'qualifier' && route.qualifierKey === tournamentEditorKey(event)).length !== 1)) {
         throw new Error(trTournamentEditor('invalidQualifier'));

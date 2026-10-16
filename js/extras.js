@@ -334,7 +334,7 @@ function initCareerChronicle() {
             if (!isPlainObject(modData)) throw new Error('mod.json musi zawierać obiekt JSON.');
 
             if (!['pdcPlayers', 'tournamentDatabase', 'regularSponsorsDB', 'techSponsorsDB',
-                'historicalChampions', 'sponsorTiers', 'shopDatabase', 'dartboard']
+                'historicalChampions', 'sponsorTiers', 'shopDatabase', 'dartboard', 'surround']
                 .some(field => modData[field] !== undefined)) throw modImportError('emptyMod');
 
             const arrayFields = ['pdcPlayers', 'tournamentDatabase', 'regularSponsorsDB', 'techSponsorsDB', 'historicalChampions'];
@@ -354,11 +354,13 @@ function initCareerChronicle() {
             if (modData.sponsorTiers !== undefined && !isPlainObject(modData.sponsorTiers)) throw new Error('Niepoprawne poziomy sponsorów.');
             if (modData.shopDatabase !== undefined && !isPlainObject(modData.shopDatabase)) throw new Error('Niepoprawna baza sklepu.');
             if (modData.dartboard !== undefined) modData.dartboard = validateModDartboardConfig(modData.dartboard);
+            if (modData.surround !== undefined) modData.surround = validateModSurroundConfig(modData.surround);
             if (modData.type === 'dartboard-skin' && !modData.dartboard) throw new Error('Paczka tarczy nie zawiera konfiguracji dartboard.');
+            if (modData.type === 'surround-skin' && !modData.surround) throw new Error('Paczka opony nie zawiera konfiguracji surround.');
         }
 
-        async function readModAssets(zipContent) {
-            return createModMediaAssets(zipContent);
+        async function readModAssets(zipContent, reuse = null) {
+            return createModMediaAssets(zipContent, reuse);
         }
 
         function copyModObjectValues(target, source) {
@@ -426,6 +428,7 @@ function initCareerChronicle() {
         }
 
         function applyModData(modData, isCareerActive, options = {}) {
+            if (typeof configureCompetitionNames === 'function') configureCompetitionNames(modData);
             const seasonArchiveBeforeMod = isCareerActive && typeof snapshotSeasonArchiveModRatings === 'function'
                 ? snapshotSeasonArchiveModRatings() : null;
             if (typeof invalidatePlayerLifecycleCache === 'function') invalidatePlayerLifecycleCache();
@@ -494,8 +497,8 @@ function initCareerChronicle() {
                         );
                         if (isCareerPlayerEntry) {
                             if (typeof applyModPlayerNickname === 'function') applyModPlayerNickname(player, modPlayer);
-                            (player.playerEditorProfileOverride === true ? ['hasTourCard']
-                                : ['name', 'sourceName', 'birthYear', 'country', 'hasTourCard', 'favoriteDouble']).forEach(field => {
+                            (player.playerEditorProfileOverride === true ? []
+                                : ['name', 'sourceName', 'birthYear', 'country', 'favoriteDouble']).forEach(field => {
                                 if (modPlayer[field] !== undefined) player[field] = modPlayer[field];
                             });
                             if (typeof applyModPlayerFavoriteDoubles === 'function') applyModPlayerFavoriteDoubles(player, modPlayer);
@@ -512,8 +515,8 @@ function initCareerChronicle() {
                         );
                         if (candidate) {
                             if (typeof applyModPlayerNickname === 'function') applyModPlayerNickname(candidate, modPlayer);
-                            (candidate.playerEditorProfileOverride === true ? ['hasTourCard']
-                                : ['name', 'sourceName', 'birthYear', 'country', 'hasTourCard', 'favoriteDouble']).forEach(field => {
+                            (candidate.playerEditorProfileOverride === true ? []
+                                : ['name', 'sourceName', 'birthYear', 'country', 'favoriteDouble']).forEach(field => {
                                 if (modPlayer[field] !== undefined) candidate[field] = modPlayer[field];
                             });
                             if (typeof applyModPlayerFavoriteDoubles === 'function') applyModPlayerFavoriteDoubles(candidate, modPlayer);
@@ -613,8 +616,12 @@ function initCareerChronicle() {
                 );
             }
             if (typeof migratePdcTourCardSystem === 'function') {
-                migratePdcTourCardSystem(isCareerActive ? [player, ...pdcPlayers] : pdcPlayers, currentDate);
+                if (!isCareerActive && typeof initializePdcTourCards2026 === 'function') initializePdcTourCards2026(pdcPlayers, currentDate);
+                else migratePdcTourCardSystem([player, ...pdcPlayers], currentDate);
             }
+            if (typeof ensurePdcQSchoolCalendar === 'function') ensurePdcQSchoolCalendar(tournamentDatabase, currentDate, { activeTournament });
+            if (typeof applyCompetitionCalendarNames === 'function') applyCompetitionCalendarNames(tournamentDatabase);
+            if (typeof refreshCompetitionNameLabels === 'function') refreshCompetitionNameLabels();
             if (typeof invalidatePlayerRankingCache === 'function') invalidatePlayerRankingCache();
 
             if (typeof removeLegacyPlayerForm === 'function') {
@@ -657,7 +664,7 @@ function initCareerChronicle() {
             forgetButton.title = activePersistedModRecord?.name || '';
         }
 
-        async function parseModPackage(modPackage) {
+        async function parseModPackage(modPackage, assetReuse = null) {
             if (typeof JSZip === 'undefined' || typeof JSZip.loadAsync !== 'function') {
                 throw new Error('Biblioteka JSZip nie jest dostępna.');
             }
@@ -675,45 +682,58 @@ function initCareerChronicle() {
                     });
                 }
             } : zipContent;
-            const loadedAssets = await readModAssets(modZip);
+            const loadedAssets = await readModAssets(modZip, assetReuse);
             if (modData.dartboard && !loadedAssets.dartboards[modData.dartboard.image]) {
                 disposeModMediaAssets(loadedAssets);
                 throw new Error(`Brak obrazu tarczy dartboards/${modData.dartboard.image} w paczce moda.`);
             }
+            if (modData.surround && !loadedAssets.surrounds[modData.surround.image]) {
+                disposeModMediaAssets(loadedAssets);
+                throw new Error(`Brak obrazu opony surrounds/${modData.surround.image} w paczce moda.`);
+            }
             return { modData, loadedAssets, zipContent };
         }
 
-        async function mergeDartboardModPackage(basePackage, skinZip, skinConfig) {
+        async function mergeDartboardModPackage(basePackage, skinZip, skinConfig, surroundConfig) {
             // Reuse the original ZIP entries, including compressed walk-on tracks.
             const combined = await JSZip.loadAsync(basePackage);
             const { entry: configEntry, prefix: basePrefix } = findModManifest(combined);
             const { prefix: skinPrefix } = findModManifest(skinZip);
             const config = JSON.parse(await configEntry.async('string'));
-            config.dartboard = skinConfig;
-            if (config.type === 'dartboard-skin') delete config.type;
+            if (skinConfig) config.dartboard = skinConfig;
+            if (surroundConfig) config.surround = surroundConfig;
+            if (['dartboard-skin', 'surround-skin'].includes(config.type)) delete config.type;
             combined.file(`${basePrefix}mod.json`, JSON.stringify(config));
             skinZip.forEach((relativePath, entry) => {
-                if (!entry.dir && relativePath.startsWith(`${skinPrefix}dartboards/`)) {
+                if (!entry.dir && ((skinConfig && relativePath.startsWith(`${skinPrefix}dartboards/`))
+                    || (surroundConfig && relativePath.startsWith(`${skinPrefix}surrounds/`)))) {
                     combined.file(`${basePrefix}${relativePath.slice(skinPrefix.length)}`, entry.async('blob'));
                 }
             });
             const blob = await combined.generateAsync({ type: 'blob', compression: 'DEFLATE', streamFiles: true });
-            const name = String(basePackage.name || 'mod').replace(/\.zip$/i, '').replace(/-winmau-blade-x$/i, '') + '-winmau-blade-x.zip';
+            const name = String(basePackage.name || 'mod').replace(/\.zip$/i, '').replace(/-winmau-blade-x$/i, '')
+                + (surroundConfig ? '-blade-x-surround.zip' : '-winmau-blade-x.zip');
             if (typeof File === 'function') return new File([blob], name, { type: 'application/zip' });
             return Object.assign(blob, { name });
         }
 
-        async function activateModPackage(modPackage, options = {}) {
+        async function activateModPackage(modPackage, options = {}, assetReuse = null) {
             if (typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy()) {
                 throw new Error('Zmiana moda jest niedostępna podczas symulacji turnieju.');
             }
             // Walidujemy strukturę ZIP-a, konfigurację i zasoby startowe.
             // Utwory wejściowe będą odczytywane dopiero przed odtworzeniem.
-            const { modData, loadedAssets, zipContent } = await parseModPackage(modPackage);
-            if (modData.type === 'dartboard-skin' && activeModPackage) {
+            const { modData, loadedAssets, zipContent } = await parseModPackage(modPackage, assetReuse);
+            if (['dartboard-skin', 'surround-skin'].includes(modData.type) && activeModPackage) {
                 disposeModMediaAssets(loadedAssets);
-                const combined = await mergeDartboardModPackage(activeModPackage, zipContent, modData.dartboard);
-                return activateModPackage(combined, options);
+                const baseAssets = moddedAssets;
+                const combined = await mergeDartboardModPackage(activeModPackage, zipContent, modData.dartboard, modData.surround);
+                return activateModPackage(combined, options, {
+                    assets: baseAssets,
+                    kinds: ['photos', 'sponsors', 'sounds',
+                        ...(!modData.dartboard ? ['dartboards'] : []),
+                        ...(!modData.surround ? ['surrounds'] : [])]
+                });
             }
             if (typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy()) {
                 disposeModMediaAssets(loadedAssets);
@@ -741,6 +761,7 @@ function initCareerChronicle() {
             activeModData = modData;
             activeModPackage = modPackage;
             if (typeof window !== 'undefined' && window.matchBoardSkin) window.matchBoardSkin.setMod(loadedAssets, modData.dartboard);
+            if (typeof window !== 'undefined' && window.matchSurroundSkin) window.matchSurroundSkin.setMod(loadedAssets, modData.surround);
             if (typeof cancelMatchIntro === 'function') cancelMatchIntro();
             if (typeof window !== 'undefined' && window.matchCrowd) window.matchCrowd.stop();
             if (typeof crowdAudio !== 'undefined' && crowdAudio) {
