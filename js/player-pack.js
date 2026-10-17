@@ -78,11 +78,16 @@ const PLAYER_PACK_TEXT = {
         fieldPhoto: 'foto', fieldWalkon: 'walk-onmuziek', fieldDarts: 'darts', fieldDartEntryAngle: 'insteekhoek van de darts' }
 };
 
+for (const [language, fieldHometown] of [['pl', 'miasto pochodzenia'], ['en', 'hometown'], ['de', 'Heimatstadt'], ['nl', 'plaats van herkomst']])
+    PLAYER_PACK_TEXT[language].fieldHometown = fieldHometown;
+
 function trPlayerPack(key, values = {}) {
     const lang = typeof currentLang === 'string' && PLAYER_PACK_TEXT[currentLang] ? currentLang : 'pl';
     return (PLAYER_PACK_TEXT[lang][key] || PLAYER_PACK_TEXT.en[key] || key)
         .replace(/\{(\w+)\}/g, (_, field) => String(values[field] ?? ''));
 }
+for (const [language, fieldScoringPreference] of [['pl', 'preferowane pole punktowania'], ['en', 'scoring preference'], ['de', 'Scoringpräferenz'], ['nl', 'scoringvoorkeur']])
+    PLAYER_PACK_TEXT[language].fieldScoringPreference = fieldScoringPreference;
 function playerPackError(key, values) { return new Error(trPlayerPack(key, values)); }
 function playerPackString(value, max = 120, required = false) {
     if (typeof value !== 'string') throw playerPackError('invalid');
@@ -122,12 +127,17 @@ function normalizePlayerPackEntry(raw) {
         kind: raw.kind, defaultTemplateIndex: index, sourceName: playerPackString(raw.sourceName, 120, true), name,
         country: playerPackString(raw.country, 80, true), nickname: playerPackString(raw.nickname, 48),
         birthYear: playerPackInt(raw.birthYear, 1900, 2100), gender: raw.gender,
-        favoriteDoubles: raw.favoriteDoubles, overall: playerPackInt(raw.overall, 40, 99),
-        scoring: playerPackInt(raw.scoring, 40, 100), doubles: playerPackInt(raw.doubles, 40, 100),
+        favoriteDoubles: raw.favoriteDoubles, overall: playerPackInt(raw.overall, 1, 99),
+        scoring: playerPackInt(raw.scoring, 1, 100), doubles: playerPackInt(raw.doubles, 1, 100),
         endurance: playerPackInt(raw.endurance, 0, 100), consistency: playerPackInt(raw.consistency, 0, 100),
         mental: playerPackInt(raw.mental, 0, 100), photo: playerPackAsset(raw.photo, 'photo'),
         walkon: playerPackAsset(raw.walkon, 'walkon')
     };
+    if (Object.prototype.hasOwnProperty.call(raw, 'hometown')) entry.hometown = playerPackString(raw.hometown, 80).normalize('NFC').replace(/\s+/g, ' ');
+    if (Object.prototype.hasOwnProperty.call(raw, 'preferredScoringSector')) {
+        if (![19, 20].includes(raw.preferredScoringSector)) throw playerPackError('invalid');
+        entry.preferredScoringSector = raw.preferredScoringSector;
+    }
     if (!['male', 'female'].includes(entry.gender) || !Array.isArray(entry.favoriteDoubles)
         || entry.favoriteDoubles.length !== 3) throw playerPackError('invalid');
     entry.favoriteDoubles = entry.favoriteDoubles.map(value => value == null ? null : playerPackInt(value, 1, 20));
@@ -193,6 +203,8 @@ function createPlayerPackEntry(candidate) {
     const raw = { key: playerPackKey({ ...candidate, defaultTemplateIndex: templateIndex }), kind,
         defaultTemplateIndex: kind === 'template' ? templateIndex : null,
         sourceName: candidate.sourceName || candidate.name, name: candidate.name, country: candidate.country,
+        hometown: typeof candidate.hometown === 'string' ? candidate.hometown : '',
+        preferredScoringSector: candidate.preferredScoringSector === 19 ? 19 : 20,
         nickname: candidate.nickname || '', birthYear: candidate.birthYear || getPlayerEditorReferenceYear() - 24,
         gender: candidate.gender === 'female' ? 'female' : 'male', favoriteDoubles: [favoriteDoubles[0] || 16,
             favoriteDoubles[1] ?? null, favoriteDoubles[2] ?? null],
@@ -287,6 +299,8 @@ function getPlayerPackChanges(target, entry) {
     const changed = (fields, key) => fields.some(field => current[field] !== entry[field]) ? [trPlayerPack(key)] : [];
     return [
         ...changed(['name'], 'fieldName'), ...changed(['country'], 'fieldCountry'),
+        ...(entry.hometown === undefined ? [] : changed(['hometown'], 'fieldHometown')),
+        ...(entry.preferredScoringSector === undefined ? [] : changed(['preferredScoringSector'], 'fieldScoringPreference')),
         ...changed(['nickname'], 'fieldNickname'), ...changed(['birthYear'], 'fieldBirth'),
         ...changed(['gender'], 'fieldGender'),
         ...(current.favoriteDoubles.some((value, index) => value !== entry.favoriteDoubles[index])
@@ -365,6 +379,8 @@ function applyPlayerPackDetails(candidate, entry) {
         baseScoring: entry.scoring, baseDoubles: entry.doubles, photo: entry.photo,
         walkon: entry.walkon || null, playerEditorNicknameOverride: true,
         playerEditorRatingOverride: true, playerEditorProfileOverride: true });
+    if (entry.hometown !== undefined) candidate.hometown = entry.hometown;
+    if (entry.preferredScoringSector !== undefined) candidate.preferredScoringSector = entry.preferredScoringSector;
     if (entry.darts !== undefined) {
         if (entry.darts === null) delete candidate.aiDartAppearance;
         else candidate.aiDartAppearance = normalizeAiDartAppearance(entry.darts);

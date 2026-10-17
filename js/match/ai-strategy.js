@@ -218,14 +218,31 @@ function chooseAiPreferredRoute(routes, favorites, standardAim, random) {
     return { ...alternative.aim };
 }
 
+function getPreferredAiScoringAim(score, dartsLeft, standardAim, stats) {
+    if (stats?.preferredScoringSector !== 19 || score <= 170
+        || standardAim?.sector !== 20 || standardAim.mult !== 3) return standardAim;
+    const leave = score - 57;
+    // A scoring preference must not undo tactical setup choices or leave a
+    // bogey after a treble, or after a single followed by normal scoring darts.
+    if (AI_BOGEY_SCORES.has(leave) || AI_BOGEY_SCORES.has(score - 19 - 60 * (dartsLeft - 1))) return standardAim;
+    if (dartsLeft === 1 && isAiCheckoutScore(score - 60) && !isAiCheckoutScore(leave)) return standardAim;
+    return { sector: 19, mult: 3 };
+}
+
 function getOptimalAim(score, isDIDO, dartsLeft = 3, opponentScore, stats = null, random = Math.random) {
     const standardAim = getStandardAiAim(score, isDIDO, dartsLeft, opponentScore);
+    if (typeof activeTournament !== 'undefined' && activeTournament?.format === 'masterOut'
+        && typeof getMasterOutCheckoutRoute === 'function') {
+        const route = getMasterOutCheckoutRoute(Number(score), Math.max(1, Math.min(3, Math.floor(Number(dartsLeft) || 1))));
+        if (route.length) return route[0];
+    }
     // Route previews and callers without a player keep the canonical guide.
     if (!stats) return standardAim;
     const remaining = Math.max(0, Math.floor(Number(score) || 0));
     const darts = Math.max(1, Math.min(3, Math.floor(Number(dartsLeft) || 1)));
     const favorites = getAiAimFavoriteDoubles(stats);
     if (isDIDO && remaining === 501) return { sector: favorites.find(value => value != null) || 20, mult: 2 };
+    if (remaining > 170) return getPreferredAiScoringAim(remaining, darts, standardAim, stats);
     if (getOneDartCheckoutAim(remaining) || (remaining === 50 && darts === 1 && shouldAiAttackBull(opponentScore))) return standardAim;
 
     if (darts === 2 && remaining >= AI_CHECKOUT_TACTICS_CONFIG.minDoubleDoubleScore
@@ -262,7 +279,8 @@ function getAiScoringAim(score, isDIDO, dartsLeft, visit, opponentScore, stats =
     const aim = getOptimalAim(score, isDIDO, dartsLeft, opponentScore, stats, random);
     // Checkouty, podwójne otwierające i konkretne ustawienia mają pierwszeństwo
     // przed zmianą sektora. Pierwsza lotka nie ma jeszcze czego omijać.
-    if (dartsLeft >= 3 || score <= 170 || aim.mult !== 3
+    const checkoutLimit = typeof activeTournament !== 'undefined' && activeTournament?.format === 'masterOut' ? 180 : 170;
+    if (dartsLeft >= 3 || score <= checkoutLimit || aim.mult !== 3
         || !visit?.blockedTriples?.includes(aim.sector)) return aim;
     const hasCheckout = leave => Boolean(checkoutGuide[leave]) && !AI_BOGEY_SCORES.has(leave);
     const originalLeave = score - aim.sector * 3;

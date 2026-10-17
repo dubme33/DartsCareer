@@ -1,5 +1,8 @@
 // Configuration helpers shared by the editor, draw, groups and portable packs.
 const EDITOR_STRUCTURE_TEXT = {
+    stagesTitle: ['Format turnieju', 'Tournament format', 'Turnierformat', 'Toernooiformaat'],
+    stagesHint: ['Wybierz samą drabinkę albo grupy z awansem do fazy pucharowej. W grupach każdy gra z każdym; format rund pucharowych ustawiasz osobno powyżej.', 'Choose knockout only or groups followed by knockout. Groups use round robin; configure knockout round formats separately above.', 'Wähle K.-o. oder Gruppen mit anschließender K.-o.-Phase. In den Gruppen spielt jeder gegen jeden; K.-o.-Runden werden oben separat eingestellt.', 'Kies alleen knock-out of groepen gevolgd door knock-out. In groepen speelt iedereen tegen iedereen; stel de knock-outrondes hierboven apart in.'],
+    groupsPreset: ['Ustaw grupy po 4 · awans 2', 'Use groups of 4 · top 2 advance', '4er-Gruppen · die besten 2 weiter', 'Groepen van 4 · beste 2 door'],
     title: ['Zaproszenia, drabinka, grupy i ligi', 'Invitations, draw, groups and leagues', 'Einladungen, Auslosung, Gruppen und Ligen', 'Uitnodigingen, schema, groepen en competities'],
     invites: ['Zaproszeni zawodnicy', 'Invited players', 'Eingeladene Spieler', 'Uitgenodigde spelers'],
     add: ['Zaproszeni + pozostali z kwalifikacji', 'Invitations + qualified entrants', 'Einladungen + qualifizierte Spieler', 'Uitnodigingen + gekwalificeerde spelers'],

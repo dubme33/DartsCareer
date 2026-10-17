@@ -186,7 +186,7 @@ function normalizeTournamentPackEvent(raw) {
     const editorTourName = editorCycle === 'custom'
         ? tournamentPackString(raw.editorTourName, 80, true) : null;
     if (editorCycle !== 'custom' && raw.editorTourName != null) throw tournamentPackError('invalid');
-    if (!['DIDO', 'legs'].includes(raw.format)) throw tournamentPackError('invalid');
+    if (!['DIDO', 'legs', 'masterOut'].includes(raw.format)) throw tournamentPackError('invalid');
     const editorQualification = normalizeTournamentPackRules(raw.editorQualification, size);
     let editorNativeRoutes;
     try { editorNativeRoutes = normalizeTournamentEditorNativeRoutes(raw.editorNativeRoutes,
@@ -232,6 +232,7 @@ function normalizeTournamentPackEvent(raw) {
         ...(editorNativeRoutes ? { editorNativeRoutes } : {}),
         ...(editorInvitations ? { editorInvitations } : {}), ...(editorStructure ? { editorStructure } : {}),
         ...(editorGender === null ? {} : { editorGender }),
+        ...(raw.editorCities == null ? {} : { editorCities: normalizeTournamentEditorCities(raw.editorCities) }),
         ...(raw.editorRequiredCardId == null ? {} : { editorRequiredCardId: tournamentPackString(raw.editorRequiredCardId, 120, true) }),
         qualifierFor: raw.qualifierFor == null ? null : tournamentPackString(raw.qualifierFor, 120, true) };
 }
@@ -271,7 +272,7 @@ function createTournamentPackEvent(tournament) {
         endMonth: tournament.endMonth ?? tournament.month, endDay: tournament.endDay ?? tournament.day,
         city: tournament.city || '', country: tournament.country || '', minOvr: Number(tournament.minOvr) || 0,
         editorFieldSize: tournament.editorFieldSize ?? (tournament.isEditorTournament ? 32 : null),
-        format: tournament.format === 'DIDO' ? 'DIDO' : 'legs', editorMatchFormat: tournament.editorMatchFormat || null,
+        format: ['DIDO','masterOut'].includes(tournament.format) ? tournament.format : 'legs', editorMatchFormat: tournament.editorMatchFormat || null,
         rankingOverride: typeof tournament.rankingOverride === 'boolean' ? tournament.rankingOverride : null,
         editorCycle: tournament.editorCycle || null,
         editorTourName: tournament.editorTourName || null,
@@ -280,6 +281,7 @@ function createTournamentPackEvent(tournament) {
         editorInvitations: tournament.editorInvitations || null, editorStructure: tournament.editorStructure || null,
         editorRequiredCardId: tournament.editorRequiredCardId || null,
         editorGender: tournament.editorGender || null,
+        editorCities: tournament.editorCities ? [...tournament.editorCities] : [],
         editorPrizes: tournament.editorPrizes || null, editorQualification: tournament.editorQualification || null,
         editorNativeRoutes: tournament.editorNativeRoutes || null,
         qualifierFor: tournament.qualifierFor || null };
@@ -323,6 +325,7 @@ function tournamentPackMatchFormat(event) {
 }
 function getTournamentPackChanges(target, event) {
     if (!target) return [tournamentPackDate(event), tournamentPackPlace(event),
+        event.editorCities?.length ? `${trTournamentEditor('cities')}: ${event.editorCities.join('; ')}` : '',
         event.editorGender ? `${trTournamentEditor('gender')}: ${trTournamentEditor(event.editorGender === 'female' ? 'genderFemale' : 'genderMale')}` : '',
         event.editorFieldSize ? `${trTournamentPack('field')}: ${event.editorFieldSize}` : '',
         event.editorCycle ? `${trTournamentPack('calendar')}: ${[event.editorCycle, event.editorTourName].filter(Boolean).join(' / ')}` : '',
@@ -333,6 +336,7 @@ function getTournamentPackChanges(target, event) {
         ['date', tournamentPackDate(old), tournamentPackDate(event)],
         ['place', tournamentPackPlace(old), tournamentPackPlace(event)],
         ['eligibility', old.minOvr, event.minOvr],
+        ...('editorCities' in event ? [['eligibility', (old.editorCities || []).join('; ') || '—', event.editorCities.join('; ') || '—']] : []),
         ['eligibility', trTournamentEditor(old.editorGender === 'female' ? 'genderFemale' : old.editorGender === 'male' ? 'genderMale' : 'genderAll'),
             trTournamentEditor(event.editorGender === 'female' ? 'genderFemale' : event.editorGender === 'male' ? 'genderMale' : 'genderAll')],
         ['field', old.editorFieldSize ?? '—', event.editorFieldSize ?? '—'],
@@ -399,8 +403,9 @@ function setTournamentPackConfiguration(tournament, event) {
     tournament.editorModified = true;
     for (const field of ['endMonth', 'endDay', 'editorFieldSize', 'editorMatchFormat',
         'rankingOverride', 'editorPrizes', 'editorQualification', 'qualifierFor', 'editorCycle', 'editorTourName',
-        'editorTeamMode', 'editorTeamEntries', 'editorRequiredCardId', 'editorGender', 'editorInvitations', 'editorStructure', 'editorNativeRoutes']) {
+        'editorTeamMode', 'editorTeamEntries', 'editorRequiredCardId', 'editorGender', 'editorCities', 'editorInvitations', 'editorStructure', 'editorNativeRoutes']) {
         const value = event[field];
+        if (field === 'editorCities' && value === undefined) continue;
         if (value == null || field === 'endMonth' && value === event.month
             || field === 'endDay' && value === event.day && event.endMonth === event.month) delete tournament[field];
         else tournament[field] = value && typeof value === 'object' ? structuredClone(value) : value;

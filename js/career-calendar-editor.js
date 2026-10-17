@@ -74,6 +74,7 @@ function hasCareerEditorCard(candidate, id, date = currentDate) {
     });
 }
 function isCareerEditorAccessEligible(event, candidate, date = currentDate) {
+    if (typeof isTournamentEditorCityEligible === 'function' && !isTournamentEditorCityEligible(event, candidate)) return false;
     if (typeof isPdcRestrictedEventEligible === 'function' && !isPdcRestrictedEventEligible(event, candidate, date)) return false;
     if(typeof isWomensSeriesTournament==='function'&&isWomensSeriesTournament(event)){
         if(!isWomensSeriesWoman(candidate))return false;

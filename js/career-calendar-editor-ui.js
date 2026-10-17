@@ -576,6 +576,6 @@ function renderCareerTourRanking(id, list) {
     if (!tour || tour.removed || tour.ranking !== 'own') return false;
     const rows = getCareerTourRanking(id).filter(candidate => getCareerTourPrizeMoney(candidate, id) > 0
         || tour.playerKeys.includes(getTournamentEditorPlayerKey(candidate)));
-    list.innerHTML = `<h3>${careerEditorHtml(tour.name)} · ${currentDate.getFullYear()}</h3><table class="career-tour-ranking"><thead><tr><th>#</th><th>${careerEditorHtml(trCareerEditor('roster').split(' (')[0])}</th><th>£</th></tr></thead><tbody>${rows.map((candidate, index) => `<tr><td>${index + 1}</td><td>${careerEditorHtml(candidate.name)}</td><td>£${getCareerTourPrizeMoney(candidate, id).toLocaleString('en-GB')}</td></tr>`).join('')}</tbody></table>`;
+    list.innerHTML = `<h3>${careerEditorHtml(tour.name)} · ${currentDate.getFullYear()}</h3><table class="career-tour-ranking"><thead><tr><th>#</th><th>${careerEditorHtml(trCareerEditor('roster').split(' (')[0])}</th><th>£</th></tr></thead><tbody>${rows.map((candidate, index) => `<tr data-ranking-row data-player-name="${careerEditorHtml(candidate.name)}" data-player-country="${careerEditorHtml(candidate.country)}"><td>${index + 1}</td><td>${careerEditorHtml(candidate.name)}</td><td>£${getCareerTourPrizeMoney(candidate, id).toLocaleString('en-GB')}</td></tr>`).join('')}</tbody></table>`;
     return true;
 }

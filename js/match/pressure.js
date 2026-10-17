@@ -52,8 +52,10 @@ function getMatchPressureLevel(match, isP1, aim = null, score = null, quick = fa
     if (match.suddenDeath || tiedSuddenDeath) return 1;
     if (canWinMatchWithNextLeg(match, isP1)) {
         const remaining = score ?? (isP1 ? match.p1Score : match.p2Score);
-        const isMatchDart = aim?.mult === 2 && (aim.sector === 25 || (aim.sector >= 1 && aim.sector <= 20))
-            && remaining === aim.sector * 2;
+        const masterOut = tournament?.format === 'masterOut';
+        const isMatchDart = (aim?.mult === 2 || (masterOut && aim?.mult === 3))
+            && (aim.sector === 25 && aim.mult === 2 || (aim.sector >= 1 && aim.sector <= 20))
+            && remaining === aim.sector * aim.mult;
         if (isMatchDart) pressure += 0.4;
         // Quick simulations have no individual darts: a modest closing-leg
         // contribution approximates the pressure of the eventual match dart.
@@ -80,8 +82,11 @@ function recordMentalThrowOutcome(isP1, score, aim, result, match = currentMatch
     const side = isP1 ? 'p1' : 'p2';
     match.mentalMistakes[side] = Math.max(0, match.mentalMistakes[side] - 1);
     const remaining = score - result.sector * result.mult;
-    const bust = remaining < 0 || remaining === 1 || (remaining === 0 && result.mult !== 2);
-    const missedCheckout = aim.mult === 2 && score === aim.sector * 2 && !(remaining === 0 && result.mult === 2);
+    const masterOut = (match.tournament || (typeof activeTournament !== 'undefined' ? activeTournament : null))?.format === 'masterOut';
+    const finishingHit = result.mult === 2 || (masterOut && result.mult === 3 && result.sector >= 1 && result.sector <= 20);
+    const bust = remaining < 0 || remaining === 1 || (remaining === 0 && !finishingHit);
+    const missedCheckout = (aim.mult === 2 || (masterOut && aim.mult === 3))
+        && score === aim.sector * aim.mult && !(remaining === 0 && finishingHit);
     if (bust || missedCheckout) match.mentalMistakes[side] = 3;
 }
 

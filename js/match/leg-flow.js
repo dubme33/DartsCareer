@@ -381,6 +381,8 @@ function checkAchievements(type, data = null) {
 
             let points = hitSec * hitMult; 
             let currentScore = scoreBeforeThrow + pointsRemoved;
+            const masterOut = activeTournament?.format === 'masterOut';
+            const checkoutScore = masterOut ? currentScore : scoreBeforeThrow;
             let playerName = currentMatch.isDoubles
                 ? getCurrentMatchThrowerName(isP1)
                 : (typeof getCurrentSinglesMatchPlayerName === 'function'
@@ -406,33 +408,35 @@ function checkAchievements(type, data = null) {
             let st = currentMatch.stats; let newScore = currentScore - points;
             const actualResult = { ...(result || {}), sector: hitSec, mult: hitMult };
             if (typeof recordMatchReportDart === 'function') {
-                recordMatchReportDart(currentMatch, isP1, scoreBeforeThrow, { sector: targetSec, mult: targetMult }, actualResult);
+                recordMatchReportDart(currentMatch, isP1, checkoutScore, { sector: targetSec, mult: targetMult }, actualResult);
             }
             if (typeof recordMentalThrowOutcome === 'function') {
-                recordMentalThrowOutcome(isP1, scoreBeforeThrow, { sector: targetSec, mult: targetMult }, actualResult);
+                recordMentalThrowOutcome(isP1, checkoutScore, { sector: targetSec, mult: targetMult }, actualResult);
             }
 
-            let isAimingAtFinishingDouble = (targetMult === 2 && (scoreBeforeThrow <= 40 || (scoreBeforeThrow === 50 && targetSec === 25)));
+            const finishingHit = hitMult === 2 || (masterOut && hitMult === 3 && hitSec >= 1 && hitSec <= 20);
+            let isAimingAtFinishingDouble = (targetMult === 2 && (checkoutScore <= 40 || (checkoutScore === 50 && targetSec === 25)))
+                || (masterOut && targetMult === 3 && checkoutScore <= 60 && checkoutScore % 3 === 0);
 
             if (isP1) {
                 st.p1TotalDarts++; st.p1LegDarts++;
                 if (st.p1LegDarts <= 9 && newScore >= 0) { st.p1First9Score += points; st.p1First9Darts++; }
                 if (isAimingAtFinishingDouble) {
                     st.p1DoubleAttempts++;
-                    if (newScore === 0 && hitMult === 2) st.p1DoubleHits++;
+                    if (newScore === 0 && finishingHit) st.p1DoubleHits++;
                 }
             } else {
                 st.p2TotalDarts++; st.p2LegDarts++;
                 if (st.p2LegDarts <= 9 && newScore >= 0) { st.p2First9Score += points; st.p2First9Darts++; }
                 if (isAimingAtFinishingDouble) {
                     st.p2DoubleAttempts++;
-                    if (newScore === 0 && hitMult === 2) st.p2DoubleHits++;
+                    if (newScore === 0 && finishingHit) st.p2DoubleHits++;
                 }
             }
 
             if (scoringVisit) scoringVisit.darts.push({ sector: hitSec, mult: hitMult, targetSector: targetSec,
                 targetMult, points, first9: st[`${throwingSide}LegDarts`] <= 9 && newScore >= 0 });
-            const bust = newScore < 0 || newScore === 1 || (newScore === 0 && hitMult !== 2);
+            const bust = newScore < 0 || newScore === 1 || (newScore === 0 && !finishingHit);
             if (bust) {
                 logThrow(`${playerName}: ${t('t-log-bust')}`, logType);
                 newScore = isP1 ? currentMatch.p1TurnStartScore : currentMatch.p2TurnStartScore; 
@@ -466,7 +470,7 @@ function checkAchievements(type, data = null) {
             if (isP1) currentMatch.p1Score = newScore; else currentMatch.p2Score = newScore;
             currentMatch.dartsThrown++; 
 
-            const legCompleted = newScore === 0 && hitMult === 2;
+            const legCompleted = newScore === 0 && finishingHit;
             if (currentMatch.dartsThrown >= 3 || legCompleted) {
                 resetMatchThrowGrouping(currentMatch);
                 currentMatch.isTurnLocked = true;
@@ -640,7 +644,7 @@ function checkAchievements(type, data = null) {
                     currentMatch.turn = currentMatch.turn === 'p1' ? 'p2' : 'p1';
                     if(currentMatch.turn === 'p1') {
                         currentMatch.p1TurnStartScore = currentMatch.p1Score;
-                        if (currentMatch.p1Score <= 170) {
+                        if (currentMatch.p1Score <= (activeTournament?.format === 'masterOut' ? 180 : 170)) {
                             const requireDelay = typeof getSpectatorPlaybackDelay === 'function'
                                 ? getSpectatorPlaybackDelay(1500, 1800)
                                 : 1500;
@@ -663,7 +667,7 @@ function checkAchievements(type, data = null) {
                     } else setTurnUI();
                 } else {
                     currentMatch.p1TurnStartScore = currentMatch.p1Score;
-                    if (currentMatch.p1Score <= 170) setTimeout(() => announceRequire(currentMatch.p1Score), 1500);
+                    if (currentMatch.p1Score <= (activeTournament?.format === 'masterOut' ? 180 : 170)) setTimeout(() => announceRequire(currentMatch.p1Score), 1500);
                     setTurnUI();
                 }
             };

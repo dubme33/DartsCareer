@@ -584,10 +584,19 @@
             // Zachowujemy dawną nazwę funkcji dla rozwoju i starzenia zawodników,
             // ale oceny nie otrzymują już losowego modyfikatora formy.
             p.form = 0;
-            p.ovr = clamp(Math.round(p.baseOvr), 40, 99);
-            p.scoring = clamp(Math.round(p.baseScoring), 40, 100);
-            p.doubles = clamp(Math.round(p.baseDoubles), 40, 100);
+            const minimum = getPlayerRatingFloor(p);
+            p.ovr = clamp(Math.round(p.baseOvr), minimum, 99);
+            p.scoring = clamp(Math.round(p.baseScoring), minimum, 100);
+            p.doubles = clamp(Math.round(p.baseDoubles), minimum, 100);
             if (Object.prototype.hasOwnProperty.call(p, 'overall')) p.overall = p.ovr;
+        }
+
+        function getPlayerRatingFloor(candidate, normalFloor = 40) {
+            // Tylko świadomie obniżone oceny z edytora korzystają z rozszerzonej skali.
+            return candidate?.playerEditorRatingOverride === true
+                && ['baseOvr', 'ovr', 'overall', 'baseScoring', 'scoring', 'baseDoubles', 'doubles']
+                    .some(field => Number.isFinite(Number(candidate[field])) && Number(candidate[field]) >= 1
+                        && Number(candidate[field]) < 40) ? 1 : normalFloor;
         }
 
         function removeLegacyPlayerForm(candidate, careerPlayer = null) {
@@ -601,6 +610,7 @@
 
             const legacyForm = Number.isFinite(Number(candidate.form)) ? Math.round(Number(candidate.form)) : 0;
             const overall = Number(candidate.ovr ?? candidate.overall);
+            const minimum = getPlayerRatingFloor(candidate);
             [['ovr', 'baseOvr', 99], ['scoring', 'baseScoring', 100], ['doubles', 'baseDoubles', 100]]
                 .forEach(([field, baseField, max]) => {
                     const base = candidate[baseField] == null ? NaN : Number(candidate[baseField]);
@@ -608,7 +618,7 @@
                     // Pełna baza zachowuje rozwój i pozwala odtworzyć oceny nawet
                     // wtedy, gdy stary wynik z formą był przycięty do 40 lub 99.
                     candidate[baseField] = clamp(Number.isFinite(base) ? base
-                        : (Number.isFinite(current) ? current - legacyForm : 55), 40, max);
+                        : (Number.isFinite(current) ? current - legacyForm : 55), minimum, max);
                 });
             applyForm(candidate);
         }
@@ -649,15 +659,16 @@
             // w interfejsie (oraz ocenach AI w applyForm), nigdy jego bazę.
             const currentOverall = candidate === careerPlayer
                 ? candidate.overall ?? candidate.ovr : candidate.ovr ?? candidate.overall;
-            const overall = clampRating(currentOverall, 40, 99, 55);
+            const minimum = getPlayerRatingFloor(candidate);
+            const overall = clampRating(currentOverall, minimum, 99, 55);
             candidate.ovr = overall;
             if (Object.prototype.hasOwnProperty.call(candidate, 'overall')) candidate.overall = overall;
-            candidate.scoring = clampRating(candidate.scoring, 40, 100, overall);
-            candidate.doubles = clampRating(candidate.doubles, 40, 100, overall);
+            candidate.scoring = clampRating(candidate.scoring, minimum, 100, overall);
+            candidate.doubles = clampRating(candidate.doubles, minimum, 100, overall);
 
-            if (Object.prototype.hasOwnProperty.call(candidate, 'baseOvr')) candidate.baseOvr = clampRating(candidate.baseOvr, 40, 99, overall);
-            if (Object.prototype.hasOwnProperty.call(candidate, 'baseScoring')) candidate.baseScoring = clampRating(candidate.baseScoring, 40, 100, candidate.scoring);
-            if (Object.prototype.hasOwnProperty.call(candidate, 'baseDoubles')) candidate.baseDoubles = clampRating(candidate.baseDoubles, 40, 100, candidate.doubles);
+            if (Object.prototype.hasOwnProperty.call(candidate, 'baseOvr')) candidate.baseOvr = clampRating(candidate.baseOvr, minimum, 99, overall);
+            if (Object.prototype.hasOwnProperty.call(candidate, 'baseScoring')) candidate.baseScoring = clampRating(candidate.baseScoring, minimum, 100, candidate.scoring);
+            if (Object.prototype.hasOwnProperty.call(candidate, 'baseDoubles')) candidate.baseDoubles = clampRating(candidate.baseDoubles, minimum, 100, candidate.doubles);
         }
 
         function ensureBaseRatings(p) {
@@ -673,25 +684,26 @@
 
             if (isCurrentPlayer(p)) {
                 const previous = player.overall;
-                player.overall = clamp(previous + ageAdjustedDelta, 45, 99);
+                player.overall = clamp(previous + ageAdjustedDelta, getPlayerRatingFloor(player, 45), 99);
                 const appliedDelta = player.overall - previous;
                 player.ovr = player.overall;
-                player.scoring = clamp(player.scoring + appliedDelta, 45, 100);
-                player.doubles = clamp(player.doubles + appliedDelta, 40, 100);
+                player.scoring = clamp(player.scoring + appliedDelta, getPlayerRatingFloor(player, 45), 100);
+                player.doubles = clamp(player.doubles + appliedDelta, getPlayerRatingFloor(player), 100);
                 return;
             }
 
             ensureBaseRatings(p);
             if (typeof limitAiFoundationImmediateGrowth === 'function') ageAdjustedDelta = limitAiFoundationImmediateGrowth(p, ageAdjustedDelta);
             const previous = p.baseOvr;
-            const minimumRating = typeof limitAiFoundationImmediateGrowth === 'function' ? Math.min(45, previous) : 45;
+            const minimumRating = getPlayerRatingFloor(p,
+                typeof limitAiFoundationImmediateGrowth === 'function' ? Math.min(45, previous) : 45);
             p.baseOvr = clamp(previous + ageAdjustedDelta, minimumRating, 99);
             const appliedDelta = p.baseOvr - previous;
             if (typeof recordAiDevelopmentImmediateChange === 'function') recordAiDevelopmentImmediateChange(p, appliedDelta);
             p.baseScoring = clamp(p.baseScoring + appliedDelta,
-                typeof applyAiPermanentRatingAdjustment === 'function' ? Math.min(45,p.baseScoring) : 45, 100);
+                getPlayerRatingFloor(p, typeof applyAiPermanentRatingAdjustment === 'function' ? Math.min(45,p.baseScoring) : 45), 100);
             p.baseDoubles = clamp(p.baseDoubles + appliedDelta,
-                typeof applyAiPermanentRatingAdjustment === 'function' ? Math.min(40,p.baseDoubles) : 40, 100);
+                getPlayerRatingFloor(p, typeof applyAiPermanentRatingAdjustment === 'function' ? Math.min(40,p.baseDoubles) : 40), 100);
             applyForm(p);
         }
 

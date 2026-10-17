@@ -1547,10 +1547,11 @@ function getBoostedPlayerStats() {
     else if (effectiveStamina < 40) sPenalty = -3;
     else if (effectiveStamina < 70) sPenalty = -1;
 
+    const minimum = typeof getPlayerRatingFloor === 'function' ? getPlayerRatingFloor(player) : 40;
     return {
-        overall: Math.min(100, Math.max(40, Math.round(player.overall) + b.o + sPenalty)),
-        scoring: Math.min(100, Math.max(40, Math.round(player.scoring) + b.s + sPenalty)),
-        doubles: Math.min(100, Math.max(40, Math.round(player.doubles) + b.d + sPenalty)),
+        overall: Math.min(100, Math.max(minimum, Math.round(player.overall) + b.o + sPenalty)),
+        scoring: Math.min(100, Math.max(minimum, Math.round(player.scoring) + b.s + sPenalty)),
+        doubles: Math.min(100, Math.max(minimum, Math.round(player.doubles) + b.d + sPenalty)),
         favoriteDouble: player.favoriteDouble,
         favoriteDoubles: Array.isArray(player.favoriteDoubles) ? player.favoriteDoubles.slice(0, 3) : undefined,
         doubleTraining: player.doubleTraining && typeof player.doubleTraining === 'object' && !Array.isArray(player.doubleTraining)
@@ -1975,6 +1976,7 @@ async function updateProfileWalkon(event) {
             let dartsThrown = 0;
             let bust = false;
             let isDIDO = activeTournament && activeTournament.format === 'DIDO';
+            const masterOut = activeTournament?.format === 'masterOut';
             const opponentScore = isP1 ? currentMatch.p2Score : currentMatch.p1Score;
             const scoringVisit = !isCareerThrower && typeof createAiScoringVisit === 'function'
                 ? createAiScoringVisit() : null;
@@ -1993,6 +1995,7 @@ async function updateProfileWalkon(event) {
                 const pointsRemoved = typeof removeKnockedOutVisitPoints === 'function'
                     ? removeKnockedOutVisitPoints(currentMatch, isP1, scoringDarts, result, isDIDO) : 0;
                 currentScore += pointsRemoved;
+                const checkoutScore = masterOut ? currentScore : scoreBeforeThrow;
                 turnScore -= pointsRemoved;
                 if (result.robinHood && typeof logThrow === 'function')
                     logThrow(`${pObj.name}: ${getRobinHoodText()}`, isP1 ? 'hit' : 'ai');
@@ -2000,8 +2003,8 @@ async function updateProfileWalkon(event) {
                     if (typeof logThrow === 'function') logThrow(`${pObj.name}: ${typeof getBounceOutLog === 'function' ? getBounceOutLog(result) : getBounceOutText().log}`, isP1 ? 'hit' : 'ai');
                 }
                 if (scoringVisit) recordAiScoringObstruction(scoringVisit, aim, result, 3 - i);
-                if (typeof recordMatchReportDart === 'function') recordMatchReportDart(currentMatch, isP1, scoreBeforeThrow, aim, result);
-                if (typeof recordMentalThrowOutcome === 'function') recordMentalThrowOutcome(isP1, scoreBeforeThrow, aim, result);
+                if (typeof recordMatchReportDart === 'function') recordMatchReportDart(currentMatch, isP1, checkoutScore, aim, result);
+                if (typeof recordMentalThrowOutcome === 'function') recordMentalThrowOutcome(isP1, checkoutScore, aim, result);
                 let hitSec = result.sector;
                 let hitMult = result.mult;
                 let points = hitSec * hitMult;
@@ -2011,6 +2014,9 @@ async function updateProfileWalkon(event) {
                 if (isDIDO && currentScore === 501 && hitMult !== 2) points = 0;
 
                 let newScore = currentScore - points;
+                const finishingHit = hitMult === 2 || (masterOut && hitMult === 3 && hitSec >= 1 && hitSec <= 20);
+                const finishingAttempt = (aim.mult === 2 && (checkoutScore <= 40 || (checkoutScore === 50 && aim.sector === 25)))
+                    || (masterOut && aim.mult === 3 && checkoutScore <= 60 && checkoutScore % 3 === 0);
                 turnScore += points;
                 dartsThrown++;
 
@@ -2018,23 +2024,23 @@ async function updateProfileWalkon(event) {
                 if (isP1) {
                     st.p1TotalDarts++; st.p1LegDarts++;
                     if (st.p1LegDarts <= 9 && newScore >= 0) { st.p1First9Score += points; st.p1First9Darts++; }
-                    if (aim.mult === 2 && (scoreBeforeThrow <= 40 || (scoreBeforeThrow === 50 && aim.sector === 25))) {
+                    if (finishingAttempt) {
                         st.p1DoubleAttempts++;
-                        if (newScore === 0 && hitMult === 2) st.p1DoubleHits++;
+                        if (newScore === 0 && finishingHit) st.p1DoubleHits++;
                     }
                 } else {
                     st.p2TotalDarts++; st.p2LegDarts++;
                     if (st.p2LegDarts <= 9 && newScore >= 0) { st.p2First9Score += points; st.p2First9Darts++; }
-                    if (aim.mult === 2 && (scoreBeforeThrow <= 40 || (scoreBeforeThrow === 50 && aim.sector === 25))) {
+                    if (finishingAttempt) {
                         st.p2DoubleAttempts++;
-                        if (newScore === 0 && hitMult === 2) st.p2DoubleHits++;
+                        if (newScore === 0 && finishingHit) st.p2DoubleHits++;
                     }
                 }
 
                 scoringDarts.darts.push({ sector: hitSec, mult: hitMult, targetSector: aim.sector, targetMult: aim.mult,
                     points, first9: st[`${isP1 ? 'p1' : 'p2'}LegDarts`] <= 9 && newScore >= 0 });
                 // Fura (Bust)
-                if (newScore < 0 || newScore === 1 || (newScore === 0 && hitMult !== 2)) {
+                if (newScore < 0 || newScore === 1 || (newScore === 0 && !finishingHit)) {
                     bust = true;
                     // NOWOŚĆ: Doliczanie brakujących lotek do statystyk w symulacji
                     let missingDarts = 2 - i; // "i" to indeks obecnej lotki (0, 1 lub 2)
@@ -2055,7 +2061,11 @@ async function updateProfileWalkon(event) {
                 if (isP1) currentMatch.p1Score = currentScore; else currentMatch.p2Score = currentScore;
 
                 // Koniec lega
-                if (currentScore === 0 && hitMult === 2) {
+                if (currentScore === 0 && finishingHit) {
+                    if (masterOut && dartsThrown === 3 && turnScore === 180) {
+                        st[`${isP1 ? 'p1' : 'p2'}OneEighties`]++;
+                        if (isCareerThrower) { initCareerStats(); player.careerStats.total180s++; }
+                    }
                     if (turnScore >= 100 && turnScore < 140) {
                         const field = isP1 ? 'p1HundredPlus' : 'p2HundredPlus';
                         st[field] = (Number(st[field]) || 0) + 1;

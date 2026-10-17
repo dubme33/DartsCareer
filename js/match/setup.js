@@ -102,6 +102,8 @@ function startMatch(vsAI) {
         }
 
         function updateMatchStatsUI() {
+            const checkoutLabel = document.getElementById('t-stat-dbl-lbl');
+            if (checkoutLabel) checkoutLabel.textContent = t(typeof activeTournament !== 'undefined' && activeTournament?.format === 'masterOut' ? 't-stat-master-out-lbl' : 't-stat-dbl-lbl');
             if (!currentMatch.stats) return;
             if (typeof refreshMatchBounceOutStats === 'function') refreshMatchBounceOutStats();
             if (typeof refreshMatchDoubleInStats === 'function') refreshMatchDoubleInStats();

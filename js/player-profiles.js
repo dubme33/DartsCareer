@@ -769,6 +769,8 @@ function openPlayerProfile(playerId, rankingType = 'main') {
             <p class="profile-eyebrow">${trPlayerProfile('profile')}</p>
             <h2>${getFlagImg(selectedPlayer.country)} ${escapeHtml(selectedPlayer.name)}</h2>
             ${nickname ? `<p class="profile-nickname">${escapeHtml(nickname)}</p>` : ''}
+            ${typeof selectedPlayer.hometown === 'string' && selectedPlayer.hometown.trim()
+                ? `<p class="profile-subtitle">${escapeHtml(typeof t === 'function' ? t(selectedPlayer.country) : selectedPlayer.country)} · ${escapeHtml(selectedPlayer.hometown.trim())}</p>` : ''}
             <p class="profile-subtitle">${trPlayerProfile('age')}: <strong>${age === null ? '—' : trPlayerProfile('years', { age })}</strong> · Overall: <strong>${overall}</strong></p>
             ${tourCardMarkup}
         </div>

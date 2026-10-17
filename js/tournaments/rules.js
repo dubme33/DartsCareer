@@ -71,7 +71,35 @@ const checkoutGuide = {
             3:   "1 D1",        2:   "D1"
         };
 
+        const masterOutCheckoutRoutes = new Map();
+        const masterOutFinishes = [...[20,16,18,12,10,8,6,4,2,1,19,17,15,14,13,11,9,7,5,3].map(sector => ({sector,mult:2})),
+            {sector:25,mult:2}, ...Array.from({length:20}, (_, i) => ({sector:20-i,mult:3}))];
+        const masterOutTargets = [...Array.from({length:20}, (_, i) => ({sector:20-i,mult:3})),
+            ...Array.from({length:20}, (_, i) => ({sector:20-i,mult:1})), {sector:25,mult:1}, ...masterOutFinishes.filter(aim => aim.mult===2)];
+
+        function getMasterOutCheckoutRoute(score, dartsLeft = 3) {
+            if (!Number.isInteger(score) || score < 2 || score > 180 || !Number.isInteger(dartsLeft) || dartsLeft < 1 || dartsLeft > 3) return [];
+            const key = `${score}:${dartsLeft}`;
+            if (masterOutCheckoutRoutes.has(key)) return masterOutCheckoutRoutes.get(key).map(aim => ({...aim}));
+            const direct = masterOutFinishes.find(aim => aim.sector*aim.mult===score);
+            let route = direct ? [direct] : [];
+            // Prefer a one-dart finish, then two darts, then three. Both doubles
+            // and trebles are legal final darts; singles and outer bull are not.
+            for (let length=2; !route.length && length<=dartsLeft; length++) {
+                for (const aim of masterOutTargets) {
+                    const rest = getMasterOutCheckoutRoute(score-aim.sector*aim.mult,length-1);
+                    if (rest.length && rest.length===length-1) { route=[aim,...rest]; break; }
+                }
+            }
+            masterOutCheckoutRoutes.set(key,route);
+            return route.map(aim => ({...aim}));
+        }
+
         function getCheckoutPath(score) {
+            if (typeof activeTournament !== 'undefined' && activeTournament?.format === 'masterOut') {
+                return getMasterOutCheckoutRoute(score).map(aim => aim.sector===25 ? 'BULL'
+                    : `${aim.mult===3?'T':aim.mult===2?'D':''}${aim.sector}`).join(' ');
+            }
             if (score > 170 || [169, 168, 166, 165, 163, 162, 159].includes(score)) return "";
             if (checkoutGuide[score]) return checkoutGuide[score];
             return "";

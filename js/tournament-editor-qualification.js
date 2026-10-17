@@ -155,9 +155,33 @@ function isTournamentEditorGenderChangeLocked(tournament, gender) {
         && typeof worldCupState !== 'undefined' && Boolean(worldCupState && !worldCupState.completed);
 }
 
+function normalizeTournamentEditorCities(value) {
+    const entries = value == null || value === '' ? [] : typeof value === 'string' ? value.split(/[;\r\n]+/) : value;
+    if (!Array.isArray(entries)) throw new Error('Invalid cities');
+    const nonempty = entries.filter(city => typeof city !== 'string' || city.trim());
+    if (nonempty.length > 50) throw new Error('Invalid cities');
+    const cities = nonempty.map(city => {
+        if (typeof city !== 'string') throw new Error('Invalid cities');
+        const text = city.normalize('NFC').trim().replace(/\s+/g, ' ');
+        if (text.length > 80 || /[\u0000-\u001f\u007f]/.test(text)) throw new Error('Invalid cities');
+        return text;
+    }).filter(Boolean);
+    return [...new Map(cities.map(city => [city.toLocaleLowerCase(), city])).values()];
+}
+
+function isTournamentEditorCityEligible(tournament, candidate) {
+    if (!Array.isArray(tournament?.editorCities) || !tournament.editorCities.length) return true;
+    if (Array.isArray(candidate?.players)) return candidate.players.length > 0
+        && candidate.players.every(member => isTournamentEditorCityEligible(tournament, member));
+    const hometown = typeof candidate?.hometown === 'string'
+        ? candidate.hometown.normalize('NFC').trim().replace(/\s+/g, ' ').toLocaleLowerCase() : '';
+    return Boolean(hometown) && tournament.editorCities.some(city => city.normalize('NFC').trim().replace(/\s+/g, ' ').toLocaleLowerCase() === hometown);
+}
+
 function isTournamentEditorCandidateEligible(tournament, candidate, referenceDate, options = {}) {
     const rules = tournament.editorQualification;
     if (!isTournamentEditorGenderEligible(tournament, candidate)) return false;
+    if (!isTournamentEditorCityEligible(tournament, candidate)) return false;
     if (typeof isCareerEditorAccessEligible === 'function' && !isCareerEditorAccessEligible(tournament, candidate, referenceDate)) return false;
     if (!candidate || candidate.isBye || candidate.retired === true
         || (!options.ignoreAvailability && typeof isPlayerAvailableForPlay === 'function' && !isPlayerAvailableForPlay(candidate))) return false;

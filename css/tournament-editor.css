@@ -73,6 +73,7 @@
 .tournament-editor-prizes { margin: 16px 0 0; padding: 15px; border: 1px solid #3b5a72; border-radius: 8px; }
 .tournament-editor-prizes legend { padding: 0 6px; font-weight: 800; }
 .tournament-editor-prizes p { margin: 0 0 13px; color: #adc4d4; font-size: 12px; }
+#te-groups-preset { padding: 10px 14px; margin: 12px 0; min-height: 44px; white-space: normal; }
 .tournament-editor-status { min-height: 22px; margin: 14px 0; color: #9feac3; font-size: 13px; }
 .tournament-editor-status.is-error { color: #ffaaa8; }
 .tournament-editor-actions { justify-content: flex-end; flex-wrap: wrap; }
@@ -114,6 +115,7 @@
     #tournament-editor-delete { margin-right: 0; }
 }
 .te-qualification-mode { display: grid; gap: 6px; margin-bottom: 12px; font-size: 12px; font-weight: 700; }
+#te-cities { box-sizing: border-box; width: 100%; min-height: 70px; resize: vertical; padding: 10px; border: 1px solid #4d7b97; border-radius: 7px; background: #0b1e30; color: #f5f9fc; font: inherit; }
 .te-qualification-mode select, .te-route select, .te-route input { width: 100%; min-width: 0; box-sizing: border-box; padding: 9px; border: 1px solid #3b5a72; border-radius: 6px; background: #102c43; color: #fff; }
 .te-route { display: flex; gap: 8px; margin: 10px 0; align-items: center; flex-wrap: wrap; }
 .te-route-source { flex: 2 1 180px; }

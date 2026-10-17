@@ -100,8 +100,9 @@ function getPlayerEventMatchRatings(candidate, stats = candidate) {
     const modifier = getPlayerFormEventModifier(candidate);
     if (!modifier || !stats) return stats;
     const result = { ...stats };
+    const minimum = typeof getPlayerRatingFloor === 'function' ? getPlayerRatingFloor(candidate) : 40;
     for (const field of ['overall', 'ovr', 'scoring', 'doubles']) {
-        if (Number.isFinite(Number(stats[field]))) result[field] = Math.max(40,
+        if (Number.isFinite(Number(stats[field]))) result[field] = Math.max(minimum,
             Math.min(field === 'overall' || field === 'ovr' ? 99 : 100, Number(stats[field]) + modifier));
     }
     return result;

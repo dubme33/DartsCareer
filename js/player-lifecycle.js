@@ -318,8 +318,9 @@ function applyAnnualAgeDecline(candidate, age) {
         : baseDecline;
     if (!decline) return 0;
 
-    const clampBaseRating = value => Math.max(40, Math.min(99, Number(value) || 40));
-    const clampDisplayedRating = value => Math.max(40, Math.min(99, Math.round(Number(value) || 40)));
+    const minimum = typeof getPlayerRatingFloor === 'function' ? getPlayerRatingFloor(candidate) : 40;
+    const clampBaseRating = value => Math.max(minimum, Math.min(99, Number(value) || minimum));
+    const clampDisplayedRating = value => Math.max(minimum, Math.min(99, Math.round(Number(value) || minimum)));
     const baseOvr = Number(candidate.baseOvr ?? candidate.ovr ?? candidate.overall) || 55;
     const baseScoring = Number(candidate.baseScoring ?? candidate.scoring) || baseOvr;
     const baseDoubles = Number(candidate.baseDoubles ?? candidate.doubles) || baseOvr;
@@ -351,7 +352,8 @@ function applyCareerAnnualAgeDecline(age) {
         : baseDecline;
     if (!decline) return 0;
 
-    const clampStat = value => Math.max(40, Math.min(100, Number(value) || 40));
+    const minimum = typeof getPlayerRatingFloor === 'function' ? getPlayerRatingFloor(player) : 40;
+    const clampStat = value => Math.max(minimum, Math.min(100, Number(value) || minimum));
     player.scoring = clampStat((Number(player.scoring) || 55) - decline);
     player.doubles = clampStat((Number(player.doubles) || 55) - decline);
     player.overall = Math.round((player.scoring * 0.6) + (player.doubles * 0.4));

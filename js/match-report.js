@@ -140,17 +140,22 @@ function recordMatchReportDart(match, isP1, score, aim, result) {
             p2: { doubles: {}, matchAttempts: 0, matchHits: 0, pressureAttempts: 0, pressureHits: 0 } };
     }
     const side = match.reportDarts[isP1 ? 'p1' : 'p2'];
+    const masterOut = (match.tournament || (typeof activeTournament !== 'undefined' ? activeTournament : null))?.format === 'masterOut';
     const validDouble = aim.mult === 2 && (aim.sector === 25 || (Number.isInteger(aim.sector) && aim.sector >= 1 && aim.sector <= 20));
-    if (!validDouble) return;
+    const validTreble = masterOut && aim.mult === 3 && Number.isInteger(aim.sector) && aim.sector >= 1 && aim.sector <= 20;
+    if (!validDouble && !validTreble) return;
     const bounced = result?.bounceOut === true;
-    const hit = !bounced && result.sector === aim.sector && result.mult === 2;
-    const double = side.doubles[aim.sector] || (side.doubles[aim.sector] = { attempts: 0, hits: 0 });
-    double.attempts++;
-    if (hit) double.hits++;
-    const checkoutAttempt = score <= 40 || (score === 50 && aim.sector === 25);
+    if (validDouble) {
+        const hit = !bounced && result.sector === aim.sector && result.mult === 2;
+        const double = side.doubles[aim.sector] || (side.doubles[aim.sector] = { attempts: 0, hits: 0 });
+        double.attempts++;
+        if (hit) double.hits++;
+    }
+    const checkoutAttempt = (validDouble && (score <= 40 || (score === 50 && aim.sector === 25)))
+        || (validTreble && score <= 60 && score % 3 === 0);
     if (!checkoutAttempt) return;
-    const finished = !bounced && score === result.sector * result.mult && result.mult === 2;
-    const matchDart = score === aim.sector * 2 && typeof canWinMatchWithNextLeg === 'function' && canWinMatchWithNextLeg(match, isP1);
+    const finished = !bounced && score === result.sector * result.mult && (result.mult === 2 || (masterOut && result.mult === 3));
+    const matchDart = score === aim.sector * aim.mult && typeof canWinMatchWithNextLeg === 'function' && canWinMatchWithNextLeg(match, isP1);
     if (matchDart) { side.matchAttempts++; if (finished) side.matchHits++; }
     const highPressure = matchDart || (typeof getMatchPressureLevel === 'function' && getMatchPressureLevel(match, isP1, aim, score) >= 0.5);
     if (highPressure) { side.pressureAttempts++; if (finished) side.pressureHits++; }

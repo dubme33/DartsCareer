@@ -17,14 +17,14 @@ function womensSeriesRankingHtml(year){
   const old=previous.indexOf(key),movement=old<0?'—':old-index,rights=[season?.qualifications.worldChampionship?.includes(key)?'WC':'',season?.qualifications.grandSlam?.includes(key)?'GS':''].filter(Boolean).join(' / ');
   const money=season?.closed?finalMoney.get(key)||0:getWomensSeriesPrizeMoney(p,year);
   const isMe=typeof isCurrentPlayer==='function'&&isCurrentPlayer(p),movementClass=movement>0?'ws-movement-up':movement<0?'ws-movement-down':'';
-  return `<tr class="${isMe?'ws-current-player':''}" data-ws-search="${escapeHtml((p.name+' '+p.country).toLocaleLowerCase())}"><td class="ws-position"><strong>#${index+1}</strong></td><td class="ws-stat ${movementClass}">${movement>0?'+':''}${movement}</td><td class="ws-player-cell">${getFlagImg(p.country)} <button type="button" class="ws-player" data-player-id="${escapeHtml(p.id||'')}" data-player-name="${escapeHtml(p.name)}">${escapeHtml(p.name)}</button>${isMe?` <b class="ws-you">(${escapeHtml(t('t-you'))})</b>`:''}</td><td>${escapeHtml(typeof getWorldCupCountryName==='function'?getWorldCupCountryName(p.country):p.country)}</td><td class="ws-stat">${played}</td><td class="ws-stat">${entries.filter(r=>r.won).length}</td><td class="ws-stat">${entries.filter(r=>r.round===2).length}</td><td class="ws-money">£${money.toLocaleString('en-GB')}</td><td class="ws-stat">${rights}</td></tr>`;
+  return `<tr class="${isMe?'ws-current-player':''}" data-ranking-row data-player-name="${escapeHtml(p.name)}" data-player-country="${escapeHtml(p.country)}"><td class="ws-position"><strong>#${index+1}</strong></td><td class="ws-stat ${movementClass}">${movement>0?'+':''}${movement}</td><td class="ws-player-cell">${getFlagImg(p.country)} <button type="button" class="ws-player" data-player-id="${escapeHtml(p.id||'')}" data-player-name="${escapeHtml(p.name)}">${escapeHtml(p.name)}</button>${isMe?` <b class="ws-you">(${escapeHtml(t('t-you'))})</b>`:''}</td><td>${escapeHtml(typeof getWorldCupCountryName==='function'?getWorldCupCountryName(p.country):p.country)}</td><td class="ws-stat">${played}</td><td class="ws-stat">${entries.filter(r=>r.won).length}</td><td class="ws-stat">${entries.filter(r=>r.round===2).length}</td><td class="ws-money">£${money.toLocaleString('en-GB')}</td><td class="ws-stat">${rights}</td></tr>`;
  });
- return `<div class="ranking-search"><label for="ws-search">${escapeHtml(womensSeriesText('search'))}</label><div class="ranking-search-controls"><input id="ws-search" type="search" placeholder="${escapeHtml(womensSeriesText('search'))}"></div></div>`+womensSeriesTable(['#',womensSeriesText('change'),womensSeriesText('player'),womensSeriesText('country'),womensSeriesText('events'),womensSeriesText('wins'),womensSeriesText('finals'),womensSeriesText('money'),womensSeriesText('qual')],rows,'ws-standings');
+ return womensSeriesTable(['#',womensSeriesText('change'),womensSeriesText('player'),womensSeriesText('country'),womensSeriesText('events'),womensSeriesText('wins'),womensSeriesText('finals'),womensSeriesText('money'),womensSeriesText('qual')],rows,'ws-standings');
 }
 function showWomensSeriesCycle(tab='overview',year=currentDate.getFullYear()){
  currentPdcRankingType='womensSeries';const list=document.getElementById('pdc-list');if(!list)return;
  list.classList.add('ws-ranking-panel');
- const sharedSearch=document.getElementById('pdc-search')?.closest('.ranking-search');if(sharedSearch)sharedSearch.hidden=true;
+ const sharedSearch=document.getElementById('pdc-search')?.closest('.ranking-search');if(sharedSearch)sharedSearch.hidden=tab!=='ranking'&&tab!=='history';
  for(const button of document.querySelectorAll('#screen-pdc button[id^="btn-rank-"]'))if(button.id!=='btn-rank-womens-series'&&button.style.background.includes('var(--accent-green)'))button.style.background='#34495e';
  const selectedButton=document.getElementById('btn-rank-womens-series');if(selectedButton)selectedButton.style.background='var(--accent-green)';
  const season=womensSeriesSeason(year,false),events=Object.values(season?.events||{}).filter(e=>e.completed).sort((a,b)=>a.number-b.number),tabs=['overview','schedule','ranking','results','prizes','winners','history','records'];
@@ -60,7 +60,6 @@ function showWomensSeriesCycle(tab='overview',year=currentDate.getFullYear()){
  list.innerHTML=html+'</div>';
  list.querySelectorAll('[data-ws-tab]').forEach(b=>b.onclick=()=>showWomensSeriesCycle(b.dataset.wsTab,year));
  list.querySelector('#ws-year').onchange=e=>showWomensSeriesCycle(tab,Number(e.target.value));
- list.querySelector('#ws-search')?.addEventListener('input',e=>{const query=e.target.value.toLocaleLowerCase();list.querySelectorAll('[data-ws-search]').forEach(row=>row.hidden=!row.dataset.wsSearch.includes(query));});
  list.querySelectorAll('[data-ws-event]').forEach(b=>b.onclick=()=>showWomensSeriesEventResults(year,Number(b.dataset.wsEvent)));
  if(typeof attachRankingProfileLinks==='function')attachRankingProfileLinks(list,'womensSeries');
  showScreen('screen-pdc');

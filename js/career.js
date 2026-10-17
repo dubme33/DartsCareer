@@ -1591,12 +1591,42 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
                     row.addEventListener('click', () => openPlayerProfile(row.dataset.playerId, rankingType));
                 });
             }
+            refreshPdcRankingFilters();
             applyPdcRankingSearch();
         }
 
         let currentPdcRankingType = 'main';
         const pdcRankingSearchKeyCache = new WeakMap();
         const pdcRankingMoneyFormatter = new Intl.NumberFormat('en-GB');
+        const pdcRankingContinents = new Map(typeof worldRegions === 'undefined' ? []
+            : Object.entries(worldRegions).flatMap(([region, members]) => Object.keys(members).map(country => [country, region])));
+
+        function getPdcRankingRows(list) {
+            return list.querySelectorAll('.ranking-player-row, [data-ranking-row]');
+        }
+
+        function refreshPdcRankingFilters() {
+            const list = document.getElementById('pdc-list');
+            const country = document.getElementById('pdc-country');
+            const continent = document.getElementById('pdc-continent');
+            if (!list || !country?.options || !continent?.options) return;
+            const selectedCountry = country.value, selectedContinent = continent.value;
+            const countryNames = new Set(Array.from(getPdcRankingRows(list), row => row.dataset.playerCountry).filter(Boolean));
+            if (selectedCountry) countryNames.add(selectedCountry);
+            const fill = (select, all, values, selected) => {
+                select.replaceChildren(...[['', all], ...values].map(([value, label]) => {
+                    const option = document.createElement('option');
+                    option.value = value;
+                    option.textContent = label;
+                    return option;
+                }));
+                select.value = selected;
+            };
+            const names = Array.from(countryNames, name => [name, t(name)]);
+            names.sort((a, b) => a[1].localeCompare(b[1], typeof currentLang === 'undefined' ? 'pl' : currentLang));
+            fill(country, t('t-pdc-all-countries'), names, selectedCountry);
+            fill(continent, t('t-pdc-all-continents'), Array.from(new Set(pdcRankingContinents.values()), name => [name, t(name)]), selectedContinent);
+        }
 
         function normalizePdcRankingSearch(value) {
             return String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
@@ -1609,33 +1639,40 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
             if (!input || !list) return;
             input.placeholder = t('t-pdc-search-placeholder');
             const query = normalizePdcRankingSearch(input.value);
-            const rows = list.querySelectorAll('.ranking-player-row');
+            const country = document.getElementById('pdc-country')?.value || '';
+            const continent = document.getElementById('pdc-continent')?.value || '';
+            const filtered = !!(query || country || continent);
+            const language = typeof currentLang === 'undefined' ? '' : currentLang;
+            const rows = getPdcRankingRows(list);
             let matches = 0;
             rows.forEach(row => {
-                let hidden = false;
+                const nationality = row.dataset.playerCountry || '';
+                const region = pdcRankingContinents.get(nationality) || '';
+                let hidden = !!((country && nationality !== country) || (continent && region !== continent));
                 if (query) {
                     const name = row.dataset.playerName;
                     let cached = pdcRankingSearchKeyCache.get(row);
-                    if (!cached || cached.name !== name) {
-                        cached = { name, key: normalizePdcRankingSearch(name) };
+                    if (!cached || cached.name !== name || cached.nationality !== nationality || cached.language !== language) {
+                        cached = { name, nationality, language,
+                            key: normalizePdcRankingSearch([name, nationality, t(nationality), region, t(region)].join(' ')) };
                         pdcRankingSearchKeyCache.set(row, cached);
                     }
-                    hidden = !cached.key.includes(query);
+                    hidden = hidden || !cached.key.includes(query);
                 }
                 if (row.hidden !== hidden) row.hidden = hidden;
                 if (!hidden) matches++;
             });
             const clear = document.getElementById('pdc-search-clear');
-            if (clear) clear.hidden = !input.value;
+            if (clear) clear.hidden = !input.value && !country && !continent;
             const status = document.getElementById('pdc-search-status');
             if (status) {
-                status.hidden = !query || rows.length === 0;
-                status.textContent = query && rows.length
+                status.hidden = !filtered || rows.length === 0;
+                status.textContent = filtered && rows.length
                     ? t('t-pdc-search-count').replace('{shown}', matches).replace('{total}', rows.length)
                     : '';
             }
             const empty = document.getElementById('pdc-search-empty');
-            if (empty) empty.hidden = !query || rows.length === 0 || matches > 0;
+            if (empty) empty.hidden = !filtered || rows.length === 0 || matches > 0;
             list.scrollTop = 0;
         }
 
@@ -1643,6 +1680,11 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
             const input = document.getElementById('pdc-search');
             if (!input) return;
             input.value = '';
+            for (const id of ['pdc-country', 'pdc-continent']) {
+                const select = document.getElementById(id);
+                if (select) select.value = '';
+            }
+            refreshPdcRankingFilters();
             applyPdcRankingSearch();
             input.focus();
         }
@@ -1696,6 +1738,8 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
             let rankingHtml = '';
             if (type.startsWith('tour:') && typeof renderCareerTourRanking === 'function') {
                 renderCareerTourRanking(type.slice(5), list);
+                refreshPdcRankingFilters();
+                applyPdcRankingSearch();
                 showScreen('screen-pdc');
                 return;
             }
@@ -1737,6 +1781,7 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
                 const pointsGuide = `<div class="ranking-points-guide" role="note">ℹ️ ${escapeHtml(t('t-gdl-points-guide'))}</div>`;
                 if (typeof gdlTable === 'undefined' || gdlTable.length === 0) {
                     list.innerHTML = `${pointsGuide}<div style="text-align:center; margin-top:40px; color:#bdc3c7;">Sezon ${leagueName} jeszcze się nie rozpoczął (start 1 lutego).</div>`;
+                    refreshPdcRankingFilters();
                     applyPdcRankingSearch();
                     showScreen('screen-pdc');
                     return;
@@ -1768,7 +1813,7 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
                     let legDiff = row.legsWon - row.legsLost;
                     let sign = legDiff > 0 ? '+' : '';
                     
-                    rankingHtml += `<button type="button" class="ranking-player-row" data-player-id="${escapeHtml(row.player.id)}" data-player-name="${escapeHtml(row.player.name)}" style="${borderStyle} ${bgStyle}">
+                    rankingHtml += `<button type="button" class="ranking-player-row" data-player-id="${escapeHtml(row.player.id)}" data-player-name="${escapeHtml(row.player.name)}" data-player-country="${escapeHtml(row.player.country)}" style="${borderStyle} ${bgStyle}">
                         <div style="flex: 3;">
                             <strong>${index + 1}.</strong> ${getFlagImg(row.player.country)} ${escapeHtml(row.player.name)} ${isMe ? "<b style='color:var(--accent-green)'>(TY)</b>" : ""}
                         </div>
@@ -1816,7 +1861,7 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
                     ? `<span title="${escapeHtml(typeof getPdcTourCardLabel === 'function' ? getPdcTourCardLabel(p) : 'Posiadacz karty PDC')}" style="display:inline-block; margin-left:6px; padding:2px 6px; border-radius:10px; background:#8e44ad; color:white; font-size:10px; font-weight:bold;">PDC CARD</span>`
                     : '';
 
-                rankingHtml += `<button type="button" class="ranking-player-row" data-player-id="${escapeHtml(p.id)}" data-player-name="${escapeHtml(p.name)}" style="border-bottom: 1px solid var(--border-color); ${bgStyle}">
+                rankingHtml += `<button type="button" class="ranking-player-row" data-player-id="${escapeHtml(p.id)}" data-player-name="${escapeHtml(p.name)}" data-player-country="${escapeHtml(p.country)}" style="border-bottom: 1px solid var(--border-color); ${bgStyle}">
                     <div>
                         <strong>#${index + 1}</strong> ${getFlagImg(p.country)} ${escapeHtml(p.name)}${tourCardBadge}
                         <span style="color: #bdc3c7; font-size: 13px; margin-left: 5px;">OVR: ${displayOvr}</span> ${isMe ? "<b>(TY)</b>" : ""}

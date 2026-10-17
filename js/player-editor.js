@@ -197,11 +197,25 @@ let playerEditorPhotoChanged = false;
 let playerEditorPendingWalkon;
 let playerEditorWalkonChanged = false;
 
+for (const [language, hometown, invalidHometown] of [
+    ['pl', 'Miasto pochodzenia (opcjonalnie)', 'Miasto może mieć maksymalnie 80 znaków.'],
+    ['en', 'Hometown (optional)', 'The hometown can contain up to 80 characters.'],
+    ['de', 'Heimatstadt (optional)', 'Die Heimatstadt darf höchstens 80 Zeichen enthalten.'],
+    ['nl', 'Woonplaats van herkomst (optioneel)', 'De plaats mag maximaal 80 tekens bevatten.']
+]) Object.assign(PLAYER_EDITOR_TRANSLATIONS[language], { hometown, invalidHometown });
+
 function trPlayerEditor(key, values = {}) {
     const language = typeof currentLang === 'string' && PLAYER_EDITOR_TRANSLATIONS[currentLang] ? currentLang : 'pl';
     const template = PLAYER_EDITOR_TRANSLATIONS[language][key] || PLAYER_EDITOR_TRANSLATIONS.pl[key] || key;
     return template.replace(/\{(\w+)\}/g, (_, name) => values[name] ?? `{${name}}`);
 }
+
+for (const [language, scoringPreference, standardScoring, preferT19, scoringPreferenceHint] of [
+    ['pl', 'Preferowane pole punktowania', 'Standardowo (głównie T20)', 'Preferuj T19', 'Preferencja dotyczy automatycznej gry i symulacji rzutów. Zejścia, otwarcia double-in i bezpieczne ustawienia końcówki mają pierwszeństwo.'],
+    ['en', 'Preferred scoring target', 'Standard (mainly T20)', 'Prefer T19', 'Used during automatic play and throw simulation. Checkouts, double-in openings and safe setup shots take priority.'],
+    ['de', 'Bevorzugtes Scoringfeld', 'Standard (vorwiegend T20)', 'T19 bevorzugen', 'Gilt für automatisches Spiel und Wurfsimulation. Checkouts, Double-in-Eröffnungen und sichere Reststellungen haben Vorrang.'],
+    ['nl', 'Voorkeursveld voor scoren', 'Standaard (vooral T20)', 'Voorkeur voor T19', 'Voor automatisch spelen en worpsimulatie. Finishes, double-in en veilige opbouw hebben voorrang.']
+]) Object.assign(PLAYER_EDITOR_TRANSLATIONS[language], { scoringPreference, standardScoring, preferT19, scoringPreferenceHint });
 
 function setPlayerEditorText(id, value) {
     const element = document.getElementById(id);
@@ -525,7 +539,7 @@ function renderPlayerEditorRoster() {
     const oomPositions = sort.startsWith('oom-') ? getPlayerEditorOomPositions(roster) : null;
     const players = sortPlayerEditorRosterPlayers(roster, sort, locale, oomPositions);
     const filtered = players.filter(candidate => (!countryFilter || candidate.country === countryFilter)
-        && (!search || [candidate.name, candidate.country, typeof t === 'function' ? t(candidate.country) : candidate.country]
+        && (!search || [candidate.name, candidate.country, candidate.hometown, typeof t === 'function' ? t(candidate.country) : candidate.country]
             .some(value => normalizePlayerEditorIdentity(value).includes(search))));
 
     list.replaceChildren();
@@ -541,7 +555,8 @@ function renderPlayerEditorRoster() {
         const country = document.createElement('small');
         const countryLabel = typeof t === 'function' ? t(candidate.country) : candidate.country;
         const oomPosition = oomPositions?.get(candidate.id || candidate);
-        country.textContent = `${countryLabel}${oomPosition ? ` · OOM #${oomPosition}` : ''}`;
+        const hometown = typeof candidate.hometown === 'string' ? candidate.hometown.trim() : '';
+        country.textContent = `${countryLabel}${hometown ? ` · ${hometown}` : ''}${oomPosition ? ` · OOM #${oomPosition}` : ''}`;
         const overall = document.createElement('b');
         overall.textContent = `OVR ${Math.round(getPlayerEditorOverall(candidate))}`;
         button.append(name, country, overall);
@@ -592,6 +607,7 @@ function populatePlayerEditorForm(candidate = null) {
     setValue('player-editor-nickname', typeof getPlayerNickname === 'function'
         ? getPlayerNickname(candidate) : (candidate?.nickname ?? candidate?.nickName ?? ''));
     renderPlayerEditorCountryOptions(candidate?.country || 'Polska');
+    setValue('player-editor-hometown', candidate?.hometown || '');
     setValue('player-editor-birth-year', Number.isInteger(candidate?.birthYear) ? candidate.birthYear : year - 24);
     const birthInput = document.getElementById('player-editor-birth-year');
     if (birthInput) birthInput.max = String(year - 12);
@@ -605,6 +621,7 @@ function populatePlayerEditorForm(candidate = null) {
     setValue('player-editor-overall', overall);
     setValue('player-editor-scoring', Math.round(Number(candidate?.baseScoring ?? candidate?.scoring) || overall));
     setValue('player-editor-doubles', Math.round(Number(candidate?.baseDoubles ?? candidate?.doubles) || overall));
+    setValue('player-editor-scoring-sector', candidate?.preferredScoringSector === 19 ? '19' : '20');
     const rankingMoney = getPlayerEditorDisplayedRankingMoney(candidate);
     setValue('player-editor-main-money', rankingMoney.main);
     setValue('player-editor-protour-money', rankingMoney.proTour);
@@ -755,6 +772,7 @@ function createPlayerEditorPlayer(data) {
         playerEditorNicknameOverride: true,
         sourceName: data.name,
         country: data.country,
+        hometown: data.hometown || '',
         gender: data.gender,
         birthYear: data.birthYear,
         favoriteDouble: data.favoriteDouble,
@@ -763,6 +781,7 @@ function createPlayerEditorPlayer(data) {
         ovr: data.overall,
         scoring: data.scoring,
         doubles: data.doubles,
+        preferredScoringSector: data.preferredScoringSector ?? 20,
         baseOvr: data.overall,
         baseScoring: data.scoring,
         baseDoubles: data.doubles,
@@ -822,6 +841,11 @@ function collectPlayerEditorForm(candidate) {
     const year = getPlayerEditorReferenceYear();
     const birthYear = getPlayerEditorNumber('player-editor-birth-year', 1900, year - 12);
     if (birthYear === null) return { error: trPlayerEditor('invalidBirthYear', { min: 1900, max: year - 12 }) };
+    const hometown = String(document.getElementById('player-editor-hometown')?.value ?? candidate?.hometown ?? '')
+        .normalize('NFC').trim().replace(/\s+/g, ' ');
+    if (hometown.length > 80 || /[\u0000-\u001f\u007f]/.test(hometown)) return { error: trPlayerEditor('invalidHometown') };
+    const preferredScoringSector = Number(document.getElementById('player-editor-scoring-sector')?.value ?? candidate?.preferredScoringSector ?? 20);
+    if (![19, 20].includes(preferredScoringSector)) return { error: trPlayerEditor('invalidRating') };
 
     const values = {
         name: `${firstName} ${lastName}`,
@@ -829,12 +853,14 @@ function collectPlayerEditorForm(candidate) {
             ? normalizePlayerNickname(document.getElementById('player-editor-nickname')?.value ?? getPlayerNickname(candidate))
             : String(document.getElementById('player-editor-nickname')?.value ?? candidate?.nickname ?? '').trim().slice(0, 48),
         country,
+        hometown,
+        preferredScoringSector,
         birthYear,
         gender: document.getElementById('player-editor-gender')?.value === 'female' ? 'female' : 'male',
         favoriteDouble: getPlayerEditorNumber('player-editor-favorite-double', 1, 20),
-        overall: getPlayerEditorNumber('player-editor-overall', 40, 99),
-        scoring: getPlayerEditorNumber('player-editor-scoring', 40, 100),
-        doubles: getPlayerEditorNumber('player-editor-doubles', 40, 100),
+        overall: getPlayerEditorNumber('player-editor-overall', 1, 99),
+        scoring: getPlayerEditorNumber('player-editor-scoring', 1, 100),
+        doubles: getPlayerEditorNumber('player-editor-doubles', 1, 100),
         endurance: getPlayerEditorNumber('player-editor-endurance', 0, 100),
         consistency: getPlayerEditorNumber('player-editor-consistency', 0, 100),
         mental: getPlayerEditorNumber('player-editor-mental', 0, 100)
@@ -900,6 +926,8 @@ function savePlayerEditor(event) {
         playerEditorNicknameOverride: true,
         playerEditorProfileOverride: true,
         country: values.country,
+        hometown: values.hometown,
+        preferredScoringSector: values.preferredScoringSector,
         birthYear: values.birthYear,
         gender: values.gender,
         favoriteDouble: values.favoriteDouble,
@@ -1163,11 +1191,13 @@ function refreshPlayerEditorTranslations() {
         'player-editor-personal-title': 'personal', 'player-editor-first-name-label': 'firstName',
         'player-editor-last-name-label': 'lastName', 'player-editor-country-label': 'country',
         'player-editor-nickname-label': 'nickname',
+        'player-editor-hometown-label': 'hometown',
         'player-editor-birth-year-label': 'birthYear', 'player-editor-gender-label': 'gender',
         'player-editor-favorite-double-label': 'favoriteDouble',
         'player-editor-favorite-double-second-label': 'secondFavoriteDouble',
         'player-editor-favorite-double-third-label': 'thirdFavoriteDouble', 'player-editor-ratings-title': 'ratings',
         'player-editor-overall-label': 'overall', 'player-editor-scoring-label': 'scoring',
+        'player-editor-scoring-sector-label': 'scoringPreference', 'player-editor-scoring-sector-hint': 'scoringPreferenceHint',
         'player-editor-doubles-label': 'doubles', 'player-editor-ranking-money-title': 'rankingMoney',
         'player-editor-ranking-money-hint': 'rankingMoneyHint', 'player-editor-main-money-label': 'mainOomMoney',
         'player-editor-protour-money-label': 'proTourMoney', 'player-editor-pc-money-label': 'playersChampMoney',
@@ -1177,6 +1207,11 @@ function refreshPlayerEditorTranslations() {
         'player-editor-mental-label': 'mental', 'player-editor-back': 'back', 'player-editor-delete': 'delete'
     };
     Object.entries(textMap).forEach(([id, key]) => setPlayerEditorText(id, trPlayerEditor(key)));
+    const scoringSector = document.getElementById('player-editor-scoring-sector');
+    if (scoringSector?.options?.length === 2) {
+        scoringSector.options[0].textContent = trPlayerEditor('standardScoring');
+        scoringSector.options[1].textContent = trPlayerEditor('preferT19');
+    }
     const search = document.getElementById('player-editor-search');
     if (search) search.placeholder = trPlayerEditor('search');
     renderPlayerEditorSortOptions();

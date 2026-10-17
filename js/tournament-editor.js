@@ -9,7 +9,7 @@ const TOURNAMENT_EDITOR_TEXT = {
         search: 'Nazwa, miasto lub kraj…', count: '{shown} z {total} turniejów', choose: 'Wybierz turniej', new: 'Nowy turniej',
         base: 'Turniej gry', mod: 'Turniej moda', own: 'Turniej własny', name: 'Nazwa turnieju', start: 'Początek', end: 'Koniec',
         city: 'Miasto', country: 'Kraj', minOvr: 'Minimalny overall', fieldSize: 'Liczba uczestników',
-        gameFormat: 'Zasada rozpoczęcia lega', standard: 'Zwykła (double-out)', dido: 'Double-in / double-out',
+        gameFormat: 'Zasady lega', masterOut: 'Master Out (double lub treble)', standard: 'Zwykła (double-out)', dido: 'Double-in / double-out',
         matchMode: 'Format meczu', auto: 'Według zasad turnieju', legs: 'Stała liczba legów', sets: 'Stała liczba setów',
         legsToWin: 'Legi do wygrania', setsToWin: 'Sety do wygrania', legsPerSet: 'Legi w secie',
         ranking: 'Turniej rankingowy — nagrody zaliczają się do odpowiednich rankingów', prizes: 'Nagrody za wynik (£)',
@@ -33,7 +33,7 @@ const TOURNAMENT_EDITOR_TEXT = {
         search: 'Name, city or country…', count: '{shown} of {total} tournaments', choose: 'Select a tournament', new: 'New tournament',
         base: 'Game event', mod: 'Mod event', own: 'Custom event', name: 'Tournament name', start: 'Start', end: 'End',
         city: 'City', country: 'Country', minOvr: 'Minimum overall', fieldSize: 'Field size',
-        gameFormat: 'Leg opening rule', standard: 'Standard (double-out)', dido: 'Double-in / double-out',
+        gameFormat: 'Leg rules', masterOut: 'Master Out (double or treble)', standard: 'Standard (double-out)', dido: 'Double-in / double-out',
         matchMode: 'Match format', auto: 'Event rules', legs: 'Fixed legs', sets: 'Fixed sets',
         legsToWin: 'Legs to win', setsToWin: 'Sets to win', legsPerSet: 'Legs per set',
         ranking: 'Ranking event — prize money counts towards the relevant rankings', prizes: 'Prizes by result (£)',
@@ -57,7 +57,7 @@ const TOURNAMENT_EDITOR_TEXT = {
         search: 'Name, Stadt oder Land…', count: '{shown} von {total} Turnieren', choose: 'Turnier auswählen', new: 'Neues Turnier',
         base: 'Spielturnier', mod: 'Mod-Turnier', own: 'Eigenes Turnier', name: 'Turniername', start: 'Beginn', end: 'Ende',
         city: 'Stadt', country: 'Land', minOvr: 'Mindest-Overall', fieldSize: 'Teilnehmerzahl',
-        gameFormat: 'Leg-Eröffnung', standard: 'Standard (Double-out)', dido: 'Double-in / Double-out',
+        gameFormat: 'Leg-Regeln', masterOut: 'Master Out (Doppel oder Triple)', standard: 'Standard (Double-out)', dido: 'Double-in / Double-out',
         matchMode: 'Matchformat', auto: 'Turnierregeln', legs: 'Feste Legzahl', sets: 'Feste Satzzahl',
         legsToWin: 'Legs zum Sieg', setsToWin: 'Sätze zum Sieg', legsPerSet: 'Legs je Satz',
         ranking: 'Ranglistenturnier — Preisgeld zählt für die relevanten Ranglisten', prizes: 'Preisgeld nach Ergebnis (£)',
@@ -81,7 +81,7 @@ const TOURNAMENT_EDITOR_TEXT = {
         search: 'Naam, stad of land…', count: '{shown} van {total} toernooien', choose: 'Kies een toernooi', new: 'Nieuw toernooi',
         base: 'Speltoernooi', mod: 'Modtoernooi', own: 'Eigen toernooi', name: 'Toernooinaam', start: 'Begin', end: 'Einde',
         city: 'Stad', country: 'Land', minOvr: 'Minimale overall', fieldSize: 'Deelnemersveld',
-        gameFormat: 'Startregel leg', standard: 'Standaard (double-out)', dido: 'Double-in / double-out',
+        gameFormat: 'Legregels', masterOut: 'Master Out (double of triple)', standard: 'Standaard (double-out)', dido: 'Double-in / double-out',
         matchMode: 'Wedstrijdformaat', auto: 'Toernooiregels', legs: 'Vast aantal legs', sets: 'Vast aantal sets',
         legsToWin: 'Legs om te winnen', setsToWin: 'Sets om te winnen', legsPerSet: 'Legs per set',
         ranking: 'Rankingtoernooi — prijzengeld telt mee voor de relevante ranglijsten', prizes: 'Prijzen per resultaat (£)',
@@ -142,7 +142,7 @@ function createTournamentEditorCopy(tournament) {
     copy.sourceName = copy.name;
     for (const field of ['month', 'day', 'endMonth', 'endDay', 'city', 'country', 'minOvr', 'format',
         'editorCycle', 'editorTourName', 'editorFieldSize', 'editorMatchFormat', 'editorRequiredCardId',
-        'editorGender', 'editorTeamMode', 'editorTeamEntries', 'editorInvitations', 'editorStructure', 'editorQualification']) {
+        'editorGender', 'editorCities', 'editorTeamMode', 'editorTeamEntries', 'editorInvitations', 'editorStructure', 'editorQualification']) {
         if (tournament[field] != null) copy[field] = JSON.parse(JSON.stringify(tournament[field]));
     }
     const cycle = typeof getCareerEditorTourId === 'function' ? getCareerEditorTourId(tournament) : 'other';
@@ -264,6 +264,13 @@ Object.assign(TOURNAMENT_EDITOR_TEXT.nl, {
         'Challenge Tour', 'Development Tour', 'World Series', 'Premier League', 'World Cup', 'Kwalificaties', 'Eigen tour', 'Overige']
 });
 
+for (const [language, cities, citiesHint, invalidCities] of [
+    ['pl', 'Miasta zawodników (opcjonalnie)', 'Puste = wszystkie miasta. Rozdziel miasta średnikiem lub nową linią. Wielkość liter i nadmiarowe spacje nie mają znaczenia. Zawodnicy bez miasta nie spełniają ograniczenia. Miasto nie zmienia kraju zawodnika.', 'Podaj maksymalnie 50 miast, po maksymalnie 80 znaków.'],
+    ['en', 'Players’ hometowns (optional)', 'Empty = all hometowns. Separate towns with a semicolon or a new line. Letter case and extra spaces are ignored. Players without a hometown do not meet this restriction. Hometown does not change nationality.', 'Enter up to 50 hometowns, with up to 80 characters each.'],
+    ['de', 'Heimatstädte der Spieler (optional)', 'Leer = alle Städte. Städte mit Semikolon oder Zeilenumbruch trennen. Großschreibung und zusätzliche Leerzeichen werden ignoriert. Spieler ohne Heimatstadt erfüllen diese Einschränkung nicht. Die Nationalität bleibt unverändert.', 'Bis zu 50 Städte mit jeweils höchstens 80 Zeichen eingeben.'],
+    ['nl', 'Plaatsen van herkomst (optioneel)', 'Leeg = alle plaatsen. Scheid plaatsen met een puntkomma of een nieuwe regel. Hoofdletters en extra spaties worden genegeerd. Spelers zonder plaats voldoen niet aan deze beperking. De nationaliteit blijft gelijk.', 'Voer maximaal 50 plaatsen van maximaal 80 tekens in.']
+]) Object.assign(TOURNAMENT_EDITOR_TEXT[language], { cities, citiesHint, invalidCities });
+
 function trTournamentEditor(key, params = {}) {
     const language = typeof currentLang === 'string' && TOURNAMENT_EDITOR_TEXT[currentLang] ? currentLang : 'pl';
     return String(TOURNAMENT_EDITOR_TEXT[language][key] || TOURNAMENT_EDITOR_TEXT.en[key] || key)
@@ -353,6 +360,7 @@ function populateTournamentEditorForm(tournament) {
         || (tournament.isEditorTournament ? 'other' : 'auto');
     tournamentEditorElement('te-custom-tour').value = tournament.editorTourName || '';
     tournamentEditorElement('te-min-ovr').value = Number(tournament.minOvr) || 0;
+    if (tournamentEditorElement('te-cities')) tournamentEditorElement('te-cities').value = (tournament.editorCities || []).join('; ');
     const inheritedGender = typeof isWorldCupQualifierTournament === 'function' && isWorldCupQualifierTournament(tournament);
     tournamentEditorElement('te-gender').value = getTournamentEditorGender(tournament);
     tournamentEditorElement('te-gender').disabled = inheritedGender;
@@ -362,7 +370,7 @@ function populateTournamentEditorForm(tournament) {
     tournamentEditorElement('te-gender-hint').hidden = !inheritedGender;
     tournamentEditorElement('te-field-size').value = String(tournament.editorFieldSize || 32);
     tournamentEditorElement('te-field-size').disabled = tournament.isEditorTournament !== true;
-    tournamentEditorElement('te-game-format').value = tournament.format === 'DIDO' ? 'DIDO' : 'standard';
+    tournamentEditorElement('te-game-format').value = ['DIDO','masterOut'].includes(tournament.format) ? tournament.format : 'standard';
     tournamentEditorElement('te-match-mode').value = tournament.editorMatchFormat?.type || 'auto';
     if (typeof renderTournamentEditorRoundFormats === 'function') renderTournamentEditorRoundFormats(tournament);
     if (typeof refreshCareerEditorEventCards === 'function') refreshCareerEditorEventCards();
@@ -398,6 +406,7 @@ function startAddingTournament() {
     tournamentEditorElement('te-field-size').value = '32';
     tournamentEditorElement('te-field-size').disabled = false;
     tournamentEditorElement('te-min-ovr').value = '0';
+    if (tournamentEditorElement('te-cities')) tournamentEditorElement('te-cities').value = '';
     tournamentEditorElement('te-gender').value = 'all';
     tournamentEditorElement('te-gender').disabled = false;
     tournamentEditorElement('te-gender-hint').hidden = true;
@@ -485,7 +494,7 @@ function refreshTournamentEditorTranslations() {
         'tournament-editor-new': 'add', 'tournament-editor-search-label': 'searchLabel', 'te-name-label': 'name',
         'te-start-label': 'start', 'te-end-label': 'end', 'te-city-label': 'city', 'te-country-label': 'country',
         'te-cycle-label': 'cycle', 'te-cycle-hint': 'cycleHint', 'te-custom-tour-label': 'customTour',
-        'te-min-ovr-label': 'minOvr', 'te-gender-label': 'gender', 'te-gender-hint': 'genderInherited', 'te-field-size-label': 'fieldSize', 'te-game-format-label': 'gameFormat',
+        'te-min-ovr-label': 'minOvr', 'te-cities-label': 'cities', 'te-cities-hint': 'citiesHint', 'te-gender-label': 'gender', 'te-gender-hint': 'genderInherited', 'te-field-size-label': 'fieldSize', 'te-game-format-label': 'gameFormat',
         'te-match-mode-label': 'matchMode', 'te-legs-label': 'legsToWin', 'te-sets-label': 'setsToWin',
         'te-legs-per-set-label': 'legsPerSet', 'te-ranking-label': 'ranking', 'te-prizes-title': 'prizes',
         'te-prizes-hint': 'prizesHint', 'te-prize-winner-label': 'winner', 'te-prize-2-label': 'runnerUp',
@@ -495,7 +504,7 @@ function refreshTournamentEditorTranslations() {
     };
     Object.entries(fields).forEach(([id, key]) => { const node = tournamentEditorElement(id); if (node) node.textContent = trTournamentEditor(key); });
     tournamentEditorElement('tournament-editor-search').placeholder = trTournamentEditor('search');
-    [['te-gender', ['genderAll', 'genderMale', 'genderFemale']], ['te-game-format', ['standard', 'dido']], ['te-match-mode', ['auto', 'legs', 'sets', 'rounds']]].forEach(([id, keys]) => {
+    [['te-gender', ['genderAll', 'genderMale', 'genderFemale']], ['te-game-format', ['standard', 'dido', 'masterOut']], ['te-match-mode', ['auto', 'legs', 'sets', 'rounds']]].forEach(([id, keys]) => {
         [...tournamentEditorElement(id).options].forEach((option, index) => { option.textContent = keys[index] === 'rounds' && typeof trCareerEditor === 'function' ? trCareerEditor('roundMode') : trTournamentEditor(keys[index]); });
     });
     const language = typeof currentLang === 'string' && TOURNAMENT_EDITOR_TEXT[currentLang] ? currentLang : 'pl';
@@ -565,8 +574,12 @@ function getTournamentEditorFormData() {
     const customTour = tournamentEditorValue('te-custom-tour').trim().replace(/\s+/g, ' ');
     if (!TOURNAMENT_EDITOR_CYCLES.includes(cycle) || cycle === 'auto' && tournamentEditorCreating
         || cycle === 'custom' && !customTour) throw new Error(trTournamentEditor('invalidCycle'));
+    let editorCities;
+    try { editorCities = normalizeTournamentEditorCities(tournamentEditorElement('te-cities')?.value || ''); }
+    catch (_) { throw new Error(trTournamentEditor('invalidCities')); }
     const values = { name, month: start.month, day: start.day, endMonth: end.month, endDay: end.day,
-        city, country, minOvr, format: tournamentEditorValue('te-game-format') === 'DIDO' ? 'DIDO' : 'legs',
+        city, country, minOvr, format: ['DIDO','masterOut'].includes(tournamentEditorValue('te-game-format')) ? tournamentEditorValue('te-game-format') : 'legs',
+        ...(editorCities.length ? { editorCities } : {}),
         editorGender: gender === 'all' ? null : gender,
         editorFieldSize, editorMatchFormat, editorRequiredCardId, rankingOverride: tournamentEditorElement('te-ranking').checked, editorPrizes,
         editorCycle: cycle === 'auto' ? null : cycle, editorTourName: cycle === 'custom' ? customTour : null };
@@ -628,6 +641,7 @@ async function saveTournamentEditor(event) {
     if (!values.editorQualification) delete tournament.editorQualification;
     if (!values.editorNativeRoutes) delete tournament.editorNativeRoutes;
     if (!values.editorGender) delete tournament.editorGender;
+    if (!values.editorCities?.length) delete tournament.editorCities;
     if (!values.editorInvitations) delete tournament.editorInvitations;
     if (!values.editorStructure) delete tournament.editorStructure;
     if (!values.editorTeamMode) { delete tournament.editorTeamMode; delete tournament.editorTeamEntries; delete tournament.editorTeamState; }

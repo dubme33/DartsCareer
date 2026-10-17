@@ -277,8 +277,12 @@ const translations = {
         "ranking-main-group-label": "Główne rankingi i tabele",
         "ranking-secondary-group-label": "Cykle poboczne",
         "ranking-records-group-label": "Statystyki i ciekawostki",
-        "pdc-search-label": "Szukaj gracza",
-        "t-pdc-search-placeholder": "Wpisz nazwisko gracza…",
+        "pdc-search-label": "Szukaj w rankingu",
+        "pdc-country-label": "Kraj",
+        "pdc-continent-label": "Kontynent",
+        "t-pdc-all-countries": "Wszystkie kraje",
+        "t-pdc-all-continents": "Wszystkie kontynenty",
+        "t-pdc-search-placeholder": "Gracz, kraj lub kontynent…",
         "pdc-search-clear": "Wyczyść",
         "t-pdc-search-count": "Znaleziono: {shown} z {total} graczy",
         "pdc-search-empty": "Brak graczy pasujących do wyszukiwania.",
@@ -329,6 +333,7 @@ const translations = {
         "t-stat-set-avg-lbl": "Średnia (bieżący set)",
         "t-stat-f9-lbl": "Średnia (First 9)",
         "t-stat-dbl-lbl": "Skuteczność D",
+        "t-stat-master-out-lbl": "Skuteczność zamknięć (Master Out)",
         "t-stat-leg-avg-lbl": "Średnia (Ten Leg)",
         "t-stat-darts-lbl": "Lotki (aktualny leg)",
         "t-stat-hi-chk-lbl": "Najwyższy checkout",
@@ -754,8 +759,12 @@ const translations = {
         "ranking-main-group-label": "Main rankings and tables",
         "ranking-secondary-group-label": "Secondary tours",
         "ranking-records-group-label": "Statistics and curiosities",
-        "pdc-search-label": "Find a player",
-        "t-pdc-search-placeholder": "Enter a player's surname…",
+        "pdc-search-label": "Search rankings",
+        "pdc-country-label": "Country",
+        "pdc-continent-label": "Continent",
+        "t-pdc-all-countries": "All countries",
+        "t-pdc-all-continents": "All continents",
+        "t-pdc-search-placeholder": "Player, country or continent…",
         "pdc-search-clear": "Clear",
         "t-pdc-search-count": "Found: {shown} of {total} players",
         "pdc-search-empty": "No players match your search.",
@@ -815,6 +824,7 @@ const translations = {
         "t-stat-set-avg-lbl": "Average (This Set)",
         "t-stat-f9-lbl": "Average (First 9)",
         "t-stat-dbl-lbl": "Doubles %",
+        "t-stat-master-out-lbl": "Checkout % (Master Out)",
         "t-stat-leg-avg-lbl": "Average (This Leg)",
         "t-stat-darts-lbl": "Darts (current leg)",
         "t-stat-hi-chk-lbl": "Highest checkout",
@@ -969,8 +979,12 @@ const translations = {
         "t-footer-privacy-settings": "Datenschutz- und Cookie-Einstellungen",
         "t-footer-contact": "Kontakt",
         "t-site-information-close": "Schließen",
-        "pdc-search-label": "Spieler suchen",
-        "t-pdc-search-placeholder": "Nachnamen eingeben…",
+        "pdc-search-label": "Rangliste durchsuchen",
+        "pdc-country-label": "Land",
+        "pdc-continent-label": "Kontinent",
+        "t-pdc-all-countries": "Alle Länder",
+        "t-pdc-all-continents": "Alle Kontinente",
+        "t-pdc-search-placeholder": "Spieler, Land oder Kontinent…",
         "pdc-search-clear": "Leeren",
         "t-pdc-search-count": "Gefunden: {shown} von {total} Spielern",
         "pdc-search-empty": "Keine Spieler entsprechen deiner Suche.",
@@ -1278,6 +1292,7 @@ const translations = {
         "t-stat-set-avg-lbl": "Durchschnitt (Dieses Set)",
         "t-stat-f9-lbl": "Durchschnitt (First 9)",
         "t-stat-dbl-lbl": "Doubles-Genauigkeit",
+        "t-stat-master-out-lbl": "Checkout-Quote (Master Out)",
         "t-stat-leg-avg-lbl": "Durchschnitt (Dieses Leg)",
         "t-stat-darts-lbl": "Darts (aktuelles Leg)",
         "t-stat-hi-chk-lbl": "Höchster Checkout",
@@ -1726,8 +1741,12 @@ const translations = {
         "ranking-main-group-label": "Hoofdranglijsten en standen",
         "ranking-secondary-group-label": "Nevencircuits",
         "ranking-records-group-label": "Statistieken en weetjes",
-        "pdc-search-label": "Speler zoeken",
-        "t-pdc-search-placeholder": "Voer de achternaam in…",
+        "pdc-search-label": "Zoek in ranglijsten",
+        "pdc-country-label": "Land",
+        "pdc-continent-label": "Continent",
+        "t-pdc-all-countries": "Alle landen",
+        "t-pdc-all-continents": "Alle continenten",
+        "t-pdc-search-placeholder": "Speler, land of continent…",
         "pdc-search-clear": "Wissen",
         "t-pdc-search-count": "Gevonden: {shown} van {total} spelers",
         "pdc-search-empty": "Geen spelers komen overeen met je zoekopdracht.",
@@ -1787,6 +1806,7 @@ const translations = {
         "t-stat-set-avg-lbl": "Gemiddelde (Deze Set)",
         "t-stat-f9-lbl": "Gemiddelde (Eerste 9)",
         "t-stat-dbl-lbl": "Doubles %",
+        "t-stat-master-out-lbl": "Checkout % (Master Out)",
         "t-stat-leg-avg-lbl": "Gemiddelde (Deze Leg)",
         "t-stat-darts-lbl": "Pijltjes (huidige leg)",
         "t-stat-hi-chk-lbl": "Hoogste checkout",
@@ -2208,7 +2228,12 @@ const translations = {
             if(typeof refreshTournamentEditorTranslations === 'function') refreshTournamentEditorTranslations();
             if(typeof refreshPdcQSchoolTranslations === 'function') refreshPdcQSchoolTranslations();
             if(typeof refreshAverageRecordsTranslations === 'function') refreshAverageRecordsTranslations();
+            if(typeof refreshPdcRankingFilters === 'function') refreshPdcRankingFilters();
             if(typeof applyPdcRankingSearch === 'function') applyPdcRankingSearch();
+            if(typeof activeTournament !== 'undefined' && activeTournament?.format === 'masterOut') {
+                const label = document.getElementById('t-stat-dbl-lbl');
+                if(label) label.textContent = t('t-stat-master-out-lbl');
+            }
             if(typeof refreshPanelTopBackTranslations === 'function') refreshPanelTopBackTranslations();
             if(typeof refreshCareerDifficultyUI === 'function') refreshCareerDifficultyUI();
             if(typeof refreshCareerWorkUI === 'function') refreshCareerWorkUI();

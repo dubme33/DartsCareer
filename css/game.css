@@ -892,7 +892,8 @@
             font-size: 13px;
         }
         .ranking-search-controls { display: flex; gap: 8px; }
-        .ranking-search-controls input {
+        .ranking-search-controls input,
+        .ranking-location-filters select {
             flex: 1;
             min-width: 0;
             margin: 0;
@@ -905,7 +906,8 @@
             font-size: 16px;
         }
         .ranking-search-controls input::placeholder { color: #bdc3c7; }
-        .ranking-search-controls input:focus-visible {
+        .ranking-search-controls input:focus-visible,
+        .ranking-location-filters select:focus-visible {
             outline: 2px solid var(--accent-green);
             outline-offset: 2px;
         }
@@ -920,9 +922,13 @@
             font-size: 13px;
             cursor: pointer;
         }
+        .ranking-location-filters { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 12px; }
+        .ranking-location-filters select { width: 100%; }
+        @media (max-width: 480px) { .ranking-location-filters { grid-template-columns: minmax(0, 1fr); } }
         .ranking-search-status { margin: 8px 0 0; color: #bdc3c7; font-size: 12px; }
         .ranking-search-empty { color: #bdc3c7; text-align: center; }
         .ranking-player-row[hidden],
+        [data-ranking-row][hidden],
         .ranking-search [hidden],
         .ranking-search-empty[hidden] { display: none; }
 

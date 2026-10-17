@@ -26,6 +26,18 @@ function mountEditorStructurePanel() {
         <datalist id="te-structure-options"></datalist><div id="te-structure-slots" class="tournament-editor-fields" style="margin-top:12px"></div></div>`;
     const form = tournamentEditorElement('tournament-editor-form');
     form.insertBefore(panel, tournamentEditorElement('te-prizes-panel'));
+    // Stage selection belongs next to the basic format, ahead of entry rules.
+    // Reuse the existing controls so saved structures keep the same schema.
+    const stages = document.createElement('fieldset');
+    stages.id = 'te-stages-panel'; stages.className = 'tournament-editor-prizes';
+    stages.innerHTML = `<legend data-structure-text="stagesTitle"></legend><p class="tournament-editor-hint" data-structure-text="stagesHint"></p>
+        <button id="te-groups-preset" type="button" data-structure-text="groupsPreset"></button><div id="te-stages-groups" hidden></div>`;
+    form.insertBefore(stages, tournamentEditorElement('te-team-panel'));
+    stages.insertBefore(tournamentEditorElement('te-structure-phase').parentElement.parentElement, tournamentEditorElement('te-groups-preset'));
+    const groupSettings = tournamentEditorElement('te-stages-groups');
+    groupSettings.append(tournamentEditorElement('te-structure-group-fields').firstElementChild, tournamentEditorElement('te-group-rules'));
+    stages.append(tournamentEditorElement('te-league-fields'));
+    tournamentEditorElement('te-groups-preset').addEventListener('click', applyEditorGroupsPreset);
     appendTournamentEditorOption(tournamentEditorElement('te-structure-phase'), 'league', trEditorStructure('league'));
     tournamentEditorElement('te-structure-phase').lastElementChild.dataset.structureText = 'league';
     for (const id of ['te-structure-phase', 'te-structure-draw', 'te-groups-count', 'te-groups-advance', 'te-groups-extra', 'te-groups-legs', 'te-groups-points', 'te-groups-tie']) {
@@ -37,8 +49,20 @@ function mountEditorStructurePanel() {
     tournamentEditorElement('te-invitation-mode').addEventListener('change', () => { enableEditorStructureRules(); renderEditorStructureFields(); });
     tournamentEditorElement('te-invitation-search').addEventListener('input', renderEditorInvitationList);
     form.addEventListener('change', event => {
-        if (['te-gender', 'te-min-ovr', 'te-team-mode'].includes(event.target.id) || event.target.closest('#te-team-panel')) renderEditorStructureFields();
+        if (['te-gender', 'te-min-ovr', 'te-team-mode', 'te-cities'].includes(event.target.id) || event.target.closest('#te-team-panel')) renderEditorStructureFields();
     });
+}
+function applyEditorGroupsPreset() {
+    const size = Number(tournamentEditorValue('te-field-size'));
+    if (![8, 16, 32, 64, 128, 256].includes(size)
+        || !editorStructureIsTeamForm() && tournamentEditorElement('te-qualification-mode').disabled) return false;
+    tournamentEditorElement('te-structure-phase').value = 'groups';
+    tournamentEditorElement('te-structure-draw').value = 'auto';
+    for (const [id, value] of Object.entries({ count: size / 4, advance: 2, extra: 0, legs: 5, points: 2, tie: 'difference' }))
+        tournamentEditorElement(`te-groups-${id}`).value = String(value);
+    editorStructureDraft = { slots: [], assignments: [] };
+    enableEditorStructureRules(); renderEditorStructureFields();
+    return true;
 }
 function editorStructureIsTeamForm() { return ['national', 'pairs'].includes(tournamentEditorElement('te-team-mode')?.value); }
 function enableEditorStructureRules() {
@@ -56,13 +80,16 @@ function editorStructureFormGroups() {
 }
 function editorStructureFormEntrants() {
     const size = Number(tournamentEditorValue('te-field-size')) || 32;
+    let editorCities;
+    try { editorCities = normalizeTournamentEditorCities(tournamentEditorElement('te-cities')?.value || ''); }
+    catch (_) { return []; }
     if (editorStructureIsTeamForm()) {
         try { return buildEditorTeamField({ ...tournamentEditorSelected, ...getTournamentTeamEditorFormData(size),
-            isEditorTournament: true, editorFieldSize: size, minOvr: Number(tournamentEditorValue('te-min-ovr')), editorGender: tournamentEditorValue('te-gender') }); }
+            isEditorTournament: true, editorCities, editorFieldSize: size, minOvr: Number(tournamentEditorValue('te-min-ovr')), editorGender: tournamentEditorValue('te-gender') }); }
         catch { return []; }
     }
     const pool = getTournamentEditorCandidates().filter(candidate => isTournamentEditorGenderEligible(
-        { editorGender: tournamentEditorValue('te-gender') }, candidate));
+        { editorGender: tournamentEditorValue('te-gender') }, candidate) && isTournamentEditorCityEligible({ editorCities }, candidate));
     const invited = [...editorInvitationDraft.keys()].map(key => pool.find(candidate => getTournamentEditorPlayerKey(candidate) === key)).filter(Boolean);
     return getTournamentEditorCandidates(tournamentEditorValue('te-invitation-mode') === 'only'
         ? invited : [...invited, ...getTournamentEditorRanking(pool, 'oom')]).slice(0, size);
@@ -85,7 +112,7 @@ function populateEditorStructureForm(event) {
 }
 function refreshEditorStructureTranslations() {
     if (!tournamentEditorElement('te-structure-panel')) return;
-    document.querySelectorAll('#te-structure-panel [data-structure-text]').forEach(node => { node.textContent = trEditorStructure(node.dataset.structureText); });
+    document.querySelectorAll('#te-structure-panel [data-structure-text], #te-stages-panel [data-structure-text]').forEach(node => { node.textContent = trEditorStructure(node.dataset.structureText); });
     tournamentEditorElement('te-invitation-search').placeholder = trEditorStructure('search');
     tournamentEditorElement('te-invitation-search').setAttribute('aria-label', trEditorStructure('search'));
     renderEditorInvitationList(); renderEditorStructureFields();
@@ -114,11 +141,14 @@ function renderEditorStructureFields() {
     if (!tournamentEditorElement('te-structure-panel')) return;
     const team = editorStructureIsTeamForm();
     const allowed = team || !tournamentEditorElement('te-qualification-mode').disabled;
+    tournamentEditorElement('te-stages-panel').hidden = !allowed;
     tournamentEditorElement('te-structure-unavailable').hidden = allowed;
     tournamentEditorElement('te-structure-content').hidden = !allowed;
     tournamentEditorElement('te-invitation-panel').hidden = team;
     const groups = editorStructureFormGroups();
     const league = tournamentEditorValue('te-structure-phase') === 'league';
+    tournamentEditorElement('te-stages-groups').hidden = !groups;
+    tournamentEditorElement('te-groups-preset').hidden = league;
     tournamentEditorElement('te-league-fields').hidden = !league;
     tournamentEditorElement('te-structure-draw-wrap').hidden = league;
     if (league) tournamentEditorElement('te-structure-draw').value = 'auto';

@@ -498,7 +498,7 @@ function initCareerChronicle() {
                         if (isCareerPlayerEntry) {
                             if (typeof applyModPlayerNickname === 'function') applyModPlayerNickname(player, modPlayer);
                             (player.playerEditorProfileOverride === true ? []
-                                : ['name', 'sourceName', 'birthYear', 'country', 'favoriteDouble']).forEach(field => {
+                                : ['name', 'sourceName', 'birthYear', 'country', 'hometown', 'preferredScoringSector', 'favoriteDouble']).forEach(field => {
                                 if (modPlayer[field] !== undefined) player[field] = modPlayer[field];
                             });
                             if (typeof applyModPlayerFavoriteDoubles === 'function') applyModPlayerFavoriteDoubles(player, modPlayer);
@@ -516,7 +516,7 @@ function initCareerChronicle() {
                         if (candidate) {
                             if (typeof applyModPlayerNickname === 'function') applyModPlayerNickname(candidate, modPlayer);
                             (candidate.playerEditorProfileOverride === true ? []
-                                : ['name', 'sourceName', 'birthYear', 'country', 'favoriteDouble']).forEach(field => {
+                                : ['name', 'sourceName', 'birthYear', 'country', 'hometown', 'preferredScoringSector', 'favoriteDouble']).forEach(field => {
                                 if (modPlayer[field] !== undefined) candidate[field] = modPlayer[field];
                             });
                             if (typeof applyModPlayerFavoriteDoubles === 'function') applyModPlayerFavoriteDoubles(candidate, modPlayer);

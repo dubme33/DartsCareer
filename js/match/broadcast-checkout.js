@@ -28,6 +28,11 @@ var matchBroadcastCheckout = (function () {
         return match ? Number(match[2]) * (match[1] === 'T' ? 3 : match[1] === 'D' ? 2 : 1) : NaN;
     }
     function route(score, dartsLeft = 3) {
+        if (typeof activeTournament !== 'undefined' && activeTournament?.format === 'masterOut'
+            && typeof getMasterOutCheckoutRoute === 'function') {
+            return getMasterOutCheckoutRoute(score,dartsLeft).map(aim => aim.sector===25 ? 'BULL'
+                : `${aim.mult===3?'T':aim.mult===2?'D':''}${aim.sector}`);
+        }
         if (!Number.isInteger(score) || score < 2 || score > 170
             || !Number.isInteger(dartsLeft) || dartsLeft < 1 || dartsLeft > 3) return [];
         const guide = typeof getCheckoutPath === 'function' ? getCheckoutPath(score) : '';
@@ -51,9 +56,22 @@ var matchBroadcastCheckout = (function () {
         }
         return [];
     }
+    let masterOutNineDartFinishes = null;
     function nineDartPossible(score, dartsThrownInLeg) {
         if (!Number.isInteger(score) || !Number.isInteger(dartsThrownInLeg)
             || dartsThrownInLeg < 3 || dartsThrownInLeg >= 9) return false;
+        if (typeof activeTournament !== 'undefined' && activeTournament?.format === 'masterOut') {
+            if (!masterOutNineDartFinishes) {
+                masterOutNineDartFinishes = [new Set(),new Set([...finishes.map(finish => finish.points),
+                    ...Array.from({length:20},(_,i)=>(i+1)*3)])];
+                for (let darts=2;darts<=6;darts++) {
+                    const totals=new Set(masterOutNineDartFinishes[darts-1]);
+                    for (const total of masterOutNineDartFinishes[darts-1]) for (const points of targetPoints) totals.add(total+points);
+                    masterOutNineDartFinishes.push(totals);
+                }
+            }
+            return masterOutNineDartFinishes[9-dartsThrownInLeg].has(score);
+        }
         return nineDartFinishes[9 - dartsThrownInLeg].has(score);
     }
     return Object.freeze({ route, nineDartPossible });

@@ -39,7 +39,7 @@ function renderWomensWorldMatchplayHonours(p){
 function showWomensWorldMatchplay(tab='overview',year=womensSeriesYear()){
  if(typeof showScreen==='function')showScreen('screen-pdc');currentRankingType='womensWorldMatchplay';
  const list=document.getElementById('pdc-list');if(!list)return false;list.classList.add('ws-ranking-panel');
- const search=document.getElementById('pdc-search')?.closest('.ranking-search');if(search)search.hidden=true;
+ const search=document.getElementById('pdc-search')?.closest('.ranking-search');if(search)search.hidden=tab!=='race';
  const tr=womensWorldMatchplayText,edition=womensWorldMatchplayEdition(year),event=getWomensWorldMatchplayEvent(year),tabs=['overview','race','participants','bracket','results','prizes','history','records'];
  const ranking=getWomensWorldMatchplayQualifyingRanking(year),rows=edition?.rankingSnapshot||ranking.rows.map((r,i)=>({id:womensSeriesKey(r.player),name:r.player.name,country:r.player.country,rank:i+1,money:r.money}));
  const participantIds=edition?.seeds.length?edition.seeds:ranking.projectedField.map(womensSeriesKey),selected=new Set(participantIds);
@@ -53,7 +53,7 @@ function showWomensWorldMatchplay(tab='overview',year=womensSeriesYear()){
   if(edition?.champion===womensSeriesKey(player)&&!edition.seniorWorldDeclined&&!edition.seniorReplacementWinner)html+=`<button id="wwm-decline-world" class="action-btn">${escapeHtml(tr('decline'))}</button>`;
  }else if(tab==='race'){
   html+=`<p>${escapeHtml(tr('period'))}</p><p>${escapeHtml(tr(edition?.seeds.length?'frozen':'pending'))}</p><p>${escapeHtml(tr((edition?.historicalStatus||ranking.historicalStatus)==='complete'?'complete':'partial'))}</p>`;
-  html+=table(['#',tr('player'),tr('money'),tr('seed')],rows.map(r=>`<tr class="${selected.has(r.id)?'ws-current-player':''}"><td>${r.rank}</td><td>${escapeHtml(womensWorldMatchplayName(r.id,year)||r.name)}</td><td class="ws-money">${money(r.money)}</td><td>${selected.has(r.id)?participantIds.indexOf(r.id)+1:'—'}</td></tr>`));
+  html+=table(['#',tr('player'),tr('money'),tr('seed')],rows.map(r=>`<tr class="${selected.has(r.id)?'ws-current-player':''}" data-ranking-row data-player-name="${escapeHtml(womensWorldMatchplayName(r.id,year)||r.name)}" data-player-country="${escapeHtml(resolveWomensWorldMatchplayPlayer(r.id)?.country||r.country||'')}"><td>${r.rank}</td><td>${escapeHtml(womensWorldMatchplayName(r.id,year)||r.name)}</td><td class="ws-money">${money(r.money)}</td><td>${selected.has(r.id)?participantIds.indexOf(r.id)+1:'—'}</td></tr>`));
  }else if(tab==='participants')html+=`<p>${escapeHtml(tr(edition?.seeds.length?'frozen':'pending'))}</p>`+table([tr('seed'),tr('player')],participantIds.map((id,i)=>`<tr><td>${i+1}</td><td>${name(id)}</td></tr>`));
  else if(tab==='bracket'||tab==='results'){
   const matches=edition?.matches||[],draw=edition?.draw||WOMENS_WORLD_MATCHPLAY_SEED_ORDER.map(n=>participantIds[n-1]);
@@ -66,6 +66,8 @@ function showWomensWorldMatchplay(tab='overview',year=womensSeriesYear()){
  else if(tab==='history')html+=table([tr('year'),tr('champion'),tr('runner'),tr('score')],getWomensWorldMatchplayHistoryRows().map(h=>`<tr><td>${h.year}${h.historical?`<br>${tr('historical')}`:''}</td><td>${escapeHtml(h.winnerName)}</td><td>${escapeHtml(h.runnerName)}</td><td>${h.score.join('–')}</td></tr>`));
  else if(tab==='records')html+=table([tr('player'),tr('titles'),tr('finals'),tr('appearances')],getWomensWorldMatchplayRecords().map(r=>`<tr><td>${escapeHtml(r.name)}</td><td>${r.titles}</td><td>${r.finals}</td><td>${r.appearances}</td></tr>`));
  list.innerHTML=html+'</div>';
+ if(typeof refreshPdcRankingFilters==='function')refreshPdcRankingFilters();
+ if(typeof applyPdcRankingSearch==='function')applyPdcRankingSearch();
  list.querySelector('#wwm-year')?.addEventListener('change',e=>showWomensWorldMatchplay(tab,Number(e.target.value)));
  for(const button of list.querySelectorAll('[data-wwm-tab]'))button.addEventListener('click',()=>showWomensWorldMatchplay(button.dataset.wwmTab,year));
  list.querySelector('#wwm-decline-world')?.addEventListener('click',()=>{if(declineWomensWorldMatchplayWorldPlace(year))showWomensWorldMatchplay(tab,year);});

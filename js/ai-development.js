@@ -188,12 +188,14 @@ function settleAiSeasonDevelopment(completedYear) {
                 : limitLowOverallDecline(seasonStart, performanceChange)
             // Mała próba zachowuje już przeskalowane transfery bez drugiej korekty.
             : state.inSeasonDelta;
-        const after = Math.max(45, Math.min(99, seasonStart + totalChange));
+        const minimum = typeof getPlayerRatingFloor === 'function' ? getPlayerRatingFloor(candidate, 45) : 45;
+        const after = Math.max(minimum, Math.min(99, seasonStart + totalChange));
         const adjustment = after - before;
         ensureBaseRatings(candidate);
         candidate.baseOvr = after;
-        candidate.baseScoring = Math.max(45, Math.min(100, candidate.baseScoring + adjustment));
-        candidate.baseDoubles = Math.max(40, Math.min(100, candidate.baseDoubles + adjustment));
+        candidate.baseScoring = Math.max(minimum, Math.min(100, candidate.baseScoring + adjustment));
+        candidate.baseDoubles = Math.max(typeof getPlayerRatingFloor === 'function' ? getPlayerRatingFloor(candidate) : 40,
+            Math.min(100, candidate.baseDoubles + adjustment));
         applyForm(candidate);
         state.settled = true;
         candidate.aiDevelopmentSummary = { year: completedYear, matches: state.matches, since: state.since,
