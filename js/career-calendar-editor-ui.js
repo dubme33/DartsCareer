@@ -138,7 +138,8 @@ function careerEditorTourChoices() {
     const language = TOURNAMENT_EDITOR_TEXT[currentLang] ? currentLang : 'en';
     TOURNAMENT_EDITOR_CYCLES.filter(id => !['auto', 'custom'].includes(id)).forEach(id => {
         const index = TOURNAMENT_EDITOR_CYCLES.indexOf(id);
-        tours.set(id, TOURNAMENT_EDITOR_TEXT[language].cycleOptions[index]);
+        tours.set(id, id === 'womensSeries' && typeof competitionName === 'function'
+            ? competitionName('womensSeries') : TOURNAMENT_EDITOR_TEXT[language].cycleOptions[index]);
     });
     tournamentDatabase.forEach(event => {
         const id = getCareerEditorTourId(event);

@@ -245,7 +245,10 @@ function normalizeCareerCalendarConfiguration(raw) {
             if (typeof tour.promotion !== 'object' || !['ranking', 'league'].includes(tour.promotion.basis)) invalid();
             promotion = { targetId: str(tour.promotion.targetId, 1000), places: int(tour.promotion.places, 1, 256), basis: tour.promotion.basis };
         }
-        return { id: str(tour.id, 1000), name: str(tour.name, 80), ranking: tour.ranking, entry: tour.entry, fieldSize,
+        // Older calendar resets could omit this deleted category's label after
+        // the Women's Series option shifted the list. Keep the deletion intact.
+        const name = tour.id === 'other' && tour.removed === true && tour.name == null ? 'Other tournaments' : tour.name;
+        return { id: str(tour.id, 1000), name: str(name, 80), ranking: tour.ranking, entry: tour.entry, fieldSize,
             playerKeys, requiredCardId: tour.entry === 'card' ? tour.requiredCardId : null, removed: tour.removed === true,
             ...(promotion ? { promotion } : {}) };
     });

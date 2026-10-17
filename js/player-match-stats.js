@@ -147,16 +147,18 @@ function getQuickSimulatedMatchStats(p1, p2, result) {
     const limit = (value, min, max) => Math.max(min, Math.min(max, value));
     const totalLegs = legs1 + legs2;
     const estimate = (candidate, wonLegs, ownAverage, opponentAverage) => {
-        const overall = limit(getOptionalMatchStat(candidate.overall ?? candidate.ovr) ?? 70, 40, 100);
-        const scoring = limit(getOptionalMatchStat(candidate.scoring) ?? overall, 40, 100);
-        const doubles = limit(getOptionalMatchStat(candidate.doubles) ?? overall, 40, 100);
-        const average = limit(getOptionalMatchStat(ownAverage) ?? 60 + overall * 0.42, 45, 125);
-        const otherAverage = limit(getOptionalMatchStat(opponentAverage) ?? average, 45, 125);
-        const performance = average - (60 + overall * 0.42);
+        const low = typeof getLowRatingThrowProfile === 'function' ? getLowRatingThrowProfile(candidate, 3) : null;
+        const overall = limit(low ? getPerformanceOverall(candidate) : getOptionalMatchStat(candidate.overall ?? candidate.ovr) ?? 70, low ? 1 : 40, 100);
+        const scoring = low ? limit(low.stat, low.statFloor, 100) : limit(getOptionalMatchStat(candidate.scoring) ?? overall, 40, 100);
+        const doubles = low ? limit(getLowRatingThrowProfile(candidate, 2).stat, low.statFloor, 100) : limit(getOptionalMatchStat(candidate.doubles) ?? overall, 40, 100);
+        const baseAverage = low ? getOverallMatchAverage(overall, 60) : 60 + overall * 0.42;
+        const average = limit(getOptionalMatchStat(ownAverage) ?? baseAverage, low ? 20 : 45, 125);
+        const otherAverage = limit(getOptionalMatchStat(opponentAverage) ?? average, low ? 20 : 45, 125);
+        const performance = average - baseAverage;
         // Prawdopodobieństwa bazują na calculateThrow. To model zbiorczy,
         // nie rekonstrukcja rzutów. Każdy wygrany leg ma dokładnie jeden checkout.
-        const doubleChance = limit(doubles * 0.0045 + performance * 0.004, 0.12, 0.57);
-        const tripleChance = limit(scoring * 0.0042 + performance * 0.003, 0.12, 0.54);
+        const doubleChance = limit(doubles * 0.0045 + performance * 0.004, low ? low.hitFloor / 100 : 0.12, 0.57);
+        const tripleChance = limit(scoring * 0.0042 + performance * 0.003, low ? low.hitFloor / 100 : 0.12, 0.54);
         const maxMisses = Math.max(1, Math.floor(1503 / average) - 8);
         const logMissChance = Math.log1p(-doubleChance);
         let doubleAttempts = wonLegs;

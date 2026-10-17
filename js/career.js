@@ -1529,10 +1529,12 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
         function applyRivalryMatchModifier(stats, isPlayer) {
             const modifier = isPlayer && currentMatch ? (Number(currentMatch.rivalryModifier) || 0) : 0;
             if (!modifier) return stats;
+            const low = typeof getLowRatingThrowProfile === 'function' ? getLowRatingThrowProfile(stats, 3) : null;
+            const minimum = low ? low.statFloor : 25;
             return {
                 ...stats,
-                scoring: clamp((stats.scoring || 0) + modifier, 25, 100),
-                doubles: clamp((stats.doubles || 0) + modifier, 25, 100)
+                scoring: clamp((stats.scoring || 0) + modifier, minimum, 100),
+                doubles: clamp((stats.doubles || 0) + modifier, minimum, 100)
             };
         }
 

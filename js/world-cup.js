@@ -416,7 +416,7 @@ function getWorldCupTeamRating(team) {
     if (!players.length) return 55;
     const teamRating = players.reduce((sum, candidate) => sum + (Number(candidate.ovr ?? candidate.overall) || 55)
         + (typeof getPlayerFormEventModifier === 'function' ? getPlayerFormEventModifier(candidate) : 0), 0) / players.length;
-    return Math.max(45, Math.min(96, teamRating));
+    return Math.max(teamRating < 70 ? 1 : 45, Math.min(96, teamRating));
 }
 
 function getWorldCupSimulatedAverage(team, won, mentalPenalty = 0, preparationModifier = 0) {
@@ -427,7 +427,8 @@ function getWorldCupSimulatedAverage(team, won, mentalPenalty = 0, preparationMo
     const form = typeof getTournamentSimulationForm === 'function'
         ? players.reduce((sum, candidate) => sum + (getTournamentSimulationForm(candidate) || 0), 0) / players.length
         : 0;
-    return Math.max(45, Math.min(125, 60 + teamOverall * 0.42 + form * 0.4 + (Math.random() * 9 - 4)
+    const baseAverage = typeof getOverallMatchAverage === 'function' ? getOverallMatchAverage(teamOverall, 60) : 60 + teamOverall * 0.42;
+    return Math.max(teamOverall < 70 ? 20 : 45, Math.min(125, baseAverage + form * 0.4 + (Math.random() * 9 - 4)
         + (won ? 2 : 0) - mentalPenalty * 0.4 + preparationModifier * 0.4));
 }
 

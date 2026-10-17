@@ -1688,6 +1688,10 @@ function skipActiveTournament() {
     const candidates = [p1, p2];
     const ratings = [p1Ratings, p2Ratings];
     const peaks = [p1PeakPerformance, p2PeakPerformance];
+    const performanceFloors = candidates.map((candidate,side) => {
+        const overall=Number(isCurrentPlayer(candidate) ? ratings[side].overall ?? ratings[side].ovr : ratings[side].ovr ?? ratings[side].overall);
+        return Number.isFinite(overall) && overall>=1 && overall<70 ? 20 : 45;
+    });
     const consistency = candidates.map(candidate => typeof getConsistencySpread === 'function'
         ? getConsistencySpread(candidate) : 1);
     // Poziom dnia jest wspólny dla tempa punktowania i rozstrzygnięcia legów.
@@ -1699,10 +1703,10 @@ function skipActiveTournament() {
         const form = getTournamentSimulationForm(candidate);
         const dayForm = (Math.random() + Math.random() - 1)
             * (6 + profile.matchNoise * 2) * consistency[side];
-        const average = 60.5 + overall * 0.42 + form * 0.4 + dayForm;
+        const average = (typeof getOverallMatchAverage === 'function' ? getOverallMatchAverage(overall) : 60.5 + overall * 0.42) + form * 0.4 + dayForm;
         const pace = typeof getAiQuickMatchPace === 'function'
             ? getAiQuickMatchPace(average, peaks[side]) : Math.max(average, peaks[side]?.averageFloor || 0);
-        return Math.max(45, Math.min(125, pace));
+        return Math.max(performanceFloors[side], Math.min(125, pace));
     });
     const accumulatedScores = [0, 0];
     const totalDarts = [0, 0];
@@ -1734,7 +1738,7 @@ function skipActiveTournament() {
                 ? getEnduranceMatchPenalty(candidate, completedLegs) : 0;
             const preparation = typeof getCareerPreparationMatchModifier === 'function'
                 ? getCareerPreparationMatchModifier(candidate) : 0;
-            const average = Math.max(45, matchAverages[side] + (preparation - fatigue - penalties[side]) * 0.4);
+            const average = Math.max(performanceFloors[side], matchAverages[side] + (preparation - fatigue - penalties[side]) * 0.4);
             const rawVariation = commonPace + (side === 0 ? legForm : -legForm) * consistency[side];
             const variation = typeof getAiQuickLegPaceVariation === 'function'
                 ? getAiQuickLegPaceVariation(rawVariation, peaks[side], average) : rawVariation;
@@ -1809,7 +1813,7 @@ function skipActiveTournament() {
     let scoreStr = `${wScore}:${lScore}`;
 
     // Średnia ważona lotkami z dokładnie tych legów, które utworzyły wynik.
-    const getMatchAverage = side => Math.max(45, Math.min(125,
+    const getMatchAverage = side => Math.max(performanceFloors[side], Math.min(125,
         accumulatedScores[side] * 3 / Math.max(1, totalDarts[side]))).toFixed(2);
     const p1Avg = getMatchAverage(0), p2Avg = getMatchAverage(1);
     const result = { p1Avg, p2Avg, p1Score: isSets ? p1Sets : p1Legs, p2Score: isSets ? p2Sets : p2Legs,

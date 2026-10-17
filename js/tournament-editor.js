@@ -240,28 +240,28 @@ Object.assign(TOURNAMENT_EDITOR_TEXT.pl, {
     cycleHint: 'Kategoria porządkuje kalendarz; zasady udziału i rankingu ustawiasz osobno.',
     invalidCycle: 'Wybierz kategorię turnieju i podaj nazwę własnego cyklu, jeśli go tworzysz.',
     cycleOptions: ['Automatycznie (turniej gry)', 'Major', 'Pro Tour', 'Players Championship', 'European Tour',
-        'Challenge Tour', 'Development Tour', 'World Series', 'Premier League', 'World Cup', 'Kwalifikacje', 'Własny cykl', 'Inne']
+        'Challenge Tour', 'Development Tour', "Women's Pro Circuit", 'World Series', 'Premier League', 'World Cup', 'Kwalifikacje', 'Własny cykl', 'Inne']
 });
 Object.assign(TOURNAMENT_EDITOR_TEXT.en, {
     cycle: 'Category / tour', customTour: 'Custom tour name', chooseCycle: 'Choose a category',
     cycleHint: 'This groups the calendar; set entry and ranking rules separately.',
     invalidCycle: 'Choose a tournament category and enter a name if you are creating a custom tour.',
     cycleOptions: ['Automatic (built-in event)', 'Major', 'Pro Tour', 'Players Championship', 'European Tour',
-        'Challenge Tour', 'Development Tour', 'World Series', 'Premier League', 'World Cup', 'Qualifiers', 'Custom tour', 'Other']
+        'Challenge Tour', 'Development Tour', "Women's Pro Circuit", 'World Series', 'Premier League', 'World Cup', 'Qualifiers', 'Custom tour', 'Other']
 });
 Object.assign(TOURNAMENT_EDITOR_TEXT.de, {
     cycle: 'Kategorie / Tour', customTour: 'Name der eigenen Tour', chooseCycle: 'Kategorie wählen',
     cycleHint: 'Die Kategorie ordnet den Kalender; Teilnahme- und Ranglistenregeln legst du separat fest.',
     invalidCycle: 'Wähle eine Turnierkategorie und gib für eine eigene Tour einen Namen ein.',
     cycleOptions: ['Automatisch (Spielturnier)', 'Major', 'Pro Tour', 'Players Championship', 'European Tour',
-        'Challenge Tour', 'Development Tour', 'World Series', 'Premier League', 'World Cup', 'Qualifikation', 'Eigene Tour', 'Andere']
+        'Challenge Tour', 'Development Tour', "Women's Pro Circuit", 'World Series', 'Premier League', 'World Cup', 'Qualifikation', 'Eigene Tour', 'Andere']
 });
 Object.assign(TOURNAMENT_EDITOR_TEXT.nl, {
     cycle: 'Categorie / tour', customTour: 'Naam van eigen tour', chooseCycle: 'Kies een categorie',
     cycleHint: 'Dit groepeert de kalender; stel deelname- en rankingregels apart in.',
     invalidCycle: 'Kies een toernooicategorie en vul een naam in voor een eigen tour.',
     cycleOptions: ['Automatisch (speltoernooi)', 'Major', 'Pro Tour', 'Players Championship', 'European Tour',
-        'Challenge Tour', 'Development Tour', 'World Series', 'Premier League', 'World Cup', 'Kwalificaties', 'Eigen tour', 'Overige']
+        'Challenge Tour', 'Development Tour', "Women's Pro Circuit", 'World Series', 'Premier League', 'World Cup', 'Kwalificaties', 'Eigen tour', 'Overige']
 });
 
 for (const [language, cities, citiesHint, invalidCities] of [
@@ -509,8 +509,9 @@ function refreshTournamentEditorTranslations() {
     });
     const language = typeof currentLang === 'string' && TOURNAMENT_EDITOR_TEXT[currentLang] ? currentLang : 'pl';
     const cycleLabels = TOURNAMENT_EDITOR_TEXT[language].cycleOptions;
-    [...(tournamentEditorElement('te-cycle')?.options || [])].forEach((option, index) => {
-        option.textContent = option.value==='womensSeries' ? (typeof competitionName==='function'?competitionName('womensSeries'):"Women's Pro Circuit") : index ? cycleLabels[index - 1] : trTournamentEditor('chooseCycle');
+    [...(tournamentEditorElement('te-cycle')?.options || [])].forEach(option => {
+        option.textContent = option.value==='womensSeries' ? (typeof competitionName==='function'?competitionName('womensSeries'):"Women's Pro Circuit")
+            : option.value ? cycleLabels[TOURNAMENT_EDITOR_CYCLES.indexOf(option.value)] : trTournamentEditor('chooseCycle');
     });
     refreshTournamentEditorQualificationTranslations();
     if (typeof refreshTournamentTeamEditorTranslations === 'function') refreshTournamentTeamEditorTranslations();
