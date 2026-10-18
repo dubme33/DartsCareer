@@ -38,7 +38,7 @@ function showWomensSeriesCycle(tab='overview',year=currentDate.getFullYear()){
    return `<tr><td>${e.womensSeriesEvent}</td><td><button data-ws-event="${e.womensSeriesEvent}">${escapeHtml(typeof getTournamentDisplayName==='function'?getTournamentDisplayName(e):e.name)}</button><br>${date} ${escapeHtml(e.city||'')}</td><td>${s?.entrants??'—'}</td><td>${escapeHtml(womensSeriesName(s?.winner,year))}</td><td>${escapeHtml(womensSeriesName(s?.runnerUp,year))}</td><td>${s?.finalScore?.join('–')||womensSeriesText('pending')}</td><td>£${(s?.totalPaid||0).toLocaleString('en-GB')}</td></tr>`;
   }));
  }else if(tab==='prizes'){
-  html+=`<p>${escapeHtml(womensSeriesText('nominal'))}</p><p>${escapeHtml(womensSeriesText('bye'))}</p>`+womensSeriesTable([womensSeriesText('results'),womensSeriesText('prizes')],Object.entries(WOMENS_SERIES_PRIZES).map(([round,money])=>`<tr><td>${round==='winner'?womensSeriesText('winner'):'Last '+round}</td><td>£${money.toLocaleString('en-GB')}</td></tr>`));
+  html+=`<p>${escapeHtml(womensSeriesText('nominal'))}</p><p>${escapeHtml(womensSeriesText('bye'))}</p>`+womensSeriesTable([womensSeriesText('results'),womensSeriesText('prizes')],['winner',2,4,8,16,32,64].map(round=>[round,WOMENS_SERIES_PRIZES[round]]).map(([round,money])=>`<tr><td>${round==='winner'?womensSeriesText('winner'):'Last '+round}</td><td>£${money.toLocaleString('en-GB')}</td></tr>`));
  }else if(tab==='records'){
   const all=Object.values(player.womensSeriesSeasons||{}).flatMap(s=>Object.values(s.events||{}).filter(e=>e.completed)),counts=new Map();
   for(const e of all)counts.set(e.winner,(counts.get(e.winner)||0)+1);

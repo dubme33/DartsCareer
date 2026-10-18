@@ -665,7 +665,9 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
         }
 
         function writeCareerStateToLegacyStorage(gameState) {
-            localStorage.setItem(LEGACY_CAREER_SAVE_KEY, JSON.stringify(gameState));
+            const browserSavedAt = typeof nextCareerStorageTimestamp === 'function'
+                ? nextCareerStorageTimestamp() : Date.now();
+            localStorage.setItem(LEGACY_CAREER_SAVE_KEY, JSON.stringify({ ...gameState, browserSavedAt }));
         }
 
         async function persistCareerGameState(gameState) {
@@ -1088,6 +1090,25 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
             }
 
             if (typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy()) return false;
+            let saveData = null;
+            try {
+                saveData = localStorage.getItem(LEGACY_CAREER_SAVE_KEY);
+            } catch (error) {
+                console.warn('Nie udało się odczytać awaryjnego localStorage.', error);
+            }
+            // A timed-out database may become available after a reload. Never
+            // replace a newer successful fallback with its older database copy.
+            if (indexedDbState && saveData && saveData.includes('"browserSavedAt"')) {
+                try {
+                    const fallback = JSON.parse(saveData);
+                    const databaseSavedAt = typeof getCareerIndexedDbReadTimestamp === 'function'
+                        ? getCareerIndexedDbReadTimestamp() : 0;
+                    if (Number.isFinite(fallback.browserSavedAt) && fallback.browserSavedAt > databaseSavedAt) {
+                        if (typeof validateGameState === 'function') validateGameState(fallback);
+                        indexedDbState = null;
+                    }
+                } catch (_) { /* A damaged fallback must not hide a valid database save. */ }
+            }
             if (indexedDbState && restoreGameState(indexedDbState, false)) {
                 if (typeof reapplyLoadedModToActiveCareer === 'function') {
                     reapplyLoadedModToActiveCareer();
@@ -1105,12 +1126,6 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
                 return true;
             }
 
-            let saveData = null;
-            try {
-                saveData = localStorage.getItem(LEGACY_CAREER_SAVE_KEY);
-            } catch (error) {
-                console.warn('Nie udało się odczytać awaryjnego localStorage.', error);
-            }
             if (!saveData) {
                 if (showFeedback) alert(t('t-alert-load-fail'));
                 return false;
@@ -1119,6 +1134,7 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
             try {
                 const legacyGameState = JSON.parse(saveData);
                 if (!restoreGameState(legacyGameState, false)) throw new Error('Starszy zapis jest niepoprawny.');
+                if (typeof rememberCareerStorageTimestamp === 'function') rememberCareerStorageTimestamp(legacyGameState.browserSavedAt);
                 if (typeof reapplyLoadedModToActiveCareer === 'function') {
                     reapplyLoadedModToActiveCareer();
                 }

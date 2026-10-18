@@ -624,7 +624,8 @@ function closeEmptyEditorTournament({ preservePlayedRounds = false } = {}) {
 }
 
 function skipActiveTournament() {
-            if (!activeTournament || (typeof currentMatch !== 'undefined' && currentMatch)
+            if (!activeTournament) return typeof showParkedCalendarTournamentResults==='function'&&showParkedCalendarTournamentResults();
+            if ((typeof currentMatch !== 'undefined' && currentMatch)
                 || (typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy())) return false;
             if (!confirm(t('t-confirm-skip'))) return;
             isSkippingTournament = true;
@@ -633,7 +634,7 @@ function skipActiveTournament() {
 
         function startTournament() {
             if (typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy()) return false;
-            if (!activeTournament) return;
+            if (!activeTournament) return typeof openCalendarTournamentSession==='function'&&openCalendarTournamentSession();
             const nativeWomensWorldMatchplay=typeof isWomensWorldMatchplayTournament==='function'&&isWomensWorldMatchplayTournament(activeTournament);
             const nativeWomensSeries=nativeWomensWorldMatchplay||typeof isWomensSeriesTournament==='function'&&isWomensSeriesTournament(activeTournament);
             if(!currentMatch&&tournamentBracket?.length>1&&typeof parkCalendarTournamentAfterRound==='function'&&parkCalendarTournamentAfterRound(activeTournament)==='calendarSession')return concludeCalendarSessionPause();

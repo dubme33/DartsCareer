@@ -80,7 +80,70 @@ function resumeCalendarTournamentSession(event){
  state.log.push({eventKey:getCalendarSessionKey(event),action:'resume',round:held.round,at:currentDate.getTime(),session:held.session});return true;
 }
 function concludeCalendarSessionPause(){
+ const ownMatch=Boolean(currentMatch&&!currentMatch.isSpectator);
  currentMatch=null;
  for(const id of ['bracket-modal','results-modal','tile-tournament']){const element=document.getElementById(id);if(element)element.style.display='none';}
- if(typeof updateHub==='function')updateHub();if(typeof showScreen==='function')showScreen('screen-hub');if(typeof saveGame==='function')saveGame(true);return true;
+ if(typeof updateHub==='function')updateHub();if(typeof showScreen==='function')showScreen('screen-hub');
+ refreshCalendarSessionHub();
+ if(ownMatch)showParkedCalendarTournamentResults();
+ if(typeof saveGame==='function')saveGame(true);return true;
+}
+
+const CALENDAR_SESSION_COPY={
+ pl:{title:'Turniej trwa — kolejna sesja',results:'Wyniki i następna runda',open:'Przejdź do następnej rundy',next:'Następna runda: {round} — {date}.',wait:'Wyniki zostały zapisane. Przesuwaj kalendarz do daty kolejnej rundy.',earlier:'Najpierw musi zakończyć się wcześniejsza sesja zaplanowana na ten dzień.'},
+ en:{title:'Tournament in progress — next session',results:'Results and next round',open:'Go to the next round',next:'Next round: {round} — {date}.',wait:'Results have been saved. Advance the calendar to the date of the next round.',earlier:'The earlier session scheduled for this day must finish first.'},
+ de:{title:'Turnier läuft — nächste Sitzung',results:'Ergebnisse und nächste Runde',open:'Zur nächsten Runde',next:'Nächste Runde: {round} — {date}.',wait:'Die Ergebnisse wurden gespeichert. Gehe im Kalender bis zum Datum der nächsten Runde weiter.',earlier:'Zuerst muss die frühere Sitzung dieses Tages beendet werden.'},
+ nl:{title:'Toernooi bezig — volgende sessie',results:'Uitslagen en volgende ronde',open:'Ga naar de volgende ronde',next:'Volgende ronde: {round} — {date}.',wait:'De uitslagen zijn opgeslagen. Ga in de kalender naar de datum van de volgende ronde.',earlier:'De eerdere sessie van deze dag moet eerst worden afgerond.'}
+};
+function getNextParkedCalendarTournament(){
+ if(!player||!Array.isArray(tournamentDatabase))return null;
+ return tournamentDatabase.filter(event=>!event.completed&&getParkedCalendarTournament(event))
+  .sort((a,b)=>getParkedCalendarTournament(a).readyAt-getParkedCalendarTournament(b).readyAt)[0]||null;
+}
+function getCalendarSessionPresentation(event){
+ const held=getParkedCalendarTournament(event);if(!held)return null;
+ const lang=typeof currentLang==='string'?currentLang:'en',copy=CALENDAR_SESSION_COPY[lang]||CALENDAR_SESSION_COPY.en;
+ const date=new Date(held.readyAt).toLocaleDateString({pl:'pl-PL',en:'en-GB',de:'de-DE',nl:'nl-NL'}[lang]||'en-GB');
+ const round=typeof getRoundName==='function'?getRoundName(held.round):String(held.round);
+ return {held,copy,next:copy.next.replace('{round}',round).replace('{date}',date),
+  note:held.readyAt>currentDate.getTime()?copy.wait:calendarTournamentReady(event)?'':copy.earlier,
+  name:typeof getTournamentDisplayName==='function'?getTournamentDisplayName(event):event.name};
+}
+function refreshCalendarSessionHub(){
+ const tile=document.getElementById('tile-calendar-session');if(!tile)return;
+ const event=getNextParkedCalendarTournament(),view=event&&getCalendarSessionPresentation(event);
+ tile.style.display=view?'block':'none';if(!view)return;
+ document.getElementById('calendar-session-title').textContent=view.copy.title;
+ document.getElementById('calendar-session-name').textContent=view.name;
+ document.getElementById('calendar-session-date').textContent=`${view.next} ${view.note}`.trim();
+ document.getElementById('calendar-session-open').textContent=calendarTournamentReady(event)?view.copy.open:view.copy.results;
+}
+function showParkedCalendarTournamentResults(){
+ if(currentMatch)return false;
+ const event=getNextParkedCalendarTournament(),view=event&&getCalendarSessionPresentation(event);if(!view)return false;
+ const escape=value=>typeof escapeHtml==='function'?escapeHtml(value):String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ const history=typeof renderTournamentMatchHistory==='function'?renderTournamentMatchHistory(view.held.matchHistory,{currentRoundOnly:true}):'';
+ const bracket=view.held.bracket.map(reference=>reference.isBye?reference:resolveLoadedPlayer(reference));
+ const pairs=[];for(let i=0;i<bracket.length;i+=2)pairs.push(`<div>${escape(bracket[i]?.name||'(BYE)')} — ${escape(bracket[i+1]?.name||'(BYE)')}</div>`);
+ document.getElementById('bracket-modal').style.display='none';
+ document.getElementById('t-tour-end-title').innerText=`${view.name} — ${t('t-round-results')}`;
+ document.getElementById('results-content').innerHTML=`<section class="calendar-session-results"><h4>${escape(view.next)}</h4><p>${escape(view.note)}</p></section>`
+  +(history||view.held.currentRoundHTML||view.held.lastTournamentResults||'')
+  +`<section class="calendar-session-results"><h4>${escape(view.next)}</h4>${pairs.join('')}`
+  +(calendarTournamentReady(event)?`<button type="button" class="action-btn" onclick="openCalendarTournamentSession()">${escape(view.copy.open)}</button>`:'')+'</section>';
+ for(const id of ['t-btn-next-round','t-btn-sim-tournament-results','t-btn-sim-to-match-results']){
+  const button=document.getElementById(id);if(button)button.style.display='none';
+ }
+ if(typeof updateTournamentFinanceResults==='function')updateTournamentFinanceResults(event);
+ document.getElementById('t-btn-tour-back').style.display='block';
+ const modal=document.getElementById('results-modal');modal.style.display='flex';
+ const panel=modal.querySelector?.('.modal-content');if(panel)panel.scrollTop=0;
+ return true;
+}
+function openCalendarTournamentSession(){
+ if(currentMatch||typeof isTournamentSimulationBusy==='function'&&isTournamentSimulationBusy())return false;
+ const event=getNextParkedCalendarTournament();if(!event)return false;
+ if(activeTournament&&activeTournament!==event||!calendarTournamentReady(event))return showParkedCalendarTournamentResults();
+ if(!activateTournamentFromCalendar(event))return false;
+ document.getElementById('results-modal').style.display='none';refreshCalendarSessionHub();return startTournament();
 }

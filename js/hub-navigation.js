@@ -190,7 +190,8 @@ function getHubUpcomingTournament() {
     const upcoming = [];
     tournamentDatabase.forEach((tournament, index) => {
         if (!tournament || tournament.completed === true) return;
-        const date = new Date(year, tournament.month, tournament.day);
+        const held = typeof getParkedCalendarTournament === 'function' && getParkedCalendarTournament(tournament);
+        const date = held ? new Date(held.readyAt) : new Date(year, tournament.month, tournament.day);
         const end = tournament.editorStructure?.league ? new Date(year, tournament.month, tournament.day)
             : new Date(year, tournament.endMonth ?? tournament.month, tournament.endDay ?? tournament.day);
         if (end < today || (typeof isTournamentScheduledForCareerYear === 'function'
@@ -247,6 +248,10 @@ function isHubCareerInFirstFortnight() {
 
 function getHubRecommendation(upcoming, qualification) {
     const text = getHubNavigationText();
+    const session = upcoming && typeof getCalendarSessionPresentation === 'function'
+        && getCalendarSessionPresentation(upcoming.tournament);
+    if (session) return { action: 'calendarSession', title: session.copy.title,
+        desc: `${session.next} ${session.note}`.trim(), button: session.copy.results };
     const tutorialState = typeof ensureTutorialState === 'function' ? ensureTutorialState() : null;
     const tutorialProgress = typeof getTutorialProgress === 'function' ? getTutorialProgress() : { done: 0, total: 0 };
     const stamina = Math.round(Number(typeof getCareerEffectiveStamina === 'function'
@@ -333,6 +338,7 @@ function updateHubOverview() {
 function runHubRecommendedAction() {
     const handlers = {
         tournament: () => typeof startTournament === 'function' && startTournament(),
+        calendarSession: () => typeof openCalendarTournamentSession === 'function' && openCalendarTournamentSession(),
         tutorial: () => typeof showTutorial === 'function' && showTutorial(),
         mailbox: () => typeof showMailbox === 'function' && showMailbox(),
         rest: () => typeof advanceDay === 'function' && advanceDay(),
@@ -401,6 +407,7 @@ function initializeHubNavigation() {
 function refreshHubNavigationTranslations() {
     selectHubCategory(activeHubCategory);
     updateHubOverview();
+    if (typeof refreshCalendarSessionHub === 'function') refreshCalendarSessionHub();
 }
 
 if (typeof document !== 'undefined') {

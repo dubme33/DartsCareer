@@ -437,6 +437,7 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
             if (typeof updateCareerLifestyleHub === 'function') updateCareerLifestyleHub();
             if (typeof updateTutorialTile === 'function') updateTutorialTile();
             if (typeof updateHubOverview === 'function') updateHubOverview();
+            if (typeof refreshCalendarSessionHub === 'function') refreshCalendarSessionHub();
         }
 
         // --- 5. SYSTEM CZASU, POCZTY I KALENDARZA ---
@@ -1332,6 +1333,8 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
 
         function viewTournamentHistory(index) {
             const tour = tournamentDatabase[index];
+            if (tour && typeof isWomensWorldMatchplayTournament === 'function' && isWomensWorldMatchplayTournament(tour)
+                && typeof showCompletedTournamentResults === 'function' && showCompletedTournamentResults(tour)) return true;
             const compactOrLegacyHistory = tour && typeof getCompletedTournamentHistoryHtml === 'function'
                 ? getCompletedTournamentHistoryHtml(tour)
                 : (tour?.historyLogs || '');

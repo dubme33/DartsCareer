@@ -302,7 +302,11 @@ function showRoundResults() {
         }
 
         function showCompletedTournamentResults(tournament) {
-            if(typeof isWomensWorldMatchplayTournament==='function'&&isWomensWorldMatchplayTournament(tournament)&&typeof showWomensWorldMatchplay==='function')return showWomensWorldMatchplay('results',tournament.womensWorldMatchplayYear);
+            if(typeof isWomensWorldMatchplayTournament==='function'&&isWomensWorldMatchplayTournament(tournament)&&typeof showWomensWorldMatchplay==='function'){
+                const year=tournament.womensWorldMatchplayYear||currentDate.getFullYear();
+                const edition=typeof womensWorldMatchplayEdition==='function'?womensWorldMatchplayEdition(year):null;
+                if(edition)return showWomensWorldMatchplay(edition.matches?.length&&!['legacy-skipped','cancelled'].includes(edition.phase)?'results':'overview',year);
+            }
             if (typeof isWorldYouthTournament === 'function' && isWorldYouthTournament(tournament)) return showWorldYouth('overview',tournament.worldYouthYear || currentDate.getFullYear());
             if (typeof updateTournamentEntrySimulationButton === 'function') updateTournamentEntrySimulationButton('t-btn-sim-to-match-results', false);
             const historyHtml = getCompletedTournamentHistoryHtml(tournament);

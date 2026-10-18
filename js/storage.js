@@ -13,13 +13,56 @@ const CAREER_PROFILE_MEDIA_METADATA_KEY = 'career-profile-media-metadata';
 const careerProfileMediaRevisions = new WeakMap();
 
 let careerIndexedDbPromise = null;
+let careerIndexedDbUnavailable = false;
+let careerIndexedDbLastReadTimestamp = 0;
+let careerStorageLastTimestamp = 0;
+const CAREER_STORAGE_OPERATION_TIMEOUT_MS = 15000;
+
+function rememberCareerStorageTimestamp(value) {
+    if (Number.isFinite(value) && value > 0) careerStorageLastTimestamp = Math.max(careerStorageLastTimestamp, value);
+}
+
+function nextCareerStorageTimestamp() {
+    careerStorageLastTimestamp = Math.max(Date.now(), careerStorageLastTimestamp + 1);
+    return careerStorageLastTimestamp;
+}
+
+function getCareerIndexedDbReadTimestamp() { return careerIndexedDbLastReadTimestamp; }
+
+function withCareerStorageDeadline(operation, stage, onTimeout = () => {}) {
+    if (typeof setTimeout !== 'function') return operation;
+    return new Promise((resolve, reject) => {
+        let settled = false;
+        const timer = setTimeout(() => {
+            if (settled) return;
+            settled = true;
+            try { onTimeout(); } catch (_) {}
+            const error = new Error(`Browser storage did not respond while ${stage}. Please export a JSON backup before closing the game.`);
+            error.code = 'CAREER_STORAGE_TIMEOUT';
+            reject(error);
+        }, CAREER_STORAGE_OPERATION_TIMEOUT_MS);
+        Promise.resolve(operation).then(value => {
+            if (settled) return;
+            settled = true; clearTimeout(timer); resolve(value);
+        }, error => {
+            if (settled) return;
+            settled = true; clearTimeout(timer); reject(error);
+        });
+    });
+}
+
+function disableUnresponsiveCareerIndexedDb(database) {
+    careerIndexedDbUnavailable = true;
+    careerIndexedDbPromise = null;
+    if (database) database.close();
+}
 const careerProfileMediaRuntime = {
     photo: { blob: null, url: '' },
     walkon: { blob: null, url: '' }
 };
 
 function canUseIndexedDbCareerStorage() {
-    return typeof indexedDB !== 'undefined' && indexedDB !== null;
+    return !careerIndexedDbUnavailable && typeof indexedDB !== 'undefined' && indexedDB !== null;
 }
 
 function openCareerSaveDatabase() {
@@ -28,9 +71,11 @@ function openCareerSaveDatabase() {
     }
     if (careerIndexedDbPromise) return careerIndexedDbPromise;
 
-    careerIndexedDbPromise = new Promise((resolve, reject) => {
+    let abandoned = false;
+    const opening = new Promise((resolve, reject) => {
         const request = indexedDB.open(CAREER_INDEXED_DB_NAME, CAREER_INDEXED_DB_VERSION);
         request.onupgradeneeded = () => {
+            if (abandoned) { request.transaction?.abort(); return; }
             const database = request.result;
             if (!database.objectStoreNames.contains(CAREER_INDEXED_DB_STORE)) {
                 database.createObjectStore(CAREER_INDEXED_DB_STORE, { keyPath: 'id' });
@@ -44,6 +89,7 @@ function openCareerSaveDatabase() {
         };
         request.onsuccess = () => {
             const database = request.result;
+            if (abandoned) { database.close(); return; }
             database.onversionchange = () => {
                 database.close();
                 careerIndexedDbPromise = null;
@@ -51,10 +97,18 @@ function openCareerSaveDatabase() {
             resolve(database);
         };
         request.onerror = () => {
-            careerIndexedDbPromise = null;
             reject(request.error || new Error('Nie udało się otworzyć IndexedDB.'));
         };
+        request.onblocked = () => {
+            abandoned = true;
+            disableUnresponsiveCareerIndexedDb();
+            reject(new Error('Browser storage is blocked by another game tab. A fallback save will be attempted.'));
+        };
     });
+    careerIndexedDbPromise = withCareerStorageDeadline(opening, 'opening the career database', () => {
+        abandoned = true;
+        disableUnresponsiveCareerIndexedDb();
+    }).catch(error => { careerIndexedDbPromise = null; throw error; });
     return careerIndexedDbPromise;
 }
 
@@ -131,19 +185,22 @@ async function getCareerProfileMediaBlob(kind, value) {
     }
     if (typeof value !== 'string' || !value.startsWith('data:')) return null;
 
-    const response = await fetch(value);
-    if (!response.ok) throw new Error(`Nie udało się przekonwertować multimedia profilu: ${kind}.`);
-    return response.blob();
+    return withCareerStorageDeadline((async () => {
+        const response = await fetch(value);
+        if (!response.ok) throw new Error(`Nie udało się przekonwertować multimedia profilu: ${kind}.`);
+        return response.blob();
+    })(), `preparing profile ${kind}`);
 }
 
 function blobToCareerDataUrl(blob) {
     if (!isCareerProfileMediaBlob(blob)) return Promise.resolve('');
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
+    const reader = new FileReader();
+    return withCareerStorageDeadline(new Promise((resolve, reject) => {
         reader.onload = () => resolve(String(reader.result || ''));
         reader.onerror = () => reject(reader.error || new Error('Nie udało się odczytać pliku profilu.'));
+        reader.onabort = () => reject(new Error('Profile media reading was cancelled.'));
         reader.readAsDataURL(blob);
-    });
+    }), 'reading profile media', () => reader.abort?.());
 }
 
 async function createCareerIndexedDbPayload(gameState) {
@@ -209,12 +266,13 @@ function applyCareerProfileMediaToPlayer(media = {}) {
 
 async function writeCareerStateToIndexedDb(gameState, media = undefined) {
     const database = await openCareerSaveDatabase();
-    return new Promise((resolve, reject) => {
+    let transaction;
+    return withCareerStorageDeadline(new Promise((resolve, reject) => {
         const storeNames = media
             ? [CAREER_INDEXED_DB_STORE, CAREER_INDEXED_DB_MEDIA_STORE]
             : [CAREER_INDEXED_DB_STORE];
-        const transaction = database.transaction(storeNames, 'readwrite');
-        const savedAt = Date.now();
+        transaction = database.transaction(storeNames, 'readwrite');
+        const savedAt = nextCareerStorageTimestamp();
         const request = transaction.objectStore(CAREER_INDEXED_DB_STORE).put({
             id: CAREER_INDEXED_DB_PRIMARY_KEY,
             savedAt,
@@ -261,6 +319,8 @@ async function writeCareerStateToIndexedDb(gameState, media = undefined) {
         transaction.oncomplete = () => resolve(savedAt);
         transaction.onerror = () => reject(transaction.error || request.error || new Error('Zapis IndexedDB nie powiódł się.'));
         transaction.onabort = () => reject(transaction.error || request.error || new Error('Zapis IndexedDB został przerwany.'));
+    }), 'saving the career', () => {
+        try { transaction?.abort(); } finally { disableUnresponsiveCareerIndexedDb(database); }
     });
 }
 
@@ -269,7 +329,11 @@ async function readCareerStateFromIndexedDb() {
     return new Promise((resolve, reject) => {
         const transaction = database.transaction(CAREER_INDEXED_DB_STORE, 'readonly');
         const request = transaction.objectStore(CAREER_INDEXED_DB_STORE).get(CAREER_INDEXED_DB_PRIMARY_KEY);
-        request.onsuccess = () => resolve(request.result?.state || null);
+        request.onsuccess = () => {
+            careerIndexedDbLastReadTimestamp = Number(request.result?.savedAt) || 0;
+            rememberCareerStorageTimestamp(careerIndexedDbLastReadTimestamp);
+            resolve(request.result?.state || null);
+        };
         request.onerror = () => reject(request.error || transaction.error || new Error('Odczyt IndexedDB nie powiódł się.'));
     });
 }
