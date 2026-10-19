@@ -1017,6 +1017,9 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
                 if (typeof repairCareerTournamentBracket === 'function') {
                     tournamentBracket = repairCareerTournamentBracket(tournamentBracket);
                 }
+                if (typeof repairWorldChampionshipBracketSlots === 'function') {
+                    tournamentBracket = repairWorldChampionshipBracketSlots();
+                }
                 // Restore saved globals first: recovering a parked session earlier
                 // would overwrite its finalists with the empty between-session save.
                 if (!activeTournament && (!Array.isArray(gameState.tournamentBracket) || gameState.tournamentBracket.length === 0)

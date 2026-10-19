@@ -263,7 +263,21 @@ function shuffleWorldChampionshipPlayers(players, random = Math.random) {
 
 function buildWorldChampionshipDraw(participants, random = Math.random, tournament = null) {
     const ranked = uniqueWorldChampionshipPlayers(participants).sort(compareWorldChampionshipOom);
-    if (ranked.length !== WORLD_CHAMPIONSHIP_FIELD_SIZE) return shuffleWorldChampionshipPlayers(ranked, random);
+    if (ranked.length !== WORLD_CHAMPIONSHIP_FIELD_SIZE) {
+        const draw = shuffleWorldChampionshipPlayers(ranked, random);
+        // Qualification can legitimately finish short of 128 real entrants.
+        // Keep every bracket slot; do not turn an explicit bye into a missing pair.
+        if (ranked.length > 0 && ranked.length < WORLD_CHAMPIONSHIP_FIELD_SIZE) {
+            while (draw.length < WORLD_CHAMPIONSHIP_FIELD_SIZE) {
+                draw.push({ name: '(BYE)', isBye: true, country: 'Brak', ovr: 0, overall: 0 });
+            }
+            if (tournament) {
+                tournament.worldChampionshipDrawVersion = WORLD_CHAMPIONSHIP_DRAW_VERSION;
+                tournament.worldChampionshipSeedPlayerIds = ranked.slice(0, 32).map(getWorldChampionshipPlayerKey);
+            }
+        }
+        return draw;
+    }
 
     const seeds = ranked.slice(0, 32);
     const rankedUnseeded = shuffleWorldChampionshipPlayers(ranked.slice(32, 64), random);

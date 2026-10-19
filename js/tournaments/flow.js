@@ -418,6 +418,18 @@ function tournamentUsesWorldChampionshipSeeds(tournament) {
         && /(?:world(?: darts)?|global darts) championship/i.test(tournament?.sourceName || tournament?.name || '');
 }
 
+function repairWorldChampionshipBracketSlots(bracket = tournamentBracket, tournament = activeTournament, round = tournamentRound) {
+    if (!tournamentUsesWorldChampionshipSeeds(tournament) || !Array.isArray(bracket)
+        || ![128, 64, 32, 16, 8, 4, 2].includes(round) || bracket.length === 0 || bracket.length > round) return bracket;
+    if (bracket.length === round && Array.from(bracket).every(Boolean)) return bracket;
+    // Only fill missing slots. Saved players, their positions and past results stay intact.
+    // Keep the array identity used by the batched simulation's state guard.
+    for (let index = 0; index < round; index++) {
+        if (!bracket[index]) bracket[index] = createMissingTournamentSlot();
+    }
+    return bracket;
+}
+
 function getTournamentSeedCount(tournament) {
     if(typeof isWomensWorldMatchplayTournament==='function'&&isWomensWorldMatchplayTournament(tournament))return 8;
     return tournamentUsesWorldChampionshipSeeds(tournament) ? 32 : 16;
@@ -685,6 +697,7 @@ function skipActiveTournament() {
             if (tournamentBracket && tournamentBracket.length > 1 && typeof repairCareerTournamentBracket === 'function') {
                 tournamentBracket = repairCareerTournamentBracket(tournamentBracket);
             }
+            tournamentBracket = repairWorldChampionshipBracketSlots();
             if (!nativeWomensWorldMatchplay && tournamentBracket && tournamentBracket.length > 1 && typeof repairRetiredTournamentBracket === 'function') {
                 tournamentBracket = repairRetiredTournamentBracket(tournamentBracket, activeTournament);
             }
@@ -761,6 +774,10 @@ function skipActiveTournament() {
                     && (tournamentBracket.length !== 32
                         || tournamentBracket.some(candidate => !candidate || candidate.isBye)
                         || activeTournament.europeanChampionshipDrawVersion !== EUROPEAN_CHAMPIONSHIP_DRAW_VERSION);
+                const expectedWorldChampionshipByes = Number(activeTournament?.worldChampionshipQualification?.shortfall) || 0;
+                const genuineWorldChampionshipByes = expectedWorldChampionshipByes > 0
+                    && activeTournament?.worldChampionshipQualification?.complete === false
+                    && tournamentBracket.filter(candidate => candidate?.isBye).length === expectedWorldChampionshipByes;
                 const staleWorldChampionshipOpeningDraw = tournamentUsesWorldChampionshipSeeds(activeTournament)
                     && tournamentRound === 128
                     && !hasRecordedTournamentHistory
@@ -770,7 +787,7 @@ function skipActiveTournament() {
                     && !String(lastTournamentResults || '').trim()
                     && (
                         tournamentBracket.length !== 128
-                        || tournamentBracket.some(candidate => !candidate || candidate.isBye)
+                        || tournamentBracket.some(candidate => !candidate || (candidate.isBye && !genuineWorldChampionshipByes))
                         || activeTournament.worldChampionshipQualification?.version !== (
                             typeof WORLD_CHAMPIONSHIP_QUALIFICATION_VERSION === 'number'
                                 ? WORLD_CHAMPIONSHIP_QUALIFICATION_VERSION
@@ -1643,6 +1660,7 @@ function skipActiveTournament() {
         }
 
         function closeBracketAndPlay() { 
+            tournamentBracket = repairWorldChampionshipBracketSlots();
             let opponent = null;
             for(let i = 0; i < tournamentBracket.length; i += 2) {
                 if(isCurrentPlayer(tournamentBracket[i])) opponent = tournamentBracket[i+1];
@@ -1899,6 +1917,7 @@ function skipActiveTournament() {
         }
 
         function* iterateTournamentRound(playerAdvancing = true) {
+            tournamentBracket = repairWorldChampionshipBracketSlots();
             if (!(typeof isWomensWorldMatchplayTournament==='function'&&isWomensWorldMatchplayTournament(activeTournament)) && !activeTournament?.qSchoolStage && !(typeof isWorldYouthTournament === 'function' && isWorldYouthTournament(activeTournament)) && typeof repairInjuredTournamentBracket === 'function') {
                 const repaired = repairInjuredTournamentBracket(tournamentBracket);
                 if (repaired !== tournamentBracket) repaired.forEach((candidate, index) => { tournamentBracket[index] = candidate; });
@@ -2245,6 +2264,7 @@ function skipActiveTournament() {
 
         function startTournamentMatch() {
             if (typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy()) return false;
+            tournamentBracket = repairWorldChampionshipBracketSlots();
             if (typeof isPlayerInjured === 'function' && isPlayerInjured(player)) {
                 return typeof showPlayerInjuryBlocked === 'function' ? showPlayerInjuryBlocked() : false;
             }
