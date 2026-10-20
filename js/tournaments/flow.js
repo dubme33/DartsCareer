@@ -421,13 +421,36 @@ function tournamentUsesWorldChampionshipSeeds(tournament) {
 function repairWorldChampionshipBracketSlots(bracket = tournamentBracket, tournament = activeTournament, round = tournamentRound) {
     if (!tournamentUsesWorldChampionshipSeeds(tournament) || !Array.isArray(bracket)
         || ![128, 64, 32, 16, 8, 4, 2].includes(round) || bracket.length === 0 || bracket.length > round) return bracket;
-    if (bracket.length === round && Array.from(bracket).every(Boolean)) return bracket;
     // Only fill missing slots. Saved players, their positions and past results stay intact.
     // Keep the array identity used by the batched simulation's state guard.
     for (let index = 0; index < round; index++) {
         if (!bracket[index]) bracket[index] = createMissingTournamentSlot();
     }
+    repairWorldChampionshipOpeningDraw(bracket, tournament, round);
     return bracket;
+}
+
+function repairWorldChampionshipOpeningDraw(bracket, tournament, round) {
+    if (round !== 128 || tournament !== activeTournament || bracket !== tournamentBracket
+        || !tournamentUsesWorldChampionshipSeeds(tournament) || tournament.completed
+        || !tournament.worldChampionshipDrawVersion || !Array.isArray(tournament.worldChampionshipSeedPlayerIds)
+        || typeof isWorldChampionshipOpeningDrawValid !== 'function' || typeof buildWorldChampionshipDraw !== 'function'
+        || (typeof currentMatch !== 'undefined' && currentMatch)) return false;
+    const histories = [typeof tournamentMatchHistory !== 'undefined' ? tournamentMatchHistory : null, tournament.matchHistory];
+    if (histories.some(history => Array.isArray(history) ? history.length > 0
+        : typeof hasTournamentMatchHistory === 'function' && hasTournamentMatchHistory(history))
+        || String(tournament.historyLogs || '').trim() || String(lastTournamentResults || '').trim()) return false;
+    if (isWorldChampionshipOpeningDrawValid(tournament, bracket)) {
+        const byes = bracket.filter(p => p.isBye).length;
+        if (byes > 0) tournament.worldChampionshipDrawByeCount = byes;
+        return false;
+    }
+    const draw = buildWorldChampionshipDraw(bracket, Math.random, tournament);
+    if (draw.length !== 128) return false;
+    // Keep the identity checked by batched simulation. No played result is reset.
+    bracket.splice(0, bracket.length, ...draw);
+    currentRoundHTML = '';
+    return true;
 }
 
 function getTournamentSeedCount(tournament) {
@@ -774,9 +797,12 @@ function skipActiveTournament() {
                     && (tournamentBracket.length !== 32
                         || tournamentBracket.some(candidate => !candidate || candidate.isBye)
                         || activeTournament.europeanChampionshipDrawVersion !== EUROPEAN_CHAMPIONSHIP_DRAW_VERSION);
-                const expectedWorldChampionshipByes = Number(activeTournament?.worldChampionshipQualification?.shortfall) || 0;
+                const recordedDrawByes = activeTournament?.worldChampionshipDrawByeCount;
+                const hasRecordedDrawByes = Number.isInteger(recordedDrawByes) && recordedDrawByes >= 0 && recordedDrawByes < 128;
+                const expectedWorldChampionshipByes = hasRecordedDrawByes ? recordedDrawByes
+                    : Number(activeTournament?.worldChampionshipQualification?.shortfall) || 0;
                 const genuineWorldChampionshipByes = expectedWorldChampionshipByes > 0
-                    && activeTournament?.worldChampionshipQualification?.complete === false
+                    && (hasRecordedDrawByes || activeTournament?.worldChampionshipQualification?.complete === false)
                     && tournamentBracket.filter(candidate => candidate?.isBye).length === expectedWorldChampionshipByes;
                 const staleWorldChampionshipOpeningDraw = tournamentUsesWorldChampionshipSeeds(activeTournament)
                     && tournamentRound === 128

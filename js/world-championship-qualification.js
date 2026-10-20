@@ -2,6 +2,10 @@ const WORLD_CHAMPIONSHIP_QUALIFICATION_VERSION = 2;
 const WORLD_CHAMPIONSHIP_FIELD_SIZE = 128;
 const WORLD_CHAMPIONSHIP_OOM_PLACES = 80;
 const WORLD_CHAMPIONSHIP_DRAW_VERSION = 1;
+const WORLD_CHAMPIONSHIP_SEED_ORDER = Object.freeze([
+    1, 32, 16, 17, 8, 25, 9, 24, 4, 29, 13, 20, 5, 28, 12, 21,
+    2, 31, 15, 18, 7, 26, 10, 23, 3, 30, 14, 19, 6, 27, 11, 22
+]);
 
 const WORLD_CHAMPIONSHIP_COUNTRY_GROUPS = Object.freeze({
     asia: ['Bahrajn', 'Chiny', 'Filipiny', 'Hongkong', 'Indie', 'Japonia', 'Malezja', 'Mongolia', 'Singapur', 'Tajlandia', 'Tajwan'],
@@ -263,40 +267,50 @@ function shuffleWorldChampionshipPlayers(players, random = Math.random) {
 
 function buildWorldChampionshipDraw(participants, random = Math.random, tournament = null) {
     const ranked = uniqueWorldChampionshipPlayers(participants).sort(compareWorldChampionshipOom);
-    if (ranked.length !== WORLD_CHAMPIONSHIP_FIELD_SIZE) {
-        const draw = shuffleWorldChampionshipPlayers(ranked, random);
-        // Qualification can legitimately finish short of 128 real entrants.
-        // Keep every bracket slot; do not turn an explicit bye into a missing pair.
-        if (ranked.length > 0 && ranked.length < WORLD_CHAMPIONSHIP_FIELD_SIZE) {
-            while (draw.length < WORLD_CHAMPIONSHIP_FIELD_SIZE) {
-                draw.push({ name: '(BYE)', isBye: true, country: 'Brak', ovr: 0, overall: 0 });
-            }
-            if (tournament) {
-                tournament.worldChampionshipDrawVersion = WORLD_CHAMPIONSHIP_DRAW_VERSION;
-                tournament.worldChampionshipSeedPlayerIds = ranked.slice(0, 32).map(getWorldChampionshipPlayerKey);
-            }
-        }
-        return draw;
+    if (!ranked.length || ranked.length > WORLD_CHAMPIONSHIP_FIELD_SIZE) {
+        return shuffleWorldChampionshipPlayers(ranked, random);
     }
 
     const seeds = ranked.slice(0, 32);
     const rankedUnseeded = shuffleWorldChampionshipPlayers(ranked.slice(32, 64), random);
     const qualifiers = shuffleWorldChampionshipPlayers(ranked.slice(64), random);
     const draw = new Array(WORLD_CHAMPIONSHIP_FIELD_SIZE);
-    const seedOrder = [1, 32, 16, 17, 8, 25, 9, 24, 4, 29, 13, 20, 5, 28, 12, 21, 2, 31, 15, 18, 7, 26, 10, 23, 3, 30, 14, 19, 6, 27, 11, 22];
+    const slot = candidate => candidate || { name: '(BYE)', isBye: true, country: 'Brak', ovr: 0, overall: 0 };
     let qualifierIndex = 0;
 
     for (let section = 0; section < 32; section++) {
         const sectionStart = section * 4;
-        draw[sectionStart] = seeds[seedOrder[section] - 1];
-        draw[sectionStart + 1] = qualifiers[qualifierIndex++];
-        draw[sectionStart + 2] = rankedUnseeded[section];
-        draw[sectionStart + 3] = qualifiers[qualifierIndex++];
+        // A withdrawal leaves a bye in the unfilled pot; it must never turn
+        // the seeded draw into an unrestricted shuffle of all remaining players.
+        draw[sectionStart] = slot(seeds[WORLD_CHAMPIONSHIP_SEED_ORDER[section] - 1]);
+        draw[sectionStart + 1] = slot(qualifiers[qualifierIndex++]);
+        draw[sectionStart + 2] = slot(rankedUnseeded[section]);
+        draw[sectionStart + 3] = slot(qualifiers[qualifierIndex++]);
     }
     if (tournament) {
         tournament.worldChampionshipDrawVersion = WORLD_CHAMPIONSHIP_DRAW_VERSION;
         // Preserve the draw's seed numbers when prize money changes or a save is loaded.
         tournament.worldChampionshipSeedPlayerIds = seeds.map(getWorldChampionshipPlayerKey);
+        // Qualification rights may still include a player injured before the draw.
+        tournament.worldChampionshipDrawByeCount = WORLD_CHAMPIONSHIP_FIELD_SIZE - ranked.length;
     }
     return draw;
+}
+
+function isWorldChampionshipOpeningDrawValid(tournament, bracket) {
+    if (!Array.isArray(bracket) || bracket.length !== WORLD_CHAMPIONSHIP_FIELD_SIZE || bracket.some(p => !p)) return false;
+    const entrants = bracket.filter(p => !p.isBye), keys = entrants.map(getWorldChampionshipPlayerKey);
+    const seeds = tournament?.worldChampionshipSeedPlayerIds;
+    if (new Set(keys).size !== entrants.length || !Array.isArray(seeds)
+        || seeds.length !== Math.min(32, entrants.length) || new Set(seeds).size !== seeds.length) return false;
+    const seedSet = new Set(seeds);
+    for (let section = 0; section < 32; section++) {
+        const expected = seeds[WORLD_CHAMPIONSHIP_SEED_ORDER[section] - 1];
+        const candidate = bracket[section * 4];
+        if (expected ? candidate.isBye || getWorldChampionshipPlayerKey(candidate) !== expected : !candidate.isBye) return false;
+        for (let offset = 1; offset < 4; offset++) {
+            if (!bracket[section * 4 + offset].isBye && seedSet.has(getWorldChampionshipPlayerKey(bracket[section * 4 + offset]))) return false;
+        }
+    }
+    return true;
 }

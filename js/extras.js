@@ -705,9 +705,15 @@ function initCareerChronicle() {
             if (['dartboard-skin', 'surround-skin'].includes(config.type)) delete config.type;
             combined.file(`${basePrefix}mod.json`, JSON.stringify(config));
             skinZip.forEach((relativePath, entry) => {
-                if (!entry.dir && ((skinConfig && relativePath.startsWith(`${skinPrefix}dartboards/`))
-                    || (surroundConfig && relativePath.startsWith(`${skinPrefix}surrounds/`)))) {
-                    combined.file(`${basePrefix}${relativePath.slice(skinPrefix.length)}`, entry.async('blob'));
+                if (entry.dir || !relativePath.startsWith(skinPrefix)) return;
+                const localPath = relativePath.slice(skinPrefix.length);
+                const slash = localPath.indexOf('/');
+                if (slash < 0) return;
+                const folder = localPath.slice(0, slash).toLowerCase();
+                if ((skinConfig && folder === 'dartboards') || (surroundConfig && folder === 'surrounds')) {
+                    // Use the canonical folder so later overlays replace the
+                    // same entry, regardless of the source ZIP's capitalisation.
+                    combined.file(`${basePrefix}${folder}${localPath.slice(slash)}`, entry.async('blob'));
                 }
             });
             const blob = await combined.generateAsync({ type: 'blob', compression: 'DEFLATE', streamFiles: true });

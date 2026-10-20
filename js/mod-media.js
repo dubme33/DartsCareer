@@ -129,7 +129,9 @@ async function createModMediaAssets(zipContent, reuse = null) {
 
     zipContent.forEach((relativePath, entry) => {
         if (entry.dir) return;
-        const folder = relativePath.split('/')[0];
+        // ZIP folder names may keep the capitalisation chosen in Explorer.
+        // Keep file stems unchanged: player and manifest image keys are exact.
+        const folder = relativePath.split('/')[0].toLowerCase();
         const filename = relativePath.split('/').pop();
         const dotIndex = filename.lastIndexOf('.');
         if (dotIndex <= 0) return;
