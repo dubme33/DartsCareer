@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Jak grać w DartsCareer — poradnik kariery w wersji 1.5.0</title>
+    <meta name="description" content="Rozpocznij karierę w DartsCareer. Poznaj mecze, trening, rankingi i kwalifikacje, instalowanie modów oraz zapisywanie i przenoszenie kariery w pliku JSON.">
+    <link rel="canonical" href="https://dartscareer.pl/pl/jak-grac/">
+    <link rel="alternate" hreflang="en" href="https://dartscareer.pl/en/how-to-play/">
+    <link rel="alternate" hreflang="pl" href="https://dartscareer.pl/pl/jak-grac/">
+    <link rel="alternate" hreflang="de" href="https://dartscareer.pl/de/spielanleitung/">
+    <link rel="alternate" hreflang="nl" href="https://dartscareer.pl/nl/handleiding/">
+    <link rel="alternate" hreflang="x-default" href="https://dartscareer.pl/en/how-to-play/">
+    <link rel="icon" href="../../favicon.ico">
+    <link rel="stylesheet" href="../../css/how-to-play.css?v=1.5.0&ui=2&languages=4&final-ui=1">
+</head>
+<body>
+    <a class="skip-link" href="#guide">Przejdź do poradnika</a>
+    <header class="guide-nav">
+        <a class="guide-brand" href="../../">DARTS <strong>CAREER</strong></a>
+        <nav aria-label="Nawigacja poradnika">
+            <a href="../../">Wróć do gry</a>
+            <span class="guide-language" role="group" aria-label="Język poradnika">
+                <a href="../../en/how-to-play/" lang="en" hreflang="en" rel="alternate" aria-label="English">EN</a>
+                <a href="./" lang="pl" hreflang="pl" aria-current="page" aria-label="Polski">PL</a>
+                <a href="../../de/spielanleitung/" lang="de" hreflang="de" rel="alternate" aria-label="Deutsch">DE</a>
+                <a href="../../nl/handleiding/" lang="nl" hreflang="nl" rel="alternate" aria-label="Nederlands">NL</a>
+            </span>
+        </nav>
+    </header>
+    <main id="guide">
+        <div class="guide-heading">
+            <span class="guide-version">Poradnik gracza · wersja 1.5.0</span>
+            <h1>Jak grać w DartsCareer</h1>
+            <p class="guide-lead">Zbuduj karierę dartera w przeglądarce: wybierz zawodnika, przygotuj się do następnego turnieju i obserwuj rozwój kariery przez kolejne sezony.</p>
+            <p>Poradnik jest dostępny bez rozpoczynania kariery. Jeśli otworzyłeś go w trakcie gry, rozgrywka pozostaje w pierwotnej karcie przeglądarki — wróć do niej, aby kontynuować.</p>
+        </div>
+        <div class="guide-columns">
+            <nav class="guide-toc" aria-labelledby="contents-title">
+                <h2 id="contents-title">Spis treści</h2>
+                <ol>
+                    <li><a href="#getting-started">Pierwsze kroki</a></li>
+                    <li><a href="#your-player">Wybór zawodnika</a></li>
+                    <li><a href="#career-hub">Centrum kariery i kolejne dni</a></li>
+                    <li><a href="#matches">Mecze i symulacja</a></li>
+                    <li><a href="#development">Trening i forma</a></li>
+                    <li><a href="#tournaments">Turnieje i rankingi</a></li>
+                    <li><a href="#finances">Finanse i decyzje</a></li>
+                    <li><a href="#ai-world">Świat kariery AI</a></li>
+                    <li><a href="#editors">Edytory i personalizacja</a></li>
+                    <li><a href="#mods">Instalowanie modów</a></li>
+                    <li><a href="#saves">Zapisy i przenoszenie kariery</a></li>
+                    <li><a href="#faq">Najczęstsze pytania</a></li>
+                </ol>
+            </nav>
+            <article class="guide-content" aria-label="Poradnik gracza DartsCareer">
+                <section id="getting-started">
+                    <h2>1. Pierwsze kroki</h2>
+                    <p>DartsCareer to darmowy, jednoosobowy symulator kariery dartera. Rywalizujesz z zawodnikami AI, uczestniczysz w turniejach, rozwijasz umiejętności i prowadzisz karierę przez wiele sezonów. Rozpoczęcie gry w przeglądarce nie wymaga konta ani instalowania aplikacji.</p>
+                    <ol>
+                        <li>Otwórz <a href="../../">grę</a> i wybierz język interfejsu: polski, angielski, niemiecki lub niderlandzki.</li>
+                        <li>Wybierz zawodnika z bazy albo wypełnij formularz własnej postaci. Ustaw trudność i sposób utrzymania zawodnika.</li>
+                        <li>W centrum kariery sprawdź kalendarz, energię i skrzynkę, zanim przesuniesz czas.</li>
+                    </ol>
+                    <p>Nie musisz od razu korzystać ze wszystkich systemów. Na początek sprawdź najbliższy dostępny turniej, spróbuj rozegrać mecz i naucz się pobierać kopię zapisu.</p>
+                </section>
+                <section id="your-player">
+                    <h2>2. Wybór zawodnika</h2>
+                    <p><strong>Własny zawodnik:</strong> wpisz imię i nazwisko, wiek i narodowość. Wybierz płeć (domyślnie mężczyzna), potencjał, trzy różne ulubione double, kąt wbicia lotek oraz start z kartą PDC lub bez niej. Pseudonim, zdjęcie i nagranie walk-onu są opcjonalne. Potencjał wpływa na profil początkowy i rozwój; OVR oznacza ogólną ocenę umiejętności.</p>
+                    <p><strong>Zawodnik z bazy:</strong> wybierz postać i przed rozpoczęciem sprawdź wyświetlane OVR oraz pieniądze głównego Order of Merit. Wybrana osoba staje się Twoim zawodnikiem i nie pozostaje jednocześnie drugim egzemplarzem wśród rywali AI. Mod społecznościowy może zmieniać nazwiska i multimedia.</p>
+                    <p>Wybór karty wpływa na punkt startowy. Bez karty masz drogę przez system kwalifikacyjny; start z kartą zapewnia skonfigurowaną pozycję w Top 64. Kariera zawodnikiem z bazy korzysta z jego profilu i statusu karty. Sprawdź podgląd — nie każdy ma prawo startować w tych samych turniejach.</p>
+                </section>
+                <section id="career-hub">
+                    <h2>3. Centrum kariery i kolejne dni</h2>
+                    <p>Centrum pokazuje datę, stan zawodnika, budżet i skróty do systemów kariery. Kalendarz zawiera terminy i wyniki, a skrzynka — zaproszenia, płatności i wiadomości. Po rozpoczęciu kariery samouczek wewnątrz gry oferuje dodatkowe objaśnienia i skróty.</p>
+                    <p>Symulacja dnia przesuwa datę i przetwarza wydarzenia świata kariery. Trening również zajmuje dzień, więc planuj go wokół turniejów. Gdy Twoje wydarzenie jest gotowe, wejdź do niego z odpowiedniego kafelka. W turnieju wielodniowym kolejna runda może mieć późniejszy termin — przed dalszą symulacją sprawdź jej datę i wyniki.</p>
+                    <p class="guide-note">Dobry plan na początek: przeczytaj wiadomości, sprawdź następny turniej, trenuj przy wystarczającej energii i zostaw czas na regenerację. Po ważnym postępie pobierz kopię JSON.</p>
+                </section>
+                <section id="matches">
+                    <h2>4. Mecze i symulacja</h2>
+                    <p>Podczas meczu wybierasz numer pola i mnożnik — Single, Double lub Treble — albo celujesz w bull. Następnie używasz przycisku rzutu. Wynik zależy od umiejętności, kondycji i sytuacji meczowej; wybranie T20 nie gwarantuje trafienia potrójnej. Zawodnicy wykonują kolejne kolejki aż do rozstrzygnięcia lega, seta lub meczu.</p>
+                    <p><strong>Standardowe double-out:</strong> zejdź dokładnie do zera, kończąc podwójną, w tym wewnętrznym bullem. Zejście poniżej zera, pozostawienie jednego punktu lub wyzerowanie niewłaściwym kończącym rzutem oznacza bust — punkty z tej kolejki są anulowane. Zwykły leg nie wymaga podwójnej na rozpoczęcie punktowania.</p>
+                    <p><strong>Inne formaty:</strong> double-in/double-out wymaga trafienia podwójnej na wejście w każdym legu. Master Out pozwala skończyć podwójną albo potrójną. Turniej może być rozgrywany w legach, setach lub mieć inny format w każdej rundzie. Sprawdź regulamin danego wydarzenia — te ustawienia nie dotyczą automatycznie wszystkich spotkań.</p>
+                    <p>Dostępne przyciski pozwalają symulować kolejki, legi lub mecze. Oglądanie własnego meczu oddaje grę Twojemu zawodnikowi; możesz zrobić pauzę albo wrócić do ręcznego rzucania. Dostępne są również highlights i oglądanie obsługiwanych meczów AI kontra AI. Symulacja turnieju przetwarza pozostałe mecze i wyniki, więc nie musisz rozgrywać spotkań innych zawodników.</p>
+                    <p>Wybierz dostępny widok 2D, 3D albo tryb TV z telewizyjną tabelą wyników i statystykami. Średnia seta dotyczy meczów setowych, a skuteczność podwójnych na wejście — double-in. Dostępność i płynność 3D zależą od sprzętu i obsługi grafiki; alternatywą jest 2D.</p>
+                </section>
+                <section id="development">
+                    <h2>5. Trening, energia i forma</h2>
+                    <p>Punktowanie i double to podstawowe umiejętności. Trening zajmuje dzień i zużywa energię; obecny system pozwala na dwie sesje tygodniowo. Mniejsza efektywna energia na początku oznacza słabsze przyrosty. Ekran treningu pokazuje koszt, pozostałe sesje i postęp rozwoju.</p>
+                    <p>Znaczenie mają też wytrzymałość, regularność, mentalność i przygotowanie. Sztab, sprzęt i baza mogą wspierać trening, regenerację lub przygotowanie do gry. Bazowy OVR nie jest tym samym co aktualna dyspozycja: forma, zmęczenie, momentum i przygotowanie wpływają na mecz bez trwałej zmiany oceny bazowej.</p>
+                    <p>Łącz ćwiczenia z odpoczynkiem, zamiast trenować bezpośrednio przed każdym startem. Na dłuższą karierę wpływają wiek i rozwój; potencjał nie gwarantuje konkretnego wyniku turniejowego.</p>
+                </section>
+                <section id="tournaments">
+                    <h2>6. Turnieje, kwalifikacje i rankingi</h2>
+                    <p>Zacznij od kalendarza: sprawdzisz terminy, zasady startu, wyniki i nagrody. <strong>Order of Merit (OOM)</strong> to ranking oparty na pieniądzach rankingowych odpowiednich rozgrywek. Główny OOM obejmuje ruchomy okres dwóch lat; ProTour, poszczególne cykle i własne serie mają odrębne zasady. Budżet do wydawania i pieniądze rankingowe są osobnymi wartościami.</p>
+                    <ul>
+                        <li><strong>Karty PDC:</strong> nowa karta ma gwarancję dwóch sezonów; coroczne utrzymanie i dalszy podział kart zależą też od odpowiedniego rankingu i zasad kart. Wyniki Challenge i Development Tour zapewniają dodatkowe ścieżki zdobycia karty.</li>
+                        <li><strong>Pro Card Trials:</strong> tak w podstawowej grze nazywa się system odpowiadający Q-School. UK i EU mają po trzy dni First Stage i cztery dni Final Stage, codzienne awanse, rankingi etapów i zwolnienia. Podział dostępnych kart jest ustalany przed Final Stage. Liczą się obecność i uprawnienia — nieobecność może odebrać prawo do miejsca z rankingu.</li>
+                        <li><strong>Ścieżki Challenge i Development:</strong> są odrębnymi cyklami, a nie dodatkowymi pieniędzmi do każdego rankingu. Wiek, karta i pozostałe zasady wydarzenia określają możliwość startu. Część nazw cykli w podstawowej grze jest fikcyjna.</li>
+                        <li><strong>Rozgrywki kobiet:</strong> Women's Pro Circuit obejmuje 24 zaplanowane turnieje i osobny ranking sezonowy. Women's Global Matchplay to oddzielny turniej ośmiu zawodniczek. Obowiązują kwalifikacje; sama płeć nie gwarantuje udziału.</li>
+                        <li><strong>Mistrzostwa młodzieżowe:</strong> Future Stars Championship ma obsadę 128 zawodników i kwalifikacje uwzględniające wiek. Finał odbywa się podczas Players Championship Finals.</li>
+                    </ul>
+                    <p>Nagrody mistrzostw młodzieżowych i kobiecego matchplay zwiększają zarobki kariery, ale nie dopisują pieniędzy do żadnego OOM. Nadal przyznawane są tytuły i odpowiednie kwalifikacje, w tym do Grand Slam i seniorskich mistrzostw świata. Inne majory także korzystają z własnych terminów rankingowych, kwalifikatorów lub wcześniejszych wyników — sprawdzaj ekran Kwalifikacje i OOM oraz widok wydarzenia.</p>
+                    <p>Mody społecznościowe mogą wyświetlać prawdziwe nazwy, takie jak Q-School, Women's Series, Women's World Matchplay i World Youth Championship. Poradnik opisuje systemy gry 1.5.0, a nie bieżący ranking sportowy ani oficjalny regulamin organizatora. Własny kalendarz i reguły kwalifikacji mogą zmieniać terminy i drogi awansu w Twojej karierze.</p>
+                </section>
+                <section id="finances">
+                    <h2>7. Finanse, sponsorzy i decyzje zawodnika</h2>
+                    <p>Nagrody i sponsorzy finansują wirtualną karierę. Podróże, pensje sztabu, utrzymanie bazy i inne koszty wpływają na budżet. Pieniądze rankingowe służą tabelom — wydawanie budżetu nie kupuje wyższego miejsca w rankingu. To symulowane finanse, a nie rzeczywiste wypłaty dla gracza.</p>
+                    <p>Zwykli sponsorzy zapewniają dochody i cele; partner techniczny może wymagać swojego sprzętu. Sztab i infrastruktura wspierają rozwój i przygotowanie. Ulepszanie i zużycie wyposażenia są czymś innym niż kosmetyczny wygląd lotek. Przed dużym zakupem zostaw środki na koszty stałe.</p>
+                    <p>Możesz skupić się na darcie lub łączyć grę z pracą. Praca daje dochód wraz z wyświetlanym wpływem na energię i profesjonalizm. Wywiady, konferencje i wydarzenia kariery mogą wpływać na reputację lub sytuację zawodnika. Czytaj dostępne odpowiedzi — nie każda decyzja prowadzi do tego samego rezultatu.</p>
+                </section>
+                <section id="ai-world">
+                    <h2>8. Zmieniający się świat kariery AI</h2>
+                    <p>Przeciwnicy sterowani przez AI rozwijają się, starzeją i mogą przechodzić na emeryturę. Do bazy dołączają kolejne pokolenia, więc przyszłe sezony nie są tylko powtórzeniem początkowej obsady. Rywale mogą poprawiać grę, tracić formę i wracać do lepszych występów.</p>
+                    <p>Darts World News, bilanse rywalizacji, Kronika, Gablotka i Archiwum sezonów pomagają śledzić ten świat. Artykuły powstają na podstawie symulowanych wydarzeń konkretnej kariery. <strong>Nie są wiadomościami o bieżących, prawdziwych wynikach sportowych</strong>, nawet gdy mod dostarcza realne nazwiska i zdjęcia.</p>
+                </section>
+                <section id="editors">
+                    <h2>9. Edytory i personalizacja</h2>
+                    <p>Edytory kariery pozwalają zmieniać i dodawać zawodników, ustawiać reprezentacje oraz budować kalendarz. Opcjonalne miasta pochodzenia i preferowany cel punktowania umożliwiają dostosowanie profili. Personalizacja lotek obejmuje kolory części, długości zwykłych shaftów i kąt, pod jakim lotki tkwią w tarczy.</p>
+                    <p>Edytor turniejów obsługuje kopiowanie wydarzeń, warunki udziału, kwalifikacje z rankingu własnego cyklu, legi lub sety osobno dla rund, grupy i fazę pucharową. Double-in i Master Out są opcjonalnymi zasadami wydarzenia. Rankingi cyklu, karty, wiek, płeć, kraj i miasto mogą decydować o uprawnieniu do startu.</p>
+                    <p>Zmiany dotyczą Twojej kariery i obsługiwanych eksportowanych paczek — edycja nie zmienia gry innym użytkownikom. Przed wyzerowaniem rankingów, usunięciem kart lub przebudową kalendarza pobierz kopię zapisu. Cykl kwalifikacyjny potrzebuje rankingu i wydarzeń kończących się przed turniejem docelowym.</p>
+                </section>
+                <section id="mods">
+                    <h2>10. Instalowanie moda społecznościowego</h2>
+                    <ol>
+                        <li>Pobierz ZIP moda przeznaczonego do Twojej wersji DartsCareer. Jeśli masz już karierę, najpierw wyeksportuj kopię JSON.</li>
+                        <li>Wybierz <strong>Wgraj Mod (.ZIP)</strong> na ekranie startowym lub import moda w sekcji Więcej w karierze.</li>
+                        <li>Wskaż oryginalny ZIP. Obsługiwana paczka ma jeden plik <code>mod.json</code> w głównym katalogu albo wewnątrz folderu oraz wskazane przez niego multimedia. Tym przyciskiem nie wczytuje się JSON-a kariery.</li>
+                        <li>Poczekaj na zakończenie importu i przeczytaj komunikat. Jeśli mod zmienia bazę początkową, wczytaj go przed nową karierą, aby uwzględnić te zmiany przy wyborze zawodnika.</li>
+                    </ol>
+                    <p>Obsługiwane mody mogą dostarczać nazwiska, zdjęcia zawodników, dane turniejów, dźwięki oraz grafiki tarczy lub opony. Dodatkowi callerzy wymagają odpowiednich nagrań w modzie. Mody są zawartością społeczności — stosuj instrukcje autora i respektuj prawa do użytych materiałów.</p>
+                    <p>Przeglądarka może zapamiętać zaimportowanego moda, lecz zależy to od dostępności i limitów pamięci. Zachowaj oryginalny ZIP obok kopii kariery. JSON nie zastępuje wszystkich osobno przechowywanych plików moda; na drugim urządzeniu w razie potrzeby wczytaj zgodną paczkę.</p>
+                </section>
+                <section id="saves">
+                    <h2>11. Zapisy, kopie bezpieczeństwa i przenoszenie kariery</h2>
+                    <p><strong>Zapisz grę</strong> przechowuje bieżącą karierę lokalnie w przeglądarce. <strong>Wczytaj grę</strong> przywraca ten zapis. Gra używa IndexedDB z obsługą starszych lub awaryjnych zapisów localStorage. Dane są przypisane do przeglądarki i witryny, a nie konta online. Inna przeglądarka lub urządzenie nie otrzymają tej kariery automatycznie.</p>
+                    <p class="guide-note guide-backup"><strong>Regularnie pobieraj kopie JSON.</strong> Wyczyszczenie danych strony, tryb prywatny, sprzątanie przeglądarki, limity pamięci lub zmiana urządzenia mogą pozbawić Cię lokalnego zapisu. Pobieraj plik zwłaszcza przed dużą edycją, aktualizacją gry lub długą przerwą. Zachowaj więcej niż jedną datowaną kopię.</p>
+                    <h3>Pobieranie kopii</h3>
+                    <ol>
+                        <li>Wróć do centrum kariery i otwórz <strong>Więcej</strong>.</li>
+                        <li>Wybierz <strong>Pobierz plik zapisu</strong>. Przeglądarka pobierze plik <code>darts_career_save_….json</code>.</li>
+                        <li>Odszukaj go w pobranych plikach i skopiuj w bezpieczne miejsce. Poczekaj na zakończenie pobierania, zanim opuścisz stronę.</li>
+                    </ol>
+                    <h3>Przywracanie i zmiana urządzenia</h3>
+                    <ol>
+                        <li>Przenieś JSON na drugie urządzenie. Oryginał zachowaj jako kopię bezpieczeństwa.</li>
+                        <li>Otwórz DartsCareer i wybierz <strong>Wgraj zapis z pliku (.JSON)</strong> na starcie lub import zapisu w sekcji Więcej.</li>
+                        <li>Wskaż JSON, poczekaj na potwierdzenie i sprawdź zawodnika oraz datę kariery. Import zastępuje aktualnie otwartą karierę — jeśli chcesz ją zachować, wcześniej wykonaj jej kopię.</li>
+                        <li>W razie potrzeby osobno zainstaluj zgodny mod społecznościowy, a po dalszej grze pobierz nowy zapis.</li>
+                    </ol>
+                    <p>Nie ma automatycznej synchronizacji w chmurze. Zakładka, skrót zainstalowanej witryny ani ZIP moda nie zastępują kopii kariery.</p>
+                </section>
+                <section id="faq">
+                    <h2>12. Najczęstsze pytania</h2>
+                    <details open><summary>Czy gra jest darmowa?</summary><p>Tak. Możesz bezpłatnie rozpocząć i prowadzić karierę. Budżet, nagrody i pieniądze od sponsorów to wartości wewnątrz gry.</p></details>
+                    <details open><summary>Czy trzeba instalować aplikację?</summary><p>Nie, wystarczy otworzyć grę w przeglądarce. Opcjonalny skrót na ekranie głównym nie jest wymagany i nie tworzy osobnego zapisu w chmurze.</p></details>
+                    <details open><summary>Czy trzeba zakładać konto?</summary><p>Nie. Rozpoczęcie i prowadzenie lokalnej kariery nie wymagają konta ani logowania.</p></details>
+                    <details open><summary>Czy można grać na telefonie?</summary><p>Interfejs obsługuje układy mobilne. Dostępność i wydajność grafiki zależą od urządzenia; jeśli 3D jest niedostępne lub działa słabo, wybierz 2D. Na telefonie również pobieraj kopie zapisu.</p></details>
+                    <details open><summary>Gdzie są przechowywane zapisy?</summary><p>W lokalnej pamięci witryny w używanej przeglądarce. Nie są automatycznie udostępniane innym przeglądarkom, urządzeniom ani kontom. Wyczyszczenie tej pamięci może je usunąć.</p></details>
+                    <details open><summary>Jak pobrać zapis JSON?</summary><p>W centrum kariery otwórz Więcej i wybierz Pobierz plik zapisu. Zachowaj pobrany JSON — samo Zapisz grę tworzy tylko zapis w przeglądarce. Zobacz <a href="#saves">instrukcję kopii bezpieczeństwa</a>.</p></details>
+                    <details open><summary>Jak przenieść karierę na inne urządzenie?</summary><p>Przenieś wyeksportowany JSON i użyj Wgraj zapis z pliku (.JSON) w przeglądarce drugiego urządzenia. W razie potrzeby osobno zachowaj i wczytaj zgodny ZIP moda.</p></details>
+                    <details open><summary>Jak zainstalować mod?</summary><p>Wybierz Wgraj Mod (.ZIP) i wskaż zgodną, oryginalną paczkę z plikiem mod.json. Zaczekaj na zakończenie importu. Zobacz <a href="#mods">opis instalacji</a>.</p></details>
+                    <details open><summary>Czy jest multiplayer online?</summary><p>Nie. Obecna gra oferuje jednoosobową karierę z rywalami AI i oglądanie meczów. To nie są mecze sieciowe pomiędzy użytkownikami.</p></details>
+                    <details open><summary>Czy można liczyć na pełną grę offline?</summary><p>Gra nie zapewnia pełnego trybu offline. Niektóre zasoby wymagają sieci. Zainstalowanie skrótu witryny nie gwarantuje działania bez internetu.</p></details>
+                    <details open><summary>Gdzie zgłosić problem?</summary><p>Skorzystaj z <a href="../../contact/?lang=pl">kontaktu</a>. Podaj przeglądarkę, urządzenie, opis i kroki prowadzące do problemu. Przy sprawdzaniu kariery zachowaj kopię JSON i unikaj udostępniania zbędnych prywatnych danych lub multimediów.</p></details>
+                </section>
+            </article>
+        </div>
+    </main>
+    <footer class="guide-footer">
+        <a href="../../">Wróć do gry</a>
+        <a href="../../en/how-to-play/" lang="en" hreflang="en">English</a>
+        <a href="../../de/spielanleitung/" lang="de" hreflang="de">Deutsch</a>
+        <a href="../../nl/handleiding/" lang="nl" hreflang="nl">Nederlands</a>
+        <a href="../../privacy-policy/?lang=pl">Polityka prywatności</a>
+        <a href="../../terms-of-use/?lang=pl">Regulamin</a>
+        <a href="../../contact/?lang=pl">Kontakt</a>
+    </footer>
+</body>
+</html>

@@ -1,0 +1,197 @@
+/* Public introduction only; career screens retain their existing layout. */
+#screen-create-player.screen.active {
+    grid-template-areas: "intro intro" "existing existing" "changelog form";
+}
+.public-game-intro {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-area: intro;
+    padding: 20px 24px;
+    border: 1px solid #355578;
+    border-left: 4px solid #27ae60;
+    border-radius: 10px;
+    background: #142b39;
+    min-width: 0;
+}
+.public-game-intro h2 {
+    margin: 0 0 8px;
+    padding: 0;
+    border: 0;
+    text-align: left;
+    font-size: 30px;
+    line-height: 1.25;
+    color: #ecf0f1;
+}
+.public-game-intro p {
+    max-width: 66ch;
+    margin: 0;
+    color: #cbd5df;
+    font-size: 15px;
+    line-height: 1.55;
+}
+.public-intro-features { display: none; }
+@media (min-width: 1100px) {
+    .public-game-intro { grid-template-columns: minmax(0, 1fr) 260px; gap: 32px; align-items: center; padding: 24px; }
+    .public-intro-features { display: grid; gap: 0; padding: 0 0 0 24px; margin: 0; border-left: 1px solid #40606a; list-style: none; }
+    .public-intro-features li { padding: 14px 0; color: #b9e5ce; font-size: 15px; line-height: 1.5; font-weight: 600; }
+    .public-intro-features li + li { border-top: 1px solid #35515c; }
+}
+.public-intro-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 12px;
+    margin-top: 18px;
+}
+.public-intro-actions a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    box-sizing: border-box;
+    min-height: 44px;
+    padding: 10px 16px;
+    border: 1px solid #58b984;
+    border-radius: 6px;
+    background: #207a49;
+    color: #fff;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 14px;
+    text-underline-offset: 4px;
+}
+.public-intro-actions a:hover { color: #fff; background: #258852; border-color: #8ae5b0; }
+.public-intro-actions #public-intro-guide {
+    padding-inline: 8px;
+    border-color: transparent;
+    background: transparent;
+    color: #a4eac2;
+    text-decoration: underline;
+}
+.public-intro-actions #public-intro-guide:hover { color: #fff; text-decoration-thickness: 2px; }
+.public-intro-actions a:focus-visible {
+    outline: 3px solid #f1c40f;
+    outline-offset: 4px;
+    border-radius: 2px;
+}
+@media (max-width: 900px) {
+    #screen-create-player.screen.active {
+        grid-template-areas: "intro" "existing" "changelog" "form";
+    }
+}
+/* Only the start screen gets a compact header. Career/match headers keep their styles. */
+@media (max-width: 768px) {
+    body:has(#screen-create-player.active) > .game-site-header {
+        flex-direction: column;
+        gap: 8px;
+        padding: 12px 16px;
+    }
+    body:has(#screen-create-player.active) > .game-site-header .logo-container {
+        flex-direction: row;
+        gap: 12px;
+        justify-content: center;
+    }
+    body:has(#screen-create-player.active) > .game-site-header #game-logo {
+        width: auto;
+        height: 52px;
+        max-height: 52px;
+    }
+    body:has(#screen-create-player.active) > .game-site-header #game-title {
+        font-size: 22px;
+        line-height: 1.2;
+        letter-spacing: 1.2px;
+    }
+    body:has(#screen-create-player.active) > .game-site-header .game-header-controls {
+        display: grid !important; /* Override the existing inline flex declaration locally. */
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 10px !important;
+        width: 100%;
+    }
+    body:has(#screen-create-player.active) > .game-site-header .game-header-volume {
+        display: grid !important;
+        grid-template-columns: minmax(0, 1fr);
+        gap: 0 !important;
+        min-width: 0;
+    }
+    body:has(#screen-create-player.active) > .game-site-header #t-vol {
+        font-size: 12px;
+        line-height: 16px;
+        white-space: nowrap;
+    }
+    body:has(#screen-create-player.active) > .game-site-header #global-volume {
+        width: min(100%, 180px);
+        min-width: 0;
+        height: 32px;
+        margin: 0;
+    }
+    body:has(#screen-create-player.active) > .game-site-header .language-selector {
+        display: grid;
+        grid-template-columns: repeat(4, 44px);
+        gap: 4px;
+    }
+    body:has(#screen-create-player.active) > .game-site-header .language-selector button {
+        box-sizing: border-box;
+        width: 44px;
+        min-height: 44px;
+        padding: 8px 4px;
+        margin: 0;
+        font-size: 14px;
+    }
+    body:has(#screen-create-player.active) > .game-site-header :is(button, input):focus-visible {
+        outline: 3px solid #f1c40f;
+        outline-offset: 2px;
+    }
+}
+@media (max-width: 480px) {
+    #screen-create-player.screen.active { padding: 16px; margin-top: 20px; gap: 16px; }
+    .public-game-intro { padding: 14px; }
+    .public-game-intro h2 { font-size: 20px; }
+    .public-game-intro p { font-size: 14px; line-height: 1.5; }
+    .public-intro-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; margin-top: 14px; }
+    .public-intro-actions a { font-size: 13px; line-height: 1.4; padding: 10px 8px; text-align: center; }
+    .public-intro-actions #public-intro-guide { grid-column: 1 / -1; justify-self: start; }
+}
+/* Start forms only: keep original values, validation and all fields. */
+#screen-create-player :is(.career-start-existing-card, .create-form-wrapper) { border-radius: 10px; }
+#screen-create-player .career-start-existing-card { padding: 18px; }
+#screen-create-player .career-start-existing-card .form-group { margin-bottom: 14px; }
+#screen-create-player :is(.career-start-existing-card, .create-form-wrapper) .form-group label {
+    font-size: 14px; line-height: 1.45; margin-bottom: 7px;
+}
+#screen-create-player :is(.career-start-existing-card, .create-form-wrapper) :is(input:not([type="range"]):not([type="file"]), select) {
+    box-sizing: border-box; min-height: 44px; width: 100%; max-width: 100%; min-width: 0; font-size: 16px;
+}
+#screen-create-player :is(.career-start-existing-card, .create-form-wrapper) select { padding-right: 36px; }
+#screen-create-player #existing-player-select { white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
+#screen-create-player .start-existing-player-name { margin: 0 0 5px; font-size: 16px; font-weight: 700; line-height: 1.45; overflow-wrap: anywhere; }
+#screen-create-player .start-existing-player-name:empty { display: none; }
+#screen-create-player #existing-player-preview { font-size: 13px; line-height: 1.6; margin-bottom: 16px; color: #8cddb1; overflow-wrap: anywhere; }
+#screen-create-player #career-start-existing-desc { font-size: 13px; line-height: 1.55; margin-bottom: 14px; color: #c5d1dc; }
+#screen-create-player :is(.career-start-existing-card, .create-form-wrapper) .form-group small {
+    font-size: 13px; line-height: 1.5; margin-top: 7px; color: #c5d1dc;
+}
+#screen-create-player :is(.career-start-existing-card, .create-form-wrapper) .action-btn { min-height: 44px; line-height: 1.45; }
+#screen-create-player :is(.career-start-existing-card, .create-form-wrapper) :is(input, select, button):focus-visible {
+    outline: 3px solid #f1c40f; outline-offset: 3px;
+}
+#screen-create-player .start-changelog-summary { display: none; }
+@media (max-width: 900px) {
+    #screen-create-player .changelog-box { max-height: none; overflow: visible; }
+    #screen-create-player .start-changelog-summary { display: list-item; cursor: pointer; padding: 10px 0; color: #ecf0f1; line-height: 1.5; }
+    #screen-create-player .start-changelog-summary > span { display: block; }
+    #screen-create-player .start-changelog-summary > .start-changelog-version { display: inline; }
+    #screen-create-player .start-changelog-version { font-size: 15px; font-weight: 700; color: #f1c40f; }
+    #screen-create-player #start-changelog-description { font-size: 13px; margin: 8px 0; color: #c5d1dc; }
+    #screen-create-player .start-changelog-action { min-height: 44px; display: inline-flex; align-items: center; color: #a4eac2; text-decoration: underline; font-size: 14px; font-weight: 600; }
+    #screen-create-player #start-changelog-details:not([open]) .start-changelog-less,
+    #screen-create-player #start-changelog-details[open] .start-changelog-more { display: none; }
+    #screen-create-player #start-changelog-details[open] .changelog-history { max-height: 65vh; overflow-y: auto; padding-right: 8px; margin-top: 12px; }
+    #screen-create-player :is(.start-changelog-summary, .changelog-history):focus-visible { outline: 3px solid #f1c40f; outline-offset: 3px; }
+    #screen-create-player .changelog-box .cl-desc { font-size: 13px; line-height: 1.5; }
+    #screen-create-player .changelog-box .cl-tag { font-size: 10px; }
+}
+@media (max-width: 359px) {
+    body:has(#screen-create-player.active) > .game-site-header .logo-container { gap: 8px; }
+    body:has(#screen-create-player.active) > .game-site-header #game-logo { height: 46px; max-height: 46px; }
+    body:has(#screen-create-player.active) > .game-site-header #game-title { font-size: 20px; letter-spacing: 1px; }
+    body:has(#screen-create-player.active) > .game-site-header #t-vol { white-space: normal; }
+    #screen-create-player .public-game-intro h2 { font-size: 19px; }
+}

@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="css/site-privacy.css?v=1.5.0">
     <title>Darts Career 1.5.0 - Free Browser Simulator Game</title>
     <meta name="description" content="Play the ultimate free Darts Career simulator in your browser. Create your player, climb the rankings, buy equipment, sign sponsors, and hit 9-darters!">
+    <link rel="canonical" href="https://dartscareer.pl/">
     <meta name="keywords" content="darts career, darts simulator, darts game, darts manager, pdc, browser game">
     
     
@@ -26,6 +27,7 @@
     <link rel="manifest" href="manifest.json?v=1.5.0">
     <meta name="theme-color" content="#16213e">
     <link rel="stylesheet" href="css/game.css?v=1.5.0&stats=1&goals=1&titles=2&tiles=1&supporters=3&aim=3&match-log=1&social=1&compact-match=5&ranking-points-guide=1&ranking-groups=1&seed-display=1&panel-top-back=1&difficulty=1&walkon-settings=1&sponsor-sort=1&average-records=1&spectator-exit=1&report-setting=1&ranking-search=1&group-watch=1&career-work=1&ranking-location=1">
+    <link rel="stylesheet" href="css/public-intro.css?v=1.5.0&ui=2&final-ui=1">
     <link rel="stylesheet" href="css/site-footer.css?v=1.5.0&footer-pages=1">
     <link rel="stylesheet" href="css/world-news-v2.css?v=1.5.0&news=2&portrait-polish=2">
     <link rel="stylesheet" href="css/season-archive.css?v=1.5.0&archive=1">
@@ -65,13 +67,13 @@
     <link rel="stylesheet" href="css/q-school.css?v=1.5.0">
 </head>
 <body>
-    <header>
+    <header class="game-site-header">
         <div class="logo-container">
             <img id="game-logo" src="logo.png" alt="Logo">
             <h1 id="game-title">Darts Career</h1>
         </div>
-        <div style="display: flex; align-items: center; gap: 20px;">
-            <div style="color: #ecf0f1; font-weight: bold; font-size: 14px; display: flex; align-items: center; gap: 5px;">
+        <div class="game-header-controls" style="display: flex; align-items: center; gap: 20px;">
+            <div class="game-header-volume" style="color: #ecf0f1; font-weight: bold; font-size: 14px; display: flex; align-items: center; gap: 5px;">
                 <span id="t-vol">🔊 Głośność:</span> 
                 <input type="range" id="global-volume" min="0" max="1" step="0.05" value="1" oninput="changeVolume(this.value)" onchange="changeVolume(this.value)">
             </div>
@@ -86,14 +88,31 @@
 
     <!-- EKRAN 1: TWORZENIE ZAWODNIKA -->
     <main id="screen-create-player" class="screen active">
+        <section class="public-game-intro" aria-labelledby="public-intro-title">
+            <div class="public-intro-copy">
+            <h2 id="public-intro-title">Build your darts career</h2>
+            <p id="public-intro-description">DartsCareer is a free browser darts career simulator. Create a player or choose one from the database. Enter tournaments, develop skills and climb rankings across seasons as AI rivals develop too. Use editors, customisation and community mods.</p>
+            <nav class="public-intro-actions" id="public-intro-navigation" aria-label="Start and help">
+                <a id="public-intro-existing" href="#career-start-existing-title">Choose a player</a>
+                <a id="public-intro-custom" href="#t-create-title">Create a player</a>
+                <a id="public-intro-guide" href="en/how-to-play/" hreflang="en" target="_blank" rel="noopener" aria-label="How to Play — opens in a new tab">How to Play</a>
+            </nav>
+            </div>
+            <ul class="public-intro-features" id="public-intro-features" aria-label="Game features">
+                <li id="public-intro-feature-career">A career across seasons</li>
+                <li id="public-intro-feature-ai">AI rivals that develop</li>
+                <li id="public-intro-feature-editors">Editors and customisation</li>
+            </ul>
+        </section>
         <!-- SZYBKI START: WYBÓR ZAWODNIKA Z BAZY -->
         <section class="career-start-existing-card">
             <h2 id="career-start-existing-title">🎯 Graj jako zawodnik z bazy</h2>
             <p id="career-start-existing-desc">Rozpocznij karierę z podanym bazowym OVR i kwotą z głównego OOM. Wybrany zawodnik nie będzie już rywalem.</p>
             <div class="form-group">
                 <label for="existing-player-select" id="career-start-existing-label">Zawodnik:</label>
-                <select id="existing-player-select" onchange="updateExistingPlayerPreview()"></select>
+                <select id="existing-player-select" aria-describedby="start-existing-player-name existing-player-preview" onchange="updateExistingPlayerPreview()"></select>
             </div>
+            <p id="start-existing-player-name" class="start-existing-player-name"></p>
             <p id="existing-player-preview"></p>
             <div class="form-group career-difficulty-field">
                 <label for="existing-career-difficulty" id="existing-career-difficulty-label">Poziom trudności:</label>
@@ -119,6 +138,14 @@
         <div class="changelog-box">
             <h3>📢 What's New / Changelog</h3>
 
+            <details id="start-changelog-details" open>
+                <summary class="start-changelog-summary">
+                    <span class="start-changelog-version">v1.5.0</span>
+                    <span id="start-changelog-description">Tour Cards, women's and youth events, editors and match viewing.</span>
+                    <span class="start-changelog-action start-changelog-more" id="start-changelog-more">Show more</span>
+                    <span class="start-changelog-action start-changelog-less" id="start-changelog-less">Show less</span>
+                </summary>
+                <div class="changelog-history" id="start-changelog-history" tabindex="0" role="region" aria-label="Full changelog">
             <!-- UPDATE V1.5.0 -->
             <div class="changelog-version-badge">v1.5.0 · Q-School, Youth &amp; Women's Darts</div>
             <div class="changelog-grid">
@@ -2067,6 +2094,8 @@
                     <p class="cl-desc">Minor visual improvements in the interface.</p>
                 </div>
             </div>
+                </div>
+            </details>
         </div>
 
         <!-- PRAWA STRONA: FORMULARZ I OPCJE GRY -->
@@ -4112,6 +4141,7 @@
     <footer style="width: 100%; box-sizing: border-box; text-align: center; padding: 25px 15px; margin-top: auto; color: #7f8c8d; font-size: 11px; font-weight: bold; text-transform: uppercase; letter-spacing: 2px;">
         <nav class="site-footer-links" aria-labelledby="site-footer-information-label">
             <span id="site-footer-information-label" class="dyn-t" data-key="t-site-information">Informacje o stronie</span>
+            <a id="site-footer-guide" href="en/how-to-play/" hreflang="en" target="_blank" rel="noopener" aria-label="How to Play — opens in a new tab">How to Play</a>
             <a id="site-footer-terms" href="terms-of-use/index.html?lang=pl" target="_blank" rel="noopener" class="dyn-t" data-key="t-footer-terms">Regulamin</a>
             <a id="site-footer-privacy" href="privacy-policy/index.html?lang=pl" target="_blank" rel="noopener" class="dyn-t" data-key="t-footer-privacy">Polityka prywatności</a>
             <a id="site-footer-contact" href="contact/index.html?lang=pl" target="_blank" rel="noopener" class="dyn-t" data-key="t-footer-contact">Kontakt</a>
@@ -4170,7 +4200,7 @@
     <script src="js/crown-masters.js?v=1.5.0&crown-masters=2&tournament-editor=2&calendar-manager=1&womens-series=1&wwm=1"></script>
     <script src="js/world-championship-qualification.js?v=1.5.0&routes=2&player-events=1&world-championship-draw=1&world-youth=1&womens-series=1&womens-age=1&wwm=1&worlds-bye=1"></script>
     <script src="js/stamina.js?v=1.5.0&staff=1&traits=1&infrastructure=1&secondary-floor-events=1&player-events=1"></script>
-    <script src="js/i18n.js?v=1.5.0&world-cup-teams=1&fix=planning-1&news=1&archive=1&staff=1&traits=1&infrastructure=1&lifestyle=1&tiles=1&records=1&finance=1&aim=3&social=1&training-energy=1&tutorial=1&hub-nav=2&player-editor=1&visit-sim=1&sudden-death-leg=1&ranking-points-guide=1&ranking-groups=1&panel-top-back=1&challenge-tour=2&development-tour=2&walkon-settings=1&sponsor-sort=1&country-names=1&footer-pages=1&average-records=1&player-events=1&tournament-watch=1&bounce-outs=1&favorite-doubles=1&simulate-to-match=1&board-3d=4&spectator-exit=1&report-setting=1&ranking-search=1&tv-controls=1&nicknames=1&director-options=1&flight-motion=1&rival-history=1&stories=1&layout=1&career-work=1&incident-settings=1&long-career-perf=1&tournament-recovery=1&bull-off-setting=1&womens-series=1&create-gender=1&dart-editor-options=1&callers=1&double-in-stats=1&competition-names=1&ranking-location=1&master-out=1"></script>
+    <script src="js/i18n.js?v=1.5.0&world-cup-teams=1&fix=planning-1&news=1&archive=1&staff=1&traits=1&infrastructure=1&lifestyle=1&tiles=1&records=1&finance=1&aim=3&social=1&training-energy=1&tutorial=1&hub-nav=2&player-editor=1&visit-sim=1&sudden-death-leg=1&ranking-points-guide=1&ranking-groups=1&panel-top-back=1&challenge-tour=2&development-tour=2&walkon-settings=1&sponsor-sort=1&country-names=1&footer-pages=1&average-records=1&player-events=1&tournament-watch=1&bounce-outs=1&favorite-doubles=1&simulate-to-match=1&board-3d=4&spectator-exit=1&report-setting=1&ranking-search=1&tv-controls=1&nicknames=1&director-options=1&flight-motion=1&rival-history=1&stories=1&layout=1&career-work=1&incident-settings=1&long-career-perf=1&tournament-recovery=1&bull-off-setting=1&womens-series=1&create-gender=1&dart-editor-options=1&callers=1&double-in-stats=1&competition-names=1&ranking-location=1&master-out=1&public-guide=1"></script>
     <script src="js/calendar-filters.js?v=1.5.0&calendar-filters=1&editor-cycles=1&calendar-manager=1&womens-series=1&wwm=1&competition-names=1"></script>
     <script src="js/difficulty.js?v=1.5.0&difficulty=1&prize-tax=1&hard-sponsors=1&sponsor-rounding=1"></script>
     <script src="js/walkon-settings.js?v=1.5.0&walkon-settings=1"></script>
@@ -4287,6 +4317,7 @@
     <script src="js/tournament-editor-teams.js?v=1.5.0&editor-structure=1&team-tournaments=1&tournament-gender=1"></script>
     <script src="js/tournament-pack.js?v=1.5.0&editor-structure=1&tournament-packs=1&qualifier-seats=1&editor-cycles=1&calendar-manager=1&tournament-gender=1&season-leagues=1&hometowns=1&master-out=1"></script>
 
+    <script src="js/public-intro.js?v=1.5.0&ui=2&guides=4&final-ui=1"></script>
     <script src="js/site-footer.js?v=1.5.0&footer-pages=5"></script>
     <script src="js/womens-series-match-save.js?v=1.5.0&womens-series=1&wwm=1"></script>
 </body>

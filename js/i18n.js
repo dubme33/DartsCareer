@@ -2185,6 +2185,7 @@ const translations = {
             currentLang = lang;
             const dict = translations[lang];
             if (!dict) return;
+            if (typeof refreshPublicIntroTranslations === 'function') refreshPublicIntroTranslations();
 
             for (const key in dict) {
                 const element = document.getElementById(key);

@@ -1,0 +1,71 @@
+:root {
+    color-scheme: dark;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    color: #ecf0f1;
+    background: #1a1a2e;
+    line-height: 1.7;
+}
+* { box-sizing: border-box; }
+body { margin: 0; }
+a { color: #a4eac2; text-underline-offset: .2em; }
+a:hover { color: #fff; }
+a:focus-visible, summary:focus-visible { outline: 3px solid #f1c40f; outline-offset: 5px; }
+.skip-link { position: absolute; left: 16px; top: -100px; padding: 12px; background: #16213e; z-index: 2; }
+.skip-link:focus { top: 12px; }
+.guide-nav, main, .guide-footer { width: min(100% - 40px, 1080px); margin-inline: auto; }
+.guide-nav { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; padding: 22px 0; border-bottom: 1px solid #355578; }
+.guide-brand { color: #fff; font-weight: 800; letter-spacing: .08em; text-decoration: none; }
+.guide-brand strong { color: #43cc80; }
+.guide-nav nav { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 20px; }
+.guide-nav a, .guide-footer a { display: inline-block; padding-block: 8px; }
+.guide-language { display: inline-flex; flex-shrink: 0; gap: 8px; }
+.guide-language a { display: inline-flex; align-items: center; justify-content: center; min-width: 40px; min-height: 44px; padding: 8px 4px; line-height: 1.2; }
+.guide-language [aria-current] { color: #fff; font-weight: 700; text-decoration-thickness: 3px; }
+.guide-heading { padding: 40px 0 24px; max-width: 800px; }
+.guide-version { color: #92a8bd; font-size: .85rem; letter-spacing: .1em; text-transform: uppercase; }
+h1 { font-size: clamp(2rem, 5vw, 3.1rem); line-height: 1.15; margin: 10px 0 20px; }
+h2 { font-size: 1.45rem; line-height: 1.35; margin-top: 0; color: #70dda0; }
+h3 { font-size: 1.1rem; }
+p { margin: 0 0 16px; }
+li { margin: 8px 0; }
+ul, ol { padding-left: 24px; }
+.guide-lead { font-size: 1.15rem; color: #d0dce8; }
+.guide-columns { display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 32px; align-items: start; }
+.guide-toc { background: #16213e; border: 1px solid #355578; border-radius: 10px; padding: 20px; }
+.guide-toc h2 { font-size: 1rem; color: #fff; }
+.guide-toc ol { margin-bottom: 0; padding-left: 22px; font-size: .9rem; }
+.guide-toc li { padding-left: 2px; margin-block: 6px; }
+.guide-toc a { display: block; padding-block: 6px; line-height: 1.5; text-wrap: pretty; }
+.guide-content { min-width: 0; line-height: 1.75; }
+.guide-content p { max-width: 72ch; }
+.guide-content section { padding: 28px 0; border-top: 1px solid #355578; scroll-margin-top: 20px; }
+.guide-content h3 { margin-top: 26px; }
+.guide-content #mods > ol { padding: 16px 18px 16px 40px; background: #16213e; border-left: 3px solid #72a8ca; border-radius: 0 6px 6px 0; }
+.guide-note { background: #16213e; padding: 16px 18px; border-left: 3px solid #43cc80; border-radius: 0 6px 6px 0; }
+.guide-backup { border-left-color: #f1c40f; }
+.guide-content details { border-bottom: 1px solid #355578; padding: 14px 0; }
+.guide-content summary { font-weight: 700; cursor: pointer; padding: 4px 0; }
+.guide-content details p { margin: 12px 0 0; }
+.guide-footer { display: flex; flex-wrap: wrap; gap: 8px 24px; padding: 28px 0; margin-top: 24px; border-top: 2px solid #c0392b; font-size: .9rem; }
+code { font-size: .9em; color: #f4dd9a; overflow-wrap: anywhere; }
+@media (max-width: 1000px) {
+    .guide-columns { grid-template-columns: minmax(0, 1fr); gap: 24px; }
+    .guide-toc ol { columns: 2; column-gap: 30px; }
+    .guide-toc li { break-inside: avoid; }
+    .guide-heading { padding-top: 28px; }
+}
+@media (max-width: 480px) {
+    .guide-nav, main, .guide-footer { width: calc(100% - 32px); }
+    .guide-nav { padding: 14px 0; gap: 6px; }
+    .guide-nav nav { width: 100%; justify-content: space-between; gap: 8px; }
+    .guide-toc { padding: 16px; }
+    .guide-toc ol { columns: 1; }
+    .guide-lead { font-size: 1.05rem; }
+}
+@media print {
+    :root { color: #111; background: #fff; }
+    .guide-nav, .guide-footer, .skip-link { display: none; }
+    .guide-columns { display: block; }
+    .guide-toc { margin-bottom: 24px; }
+    h2, a, code { color: #111; }
+}
