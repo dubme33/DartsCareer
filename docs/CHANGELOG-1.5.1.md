@@ -38,7 +38,7 @@ Choose from ten point styles, including front or rear rings, spiral, diamond, fl
 
 ## 🖌️ Fit Your Artwork and Download Flight Templates
 
-Fit, fill, move, zoom and rotate imported flight artwork before applying it. Download PNG or SVG templates for a single flight wing, prepare your design and import it with the Prepared template option. The same artwork workflow is available for personal and AI dart setups.
+Fit, fill, move, zoom and rotate imported flight artwork before applying it. Download clearly labelled PNG or SVG templates for a single flight wing, follow the step-by-step instructions and import your design with the Prepared template option. Templates have a single outline without the unused dashed rectangle; captions outside the wing are clipped away on import. The same artwork workflow is available for personal and AI dart setups.
 
 ## 💾 Three Named Dart Sets with Thumbnails
 

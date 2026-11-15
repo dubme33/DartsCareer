@@ -5,19 +5,39 @@
         pl: { title:'Dopasuj grafikę piórka', hint:'Podgląd pokazuje obie strony złożonego piórka. Przesuń obraz tak, aby ważne elementy mieściły się w obrysie.',
             fit:'Dopasowanie', contain:'Cały obraz', cover:'Wypełnij', template:'Gotowy szablon', zoom:'Powiększenie', horizontal:'Poziomo', vertical:'Pionowo', rotate:'Obróć o 90°',
             apply:'Zastosuj grafikę', cancel:'Anuluj', png:'Szablon PNG', svg:'Szablon SVG', guides:'Pokaż obrys',
-            templateHint:'Szablon przedstawia jedno skrzydełko. Umieść grafikę w obrysie, usuń prowadnice i zapisz PNG. Przy wczytywaniu wybierz „Gotowy szablon”.' },
+            templateTitle:'Szablon grafiki piórka',
+            templateHint:'To szablon jednego skrzydełka lotki. Białe pole jest miejscem na Twój wzór, a turkusowa linia pokazuje jego kształt. To nie jest element rozgrywki.',
+            templateHelp:'Jak użyć szablonu?',
+            templateSteps:['Pobierz PNG lub SVG i otwórz w edytorze graficznym. Umieść swój wzór w białym polu.', 'Usuń turkusowy obrys (w SVG: grupa „guides”). Zapisz PNG w rozmiarze 512 × 512 px, bez kadrowania.', 'Wczytaj PNG jako grafikę piórka, wybierz „Gotowy szablon” i sprawdź podgląd przed zastosowaniem.'],
+            templateNote:'Kwadratowy plik jest nakładany na model piórka; podgląd w grze pokazuje jego proporcje. Podpis poza obrysem jest wycinany przy imporcie.',
+            templateLabels:['SZABLON PIÓRKA', '1 skrzydełko · 512 × 512 px', 'Grafika w białym polu', 'Usuń turkusowy obrys'] },
         en: { title:'Fit flight artwork', hint:'The preview shows both sides of the folded flight. Move the image to keep important details inside the outline.',
             fit:'Fit', contain:'Whole image', cover:'Fill', template:'Prepared template', zoom:'Zoom', horizontal:'Horizontal', vertical:'Vertical', rotate:'Rotate 90°',
             apply:'Apply artwork', cancel:'Cancel', png:'PNG template', svg:'SVG template', guides:'Show outline',
-            templateHint:'The template shows one wing. Place artwork inside the outline, remove guides and save as PNG. Select “Prepared template” when importing.' },
+            templateTitle:'Flight artwork template',
+            templateHint:'This is a template for one wing of a dart flight. The white area is for your design; the teal line marks its shape. This is not part of a match.',
+            templateHelp:'How do I use the template?',
+            templateSteps:['Download PNG or SVG and open it in an image editor. Place your design in the white area.', 'Remove the teal outline (the “guides” group in SVG). Save as a 512 × 512 px PNG without cropping.', 'Import the PNG as flight artwork, select “Prepared template” and check the preview before applying.'],
+            templateNote:'The square file is mapped onto the flight model; the game preview shows its proportions. The caption outside the outline is clipped away on import.',
+            templateLabels:['FLIGHT TEMPLATE', '1 wing · 512 × 512 px', 'Design in the white area', 'Remove the teal outline'] },
         de: { title:'Flight-Motiv anpassen', hint:'Die Vorschau zeigt beide Seiten des gefalteten Flights. Verschiebe das Bild, bis wichtige Details im Umriss liegen.',
             fit:'Anpassung', contain:'Ganzes Bild', cover:'Ausfüllen', template:'Fertige Vorlage', zoom:'Vergrößerung', horizontal:'Horizontal', vertical:'Vertikal', rotate:'Um 90° drehen',
             apply:'Motiv übernehmen', cancel:'Abbrechen', png:'PNG-Vorlage', svg:'SVG-Vorlage', guides:'Umriss zeigen',
-            templateHint:'Die Vorlage zeigt einen Flügel. Motiv im Umriss platzieren, Hilfslinien entfernen und als PNG speichern. Beim Laden „Fertige Vorlage“ wählen.' },
+            templateTitle:'Vorlage für ein Flight-Motiv',
+            templateHint:'Dies ist eine Vorlage für einen Flügel des Dart-Flights. Die weiße Fläche ist für dein Motiv; die türkise Linie zeigt die Form. Dies ist kein Teil eines Spiels.',
+            templateHelp:'Wie benutze ich die Vorlage?',
+            templateSteps:['PNG oder SVG herunterladen und in einem Bildeditor öffnen. Das Motiv in die weiße Fläche setzen.', 'Die türkise Kontur entfernen (SVG-Gruppe „guides“). Ohne Zuschneiden als PNG mit 512 × 512 px speichern.', 'Das PNG als Flight-Motiv laden, „Fertige Vorlage“ wählen und die Vorschau vor dem Übernehmen prüfen.'],
+            templateNote:'Die quadratische Datei wird auf das Flight-Modell gelegt; die Vorschau zeigt seine Proportionen. Die Beschriftung außerhalb der Kontur wird beim Import abgeschnitten.',
+            templateLabels:['FLIGHT-VORLAGE', '1 Flügel · 512 × 512 px', 'Motiv in die weiße Fläche', 'Türkise Kontur entfernen'] },
         nl: { title:'Flightafbeelding passend maken', hint:'Het voorbeeld toont beide zijden van de gevouwen flight. Verplaats de afbeelding zodat belangrijke details binnen de omtrek vallen.',
             fit:'Aanpassing', contain:'Hele afbeelding', cover:'Opvullen', template:'Klaar sjabloon', zoom:'Vergroting', horizontal:'Horizontaal', vertical:'Verticaal', rotate:'90° draaien',
             apply:'Afbeelding toepassen', cancel:'Annuleren', png:'PNG-sjabloon', svg:'SVG-sjabloon', guides:'Omtrek tonen',
-            templateHint:'Het sjabloon toont één vleugel. Plaats de afbeelding binnen de omtrek, verwijder hulplijnen en sla op als PNG. Kies “Klaar sjabloon” bij het laden.' }
+            templateTitle:'Sjabloon voor flightafbeeldingen',
+            templateHint:'Dit is een sjabloon voor één vleugel van een dartflight. Het witte vlak is voor je ontwerp; de groene lijn geeft de vorm aan. Dit is geen onderdeel van een wedstrijd.',
+            templateHelp:'Hoe gebruik ik het sjabloon?',
+            templateSteps:['Download PNG of SVG en open het in een afbeeldingseditor. Plaats je ontwerp in het witte vlak.', 'Verwijder de groene omtrek (de SVG-groep “guides”). Sla op als PNG van 512 × 512 px zonder bijsnijden.', 'Importeer de PNG als flightafbeelding, kies “Klaar sjabloon” en controleer het voorbeeld voordat je toepast.'],
+            templateNote:'Het vierkante bestand wordt op het flightmodel geplaatst; het voorbeeld toont de verhoudingen. Het bijschrift buiten de omtrek wordt bij het importeren weggesneden.',
+            templateLabels:['FLIGHT-SJABLOON', '1 vleugel · 512 × 512 px', 'Ontwerp in het witte vlak', 'Verwijder de groene lijn'] }
     };
     const text = () => copy[typeof currentLang === 'string' ? currentLang : 'en'] || copy.en;
     let active = null;
@@ -55,8 +75,13 @@
         ctx.restore();return canvas;
     }
     function templateSvg(shape) {
+        if(!Object.hasOwn(root.dartModel.outlines,shape))shape='standard';
+        const t=text(),escape=value=>value.replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&apos;'}[char]));
         const path=points(shape).map(([x,y],i)=>`${i?'L':'M'}${(x/17.5*512).toFixed(2)} ${((1-y/42)*512).toFixed(2)}`).join(' ')+' Z';
-        return `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512"><title>DartsCareer ${shape} flight template</title><defs><clipPath id="wing"><path d="${path}"/></clipPath></defs><g id="artwork" clip-path="url(#wing)"><rect width="512" height="512" fill="white"/></g><g id="guides" fill="none" stroke="#279b8d" stroke-width="3"><path d="${path}"/><path d="M32 180H300V380H32Z" stroke-dasharray="8 6"/></g></svg>`;
+        // Keep captions strictly outside the texture footprint: template imports
+        // use the same wing path to clip them, without changing the 512px UV map.
+        const labels=t.templateLabels.map((label,i)=>`<text x="336" y="${456+i*14}"${i===0?' font-weight="bold"':''}>${escape(label)}</text>`).join('');
+        return `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512"><title>DartsCareer — ${escape(t.templateTitle)} (${shape})</title><desc>${escape([t.templateHint,...t.templateSteps,t.templateNote].join(' '))}</desc><defs><clipPath id="wing"><path d="${path}"/></clipPath><mask id="outside-wing" maskUnits="userSpaceOnUse" x="0" y="0" width="512" height="512"><rect width="512" height="512" fill="white"/><path d="${path}" fill="black"/></mask></defs><g id="artwork" clip-path="url(#wing)"><rect width="512" height="512" fill="white"/></g><g id="guides" fill="none" stroke="#279b8d" stroke-width="3"><path d="${path}"/></g><g id="instructions" mask="url(#outside-wing)"><rect x="328" y="442" width="180" height="64" rx="4" fill="#eaf7f5"/><g fill="#24514a" font-family="Arial, sans-serif" font-size="12">${labels}</g></g></svg>`;
     }
     function saveBlob(blob, name) {
         const url=URL.createObjectURL(blob),link=document.createElement('a');
@@ -78,7 +103,7 @@
     }
     function controlsMarkup(shape) {
         const t=text(),safe=Object.hasOwn(root.dartModel.outlines,shape)?shape:'standard';
-        return `<div class="flight-template-tools"><button type="button" onclick="flightArtworkEditor.downloadTemplate('${safe}','png')">${t.png}</button><button type="button" onclick="flightArtworkEditor.downloadTemplate('${safe}','svg')">${t.svg}</button><small>${t.templateHint}</small></div>`;
+        return `<div class="flight-template-tools"><strong class="flight-template-title">${t.templateTitle}</strong><small>${t.templateHint}</small><button type="button" onclick="flightArtworkEditor.downloadTemplate('${safe}','png')">${t.png}</button><button type="button" onclick="flightArtworkEditor.downloadTemplate('${safe}','svg')">${t.svg}</button><details class="flight-template-help"><summary>${t.templateHelp}</summary><ol>${t.templateSteps.map(step=>`<li>${step}</li>`).join('')}</ol><p>${t.templateNote}</p></details></div>`;
     }
     function open(image,{shape='standard',filename=''}={}) {
         active?.finish(null);

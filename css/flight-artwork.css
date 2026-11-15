@@ -1,5 +1,11 @@
 .flight-template-tools { display:flex;flex-wrap:wrap;gap:8px;align-items:center;flex-basis:100%;margin-top:8px; }
 .flight-template-tools small { flex-basis:100%;color:#b7cbda;font-size:12px;line-height:1.6; }
+.flight-template-title { flex-basis:100%;font-size:14px;color:#eff8ff; }
+.flight-template-help { flex-basis:100%;min-width:0;font-size:13px;color:#bbd0de;line-height:1.6; }
+.flight-template-help summary { cursor:pointer;color:#91dfce;padding:6px 0; }
+.flight-template-help ol { margin:6px 0;padding-left:24px; }
+.flight-template-help li { margin-bottom:7px; }
+.flight-template-help p { margin:8px 0 0;font-size:12px; }
 .flight-template-tools button { border:1px solid #579d9a;border-radius:6px;background:#173f51;color:#eefbff;padding:8px 12px;min-height:38px;cursor:pointer;font:inherit; }
 .flight-artwork-dialog { box-sizing:border-box;width:min(780px,94vw);max-height:92vh;overflow:auto;border:1px solid #59808c;border-radius:14px;background:#10243b;color:#eff8ff;padding:22px; }
 .flight-artwork-dialog::backdrop { background:#020e20cc; }
