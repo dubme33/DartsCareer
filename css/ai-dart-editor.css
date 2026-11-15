@@ -68,3 +68,10 @@
     #screen-player-editor .ai-dart-editor-artwork > button,
     #screen-player-editor .ai-dart-editor-artwork > label { width: 100%; box-sizing: border-box; text-align: center; }
 }
+#screen-player-editor .ai-dart-fine-grips { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 9px; margin-top: 12px; }
+#screen-player-editor .ai-dart-fine-grips label { min-width: 0; color: #b9cce0; font-size: 11px; }
+#screen-player-editor .ai-dart-fine-grips select { width: 100%; min-width: 0; min-height: 38px; color: #fff; background: #132a45; border: 1px solid #355577; border-radius: 6px; }
+
+.ai-dart-diameter-control { display:grid;gap:7px;min-width:0;align-content:start; }
+.ai-dart-diameter-control button { justify-self:start;min-height:32px;border:1px solid #567c95;border-radius:5px;padding:5px 9px;color:#d7eaf5;background:#1b3d52;font:inherit;font-size:11px;cursor:pointer; }
+.ai-dart-diameter-control button:disabled { opacity:.5;cursor:default; }

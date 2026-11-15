@@ -38,6 +38,7 @@ function initializeMatchCaller(match = typeof currentMatch === 'undefined' ? nul
     return id;
 }
 function refreshCallerSettingsUI() {
+    if (typeof window !== 'undefined' && window.matchCallerCard) window.matchCallerCard.refresh();
     if (typeof document === 'undefined') return;
     const copy = CALLER_SETTINGS_COPY[typeof currentLang === 'string' ? currentLang : 'en'] || CALLER_SETTINGS_COPY.en;
     for (const [id, text] of [['caller-settings-title', copy.title], ['caller-settings-label', copy.label], ['caller-settings-help', copy.help]]) {

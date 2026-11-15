@@ -74,6 +74,7 @@ function hasCareerEditorCard(candidate, id, date = currentDate) {
     });
 }
 function isCareerEditorAccessEligible(event, candidate, date = currentDate) {
+    if (typeof isTournamentPlayerAbsent === 'function' && isTournamentPlayerAbsent(event, candidate, date)) return false;
     if (typeof isTournamentEditorCityEligible === 'function' && !isTournamentEditorCityEligible(event, candidate)) return false;
     if (typeof isPdcRestrictedEventEligible === 'function' && !isPdcRestrictedEventEligible(event, candidate, date)) return false;
     if(typeof isWomensSeriesTournament==='function'&&isWomensSeriesTournament(event)){
@@ -226,6 +227,7 @@ function normalizeCareerCalendarConfiguration(raw) {
     for (const card of cards) { if (cardIds.has(card.id)) invalid(); cardIds.add(card.id); }
     if (raw.pdc?.removed === true) cardIds.delete('pdc');
     const tours = raw.tours.map(tour => {
+        if (tour.groupTitles != null && typeof tour.groupTitles !== 'boolean') invalid();
         const builtInIds = ['major', 'proTour', 'playersChampionship', 'europeanTour', 'challengeTour', 'developmentTour', 'womensSeries', 'womensWorldMatchplay', 'worldSeries', 'premierLeague', 'worldCup', 'qualifier', 'other'];
         if (!builtInIds.includes(tour.id)) {
             if (typeof tour.id !== 'string' || !tour.id.startsWith('custom:')) invalid();
@@ -250,7 +252,7 @@ function normalizeCareerCalendarConfiguration(raw) {
         const name = tour.id === 'other' && tour.removed === true && tour.name == null ? 'Other tournaments' : tour.name;
         return { id: str(tour.id, 1000), name: str(name, 80), ranking: tour.ranking, entry: tour.entry, fieldSize,
             playerKeys, requiredCardId: tour.entry === 'card' ? tour.requiredCardId : null, removed: tour.removed === true,
-            ...(promotion ? { promotion } : {}) };
+            ...(promotion ? { promotion } : {}), ...(tour.groupTitles === true ? { groupTitles: true } : {}) };
     });
     if (new Set(tours.map(tour => tour.id)).size !== tours.length) invalid();
     if (typeof validateCareerTourPromotionRules === 'function') validateCareerTourPromotionRules(tours, invalid);

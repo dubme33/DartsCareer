@@ -22,6 +22,11 @@
         activeText: '--broadcast-active-text', score: '--broadcast-score-idle', deep: '--broadcast-deep',
         mid: '--broadcast-mid', stage: '--broadcast-stage-bg', stageGlow: '--broadcast-stage-glow'
     });
+    const stageDefaults = Object.freeze({
+        accent: '#d5222a', secondary: '#f0bd18', deep: '#101820', mid: '#202a34',
+        stage: '#07111a', stageGlow: '#203541', score: '#a9f272', scoreBackground: '#111b1b'
+    });
+    let stageCache = null;
 
     function normalizeTheme(value) {
         const key = String(value || '').trim().toLocaleLowerCase('en').replace(/[\s_]+/g, '-');
@@ -105,5 +110,26 @@
         return theme;
     }
 
-    root.matchBroadcastTheme = Object.freeze({ resolve, apply, normalizeTheme, legStarter });
+    // Read the scoreboard's actual CSS palette, including editor/mod overrides.
+    // Cache by event appearance: score updates must not force style reads or repaint stage textures.
+    function palette(tournament = null, match = null) {
+        const theme = resolve(tournament, match), screen = root.document?.getElementById?.('screen-match');
+        const key = JSON.stringify([theme, theme === 'custom' ? tournament?.broadcastColors : null]);
+        if (stageCache?.screen === screen && stageCache.key === key) return stageCache.value;
+        apply(tournament, match);
+        const style = screen && root.getComputedStyle?.(screen), value = { theme };
+        for (const [name, fallback] of Object.entries(stageDefaults)) {
+            const property = name === 'scoreBackground' ? '--broadcast-score-bg' : paletteProperties[name];
+            const supplied = theme === 'custom' ? tournament?.broadcastColors?.[name] : null;
+            let hex = String(style?.getPropertyValue(property) || supplied || fallback).trim();
+            if (!/^#(?:[0-9a-f]{3,4}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(hex)) hex = fallback;
+            // Stage materials are opaque; expand shorthand and ignore optional CSS alpha.
+            value[name] = (hex.length < 6 ? '#' + [...hex.slice(1,4)].map(c => c + c).join('') : hex.slice(0,7)).toLowerCase();
+        }
+        const result = Object.freeze(value);
+        stageCache = { screen, key, value: result };
+        return result;
+    }
+
+    root.matchBroadcastTheme = Object.freeze({ resolve, apply, palette, normalizeTheme, legStarter });
 })(typeof window !== 'undefined' ? window : globalThis);

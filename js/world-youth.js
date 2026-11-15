@@ -89,7 +89,8 @@ function createWorldYouthEdition(event=activeTournament,candidates=getWorldYouth
     const year=date.getFullYear(),existing=getWorldYouthEdition(year);if(existing)return existing;
     const dtEvents=tournamentDatabase.filter(t=>t.specialType==='developmentTour'&&!t.editorDisabled);
     if(dtEvents.some(t=>!t.completed))throw new Error(worldYouthText('dtPending'));
-    const eligible=candidates.filter(p=>isWorldYouthEligible(p,date));
+    const eligible=candidates.filter(p=>isWorldYouthEligible(p,date)
+        && (typeof isTournamentPlayerAbsent!=='function'||!isTournamentPlayerAbsent(event,p,date)));
     const dt=typeof getDevelopmentTourOrderOfMerit==='function'?getDevelopmentTourOrderOfMerit(eligible,{includeZero:false}):eligible.filter(p=>p.developmentTourPrizeMoney>0).sort((a,b)=>b.developmentTourPrizeMoney-a.developmentTourPrizeMoney);
     const oom=[...eligible].sort((a,b)=>typeof compareWorldChampionshipOom==='function'?compareWorldChampionshipOom(a,b)
         :(Number(b.prizeMoney)||0)-(Number(a.prizeMoney)||0)||worldYouthKey(a).localeCompare(worldYouthKey(b)));
@@ -259,6 +260,12 @@ function startWorldYouthCareerGroupMatch(){
     if(isTournamentSimulationBusy()||currentMatch)return false;
     const pending=getWorldYouthPendingCareerGroup();if(!pending)return false;
     const opponent=isCurrentPlayer(pending.p1)?pending.p2:pending.p1;
+    if(typeof isPlayerInjured==='function'&&isPlayerInjured(player))return typeof showPlayerInjuryBlocked==='function'?showPlayerInjuryBlocked():false;
+    if(typeof isPlayerInjured==='function'&&isPlayerInjured(opponent)){
+        const result=simulateAImatch(pending.p1,pending.p2,{type:'legs',legsToWin:5});
+        recordWorldYouthGroupMatch(pending.groupIndex,pending.matchIndex,result.winner===pending.p1,result.p1Score,result.p2Score,result);
+        return simulateWorldYouthGroups(false);
+    }
     if(opponent.isBye){recordWorldYouthGroupMatch(pending.groupIndex,pending.matchIndex,isCurrentPlayer(pending.p1),isCurrentPlayer(pending.p1)?5:0,isCurrentPlayer(pending.p2)?5:0);return simulateWorldYouthGroups(false);}
     if(typeof maybeBeginPreTournamentPressConference==='function'&&maybeBeginPreTournamentPressConference(activeTournament,opponent,()=>startWorldYouthCareerGroupMatch()))return true;
     tournamentBracket=[player,opponent];tournamentRound=64;

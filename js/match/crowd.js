@@ -61,7 +61,7 @@
     }
 
     function isStageMatch(match = currentMatch, tournament = activeTournament) {
-        return Boolean(match?.isTournament && tournament && !isFloorTournament(tournament));
+        return window.matchVenue&&match ? window.matchVenue.resolve(match,tournament)==='tv' : Boolean(match?.isTournament && tournament && !isFloorTournament(tournament));
     }
 
     function hashSeed(value) {
@@ -114,7 +114,7 @@
     }
 
     function updateVolumes() {
-        const global = volume();
+        const global = volume() * (window.matchVenue?.ambienceGain?.() ?? 1);
         const arena = getArenaAudio();
         if (arena) arena.volume = ARENA_VOLUME * global;
         if (chantAudio) chantAudio.volume = CHANT_VOLUME * global;
@@ -220,7 +220,7 @@
         visits = makeVisitState();
         lastCue = null;
         cueHistory = [];
-        randomState = hashSeed(`${tournament.name}|${tournament.specialType || ''}|${Date.now()}`);
+        randomState = hashSeed(`${tournament?.name || 'Darts Career'}|${tournament?.specialType || ''}|${Date.now()}`);
         try {
             const arena = new Audio(source('arenaloop', ['crowd']));
             arena.loop = true;
@@ -356,7 +356,7 @@
 
     window.matchCrowd = Object.freeze({
         start, stop, finishMatch, playPostMatch, stopPostMatch, onThrow, setVolume: updateVolumes,
-        isStageMatch, getPostMatchSource, playChant,
+        isStageMatch, isFloorTournament, getPostMatchSource, playChant,
         getState() {
             return {
                 enabled, stageMatch: isStageMatch(activeMatch, crowdTournament),

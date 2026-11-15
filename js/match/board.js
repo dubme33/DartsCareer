@@ -7,7 +7,12 @@ function getPrefix(m) { return m === 1 ? "" : (m === 2 ? "D" : "T"); }
         function drawDartboard() {
             if (typeof currentMatch !== 'undefined' && (currentMatch?.isSpectator || currentMatch?.careerAutoplay) && currentMatch.spectatorSkipThrow) return;
             if (typeof window !== 'undefined' && window.matchBoard3D?.sync(drawnDarts)) return;
-            const canvas = document.getElementById('dartboard'); const ctx = canvas.getContext('2d');
+            renderDartboard2D(document.getElementById('dartboard'), drawnDarts);
+        }
+
+        function renderDartboard2D(canvas, darts = []) {
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
             const cx = canvas.width / 2, cy = canvas.height / 2;
             ctx.clearRect(0, 0, canvas.width, canvas.height);
             const { innerBull, outerBull, trebleInner, trebleOuter, doubleInner } = matchBoardLayout.radii;
@@ -64,8 +69,8 @@ function getPrefix(m) { return m === 1 ? "" : (m === 2 ? "D" : "T"); }
             ctx.beginPath(); ctx.arc(cx, cy, 163, 0, 2*Math.PI); ctx.stroke();
             }
 
-            const presentations = matchBoardLayout.presentDarts(drawnDarts);
-            drawnDarts.forEach((d, index) => { 
+            const presentations = matchBoardLayout.presentDarts(darts);
+            darts.forEach((d, index) => { 
                 const display = presentations[index].point;
                 if (d.robinHood) {
                     // In 2D show the unscored dart protruding from the first flight.

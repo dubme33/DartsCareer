@@ -114,17 +114,24 @@ function buildWorldChampionshipQualification(candidates, referenceDate = (typeof
     const categories = [];
 
     const addCategory = (key, label, count, pool, predicate = () => true) => {
-        const override = tournament?.editorNativeRoutes?.find(route => route.nativeKey === key);
-        if (override && typeof getTournamentEditorNativeRoutePool === 'function') {
+        const overrides = tournament?.editorNativeRoutes?.filter(route => route.nativeKey === key) || [];
+        const resultReserved = typeof getTournamentEditorReservedResultKeys === 'function'
+            ? getTournamentEditorReservedResultKeys(overrides, ranked, referenceDate, selectedKeys) : new Set();
+        for (const [routeIndex, override] of overrides.entries()) {
+          if (typeof getTournamentEditorNativeRoutePool === 'function') {
             const routePool = getTournamentEditorNativeRoutePool(tournament, override, ranked, referenceDate);
-            const players = routePool.filter(candidate => !selectedKeys.has(getWorldChampionshipPlayerKey(candidate)))
+            const players = routePool.filter(candidate => !selectedKeys.has(getWorldChampionshipPlayerKey(candidate))
+                && (override.source === 'tournament' || !resultReserved.has(getWorldChampionshipPlayerKey(candidate))))
                 .slice(0, Math.min(count, override.places));
             players.forEach(candidate => { selected.push(candidate); selectedKeys.add(getWorldChampionshipPlayerKey(candidate)); });
-            categories.push({ key: `native-${key}`, label: getTournamentEditorNativeRouteLabel(override),
+            categories.push({ key: `native-${key}${routeIndex ? `-${routeIndex}` : ''}`, label: getTournamentEditorNativeRouteLabel(override),
                 requested: override.places, playerIds: players.map(getWorldChampionshipPlayerKey),
+                ...(override.source === 'tournament' ? { confirmed: getTournamentEditorResultSource(override, ranked, referenceDate).confirmed,
+                    pending: !getTournamentEditorResultSource(override, ranked, referenceDate).confirmed } : {}),
                 shortfall: Math.max(0, override.places - players.length), editorRoute: override });
             count -= override.places;
             if (count <= 0) return players;
+          }
         }
         const additions = [];
         for (const candidate of pool) {
@@ -158,8 +165,7 @@ function buildWorldChampionshipQualification(candidates, referenceDate = (typeof
     if(nativeWomensSeries&&!tournament?.editorNativeRoutes?.some(r=>r.nativeKey==='women')){
         categories.push({key:'women',label:"Women's Series",requested:3,playerIds:[],shortfall:3});
     }else if(nativeWomensSeries){
-        const count=tournament?.editorNativeRoutes?.find(r=>r.nativeKey==='women')?.places||3;
-        addCategory('women', "Women's Series: trzy najwyżej sklasyfikowane niezakwalifikowane zawodniczki",count,getWomensSeriesQualificationPlayers(referenceDate.getFullYear(),ranked),isWorldChampionshipWoman);
+        addCategory('women', "Women's Series: trzy najwyżej sklasyfikowane niezakwalifikowane zawodniczki",3,getWomensSeriesQualificationPlayers(referenceDate.getFullYear(),ranked),isWorldChampionshipWoman);
     }else addCategory('women', 'Cztery najlepsze kobiety spoza Top 80 OOM', 4, outsideTop80, isWorldChampionshipWoman);
     addCategory('china', 'Najlepszy zawodnik z Chin spoza Top 80 OOM', 1, outsideTop80, candidate => isWorldChampionshipCountry(candidate, 'Chiny'));
     addCategory('japan', 'Najlepszy zawodnik z Japonii spoza Top 80 OOM', 1, outsideTop80, candidate => isWorldChampionshipCountry(candidate, 'Japonia'));
@@ -224,7 +230,8 @@ function getWorldChampionshipQualificationField(tournament, candidates, referenc
     const year = referenceDate instanceof Date ? referenceDate.getFullYear() : new Date(referenceDate).getFullYear();
     const existing = tournament?.worldChampionshipQualification;
     if(tournament?.worldChampionshipDrawVersion&&existing?.year===year)return resolveWorldChampionshipPlayerKeys(existing.playerIds,candidates);
-    let routeSignature = JSON.stringify(tournament?.editorNativeRoutes || []);
+    let routeSignature = typeof getTournamentEditorQualificationRouteSignature === 'function'
+        ? getTournamentEditorQualificationRouteSignature(tournament, candidates, referenceDate) : JSON.stringify(tournament?.editorNativeRoutes || []);
     if(typeof womensSeriesSeason==='function')routeSignature+=`|ws:${JSON.stringify(womensSeriesSeason(year,false)?.finalRanking||[])}`;
     const wwm=typeof getWomensWorldMatchplayWorldEdition==='function'?getWomensWorldMatchplayWorldEdition(year):null;
     if(wwm?.champion)routeSignature+=`|wwm:${JSON.stringify([wwm.champion,Boolean(wwm.seniorWorldDeclined),wwm.seniorReplacementWinner||null,wwm.seniorWorldRoute])}`;

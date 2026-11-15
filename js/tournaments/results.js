@@ -232,6 +232,7 @@ function finalizeTournamentMatchHistory(tournament, fallbackHtml = typeof lastTo
     if (typeof updateTournamentFinanceResults === 'function') updateTournamentFinanceResults(tournament);
     if (hasTournamentMatchHistory(tournamentMatchHistory)) {
         tournament.matchHistory = tournamentMatchHistory;
+        tournament.editorResultYear = typeof currentDate !== 'undefined' ? currentDate.getFullYear() : null;
         tournament.historyLogs = '';
         if (typeof archiveGrandSlamTournamentFinalists === 'function') {
             archiveGrandSlamTournamentFinalists(tournament,

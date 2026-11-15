@@ -108,9 +108,10 @@ function normalizeTournamentPackRules(raw, fieldSize) {
     const routes = raw.routes.map(rawRoute => {
         if (!rawRoute || typeof rawRoute !== 'object' || Array.isArray(rawRoute)) throw tournamentPackError('invalid');
         const source = rawRoute.source;
-        if (![...TOURNAMENT_PACK_RANKINGS, 'qualifier', 'country', 'tourRanking'].includes(source)) throw tournamentPackError('invalid');
+        if (![...TOURNAMENT_PACK_RANKINGS, 'qualifier', 'country', 'tourRanking', 'tournament'].includes(source)) throw tournamentPackError('invalid');
         const route = { source, places: tournamentPackInteger(rawRoute.places, 1, 256) };
         if (source === 'qualifier') route.qualifierKey = tournamentPackString(rawRoute.qualifierKey, 120, true);
+        if (source === 'tournament') route.tournamentKey = tournamentPackString(rawRoute.tournamentKey, 120, true);
         if (source === 'tourRanking') route.tourId = tournamentPackString(rawRoute.tourId, 1000, true);
         if (source === 'country') {
             route.country = tournamentPackString(rawRoute.country, 80, true);
@@ -187,6 +188,7 @@ function normalizeTournamentPackEvent(raw) {
         ? tournamentPackString(raw.editorTourName, 80, true) : null;
     if (editorCycle !== 'custom' && raw.editorTourName != null) throw tournamentPackError('invalid');
     if (!['DIDO', 'legs', 'masterOut'].includes(raw.format)) throw tournamentPackError('invalid');
+    if(raw.matchVenue!=null&&!['auto','tv','floor'].includes(raw.matchVenue))throw tournamentPackError('invalid');
     const editorQualification = normalizeTournamentPackRules(raw.editorQualification, size);
     let editorNativeRoutes;
     try { editorNativeRoutes = normalizeTournamentEditorNativeRoutes(raw.editorNativeRoutes,
@@ -228,6 +230,7 @@ function normalizeTournamentPackEvent(raw) {
     return { key, kind: raw.kind, name, month, day, endMonth, endDay, city, country,
         minOvr: tournamentPackInteger(raw.minOvr ?? 0, 0, 100), editorFieldSize: size,
         format: raw.format, editorMatchFormat, rankingOverride, editorPrizes, editorQualification,
+        ...(raw.matchVenue==null?{}:{matchVenue:raw.matchVenue}),
         editorCycle, editorTourName, editorTeamMode, editorTeamEntries,
         ...(editorNativeRoutes ? { editorNativeRoutes } : {}),
         ...(editorInvitations ? { editorInvitations } : {}), ...(editorStructure ? { editorStructure } : {}),
@@ -273,6 +276,7 @@ function createTournamentPackEvent(tournament) {
         city: tournament.city || '', country: tournament.country || '', minOvr: Number(tournament.minOvr) || 0,
         editorFieldSize: tournament.editorFieldSize ?? (tournament.isEditorTournament ? 32 : null),
         format: ['DIDO','masterOut'].includes(tournament.format) ? tournament.format : 'legs', editorMatchFormat: tournament.editorMatchFormat || null,
+        ...(Object.hasOwn(tournament,'matchVenue')?{matchVenue:['tv','floor'].includes(tournament.matchVenue)?tournament.matchVenue:'auto'}:{}),
         rankingOverride: typeof tournament.rankingOverride === 'boolean' ? tournament.rankingOverride : null,
         editorCycle: tournament.editorCycle || null,
         editorTourName: tournament.editorTourName || null,
@@ -305,10 +309,10 @@ function tournamentPackPlace(event) { return [event.city, event.country].filter(
 function tournamentPackRules(event) {
     const rules = event.editorQualification;
     if (event.editorNativeRoutes?.length) return event.editorNativeRoutes.map(route =>
-        `${route.nativeKey}: ${route.places}× ${route.source === 'tourRanking' ? route.tourId
+        `${route.nativeKey}: ${route.places}× ${route.source === 'tournament' ? route.tournamentKey : route.source === 'tourRanking' ? route.tourId
             : route.source === 'country' ? `${route.country} (${route.ranking})` : route.source}`).join(', ');
     if (!rules) return '—';
-    const routes = rules.routes.map(route => `${route.places}× ${route.source === 'qualifier' ? route.qualifierKey
+    const routes = rules.routes.map(route => `${route.places}× ${route.source === 'tournament' ? route.tournamentKey : route.source === 'qualifier' ? route.qualifierKey
         : route.source === 'tourRanking' ? route.tourId
             : route.source === 'country' ? `${route.country} (${route.ranking})` : route.source}`).join(', ');
     const criteria = [rules.card, `${rules.minAge}–${rules.maxAge || '∞'}`,
@@ -400,6 +404,7 @@ function setTournamentPackConfiguration(tournament, event) {
     tournament.month = event.month; tournament.day = event.day;
     tournament.city = event.city; tournament.country = event.country;
     tournament.minOvr = event.minOvr; tournament.format = event.format;
+    if(Object.hasOwn(event,'matchVenue'))tournament.matchVenue=event.matchVenue==='auto'?null:event.matchVenue;
     tournament.editorModified = true;
     for (const field of ['endMonth', 'endDay', 'editorFieldSize', 'editorMatchFormat',
         'rankingOverride', 'editorPrizes', 'editorQualification', 'qualifierFor', 'editorCycle', 'editorTourName',
@@ -442,7 +447,11 @@ function validateTournamentPackLinks(events, touchedKeys) {
             if (mainRules?.mode === 'custom' && mainRules.kind === 'main') {
                 const matchingRoutes = mainRules.routes.filter(route => route.source === 'qualifier'
                     && tournamentPackKey(route.qualifierKey) === key && route.places === rules.qualifyingPlaces);
-                if (matchingRoutes.length !== 1) throw tournamentPackError('linkInvalid', { name: event.name });
+                const resultRoutes = mainRules.routes.filter(route => route.source === 'tournament'
+                    && tournamentPackKey(route.tournamentKey) === key);
+                if (!((matchingRoutes.length === 1 && !resultRoutes.length)
+                    || (!matchingRoutes.length && resultRoutes.reduce((sum, route) => sum + route.places, 0) === rules.qualifyingPlaces)))
+                    throw tournamentPackError('linkInvalid', { name: event.name });
             } else if (typeof isTournamentEditorNativeTarget !== 'function' || !isTournamentEditorNativeTarget(main)) {
                 throw tournamentPackError('linkInvalid', { name: event.name });
             }
@@ -511,6 +520,11 @@ function projectTournamentPackImport(plan, database = tournamentDatabase,
         if (row.action === 'skip') continue;
         const target = lookup(row.event.key);
         const rules = target.editorQualification;
+        for (const route of [...(target.editorNativeRoutes || []), ...(rules?.routes || [])]) {
+            if (route.source !== 'tournament') continue;
+            const source = lookup(route.tournamentKey);
+            if (source) route.tournamentKey = tournamentEditorKey(source);
+        }
         if (rules?.kind === 'qualifier') {
             const main = lookup(rules.targetKey);
             if (main) { rules.targetKey = tournamentEditorKey(main); target.qualifierFor = main.name; }
@@ -714,6 +728,7 @@ async function applyStagedTournamentPack() {
             && JSON.stringify(incomingConfiguration) !== JSON.stringify(normalizeCareerCalendarConfiguration(getCareerCalendarEditorState()));
         if (configurationChanged && typeof activeTournament !== 'undefined' && activeTournament) throw new Error(trTournamentEditor('inUse'));
         if (!projection.count && !configurationChanged) { setTournamentPackStatus(trTournamentPack('noChanges')); return false; }
+        if (typeof checkpointCareerSlotBeforeImport === 'function' && !await checkpointCareerSlotBeforeImport()) return false;
         const changedContinentalHosts = plan.entries.filter(row => row.action === 'replace'
             && row.target.country !== row.event.country && typeof isContinentalTourTournament === 'function'
             && isContinentalTourTournament(row.target)).map(row => row.target);

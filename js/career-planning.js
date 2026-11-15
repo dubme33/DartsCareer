@@ -38,7 +38,7 @@ const CAREER_PLANNING_TEXT = {
     etReserves: ['Lista rezerwowa European Tour', 'European Tour reserve list', 'European-Tour-Nachrückerliste', 'European Tour-reservelijst'],
     reserve: ['Jesteś na liście rezerwowej', 'You are on the reserve list', 'Du stehst auf der Nachrückerliste', 'Je staat op de reservelijst'],
     reserveReason: ['Pozycja na liście: {position}. Czekasz na wycofanie zakwalifikowanego zawodnika.', 'Reserve position: {position}. You are waiting for a qualified player to withdraw.', 'Listenplatz: {position}. Du wartest auf die Absage eines qualifizierten Spielers.', 'Reservepositie: {position}. Je wacht tot een geplaatste speler zich terugtrekt.'],
-    etReserveNote: ['Przegrani finałów kwalifikacji kartowiczów, według OOM z końca kwalifikatora. Rezerwowy przejmuje miejsce i rundę wejścia wycofanego zawodnika. Brak zapisanych wyników finałów oznacza brak rezerwowych.', 'Tour Card qualifier final-round losers, ordered by OOM at qualifier completion. A reserve inherits the withdrawn player’s slot and entry round. Without recorded final results there are no reserves.', 'Verlierer der letzten Tour-Card-Qualifikationsrunde nach OOM bei Qualifikationsende. Nachrücker übernehmen Platz und Einstiegsrunde des zurückgezogenen Spielers. Ohne gespeicherte Finalergebnisse gibt es keine Nachrücker.', 'Verliezers van de laatste Tour Card-kwalificatieronde, op OOM bij afloop. Een reserve neemt de plaats en instapronde van de teruggetrokken speler over. Zonder opgeslagen finaleresultaten zijn er geen reserves.'],
+    etReserveNote: ['Przegrani finałów kwalifikacji kartowiczów, według OOM z końca kwalifikatora. Przed losowaniem miejsce rozstawionego przejmuje najwyżej notowany pozostały uczestnik, a rezerwowy wchodzi do pierwszej rundy. Po losowaniu zachowuje rundę zwolnionego miejsca. Brak zapisanych wyników finałów oznacza brak rezerwowych.', 'Tour Card qualifier final-round losers, ordered by OOM at qualifier completion. Before the draw, the highest-ranked remaining entrant takes a vacant seed and the reserve starts in round one. After the draw, the vacant slot retains its entry round. Without recorded final results there are no reserves.', 'Verlierer der letzten Tour-Card-Qualifikationsrunde nach OOM bei Qualifikationsende. Vor der Auslosung rückt der bestplatzierte übrige Teilnehmer in die Setzliste auf; der Nachrücker beginnt in Runde eins. Nach der Auslosung bleibt die Einstiegsrunde des freien Platzes bestehen. Ohne gespeicherte Finalergebnisse gibt es keine Nachrücker.', 'Verliezers van de laatste Tour Card-kwalificatieronde, op OOM bij afloop. Voor de loting neemt de hoogst geklasseerde overgebleven deelnemer de vrije geplaatste positie over; de reserve begint in ronde één. Na de loting behoudt de vrije plaats zijn instapronde. Zonder opgeslagen finaleresultaten zijn er geen reserves.'],
     etReserveEmpty: ['Brak dostępnych rezerwowych.', 'No available reserves.', 'Keine verfügbaren Nachrücker.', 'Geen beschikbare reserves.'],
     etWithdrawals: ['Wycofania i zastępstwa', 'Withdrawals and replacements', 'Absagen und Nachrücker', 'Terugtrekkingen en vervangers'],
     etReplacement: ['{replacement} za {withdrawn} · od rundy {round}', '{replacement} replaces {withdrawn} · enters round {round}', '{replacement} ersetzt {withdrawn} · ab Runde {round}', '{replacement} vervangt {withdrawn} · vanaf ronde {round}'],
@@ -157,7 +157,7 @@ function buildQualificationPreview(tournament, candidates, referenceDate = curre
                 [event.name, event.sourceName].includes(group.qualifierKey)) : null;
             groups[groups.length - 1].label = group.source === 'country'
                 ? `${typeof t === 'function' ? t(group.country || '') : group.country || ''} · ${trTournamentEditor(group.ranking || 'oom')}`
-                : group.source === 'tourRanking' ? getTournamentEditorNativeRouteLabel(group)
+                : ['tourRanking', 'tournament'].includes(group.source) ? getTournamentEditorNativeRouteLabel(group)
                     : qualifier?.name || trTournamentEditor(group.source);
             if (group.source === 'tourRanking') groups[groups.length - 1].rankingAmounts = Object.fromEntries(
                 group.players.map(candidate => [key(candidate), getCareerTourPrizeMoney(candidate, group.tourId, year)]));
@@ -179,17 +179,18 @@ function buildQualificationPreview(tournament, candidates, referenceDate = curre
     } else if (kind === 'worlds') {
         const saved = tournament.worldChampionshipQualification;
         const locked = saved?.year === year && saved.version === WORLD_CHAMPIONSHIP_QUALIFICATION_VERSION
-            && (saved.routeSignature || '[]') === JSON.stringify(tournament.editorNativeRoutes || [])
+            && (saved.routeSignature || '[]') === (typeof getTournamentEditorQualificationRouteSignature === 'function'
+                ? getTournamentEditorQualificationRouteSignature(tournament, all, referenceDate) : JSON.stringify(tournament.editorNativeRoutes || []))
             && resolve(saved.playerIds).length === WORLD_CHAMPIONSHIP_FIELD_SIZE;
         if (locked) {
             if (Array.isArray(saved.categories) && saved.categories.length) saved.categories.forEach(category => {
-                add(category.key, category.requested, resolve(category.playerIds), true);
+                add(category.key, category.requested, resolve(category.playerIds), !category.pending, category.pending, []);
                 if (category.editorRoute) groups.at(-1).label = getTournamentEditorNativeRouteLabel(category.editorRoute);
             });
             else add('draw', WORLD_CHAMPIONSHIP_FIELD_SIZE, resolve(saved.playerIds), true);
         } else {
             buildWorldChampionshipQualification(all, referenceDate, tournament).categories.forEach(category => {
-                add(category.key, category.requested, resolve(category.playerIds));
+                add(category.key, category.requested, resolve(category.playerIds), category.confirmed, category.pending, []);
                 if (category.editorRoute) groups.at(-1).label = getTournamentEditorNativeRouteLabel(category.editorRoute);
             });
         }
@@ -199,21 +200,24 @@ function buildQualificationPreview(tournament, candidates, referenceDate = curre
         const ukOpenLocked = typeof isUKOpenTournament === 'function' && isUKOpenTournament(tournament)
             && typeof isValidUKOpenQualificationState === 'function'
             && isValidUKOpenQualificationState(tournament.ukOpenQualification, referenceDate);
-        (getRankingQualificationGroups(tournament, all) || []).forEach(group =>
-            add(group.key, group.places, group.players, ukOpenLocked));
+        (getRankingQualificationGroups(tournament, all) || []).forEach(group => {
+            add(group.key, group.places, group.players, ukOpenLocked || group.confirmed, group.pending, group.eligible || []);
+            if (group.label) groups.at(-1).label = group.label;
+        });
         size = groups.reduce((sum, group) => sum + group.places, 0);
         if (typeof isUKOpenTournament === 'function' && isUKOpenTournament(tournament)) note = 'ukOpenNote';
     } else if (kind === 'continental') {
         const saved = tournament.continentalQualification;
         const locked = saved?.year === year && saved.version === CONTINENTAL_QUALIFICATION_VERSION
             && Array.isArray(saved.oomPlayerIds) && Array.isArray(saved.proTourPlayerIds);
-        const automatic = buildContinentalAutomaticField(all);
+        const automatic = buildContinentalAutomaticField(all, tournament);
         const state = locked ? JSON.parse(JSON.stringify(saved)) : {
             oomPlayerIds: automatic.oomPlayers.map(key), proTourPlayerIds: automatic.proTourPlayers.map(key), paths: {}
         };
+        const entryIds = getContinentalTourEntryPlayerIds(state);
         const effective = ids => resolve(getContinentalEffectivePlayerIds(ids, state));
-        add('oom16', 16, effective(state.oomPlayerIds), locked);
-        add('pt16', 16, effective(state.proTourPlayerIds), locked);
+        add('oom16', 16, resolve(entryIds.oomPlayerIds), locked);
+        add('pt16', 16, resolve(entryIds.proTourPlayerIds), locked);
         const customHostWinners = typeof getTournamentEditorNativeQualifierWinners === 'function'
             ? getTournamentEditorNativeQualifierWinners(tournament, all, referenceDate) : [];
         const customHostKeys = new Set(customHostWinners.map(key));
@@ -223,7 +227,7 @@ function buildQualificationPreview(tournament, candidates, referenceDate = curre
             const ids = path === 'host' && customHostWinners.length
                 ? [...new Set([...customHostWinners.map(key),
                     ...(pathState?.editorNativeOriginalQualifiedPlayerIds || pathState?.qualifiedPlayerIds || [])])].slice(0, config.places)
-                : pathState?.qualifiedPlayerIds || [];
+                : entryIds.paths[path];
             const selected = effective(ids)
                 .filter(p => (state.withdrawals || []).some(entry => entry.replacementPlayerId === key(p))
                     || path === 'host' && customHostKeys.has(key(p))
@@ -233,8 +237,12 @@ function buildQualificationPreview(tournament, candidates, referenceDate = curre
         });
         size = 48;
         note = 'continentalNote';
+        if (tournament.editorNativeRoutes?.length && !state.nativeEntryPlayerIds) {
+            const replacements = applyTournamentEditorNativeQualificationGroups(tournament, groups, all, referenceDate);
+            groups.splice(0, groups.length, ...replacements);
+        }
         reservePlayers = getContinentalTourReservePlayers(tournament, state, all);
-        withdrawals = (state.withdrawals || []).map(entry => ({ ...entry,
+        withdrawals = [...(state.earlyWithdrawals || []), ...(state.withdrawals || [])].map(entry => ({ ...entry,
             withdrawn: resolve([entry.withdrawnPlayerId])[0], replacement: resolve([entry.replacementPlayerId])[0] }));
     } else if (kind === 'slam') {
         const qualifier = tournamentDatabase.find(event => event.specialType === 'pdcTourCardQualifier'
@@ -327,6 +335,10 @@ function buildQualificationPreview(tournament, candidates, referenceDate = curre
         add('draw', size, tournamentBracket, true);
     }
     const ownKey = key(careerPlayer);
+    if (typeof isTournamentPlayerAbsent === 'function') for (const group of groups) {
+        group.players = group.players.filter(candidate => !isTournamentPlayerAbsent(tournament,candidate,referenceDate));
+        group.eligible = group.eligible.filter(candidate => !isTournamentPlayerAbsent(tournament,candidate,referenceDate));
+    }
     const selectedGroup = groups.find(group => group.players.some(p => key(p) === ownKey));
     const pendingGroup = groups.find(group => group.pending && group.eligible.some(p => key(p) === ownKey));
     const reservePosition = reservePlayers.findIndex(candidate => key(candidate) === ownKey) + 1;
@@ -363,6 +375,8 @@ function updateCareerPlanningStrings() {
         const node = document.getElementById(id);
         if (node) node.textContent = (id === 'planning-tile-title' ? '📊 ' : '') + trPlanning(key);
     });
+    const scenarioTab = document.getElementById('planning-tab-whatif');
+    if (scenarioTab && typeof trQualificationScenario === 'function') scenarioTab.textContent = trQualificationScenario('title');
 }
 
 function refreshCareerPlanningTranslations() {
@@ -371,7 +385,10 @@ function refreshCareerPlanningTranslations() {
 }
 
 function showCareerPlanning(tab = 'qualification', tournamentIndex = null) {
-    careerPlanningTab = tab === 'defence' ? 'defence' : 'qualification';
+    careerPlanningTab = ['defence', 'whatif'].includes(tab) ? tab : 'qualification';
+    // Keep the assumptions, but require a fresh calculation after returning
+    // from gameplay, an editor or an import that may have changed the world.
+    if (careerPlanningTab === 'whatif' && typeof getQualificationScenarioDraft === 'function') getQualificationScenarioDraft().report = null;
     if (Number.isInteger(tournamentIndex)) careerPlanningTournamentIndex = tournamentIndex;
     updateCareerPlanningStrings();
     renderCareerPlanning();
@@ -381,11 +398,16 @@ function showCareerPlanning(tab = 'qualification', tournamentIndex = null) {
 function renderCareerPlanning() {
     const content = document.getElementById('planning-content');
     if (!content) return;
-    ['qualification', 'defence'].forEach(tab => {
+    ['qualification', 'defence', 'whatif'].forEach(tab => {
         const button = document.getElementById(`planning-tab-${tab}`);
         button?.setAttribute('aria-pressed', String(careerPlanningTab === tab));
     });
     if (!player?.name) { content.innerHTML = `<p>${escapeHtml(trPlanning('noPlayer'))}</p>`; return; }
+    if (careerPlanningTab === 'whatif' && typeof renderQualificationScenario === 'function') {
+        content.innerHTML = renderQualificationScenario();
+        bindQualificationScenario();
+        return;
+    }
     const candidates = getPdcTourCardPlayers(true);
     refreshMainOrderOfMerit(candidates, currentDate);
     refreshProTourOrderOfMerit(candidates, currentDate);

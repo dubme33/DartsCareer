@@ -193,6 +193,7 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
                 grandSlamState: typeof getGrandSlamStateForSave === 'function' ? getGrandSlamStateForSave() : null,
                 playerLifecycleState: typeof playerLifecycleState !== 'undefined' ? playerLifecycleState : null
             };
+            if (typeof getCareerSlotIdForSave === 'function') gameState.careerSlotId = getCareerSlotIdForSave();
             if(typeof getWomensSeriesMatchForSave==='function'){
                 const match=getWomensSeriesMatchForSave();if(match)gameState.womensSeriesMatch=match;
             }
@@ -404,10 +405,15 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
                 || (typeof lastTournamentResults === 'string' && lastTournamentResults.trim().length > 0)
                 || (typeof currentRoundHTML === 'string' && currentRoundHTML.trim().length > 0)
                 || Object.keys(tournament.spectatedMatchResults || {}).length > 0;
+            // Qualification rights can retain an injured entrant's identity for
+            // a walkover. A new reserve filling a vacancy must be healthy now.
+            const healthyReplacements = !hasPlayedMatches ? getTournamentRetirementReplacementPool(tournament,
+                candidates.filter(candidate => typeof isPlayerAvailableForPlay !== 'function' || isPlayerAvailableForPlay(candidate)))
+                .filter(candidate => candidate && activeIdentities.has(getIdentity(candidate))) : [];
 
             return bracket.map(candidate => {
                 if (!isUnavailable(candidate)) return candidate;
-                const replacement = !hasPlayedMatches && replacements.find(candidate =>
+                const replacement = !hasPlayedMatches && healthyReplacements.find(candidate =>
                     !usedIdentities.has(getIdentity(candidate))
                     && !(typeof isCurrentPlayer === 'function' && isCurrentPlayer(candidate))
                     && getIdentity(candidate) !== getIdentity(player));
@@ -670,7 +676,7 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
             localStorage.setItem(LEGACY_CAREER_SAVE_KEY, JSON.stringify({ ...gameState, browserSavedAt }));
         }
 
-        async function persistCareerGameState(gameState) {
+        async function persistCareerGameState(gameState, options = {}) {
             if (typeof canUseIndexedDbCareerStorage === 'function'
                 && canUseIndexedDbCareerStorage()
                 && typeof writeCareerStateToIndexedDb === 'function') {
@@ -678,12 +684,13 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
                     const indexedDbPayload = typeof createCareerIndexedDbPayload === 'function'
                         ? await createCareerIndexedDbPayload(gameState)
                         : { state: gameState, media: undefined, mediaByKind: {} };
-                    await writeCareerStateToIndexedDb(indexedDbPayload.state, indexedDbPayload.media);
+                    await writeCareerStateToIndexedDb(indexedDbPayload.state, indexedDbPayload.media, options);
                     if (typeof applyCareerProfileMediaToPlayer === 'function') {
                         applyCareerProfileMediaToPlayer(indexedDbPayload.mediaByKind);
                     }
                     return { success: true, backend: 'indexeddb', omittedMedia: false };
                 } catch (indexedDbError) {
+                    if (['CAREER_SLOT_CONFLICT', 'CAREER_SLOT_LIMIT'].includes(indexedDbError.code)) return { success: false, backend: null, errorCode: indexedDbError.code };
                     console.warn('Pełny zapis IndexedDB nie powiódł się. Próba bez multimediów.', indexedDbError);
                     try {
                         const compactIndexedDbState = getSaveStateWithoutProfileMedia(gameState);
@@ -691,9 +698,10 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
                         const clearedMedia = typeof CAREER_PROFILE_MEDIA_KEYS !== 'undefined'
                             ? Object.fromEntries(Object.values(CAREER_PROFILE_MEDIA_KEYS).map(key => [key, null]))
                             : undefined;
-                        await writeCareerStateToIndexedDb(compactIndexedDbState, clearedMedia);
+                        await writeCareerStateToIndexedDb(compactIndexedDbState, clearedMedia, { ...options, slotOmitMediaFallback: true });
                         return { success: true, backend: 'indexeddb', omittedMedia: true };
                     } catch (compactIndexedDbError) {
+                        if (['CAREER_SLOT_CONFLICT', 'CAREER_SLOT_LIMIT'].includes(compactIndexedDbError.code)) return { success: false, backend: null, errorCode: compactIndexedDbError.code };
                         console.warn('Odchudzony zapis IndexedDB nie powiódł się. Używam awaryjnego localStorage.', compactIndexedDbError);
                     }
                 }
@@ -724,7 +732,7 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
             }
         }
 
-        async function performCareerSave(isAutoSave = false) {
+        async function performCareerSave(isAutoSave = false, options = {}) {
             while (typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy()) {
                 if (!await waitForTournamentSimulation()) return false;
             }
@@ -740,7 +748,7 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
 
             const queuedWrite = careerSaveWriteQueue
                 .catch(() => undefined)
-                .then(() => persistCareerGameState(gameState));
+                .then(() => persistCareerGameState(gameState, options));
             pendingCareerSaveWriteCount++;
             careerSaveWriteQueue = queuedWrite.then(
                 () => { pendingCareerSaveWriteCount--; },
@@ -754,6 +762,7 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
                 result = { success: false, backend: null, omittedMedia: false };
             }
 
+            if (typeof recordCareerSlotSaveResult === 'function') recordCareerSlotSaveResult(result, gameState);
             if (!isAutoSave) {
                 if (!result.success) {
                     alert('Nie udało się zapisać kariery w pamięci przeglądarki. Pobierz plik .JSON, aby nie utracić postępów.');
@@ -766,13 +775,13 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
             return result.success;
         }
 
-        function flushScheduledCareerAutosave(isAutoSave = true) {
+        function flushScheduledCareerAutosave(isAutoSave = true, options = {}) {
             if (pendingCareerAutosaveTimer !== null) {
                 clearTimeout(pendingCareerAutosaveTimer);
                 pendingCareerAutosaveTimer = null;
             }
             const resolvers = pendingCareerAutosaveResolvers.splice(0);
-            const operation = performCareerSave(isAutoSave);
+            const operation = performCareerSave(isAutoSave, options);
             operation.then(
                 result => resolvers.forEach(resolve => resolve(result)),
                 () => resolvers.forEach(resolve => resolve(false))
@@ -781,16 +790,17 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
         }
 
         function saveGame(isAutoSave = false, options = {}) {
+            if (typeof isCareerSlotOperationBusy === 'function' && isCareerSlotOperationBusy() && !options.slotInternal) return Promise.resolve(false);
             if (!isAutoSave) {
                 return pendingCareerAutosaveResolvers.length
-                    ? flushScheduledCareerAutosave(false)
-                    : performCareerSave(false);
+                    ? flushScheduledCareerAutosave(false, options)
+                    : performCareerSave(false, options);
             }
 
             if (options.immediate === true) {
                 return pendingCareerAutosaveResolvers.length
-                    ? flushScheduledCareerAutosave(true)
-                    : performCareerSave(true);
+                    ? flushScheduledCareerAutosave(true, options)
+                    : performCareerSave(true, options);
             }
 
             return new Promise(resolve => {
@@ -820,6 +830,7 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
 
         function warnBeforeLeavingActiveCareer(event) {
             if (!hasActiveCareerForNavigationWarning()) return;
+            if (typeof careerSlotNavigationSafe !== 'undefined' && careerSlotNavigationSafe) return;
             event.preventDefault();
             // Współczesne przeglądarki pokazują własny, niemodyfikowalny tekst.
             // Przypisanie returnValue zachowuje zgodność ze starszymi wersjami.
@@ -867,6 +878,9 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
                 });
                 if (typeof removeObsoleteDuplicatePlayers === 'function') removeObsoleteDuplicatePlayers(pdcPlayers);
                 if (typeof restorePlayerLifecycleState === 'function') restorePlayerLifecycleState(gameState.playerLifecycleState);
+                if (typeof ensurePermanentPlayersInRoster === 'function') {
+                    ensurePermanentPlayersInRoster(pdcPlayers, { careerPlayer: player });
+                }
                 mergeNewDefaultPlayersIntoSave();
                 if (typeof applyKnownPlayerCorrections === 'function') {
                     applyKnownPlayerCorrections([player, ...pdcPlayers], { preserveProgress: true, careerPlayer: player });
@@ -1070,6 +1084,7 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
         }
 
         async function loadGame(showFeedback = true) {
+            if (typeof isCareerSlotOperationBusy === 'function' && isCareerSlotOperationBusy()) return false;
             if (typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy()) return false;
             // Wczytanie uruchomione tuż po zmianie w edytorze nie może wyprzedzić
             // ostatniego zapisu i odtworzyć starszej wersji zawodników.
@@ -1113,7 +1128,8 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
                 } catch (_) { /* A damaged fallback must not hide a valid database save. */ }
             }
             if (indexedDbState && restoreGameState(indexedDbState, false)) {
-                if (typeof reapplyLoadedModToActiveCareer === 'function') {
+                if (typeof adoptCareerSlotState === 'function') adoptCareerSlotState(indexedDbState);
+                if (!indexedDbState.careerSlotId && typeof reapplyLoadedModToActiveCareer === 'function') {
                     reapplyLoadedModToActiveCareer();
                 }
                 if (typeof readCareerProfileMediaFromIndexedDb === 'function'
@@ -1136,9 +1152,11 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
 
             try {
                 const legacyGameState = JSON.parse(saveData);
+                if (typeof shouldIgnoreLegacyCareerSlot === 'function' && await shouldIgnoreLegacyCareerSlot(legacyGameState)) { if (showFeedback) alert(t('t-alert-load-fail')); return false; }
                 if (!restoreGameState(legacyGameState, false)) throw new Error('Starszy zapis jest niepoprawny.');
+                if (typeof adoptCareerSlotState === 'function') adoptCareerSlotState(legacyGameState);
                 if (typeof rememberCareerStorageTimestamp === 'function') rememberCareerStorageTimestamp(legacyGameState.browserSavedAt);
-                if (typeof reapplyLoadedModToActiveCareer === 'function') {
+                if (!legacyGameState.careerSlotId && typeof reapplyLoadedModToActiveCareer === 'function') {
                     reapplyLoadedModToActiveCareer();
                 }
 
@@ -1187,6 +1205,7 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
         }
 
         function importSaveFromFile(event) {
+            if (typeof importCareerSlotFile === 'function') return importCareerSlotFile(event);
             if (typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy()) return false;
             const file = event.target.files[0];
             if (!file) return;
@@ -1220,7 +1239,17 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
         }
 
     // --- SYSTEM SPONSORÓW ---
-        const MOD_PROTECTED_REGULAR_SPONSORS_DB = Object.freeze(["M1KEYbet", "Veyronix Technologies"]);
+        const MOD_PROTECTED_REGULAR_SPONSORS_DB = Object.freeze([
+            "M1KEYbet", "Veyronix Technologies", "Ihtto-lauttayhtiö", "Rabarbar Darts"
+        ]);
+        const MOD_PROTECTED_TECH_SPONSORS_DB = Object.freeze(["Lancashire Darts Co."]);
+        const MOD_PROTECTED_TECH_SPONSOR_TIERS = Object.freeze({ 'Lancashire Darts Co.': 'B' });
+        const SPONSOR_LOCAL_LOGO_NAMES = Object.freeze({
+            'Veyronix Technologies': 'Veyronix',
+            'Ihtto-lauttayhtiö': 'Ihtto-lauttayhtio',
+            'Lancashire Darts Co.': 'Lancashire-Darts-Co',
+            'Rabarbar Darts': 'Rabarbar-Darts'
+        });
         const DEFAULT_REGULAR_SPONSORS_DB = Object.freeze([
             "Dartify", "Bullseye Brews", "AeroFlights", "Precision Logistics", "Oche Energy",
             "DoubleTop Betting", "Trevs Tyres", "MaxScore Analytics", "DartKing Apparel", "Perfect9 Solutions",
@@ -1229,10 +1258,17 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
             ...MOD_PROTECTED_REGULAR_SPONSORS_DB
         ]);
         const regularSponsorsDB = [...DEFAULT_REGULAR_SPONSORS_DB];
-        const techSponsorsDB = [
+        const DEFAULT_TECH_SPONSORS_DB = Object.freeze([
             "AimX", "BladeDart", "Crimson Drake", "Quest Darts", "ArrowsTech", "Strike",
-            "Taurus", "Pegasus", "Locks", "ELITE", "CueSpirit", "Galaxy Darts"
-        ];
+            "Taurus", "Pegasus", "Locks", "ELITE", "CueSpirit", "Galaxy Darts",
+            ...MOD_PROTECTED_TECH_SPONSORS_DB
+        ]);
+        const techSponsorsDB = [...DEFAULT_TECH_SPONSORS_DB];
+
+        function getTechnicalSponsorTier(name) {
+            return Object.hasOwn(MOD_PROTECTED_TECH_SPONSOR_TIERS, name)
+                ? MOD_PROTECTED_TECH_SPONSOR_TIERS[name] : sponsorTiers[name] || 'C';
+        }
 
         let availableSponsorOffers = [];
         let availableTechOffers = [];
@@ -1341,7 +1377,7 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
             // Losowanie 4 ofert technicznych (dylemat: Kasa czy Sprzęt?)
             let shuffledTech = shuffle(techSponsorsDB).slice(0, 4);
             shuffledTech.forEach(name => {
-                let tier = sponsorTiers[name] || 'C';
+                let tier = getTechnicalSponsorTier(name);
                 let techMultiplier = 1.0;
 
                 // Najlepsi (S/A) dają mało pieniędzy, bo inwestują w Twój rozwój (Sprzęt dający +3/+4)
@@ -1370,7 +1406,8 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
             const modLogo = typeof getModSponsorLogoAsset === 'function'
                 ? getModSponsorLogoAsset(moddedAssets, sponsorName)
                 : moddedAssets?.sponsors?.[sponsorName];
-            const localLogoName = sponsorName === 'Veyronix Technologies' ? 'Veyronix' : sponsorName;
+            const localLogoName = Object.hasOwn(SPONSOR_LOCAL_LOGO_NAMES, sponsorName)
+                ? SPONSOR_LOCAL_LOGO_NAMES[sponsorName] : sponsorName;
             let imgSrc = modLogo || `sponsors/${localLogoName}.png`;
                 
             const safeName = escapeHtml(sponsorName);
@@ -1534,7 +1571,8 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
             'ArrowsTech': 'A', 'BladeDart': 'A',
             'Pegasus': 'B', 'Quest Darts': 'B', "Taurus": 'B', 'Galaxy Darts': 'B', 'Strike': 'B',
             'ELITE': 'C',
-            'Locks': 'D', 'CueSpirit': 'D'
+            'Locks': 'D', 'CueSpirit': 'D',
+            ...MOD_PROTECTED_TECH_SPONSOR_TIERS
         };
 
         // Zbalansowane bonusy (OVR, Scoring, Doubles) w zależności od tieru
@@ -1550,7 +1588,7 @@ function showOpponentSelection() { showScreen('screen-select-opponent'); }
         // Zwraca aktywne bonusy gracza od lotek
         function getPlayerDartsBonus() {
             if (!player.technicalPartner) return tierBonuses['NONE'];
-            let tier = sponsorTiers[player.technicalPartner.name] || 'C';
+            let tier = getTechnicalSponsorTier(player.technicalPartner.name);
             return tierBonuses[tier];
         }
 
@@ -1599,7 +1637,7 @@ function getBoostedPlayerStats() {
             let dartsInfo = document.getElementById('shop-darts-info');
             if (player.technicalPartner) {
                 let pName = player.technicalPartner.name;
-                let tier = sponsorTiers[pName] || 'C';
+                let tier = getTechnicalSponsorTier(pName);
                 let bonus = tierBonuses[tier];
                 dartsInfo.innerHTML = `
                     <div style="display:flex; align-items:center; gap: 15px;">

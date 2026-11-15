@@ -6,25 +6,78 @@ const TOURNAMENT_EDITOR_RANKINGS = {
 
 function getTournamentEditorNativeRouteDefinitions(tournament) {
     const name = String(tournament?.sourceName || tournament?.name || '');
-    if (tournament?.isEditorTournament || !/(?:world(?: darts)?|global darts) championship/i.test(name)
-        || typeof buildWorldChampionshipQualification !== 'function') return [];
-    return buildWorldChampionshipQualification([]).categories.filter(route => route.key !== 'oomFallback');
+    if (!tournament || hasTournamentEditorQualification(tournament)) return [];
+    if (/(?:world(?: darts)?|global darts) championship/i.test(name)
+        && typeof buildWorldChampionshipQualification === 'function')
+        return buildWorldChampionshipQualification([]).categories.filter(route => route.key !== 'oomFallback');
+    if (!isTournamentEditorNativeTarget(tournament)) return [];
+    if (tournament.specialType === 'ukOpen'
+        || /(?:uk|british) open/i.test(name)
+        || typeof isWomensWorldMatchplayTournament === 'function' && isWomensWorldMatchplayTournament(tournament)
+        || typeof isWomensSeriesTournament === 'function' && isWomensSeriesTournament(tournament)) return [];
+    if (typeof isContinentalTourTournament === 'function' && isContinentalTourTournament(tournament))
+        return [{ key: 'oom16', requested: 16 }, { key: 'pt16', requested: 16 },
+            ...Object.entries(CONTINENTAL_QUALIFIER_PATHS).map(([key, path]) => ({ key, requested: path.places }))];
+    const groups = typeof getRankingQualificationGroups === 'function'
+        ? getRankingQualificationGroups(tournament, [], true) : null;
+    if (groups?.length) return groups.map(group => ({ key: group.key, requested: group.places }));
+    const capacity = getTournamentEditorNativeQualifierCapacity(tournament);
+    return capacity ? [{ key: 'field', label: 'Field', requested: capacity }] : [];
+}
+
+function applyTournamentEditorNativeQualificationGroups(tournament, groups, candidates, referenceDate = currentDate) {
+    if (!tournament?.editorNativeRoutes?.length) return groups;
+    const used = new Set(), key = getTournamentEditorPlayerKey;
+    const result = [];
+    groups.forEach(group => {
+        const routes = tournament.editorNativeRoutes.filter(route => route.nativeKey === group.key);
+        const reserved = getTournamentEditorReservedResultKeys(routes, candidates, referenceDate, used);
+        routes.forEach((route, index) => {
+            const pool = getTournamentEditorNativeRoutePool(tournament, route, candidates, referenceDate);
+            const players = pool.filter(candidate => !used.has(key(candidate))
+                && (route.source === 'tournament' || !reserved.has(key(candidate)))).slice(0, route.places);
+            players.forEach(candidate => used.add(key(candidate)));
+            const confirmed = route.source === 'tournament' ? getTournamentEditorResultSource(route, candidates, referenceDate).confirmed : false;
+            result.push({ key: `native-${group.key}-${index}`, nativeKey: group.key, places: route.places, players,
+                label: getTournamentEditorNativeRouteLabel(route), editorRoute: route,
+                confirmed, pending: route.source === 'tournament' && !confirmed, eligible: [] });
+        });
+        const remaining = group.places - routes.reduce((sum, route) => sum + route.places, 0);
+        if (remaining > 0) {
+            const ranking = { oom16: 'oom', pt16: 'protour', pc64: 'pc', et32: 'europeanTour' }[group.key];
+            const rankingPool = ranking ? getTournamentEditorRanking(candidates, ranking).filter(candidate =>
+                !(typeof isContinentalTourTournament === 'function' && isContinentalTourTournament(tournament))
+                || candidate.hasTourCard === true) : [];
+            const pool = getTournamentEditorCandidates([...(group.players || []), ...rankingPool]);
+            const players = pool.filter(candidate => candidate && !candidate.isBye && !used.has(key(candidate))).slice(0, remaining);
+            players.forEach(candidate => used.add(key(candidate)));
+            result.push({ ...group, places: remaining, players, nativeKey: group.key });
+        }
+    });
+    return result;
 }
 
 function normalizeTournamentEditorNativeRoutes(raw, tournament) {
     if (raw == null || Array.isArray(raw) && !raw.length) return null;
     const definitions = getTournamentEditorNativeRouteDefinitions(tournament);
-    if (!Array.isArray(raw) || raw.length > definitions.length || hasTournamentEditorQualification(tournament))
+    if (!Array.isArray(raw) || raw.length > 128 || hasTournamentEditorQualification(tournament))
         throw new Error('Invalid native qualification routes');
-    const used = new Set();
+    const totals = new Map();
     return raw.map(value => {
         const definition = definitions.find(route => route.key === value?.nativeKey);
-        if (!definition || used.has(value.nativeKey) || !Number.isInteger(value.places)
+        const total = (totals.get(value?.nativeKey) || 0) + (value?.places || 0);
+        if (!definition || !Number.isInteger(value.places)
             || value.places < 1 || value.places > definition.requested
-            || ![...Object.keys(TOURNAMENT_EDITOR_RANKINGS), 'country', 'tourRanking'].includes(value.source))
+            || total > definition.requested
+            || ![...Object.keys(TOURNAMENT_EDITOR_RANKINGS), 'country', 'tourRanking', 'tournament'].includes(value.source))
             throw new Error('Invalid native qualification routes');
-        used.add(value.nativeKey);
+        totals.set(value.nativeKey, total);
         const route = { nativeKey: value.nativeKey, source: value.source, places: value.places };
+        if (value.source === 'tournament') {
+            if (typeof value.tournamentKey !== 'string' || !value.tournamentKey.trim() || value.tournamentKey.length > 120
+                || /[\u0000-\u001f\u007f]/.test(value.tournamentKey)) throw new Error('Invalid native qualification routes');
+            route.tournamentKey = value.tournamentKey.trim();
+        }
         if (value.source === 'tourRanking') {
             if (typeof value.tourId !== 'string' || !value.tourId.trim() || value.tourId.length > 1000
                 || /[\u0000-\u001f\u007f]/.test(value.tourId)) throw new Error('Invalid native qualification routes');
@@ -42,6 +95,7 @@ function normalizeTournamentEditorNativeRoutes(raw, tournament) {
 
 function validateTournamentEditorNativeRouteLinks(tournament, routes, events = tournamentDatabase, tours = null) {
     validateTournamentEditorCycleRankingLinks(tournament, routes, events, tours);
+    validateTournamentEditorResultSourceLinks(tournament, routes, events);
 }
 
 function validateTournamentEditorCycleRankingLinks(tournament, routes, events = tournamentDatabase, tours = null) {
@@ -64,6 +118,8 @@ function validateTournamentEditorEventTourLinks(tournament, events = tournamentD
         [tournament.editorQualification?.routes, 'invalidTourRoute']]) {
         try { validateTournamentEditorCycleRankingLinks(tournament, routes, events, tours); }
         catch (_error) { throw new Error(typeof trTournamentEditor === 'function' ? trTournamentEditor(message) : 'Invalid cycle ranking qualification'); }
+        try { validateTournamentEditorResultSourceLinks(tournament, routes, events); }
+        catch (_error) { throw new Error(typeof trTournamentEditor === 'function' ? trTournamentEditor('invalidTournamentSource') : 'Invalid tournament result source'); }
     }
 }
 
@@ -83,18 +139,118 @@ function getTournamentEditorNativeRoutePool(tournament, route, candidates, refer
         // Rank the whole cycle first; an unavailable leader passes the place down.
         return getTournamentEditorCycleRankingPool(route, all, referenceDate);
     }
+    if (route.source === 'tournament') return getTournamentEditorResultSource(route, all, referenceDate).players;
     return getTournamentEditorRanking(all.filter(candidate => route.source !== 'country'
         || matchesTournamentEditorCountry(candidate, route.country)), route.source === 'country' ? route.ranking : route.source);
 }
 
 function getTournamentEditorNativeRouteLabel(route) {
     const text = key => typeof trTournamentEditor === 'function' ? trTournamentEditor(key) : key;
+    if (route.source === 'tournament') {
+        const event = typeof tournamentDatabase !== 'undefined' && tournamentDatabase.find(candidate =>
+            [candidate.sourceName, candidate.name].includes(route.tournamentKey));
+        return `${text('tournament')} · ${event?.name || route.tournamentKey}`;
+    }
     if (route.source === 'tourRanking') {
         const tour = typeof getCareerCalendarEditorState === 'function'
             ? getCareerCalendarEditorState().tours.find(candidate => candidate.id === route.tourId) : null;
         return `${text('tourRanking')} · ${tour?.name || route.tourId}`;
     }
     return route.source === 'country' ? `${typeof t === 'function' ? t(route.country) : route.country} · ${text(route.ranking)}` : text(route.source);
+}
+
+function isTournamentEditorResultSource(event) {
+    return Boolean(event && !event.isDoubles && !['doubles', 'teams'].includes(event.editorTeamMode)
+        && !['worldCup', 'worldCupQualifier', 'worldCupQualifiers'].includes(event.specialType));
+}
+
+function validateTournamentEditorResultSourceLinks(tournament, routes, events = tournamentDatabase) {
+    const totals = new Map();
+    (routes || []).filter(route => route.source === 'tournament').forEach(route => {
+        const source = events.find(event => [event.sourceName, event.name].includes(route.tournamentKey));
+        const total = (totals.get(route.tournamentKey) || 0) + route.places;
+        const capacity = isTournamentEditorQualifier(source) ? source.editorQualification.qualifyingPlaces
+            : source?.editorFieldSize || 1024;
+        if (!source || source === tournament || !isTournamentEditorResultSource(source) || total > capacity
+            || new Date(2027, source.endMonth ?? source.month, source.endDay ?? source.day)
+                >= new Date(2027, tournament.month, tournament.day)) throw new Error('Invalid tournament result source');
+        totals.set(route.tournamentKey, total);
+    });
+}
+
+function getTournamentEditorResultSource(route, candidates, referenceDate = currentDate) {
+    const event = typeof tournamentDatabase !== 'undefined' && tournamentDatabase.find(candidate =>
+        [candidate.sourceName, candidate.name].includes(route.tournamentKey));
+    const year = referenceDate.getFullYear();
+    if (!event?.completed || !isTournamentEditorResultSource(event)) return { confirmed: false, players: [] };
+    const all = getTournamentEditorCandidates(candidates);
+    const byKey = new Map(all.map(candidate => [getTournamentEditorPlayerKey(candidate), candidate]));
+    if (isTournamentEditorQualifier(event)) {
+        const result = event.editorQualifierResults;
+        return { confirmed: result?.year === year, players: result?.year === year
+            ? (result.playerKeys || []).map(key => byKey.get(key)).filter(Boolean) : [] };
+    }
+    const placements = new Map();
+    // Older saves can recover current-season finishes from the existing ledger.
+    all.forEach(candidate => {
+        if (candidate.seasonStats?.year !== year) return;
+        (candidate.seasonStats.results || []).filter(result => [event.sourceName, event.name]
+            .includes(result.sourceTournament || result.tournament)).forEach(result => {
+            const place = result.won ? 1 : Number(result.round);
+            if (Number.isFinite(place) && place >= 1) placements.set(getTournamentEditorPlayerKey(candidate), place);
+        });
+    });
+    const confirmed = event.editorResultYear === year || event.editorResultYear == null && placements.size > 0;
+    if (!confirmed) return { confirmed: false, players: [] };
+    const history = event.matchHistory;
+    const historyKeys = new Map(all.map(candidate => [candidate.id ? `id:${candidate.id}`
+        : `name:${String(candidate.name || '').trim()}|${String(candidate.country || '').trim()}`, getTournamentEditorPlayerKey(candidate)]));
+    if (history?.version === 1) (history.blocks || []).filter(block => block.type === 'round').forEach(block => {
+        (block.matches || []).forEach(match => {
+            const firstWon = Number(match[2]) > Number(match[3]);
+            if (Number(match[2]) === Number(match[3])) return;
+            const winner = history.players?.[match[firstWon ? 0 : 1]]?.[0];
+            const loser = history.players?.[match[firstWon ? 1 : 0]]?.[0];
+            const loserKey = historyKeys.get(loser), winnerKey = historyKeys.get(winner);
+            if (byKey.has(loserKey)) placements.set(loserKey, Number(block.round));
+            if (Number(block.round) === 2 && byKey.has(winnerKey)) placements.set(winnerKey, 1);
+        });
+    });
+    const players = [...placements].filter(([key]) => byKey.has(key))
+        .sort(([first, firstPlace], [second, secondPlace]) => firstPlace - secondPlace
+            || (typeof sortContinentalQualificationRank === 'function'
+                ? sortContinentalQualificationRank(byKey.get(first), byKey.get(second))
+                : (Number(byKey.get(second).prizeMoney) || 0) - (Number(byKey.get(first).prizeMoney) || 0)))
+        .map(([key]) => byKey.get(key));
+    return { confirmed, players };
+}
+
+function populateTournamentEditorResultSourceOptions(select, selected = '') {
+    select.innerHTML = '';
+    appendTournamentEditorOption(select, '', trTournamentEditor('selectTournamentSource'));
+    tournamentDatabase.filter(event => event !== tournamentEditorSelected && isTournamentEditorResultSource(event))
+        .forEach(event => appendTournamentEditorOption(select, tournamentEditorKey(event), event.name));
+    select.value = selected || '';
+}
+
+function getTournamentEditorReservedResultKeys(routes, candidates, referenceDate, excluded = new Set()) {
+    const totals = new Map();
+    (routes || []).filter(route => route.source === 'tournament').forEach(route =>
+        totals.set(route.tournamentKey, (totals.get(route.tournamentKey) || 0) + route.places));
+    return new Set([...totals].flatMap(([tournamentKey, places]) =>
+        getTournamentEditorResultSource({ tournamentKey }, candidates, referenceDate).players
+            .filter(candidate => !excluded.has(getTournamentEditorPlayerKey(candidate))).slice(0, places).map(getTournamentEditorPlayerKey)));
+}
+
+function getTournamentEditorQualificationRouteSignature(tournament, candidates, referenceDate) {
+    const routes = tournament?.editorNativeRoutes || [];
+    let signature = JSON.stringify(routes);
+    if (routes.some(route => route.source === 'tournament')) signature += '|results:' + JSON.stringify(
+        routes.filter(route => route.source === 'tournament').map(route => {
+            const result = getTournamentEditorResultSource(route, candidates, referenceDate);
+            return [route.tournamentKey, result.confirmed, result.players.map(getTournamentEditorPlayerKey)];
+        }));
+    return signature;
 }
 
 function hasTournamentEditorQualification(tournamentOrName) {
@@ -242,6 +398,8 @@ function getTournamentEditorNativeQualifierWinners(main, candidates, referenceDa
     const byKey = new Map(getTournamentEditorCandidates(candidates).map(candidate => [getTournamentEditorPlayerKey(candidate), candidate]));
     const used = new Set();
     return tournamentDatabase.filter(event => isTournamentEditorQualifier(event)
+        && !(main.editorNativeRoutes || []).some(route => route.source === 'tournament'
+            && [event.sourceName, event.name].includes(route.tournamentKey))
         && event.editorQualification.targetKey === targetKey && event.completed
         && event.editorQualifierResults?.year === referenceDate.getFullYear()).flatMap(event =>
         (event.editorQualifierResults.playerKeys || []).slice(0, event.editorQualification.qualifyingPlaces)).flatMap(key => {
@@ -300,7 +458,11 @@ function getTournamentEditorQualificationGroups(tournament, candidates, referenc
                     .flatMap(group => group.players.map(getTournamentEditorPlayerKey))
                 : typeof isContinentalTourTournament === 'function' && isContinentalTourTournament(main)
                     && typeof buildContinentalAutomaticField === 'function'
-                    ? Object.values(buildContinentalAutomaticField(all)).flat().map(getTournamentEditorPlayerKey) : []);
+                    ? Object.values(buildContinentalAutomaticField(all, main)).flat().map(getTournamentEditorPlayerKey)
+                    : /(?:world(?: darts)?|global darts) championship/i.test(main.sourceName || main.name || '')
+                        && typeof buildWorldChampionshipQualification === 'function'
+                        ? buildWorldChampionshipQualification(all, referenceDate, main).categories
+                            .filter(category => category.key !== 'oomFallback').flatMap(category => category.playerIds) : []);
             eligible = eligible.filter(candidate => isTournamentEditorGenderEligible(main, candidate)
                 && (hasTournamentEditorQualification(main)
                 ? isTournamentEditorCandidateEligible(main, candidate, referenceDate)
@@ -313,17 +475,21 @@ function getTournamentEditorQualificationGroups(tournament, candidates, referenc
             eligible = eligible.filter(candidate => !qualifiedKeys.has(getTournamentEditorPlayerKey(candidate)));
         }
     }
-    const reservedKeys = new Set();
-    if (!isTournamentEditorQualifier(tournament)) (rules.routes || []).filter(route => route.source === 'qualifier').forEach(route => {
+    const reservedKeys = getTournamentEditorReservedResultKeys(rules.routes, eligible, referenceDate);
+    if (!isTournamentEditorQualifier(tournament)) (rules.routes || []).filter(route => ['qualifier', 'tournament'].includes(route.source)).forEach(route => {
+        if (route.source === 'tournament') return;
         const qualifier = tournamentDatabase.find(event => [event.sourceName, event.name].filter(Boolean).includes(route.qualifierKey));
         if (qualifier?.completed && qualifier.editorQualifierResults?.year === referenceDate.getFullYear()) {
             qualifier.editorQualifierResults.playerKeys.forEach(key => reservedKeys.add(key));
         }
     });
     const used = new Set();
-    return (rules.routes || []).filter(route => !options.automaticOnly || route.source !== 'qualifier').map((route, index) => {
+    return (rules.routes || []).filter(route => !options.automaticOnly || !['qualifier', 'tournament'].includes(route.source)).map((route, index) => {
         let players = [], pending = false, confirmed = false, pool = [];
-        if (route.source === 'qualifier') {
+        if (route.source === 'tournament') {
+            const result = getTournamentEditorResultSource(route, eligible, referenceDate);
+            confirmed = result.confirmed; pending = !confirmed; players = result.players;
+        } else if (route.source === 'qualifier') {
             const qualifier = tournamentDatabase.find(event => [event.sourceName, event.name].filter(Boolean).includes(route.qualifierKey));
             const result = qualifier?.editorQualifierResults;
             confirmed = Boolean(qualifier?.completed && result?.year === referenceDate.getFullYear());
@@ -342,7 +508,7 @@ function getTournamentEditorQualificationGroups(tournament, candidates, referenc
         players = players.filter(candidate => !used.has(getTournamentEditorPlayerKey(candidate))).slice(0, route.places);
         players.forEach(candidate => used.add(getTournamentEditorPlayerKey(candidate)));
         return { key: `editor-${index}`, source: route.source, qualifierKey: route.qualifierKey,
-            country: route.country, ranking: route.ranking, tourId: route.tourId,
+            country: route.country, ranking: route.ranking, tourId: route.tourId, tournamentKey: route.tournamentKey,
             places: route.places, players, pending, confirmed, eligible: pool };
     });
 }

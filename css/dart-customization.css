@@ -91,3 +91,25 @@
     .dart-option button { min-height: 34px; }
     .dart-preview-toolbar { flex-wrap: wrap; }
 }
+.dart-grip-zone-fields.dart-grip-fine-fields { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.dart-diameter-control { min-width:0;display:grid;gap:6px; }
+.dart-kit-slots{margin:0 0 20px;padding:14px;border:1px solid #67819c55;border-radius:9px;background:#102a3e;min-width:0}
+.dart-kit-slots h5{margin:0 0 8px;color:#e4f2fd;font-size:15px}
+.dart-kit-slots p{margin:0 0 10px;color:#bbcede;font-size:12px;line-height:1.6}
+.dart-kit-slot-list{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.dart-kit-slot{min-width:0;padding:12px;border:1px solid #67819c55;border-radius:7px;background:#142d42}
+.dart-kit-slot h6{margin:0 0 8px;font-size:14px;color:#d7f5e5}
+.dart-kit-slot-preview,.dart-kit-slot-empty{display:flex;align-items:center;justify-content:center;min-height:85px;border-radius:6px;background:#0a1d2c;overflow:hidden;margin:8px 0}
+.dart-kit-slot-preview svg.dart-preview-fallback{position:static;display:block;width:100%;height:auto;max-height:110px}
+.dart-kit-slot-empty{border:1px dashed #67819c55;color:#7293aa;font-size:25px}
+.dart-kit-slot .dart-kit-slot-dimensions{font-size:11px;overflow-wrap:anywhere;min-height:36px}
+.dart-kit-slot label{display:block;margin:8px 0 5px;color:#dcebf4;font-size:12px}
+.dart-kit-slot input{box-sizing:border-box;width:100%;min-width:0;padding:9px;border:1px solid #6896b580;border-radius:5px;background:#1b3f58;color:white;font:inherit;font-size:13px}
+.dart-kit-slot-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:10px}
+.dart-kit-slot-actions button{min-width:0;min-height:36px;white-space:normal;overflow-wrap:anywhere;padding:7px;border:1px solid #5998be80;border-radius:5px;background:#25597a;color:#f2f9ff;font:inherit;font-size:12px;cursor:pointer}
+.dart-kit-slot-actions button:disabled{opacity:.45;cursor:default}
+.dart-kit-slots #dart-kit-slot-status{margin:10px 0 0;color:#ffdf9c}
+@media(max-width:700px){.dart-kit-slot-list{grid-template-columns:1fr}}
+.dart-diameter-control > button { justify-self:start;min-height:32px;border:1px solid #567c95;border-radius:5px;padding:5px 9px;color:#d7eaf5;background:#1b3d52;font:inherit;font-size:11px;cursor:pointer; }
+.dart-diameter-control > button:disabled { opacity:.5;cursor:default; }
+.dart-grip-fine-fields label:nth-child(3n + 1) { border-left: 2px solid #71bbd1; padding-left: 6px; }

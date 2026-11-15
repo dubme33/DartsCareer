@@ -136,7 +136,9 @@ function sendTournamentWithdrawalReport(tournament, candidates) {
             ? currentDate.getFullYear()
             : 0);
     if (Number(tournament.withdrawalReportSentYear) === reportYear) return false;
-    const entries = resolveTournamentWithdrawalReportEntries(tournament, candidates);
+    const entries = resolveTournamentWithdrawalReportEntries(tournament, candidates).filter(entry =>
+        typeof getTournamentAbsenceEntries !== 'function' || !getTournamentAbsenceEntries(tournament)
+            .some(absence => absence.notified && [entry.playerKey, entry.playerId].includes(absence.playerKey)));
     if (!entries.length) return false;
     const displayName = typeof getTournamentDisplayName === 'function'
         ? getTournamentDisplayName(tournament)
@@ -338,7 +340,8 @@ function propagateSecondaryTourWithdrawals(tournament, withdrawnPlayers, calenda
 
 function prepareSecondaryTourWithdrawals(tournament, eligiblePlayers, random = Math.random) {
     const tourType = getSecondaryTourWithdrawalType(tournament);
-    const rankedPlayers = getTournamentWithdrawalCandidates(eligiblePlayers);
+    const rankedPlayers = getTournamentWithdrawalCandidates(eligiblePlayers).filter(candidate =>
+        typeof isTournamentPlayerAbsent !== 'function' || !isTournamentPlayerAbsent(tournament,candidate));
     if (!tourType) return rankedPlayers;
     rankedPlayers.sort(tourType === 'challengeTour' ? compareChallengeTourOrderOfMerit : compareDevelopmentTourOrderOfMerit);
     const hasWithdrawalKey = (keys, candidate) => keys.has(getTournamentWithdrawalPlayerKey(candidate))
@@ -350,13 +353,15 @@ function prepareSecondaryTourWithdrawals(tournament, eligiblePlayers, random = M
             && hasWithdrawalKey(forcedKeys, candidate));
         const forcedSet = new Set(forcedWithdrawals);
         const withdrawalCandidates = tourType === 'challengeTour' ? rankedPlayers : rankedPlayers.slice(0, 20);
-        const randomWithdrawals = withdrawalCandidates.filter(candidate => !isCurrentPlayer(candidate)
+        const randomWithdrawals = withdrawalCandidates.filter(candidate => !(typeof hasGeneratedTournamentAbsences === 'function'
+            && hasGeneratedTournamentAbsences(tournament)) && !isCurrentPlayer(candidate)
             && !forcedSet.has(candidate) && random() < (tourType === 'challengeTour'
                 ? getChallengeTourWithdrawalChance(candidate) : PLAYERS_CHAMPIONSHIP_TOP_20_WITHDRAWAL_CHANCE));
         // Nie ma rezerwowych spoza tej puli. Zachowujemy co najmniej dwóch
         // uczestników, aby nawet mała obsada mogła rozegrać turniej.
         const withdrawnPlayers = [...forcedWithdrawals, ...randomWithdrawals].slice(0, Math.max(0, rankedPlayers.length - 2));
-        tournament.secondaryTourWithdrawals = withdrawnPlayers.map(getTournamentWithdrawalPlayerKey);
+        tournament.secondaryTourWithdrawals = [...new Set([...withdrawnPlayers.map(getTournamentWithdrawalPlayerKey),
+            ...(typeof getTournamentAbsenceEntries === 'function' ? getTournamentAbsenceEntries(tournament).map(entry => entry.playerKey) : [])])];
     }
     const withdrawnKeys = new Set(tournament.secondaryTourWithdrawals);
     propagateSecondaryTourWithdrawals(tournament, tournament.secondaryTourWithdrawals);
@@ -497,7 +502,9 @@ function getTournamentSeedRanking(tournament, candidates = getDefaultTournamentS
         || /(?:european|continental) tour/.test(name);
 
     if (isContinentalMain) {
-        const seedIds = tournament?.continentalQualification?.oomPlayerIds;
+        const seedIds = tournament?.continentalQualification?.drawEntryPlayerIds?.oomPlayerIds
+            || tournament?.continentalQualification?.nativeEntryPlayerIds?.oomPlayerIds
+            || tournament?.continentalQualification?.oomPlayerIds;
         if (Array.isArray(seedIds)) {
             const byQualificationKey = new Map(unique.map(candidate => [
                 typeof getContinentalQualificationPlayerKey === 'function'
@@ -670,6 +677,7 @@ function skipActiveTournament() {
         function startTournament() {
             if (typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy()) return false;
             if (!activeTournament) return typeof openCalendarTournamentSession==='function'&&openCalendarTournamentSession();
+            if (typeof processTournamentAbsences === 'function') processTournamentAbsences();
             const nativeWomensWorldMatchplay=typeof isWomensWorldMatchplayTournament==='function'&&isWomensWorldMatchplayTournament(activeTournament);
             const nativeWomensSeries=nativeWomensWorldMatchplay||typeof isWomensSeriesTournament==='function'&&isWomensSeriesTournament(activeTournament);
             if(!currentMatch&&tournamentBracket?.length>1&&typeof parkCalendarTournamentAfterRound==='function'&&parkCalendarTournamentAfterRound(activeTournament)==='calendarSession')return concludeCalendarSessionPause();
@@ -739,15 +747,27 @@ function skipActiveTournament() {
                 && !String(lastTournamentResults || '').trim()
                 && !currentMatch;
             if (injuredUnplayedOpeningDraw) {
-                tournamentBracket = [];
-                if (activeTournament) {
-                    activeTournament.simulationForm = null;
-                    if (typeof isContinentalTourTournament === 'function'
-                        && isContinentalTourTournament(activeTournament)
-                        && activeTournament.continentalQualification) {
-                        activeTournament.continentalQualification.withdrawalsProcessed = false;
-                        activeTournament.continentalQualification.withdrawals = [];
+                if (typeof isContinentalTourTournament === 'function' && isContinentalTourTournament(activeTournament)) {
+                    // A drawn ET field already owns its withdrawals and seed promotions.
+                    // Replace only newly injured entrants; keep every healthy pairing.
+                    const field = prepareContinentalTourWithdrawals(activeTournament, { refreshInjuries: true });
+                    const byKey = new Map(getContinentalQualificationPlayers().map(candidate => [getContinentalQualificationPlayerKey(candidate), candidate]));
+                    const replacements = [];
+                    tournamentBracket = tournamentBracket.map(candidate => {
+                        if (!candidate || candidate.isBye || !isPlayerInjured(candidate)) return candidate;
+                        const key = getContinentalEffectivePlayerIds([getContinentalQualificationPlayerKey(candidate)], field.state)[0];
+                        const replacement = byKey.get(key);
+                        if (replacement) replacements.push(replacement);
+                        return replacement || createMissingTournamentSlot();
+                    });
+                    if (replacements.length) {
+                        const previousForm = activeTournament.simulationForm || {};
+                        prepareTournamentSimulationForm(replacements);
+                        activeTournament.simulationForm = { ...previousForm, ...activeTournament.simulationForm };
                     }
+                } else {
+                    tournamentBracket = [];
+                    activeTournament.simulationForm = null;
                 }
             }
             if (tournamentBracket?.length > 1 && !nativeWomensWorldMatchplay && !activeTournament?.qSchoolStage && !(typeof isWorldYouthTournament === 'function' && isWorldYouthTournament(activeTournament)) && typeof repairInjuredTournamentBracket === 'function') {
@@ -897,6 +917,12 @@ function skipActiveTournament() {
             let nonCardPlayers = allPlayers.filter(candidate => candidate.hasTourCard !== true)
                 .filter(candidate => typeof isPlayerAvailableForPlay !== 'function' || isPlayerAvailableForPlay(candidate))
                 .sort((a, b) => (Number(b.prizeMoney) || 0) - (Number(a.prizeMoney) || 0));
+            if (typeof isTournamentPlayerAbsent === 'function') {
+                const attending = candidate => !isTournamentPlayerAbsent(activeTournament,candidate);
+                allPlayers = allPlayers.filter(attending);
+                tourCardPlayers = tourCardPlayers.filter(attending);
+                nonCardPlayers = nonCardPlayers.filter(attending);
+            }
             if (typeof refreshProTourOrderOfMerit === 'function') {
                 refreshProTourOrderOfMerit(allPlayers, currentDate);
             }
@@ -1063,12 +1089,13 @@ function skipActiveTournament() {
                 const playersChampionshipField = buildPlayersChampionshipField(
                     tourCardPlayers,
                     nonCardPlayers,
-                    Math.random,
+                    typeof hasGeneratedTournamentAbsences === 'function' && hasGeneratedTournamentAbsences(activeTournament) ? () => 1 : Math.random,
                     activeTournament.playersChampionshipPairedWithdrawalKeys
                 );
                 participants = playersChampionshipField.participants;
-                activeTournament.playersChampionshipWithdrawals = playersChampionshipField.withdrawnPlayers
-                    .map(candidate => candidate.id || candidate.name);
+                activeTournament.playersChampionshipWithdrawals = [...new Set([
+                    ...playersChampionshipField.withdrawnPlayers.map(candidate => candidate.id || candidate.name),
+                    ...(typeof getTournamentAbsenceEntries === 'function' ? getTournamentAbsenceEntries(activeTournament).map(entry => entry.playerKey) : [])])];
                 activeTournament.playersChampionshipReplacements = playersChampionshipField.replacements
                     .map(candidate => candidate.id || candidate.name);
                 propagatePlayersChampionshipWithdrawals(
@@ -1145,9 +1172,17 @@ function skipActiveTournament() {
                 participants = Array.from(qualified); tournamentRound = 32;
             }
 
+            if (activeTournament.editorNativeRoutes?.some(route => route.nativeKey === 'field')) {
+                participants = applyTournamentEditorNativeQualificationGroups(activeTournament,
+                    [{ key: 'field', places: participants.length || tournamentRound, players: participants }], availablePlayers)
+                    .flatMap(group => group.players);
+            }
             if (typeof isCareerEditorAccessEligible === 'function') participants = participants.map(candidate => candidate?.isBye
                 || isCareerEditorAccessEligible(activeTournament, candidate, currentDate) ? candidate
                 : { name: '(BYE)', isBye: true, country: 'Brak', ovr: 0, overall: 0 });
+            if (typeof isTournamentPlayerAbsent === 'function') participants = participants.map(candidate =>
+                isTournamentPlayerAbsent(activeTournament,candidate)
+                    ? { name: '(BYE)', isBye: true, country: 'Brak', ovr: 0, overall: 0 } : candidate);
             if (typeof repairInjuredTournamentBracket === 'function') participants = repairInjuredTournamentBracket(participants);
             // Fixed individual fields retain their size when the database has
             // too few healthy reserves. Missing places are genuine byes.
@@ -1529,6 +1564,7 @@ function skipActiveTournament() {
 
        function showBracket() {
             if (typeof isWorldYouthTournament === 'function' && isWorldYouthTournament(activeTournament) && getWorldYouthEdition()?.phase === 'groups') return showWorldYouth('groups');
+            if (typeof maybeShowUKOpenDrawCeremony === 'function' && maybeShowUKOpenDrawCeremony()) return;
             const qSchoolOverview = document.getElementById('qschool-bracket-overview');
             if (qSchoolOverview) qSchoolOverview.hidden = activeTournament?.specialType !== 'pdcQSchool';
             document.getElementById('t-btn-play-match').onclick = closeBracketAndPlay;
@@ -1545,7 +1581,8 @@ function skipActiveTournament() {
                 updateTournamentEntrySimulationButton('t-btn-sim-to-match');
             }
             document.getElementById('bracket-title').innerText = `🏆 ${t('t-bracket')}: ${getRoundName(tournamentRound)}`;
-            const list = document.getElementById('bracket-list'); list.innerHTML = "";
+            const list = document.getElementById('bracket-list');
+            const matchRows = [];
             
             let isPlayerInRound = false;
 
@@ -1569,13 +1606,17 @@ function skipActiveTournament() {
                 
                 if (isPlayerMatch) isPlayerInRound = true;
 
-                list.innerHTML += `<div class="bracket-match ${isPlayerMatch ? 'player-match' : ''}">
+                matchRows.push(`<div class="bracket-match ${isPlayerMatch ? 'player-match' : ''}">
                     <div style="flex: 1; text-align: left;">${isCurrentPlayer(p1) ? getFlagImg(player.country) : getFlagImg(p1.country)} ${getTournamentSeedBadgeHtml(p1)}${escapeHtml(p1.name)} <span style="color:#bdc3c7; font-size:12px;">(OVR ${getDisplayedOvr(p1)})</span></div>
                     <div class="bracket-vs" style="flex: 0 0 40px; text-align: center;">VS</div>
                     <div style="flex: 1; text-align: right;">${isCurrentPlayer(p2) ? getFlagImg(player.country) : getFlagImg(p2.country)} ${getTournamentSeedBadgeHtml(p2)}${escapeHtml(p2.name)} <span style="color:#bdc3c7; font-size:12px;">(OVR ${getDisplayedOvr(p2)})</span></div>
                     ${watchControl}
-                </div>`;
+                </div>`);
             }
+
+            // Parse the full draw once instead of reparsing all earlier pairs
+            // on every append (large Development/Challenge Tour fields).
+            list.innerHTML = matchRows.join('');
 
             // Zarządzanie przyciskami w zależności od tego, czy gracz nadal jest w turnieju
             const canSkipSecondaryTour = (typeof isChallengeTourTournament === 'function'
@@ -1693,11 +1734,14 @@ function skipActiveTournament() {
                 else if(isCurrentPlayer(tournamentBracket[i+1])) opponent = tournamentBracket[i];
             }
             
-            if (opponent && opponent.isBye) {
-                alert(t('t-alert-bye'));
+            if (opponent && (opponent.isBye || typeof isPlayerInjured === 'function' && isPlayerInjured(opponent))) {
+                alert(t(opponent.isBye ? 't-alert-bye' : 't-alert-injury-walkover'));
                 const outcome = advanceTournament(true);
                 if(outcome==='calendarSession')return concludeCalendarSessionPause();
                 if (outcome === 'worldYouth') { concludeWorldYouthEvent(); return; }
+                if ((outcome === true || ['editorQualifier', 'worldMastersFinalsQualifier', 'pdcQSchool',
+                    'pdcTourCardQualifier', 'crownMastersQualifier', 'emptyEditorTournament'].includes(outcome))
+                    && typeof finishFastForwardedSpecialTournament === 'function') return finishFastForwardedSpecialTournament(outcome);
                 showRoundResults(); // Pokaże symulację rywali
                 return;
             }
@@ -1978,8 +2022,10 @@ function skipActiveTournament() {
                 // Top 16 OOM zaczyna od Last 32, a Top 16 ProTour od Last 64.
                 // Tylko porażka w ich pierwszym meczu jest nagrodą wyłącznie
                 // do budżetu; następne rundy zachowują normalne rankingi.
-                const automaticPlayerIds = tournamentRound === 32 ? qualification?.oomPlayerIds
-                    : tournamentRound === 64 ? qualification?.proTourPlayerIds
+                const entryIds = typeof getContinentalTourEntryPlayerIds === 'function'
+                    ? getContinentalTourEntryPlayerIds(qualification) : qualification;
+                const automaticPlayerIds = tournamentRound === 32 ? entryIds?.oomPlayerIds
+                    : tournamentRound === 64 ? entryIds?.proTourPlayerIds
                         : null;
                 if (!Array.isArray(automaticPlayerIds)) return false;
                 const candidateKey = typeof getContinentalQualificationPlayerKey === 'function'
@@ -2032,7 +2078,13 @@ function skipActiveTournament() {
                 const simulateYouthCareerMatch = typeof isWorldYouthTournament === 'function' && isWorldYouthTournament(activeTournament)
                     && activeTournament.worldYouthSimulateCareer === true && !currentMatch;
                 if ((isCurrentPlayer(p1) || isCurrentPlayer(p2)) && !simulateYouthCareerMatch) {
-                    if (playerAdvancing) {
+                    const injuryWalkover = typeof isPlayerInjured === 'function' && (isPlayerInjured(p1) || isPlayerInjured(p2));
+                    if (injuryWalkover) {
+                        const result = simulateAImatch(p1, p2, getTournamentMatchFormat(activeTournament, tournamentRound));
+                        winner = result.winner; loser = result.loser;
+                        matchWScore = Math.max(result.p1Score, result.p2Score);
+                        matchLScore = Math.min(result.p1Score, result.p2Score);
+                    } else if (playerAdvancing) {
                         winner = isCurrentPlayer(p1) ? p1 : p2;
                         loser = isCurrentPlayer(p1) ? p2 : p1;
                     } else {
@@ -2049,7 +2101,7 @@ function skipActiveTournament() {
                     if (!isNonPrizeQualifier) {
                         awardPrizeMoney(loser, prize, activeTournament.name, { countTowardsRankings: countPrizeTowardsRankings });
                     }
-                    applyTournamentRatingChange(winner, loser, tournamentRound);
+                    if (!injuryWalkover) applyTournamentRatingChange(winner, loser, tournamentRound);
 
                     let scoreStr = "W:O";
                     let wAvg = "0.00", lAvg = "0.00";
@@ -2156,7 +2208,7 @@ function skipActiveTournament() {
                     if (!isNonPrizeQualifier) {
                         awardPrizeMoney(loser, prize, activeTournament.name, { countTowardsRankings: countPrizeTowardsRankings });
                     }
-                    applyTournamentRatingChange(winner, loser, tournamentRound);
+                    if (!matchRes.walkover) applyTournamentRatingChange(winner, loser, tournamentRound);
 
                     let wAvg = winner === p1 ? matchRes.p1Avg : matchRes.p2Avg;
                     let lAvg = loser === p1 ? matchRes.p1Avg : matchRes.p2Avg;
@@ -2304,6 +2356,7 @@ function skipActiveTournament() {
             const matchFormat = getTournamentMatchFormat(activeTournament, tournamentRound);
             if (!opponent) return false;
             if (opponent.isBye) return closeBracketAndPlay();
+            if (typeof isPlayerInjured === 'function' && isPlayerInjured(opponent)) return closeBracketAndPlay();
             if (typeof maybeBeginPreTournamentPressConference === 'function'
                 && maybeBeginPreTournamentPressConference(activeTournament, opponent, () => startTournamentMatch())) return true;
             initRivalries();

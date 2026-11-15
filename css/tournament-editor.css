@@ -125,6 +125,8 @@
 .te-route-country-fields, .te-route-tour-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); flex: 1 1 100%; gap: 8px; min-width: 0; padding: 0 0 8px; border-bottom: 1px solid #345269; }
 .te-route-country-fields label, .te-route-tour-fields label { display: grid; gap: 5px; min-width: 0; color: #cbdde9; font-size: 12px; font-weight: 700; }
 .te-route-tour-fields { grid-template-columns: minmax(0, 1fr); }
+.te-route-result-fields { display: grid; flex: 1 1 100%; gap: 8px; min-width: 0; }
+.te-route-result-fields[hidden] { display: none; }
 .te-qualification [hidden] { display: none !important; }
 #te-prizes-panel[hidden] { display: none !important; }
 #te-routes-label { display: block; margin-top: 15px; font-size: 12px; }

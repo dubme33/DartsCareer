@@ -394,6 +394,17 @@ function initCareerChronicle() {
             return nameMap;
         }
 
+        function getReplaceableSponsorNames(names, protectedNames) {
+            const key = name => String(name).trim().normalize('NFC').toLocaleLowerCase();
+            const seen = new Set(protectedNames.map(key));
+            return names.map(name => name.trim()).filter(name => {
+                const normalized = key(name);
+                if (!normalized || seen.has(normalized)) return false;
+                seen.add(normalized);
+                return true;
+            });
+        }
+
         function applyRegularSponsorMod(regularSponsorNames) {
             if (!Array.isArray(regularSponsorNames)) return;
             const previousNames = [...regularSponsorsDB];
@@ -403,9 +414,10 @@ function initCareerChronicle() {
             const protectedNames = typeof MOD_PROTECTED_REGULAR_SPONSORS_DB !== 'undefined'
                 ? [...MOD_PROTECTED_REGULAR_SPONSORS_DB]
                 : ['M1KEYbet'];
-            const replaceableSlotCount = Math.max(0, defaultNames.length - protectedNames.length);
-            const nextNames = regularSponsorNames.slice(0, replaceableSlotCount).map(name => name.trim());
-            const nameMap = createIndexedSponsorNameMap(defaultNames, previousNames, nextNames);
+            const replaceableDefaults = getReplaceableSponsorNames(defaultNames, protectedNames);
+            const replaceablePrevious = getReplaceableSponsorNames(previousNames, protectedNames);
+            const nextNames = getReplaceableSponsorNames(regularSponsorNames, protectedNames).slice(0, replaceableDefaults.length);
+            const nameMap = createIndexedSponsorNameMap(replaceableDefaults, replaceablePrevious, nextNames);
             regularSponsorsDB.splice(0, regularSponsorsDB.length, ...nextNames, ...protectedNames);
 
             const renameSponsor = sponsor => {
@@ -427,11 +439,22 @@ function initCareerChronicle() {
             }
         }
 
+        function applyTechnicalSponsorMod(technicalSponsorNames) {
+            if (!Array.isArray(technicalSponsorNames)) return;
+            const protectedNames = typeof MOD_PROTECTED_TECH_SPONSORS_DB !== 'undefined'
+                ? [...MOD_PROTECTED_TECH_SPONSORS_DB] : [];
+            const nextNames = getReplaceableSponsorNames(technicalSponsorNames, protectedNames);
+            techSponsorsDB.splice(0, techSponsorsDB.length, ...nextNames, ...protectedNames);
+        }
+
         function applyModData(modData, isCareerActive, options = {}) {
             if (typeof configureCompetitionNames === 'function') configureCompetitionNames(modData);
             const seasonArchiveBeforeMod = isCareerActive && typeof snapshotSeasonArchiveModRatings === 'function'
                 ? snapshotSeasonArchiveModRatings() : null;
             if (typeof invalidatePlayerLifecycleCache === 'function') invalidatePlayerLifecycleCache();
+            if (typeof ensurePermanentPlayersInRoster === 'function') {
+                ensurePermanentPlayersInRoster(pdcPlayers, { careerPlayer: isCareerActive ? player : null, preserveProgress: isCareerActive });
+            }
             if (!isCareerActive) {
                 if (modData.pdcPlayers) {
                     pdcPlayers.length = 0;
@@ -444,9 +467,11 @@ function initCareerChronicle() {
                                 ? candidate.defaultTemplateIndex
                                 : index
                         };
+                        if (typeof applyPermanentPlayerIdentity === 'function') applyPermanentPlayerIdentity(newCandidate, { preserveProgress: false });
                         if (typeof applyModPlayerFavoriteDoubles === 'function') applyModPlayerFavoriteDoubles(newCandidate, candidate);
                         pdcPlayers.push(newCandidate);
                     });
+                    if (typeof ensurePermanentPlayersInRoster === 'function') ensurePermanentPlayersInRoster(pdcPlayers, { preserveProgress: false });
                     if (typeof removeObsoleteDuplicatePlayers === 'function') removeObsoleteDuplicatePlayers(pdcPlayers);
                     if (typeof removeRetiredPlayersFromPool === 'function') removeRetiredPlayersFromPool(pdcPlayers);
                     if (typeof applyKnownPlayerCorrections === 'function') applyKnownPlayerCorrections(pdcPlayers);
@@ -488,11 +513,15 @@ function initCareerChronicle() {
                         ? player.defaultTemplateIndex
                         : null;
                     modData.pdcPlayers.forEach((modPlayer, index) => {
+                        const permanentDefinition = typeof getPermanentPlayerDefinition === 'function' ? getPermanentPlayerDefinition(modPlayer) : null;
+                        if (permanentDefinition) modPlayer = { ...modPlayer, name: permanentDefinition.name, sourceName: permanentDefinition.name };
                         const sourceName = modPlayer.sourceName || modPlayer.name;
-                        const templateIndex = Number.isInteger(modPlayer.defaultTemplateIndex)
+                        const templateIndex = permanentDefinition ? null : Number.isInteger(modPlayer.defaultTemplateIndex)
                             ? modPlayer.defaultTemplateIndex
                             : index;
-                        const isCareerPlayerEntry = templateIndex === careerTemplateIndex || (
+                        const isCareerPlayerEntry = permanentDefinition
+                            ? getPermanentPlayerDefinition(player) === permanentDefinition
+                            : templateIndex === careerTemplateIndex || (
                             Boolean(careerSourceName) && normalizeSourceName(sourceName) === careerSourceName
                         );
                         if (isCareerPlayerEntry) {
@@ -503,11 +532,13 @@ function initCareerChronicle() {
                             });
                             if (typeof applyModPlayerFavoriteDoubles === 'function') applyModPlayerFavoriteDoubles(player, modPlayer);
                             player.defaultTemplateIndex = templateIndex;
+                            if (typeof applyPermanentPlayerIdentity === 'function') applyPermanentPlayerIdentity(player);
                             return;
                         }
                         const indexedCandidate = pdcPlayers[index];
-                        const candidate = playersByTemplateIndex.get(templateIndex) || playersBySourceName.get(sourceName) || (
+                        const candidate = (!permanentDefinition && playersByTemplateIndex.get(templateIndex)) || playersBySourceName.get(sourceName) || (
                             indexedCandidate &&
+                            !(typeof getPermanentPlayerDefinition === 'function' && getPermanentPlayerDefinition(indexedCandidate)) &&
                             indexedCandidate.country === modPlayer.country &&
                             Number(indexedCandidate.ovr) === Number(modPlayer.ovr)
                                 ? indexedCandidate
@@ -523,6 +554,7 @@ function initCareerChronicle() {
                             if (!Number.isInteger(candidate.defaultTemplateIndex) && candidate === indexedCandidate) {
                                 candidate.defaultTemplateIndex = index;
                             }
+                            if (typeof applyPermanentPlayerIdentity === 'function') applyPermanentPlayerIdentity(candidate);
                         } else {
                             const newCandidate = {
                                 ...modPlayer,
@@ -532,9 +564,11 @@ function initCareerChronicle() {
                             };
                             if (typeof applyModPlayerFavoriteDoubles === 'function') applyModPlayerFavoriteDoubles(newCandidate, modPlayer);
                             if (typeof applyKnownPlayerCorrections === 'function') applyKnownPlayerCorrections([newCandidate]);
+                            if (typeof applyPermanentPlayerIdentity === 'function') applyPermanentPlayerIdentity(newCandidate, { preserveProgress: false });
                             pdcPlayers.push(newCandidate);
                         }
                     });
+                    if (typeof ensurePermanentPlayersInRoster === 'function') ensurePermanentPlayersInRoster(pdcPlayers, { careerPlayer: player });
                     if (typeof removeObsoleteDuplicatePlayers === 'function') removeObsoleteDuplicatePlayers(pdcPlayers);
                     // Mod nie może wskrzesić zawodnika usuniętego przez system
                     // emerytur — nawet gdy jego prawdziwe nazwisko różni się od
@@ -587,11 +621,11 @@ function initCareerChronicle() {
             }
 
             if (modData.regularSponsorsDB) applyRegularSponsorMod(modData.regularSponsorsDB);
-            if (modData.techSponsorsDB) {
-                techSponsorsDB.length = 0;
-                modData.techSponsorsDB.forEach(sponsor => techSponsorsDB.push(sponsor));
-            }
+            if (modData.techSponsorsDB) applyTechnicalSponsorMod(modData.techSponsorsDB);
             if (modData.sponsorTiers) copyModObjectValues(sponsorTiers, modData.sponsorTiers);
+            if (typeof MOD_PROTECTED_TECH_SPONSOR_TIERS !== 'undefined') {
+                copyModObjectValues(sponsorTiers, MOD_PROTECTED_TECH_SPONSOR_TIERS);
+            }
             if (modData.shopDatabase) {
                 ['board', 'surround', 'light'].forEach(category => {
                     if (Array.isArray(modData.shopDatabase[category])) shopDatabase[category] = modData.shopDatabase[category];
@@ -746,6 +780,9 @@ function initCareerChronicle() {
                 throw new Error('Zmiana moda jest niedostępna podczas symulacji turnieju.');
             }
             const isCareerActive = options.isCareerActive ?? Boolean(player && player.name);
+            if (isCareerActive && typeof checkpointCareerSlotBeforeImport === 'function' && !await checkpointCareerSlotBeforeImport()) {
+                disposeModMediaAssets(loadedAssets); return { canceled: true };
+            }
             const previousAssets = moddedAssets;
             try {
                 // Profil ma własne adresy: wymiana moda nie unieważni jego plików.
@@ -852,6 +889,7 @@ function initCareerChronicle() {
 
             try {
                 const result = await activateModPackage(file, { persist: true });
+                if (result.canceled) return;
                 alert(result.isCareerActive ? t('t-alert-mod-career') : t('t-alert-mod-new'));
                 if (!result.persisted) alert(t('t-alert-mod-persist-err'));
             } catch (error) {

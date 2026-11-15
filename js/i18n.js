@@ -391,6 +391,7 @@ const translations = {
         "t-alert-exhausted": "Potrzebujesz co najmniej 20 energii na trening. Zregeneruj siły, przesuwając dni w kalendarzu.",
         "t-alert-lvl-sc": "🎯 Znakomicie! Twój Scoring wzrósł o +1 punkt!",
         "t-alert-lvl-db": "🎯 Perfekcyjnie! Twoja Skuteczność na Podwójnych wzrosła o +1 punkt!",
+        "t-alert-injury-walkover": "Rywal jest kontuzjowany. Awansujesz walkowerem bez rozgrywania meczu.",
         "t-alert-bye": "Otrzymujesz wolny los (BYE) jako zawodnik rozstawiony! Awansujesz do kolejnej fazy bez gry.",
         "t-alert-save-ok": "Gra została pomyślnie zapisana!",
         "t-alert-load-ok": "Gra została pomyślnie wczytana!",
@@ -882,6 +883,7 @@ const translations = {
         "t-alert-exhausted": "You need at least 20 stamina to train. Regenerate by advancing days in the calendar.",
         "t-alert-lvl-sc": "🎯 Excellent! Your Scoring increased by +1 point!",
         "t-alert-lvl-db": "🎯 Perfect! Your Doubles accuracy increased by +1 point!",
+        "t-alert-injury-walkover": "Your opponent is injured. You advance by walkover without playing a match.",
         "t-alert-bye": "You receive a BYE as a seeded player! You advance to the next round without playing.",
         "t-alert-save-ok": "Game saved successfully!",
         "t-alert-load-ok": "Game loaded successfully!",
@@ -1350,6 +1352,7 @@ const translations = {
         "t-alert-exhausted": "Du brauchst mindestens 20 Ausdauer für das Training. Regeneriere sie, indem du im Kalender Tage vorrückst.",
         "t-alert-lvl-sc": "🎯 Ausgezeichnet! Dein Scoring stieg um +1 Punkt!",
         "t-alert-lvl-db": "🎯 Perfekt! Deine Doubles-Genauigkeit stieg um +1 Punkt!",
+        "t-alert-injury-walkover": "Dein Gegner ist verletzt. Du kommst kampflos weiter, ohne ein Spiel zu bestreiten.",
         "t-alert-bye": "Du erhältst ein Freilos (BYE) als gesetzter Spieler! Du rückst ohne Spiel in die nächste Runde vor.",
         "t-alert-save-ok": "Spiel erfolgreich gespeichert!",
         "t-alert-load-ok": "Spiel erfolgreich geladen!",
@@ -1864,6 +1867,7 @@ const translations = {
         "t-alert-exhausted": "Je hebt minstens 20 stamina nodig om te trainen. Herstel door dagen in de kalender vooruit te gaan.",
         "t-alert-lvl-sc": "🎯 Uitstekend! Je Scoring is met +1 punt gestegen!",
         "t-alert-lvl-db": "🎯 Perfect! Je Doubles-nauwkeurigheid is met +1 punt gestegen!",
+        "t-alert-injury-walkover": "Je tegenstander is geblesseerd. Je gaat via een walk-over door zonder een wedstrijd te spelen.",
         "t-alert-bye": "Je ontvangt een BYE als geplaatste speler! Je gaat door naar de volgende ronde zonder te spelen.",
         "t-alert-save-ok": "Spel succesvol opgeslagen!",
         "t-alert-load-ok": "Spel succesvol geladen!",
@@ -2185,6 +2189,7 @@ const translations = {
             currentLang = lang;
             const dict = translations[lang];
             if (!dict) return;
+            if (typeof dartsPrivacy !== 'undefined') dartsPrivacy.refresh();
             if (typeof refreshPublicIntroTranslations === 'function') refreshPublicIntroTranslations();
 
             for (const key in dict) {
@@ -2212,6 +2217,14 @@ const translations = {
             if(typeof refreshWorldCupTranslations === 'function') refreshWorldCupTranslations();
             if(typeof refreshWorldMastersTranslations === 'function') refreshWorldMastersTranslations();
             if(typeof refreshCareerPlanningTranslations === 'function') refreshCareerPlanningTranslations();
+            if(typeof refreshModDiagnosticsTranslations === 'function') refreshModDiagnosticsTranslations();
+            if(typeof refreshMatchVenueTranslations === 'function') refreshMatchVenueTranslations();
+            if(typeof refreshUKOpenDrawTranslations === 'function') refreshUKOpenDrawTranslations();
+            if(typeof refreshCareerCardTranslations === 'function') refreshCareerCardTranslations();
+            if(typeof refreshCareerTravelTranslations === 'function') refreshCareerTravelTranslations();
+            if(typeof refreshLocalDartsTranslations === 'function') refreshLocalDartsTranslations();
+            if(typeof refreshPracticeTranslations === 'function') refreshPracticeTranslations();
+            if(typeof refreshCareerSlotsTranslations === 'function') refreshCareerSlotsTranslations();
             if(typeof refreshWorldNewsTranslations === 'function') refreshWorldNewsTranslations();
             if(typeof refreshSeasonArchiveTranslations === 'function') refreshSeasonArchiveTranslations();
             if(typeof refreshPlayerStaffTranslations === 'function') refreshPlayerStaffTranslations();

@@ -115,6 +115,7 @@
             row.setAttribute('aria-label', `${name || '—'}: ${match[`${side}Score`]}${startsLeg ? ` · ${labels.starter}` : ''}${throwing ? ` · ${labels.turn}` : ''}${nine ? ` · ${labels.nine}` : ''}`);
         }
         panel.classList.toggle('has-nine', anyNine);
+        window.matchVenue?.scoreChanged?.();
     }
     window.refreshMatchBroadcastScoreboard = refresh;
     refresh();

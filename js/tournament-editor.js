@@ -371,6 +371,7 @@ function populateTournamentEditorForm(tournament) {
     tournamentEditorElement('te-field-size').value = String(tournament.editorFieldSize || 32);
     tournamentEditorElement('te-field-size').disabled = tournament.isEditorTournament !== true;
     tournamentEditorElement('te-game-format').value = ['DIDO','masterOut'].includes(tournament.format) ? tournament.format : 'standard';
+    if(tournamentEditorElement('te-match-venue'))tournamentEditorElement('te-match-venue').value=['tv','floor'].includes(tournament.matchVenue)?tournament.matchVenue:'auto';
     tournamentEditorElement('te-match-mode').value = tournament.editorMatchFormat?.type || 'auto';
     if (typeof renderTournamentEditorRoundFormats === 'function') renderTournamentEditorRoundFormats(tournament);
     if (typeof refreshCareerEditorEventCards === 'function') refreshCareerEditorEventCards();
@@ -579,7 +580,7 @@ function getTournamentEditorFormData() {
     try { editorCities = normalizeTournamentEditorCities(tournamentEditorElement('te-cities')?.value || ''); }
     catch (_) { throw new Error(trTournamentEditor('invalidCities')); }
     const values = { name, month: start.month, day: start.day, endMonth: end.month, endDay: end.day,
-        city, country, minOvr, format: ['DIDO','masterOut'].includes(tournamentEditorValue('te-game-format')) ? tournamentEditorValue('te-game-format') : 'legs',
+        city, country, minOvr, matchVenue:['tv','floor'].includes(tournamentEditorValue('te-match-venue'))?tournamentEditorValue('te-match-venue'):null, format: ['DIDO','masterOut'].includes(tournamentEditorValue('te-game-format')) ? tournamentEditorValue('te-game-format') : 'legs',
         ...(editorCities.length ? { editorCities } : {}),
         editorGender: gender === 'all' ? null : gender,
         editorFieldSize, editorMatchFormat, editorRequiredCardId, rankingOverride: tournamentEditorElement('te-ranking').checked, editorPrizes,

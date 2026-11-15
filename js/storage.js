@@ -1,5 +1,7 @@
 const CAREER_INDEXED_DB_NAME = 'dartsCareerStorage';
-const CAREER_INDEXED_DB_VERSION = 4;
+const CAREER_INDEXED_DB_VERSION = 5;
+const CAREER_INDEXED_DB_SLOT_STORE = 'careerSlots';
+const CAREER_INDEXED_DB_SLOT_META_STORE = 'careerSlotIndex';
 const CAREER_INDEXED_DB_STORE = 'careerSaves';
 const CAREER_INDEXED_DB_MEDIA_STORE = 'profileMedia';
 const CAREER_INDEXED_DB_MOD_STORE = 'modPackages';
@@ -85,6 +87,9 @@ function openCareerSaveDatabase() {
             }
             if (!database.objectStoreNames.contains(CAREER_INDEXED_DB_MOD_STORE)) {
                 database.createObjectStore(CAREER_INDEXED_DB_MOD_STORE, { keyPath: 'id' });
+            }
+            for (const name of [CAREER_INDEXED_DB_SLOT_STORE, CAREER_INDEXED_DB_SLOT_META_STORE]) {
+                if (!database.objectStoreNames.contains(name)) database.createObjectStore(name, { keyPath: 'id' });
             }
         };
         request.onsuccess = () => {
@@ -254,6 +259,8 @@ async function createPortableCareerGameState(gameState) {
 function applyCareerProfileMediaToPlayer(media = {}) {
     if (typeof player === 'undefined' || !player) return;
     Object.keys(CAREER_PROFILE_MEDIA_KEYS).forEach(kind => {
+        const permanentPhoto = kind === 'photo' && typeof getPermanentPlayerPhoto === 'function' ? getPermanentPlayerPhoto(player) : '';
+        if (permanentPhoto) { player.photo = permanentPhoto; return; }
         const blob = media[kind];
         if (!isCareerProfileMediaBlob(blob)) return;
         player[kind] = applyCareerProfileMediaBlob(kind, blob);
@@ -264,7 +271,8 @@ function applyCareerProfileMediaToPlayer(media = {}) {
     }
 }
 
-async function writeCareerStateToIndexedDb(gameState, media = undefined) {
+async function writeCareerStateToIndexedDb(gameState, media = undefined, options = {}) {
+    if (typeof writeManagedCareerState === 'function') return writeManagedCareerState(gameState, media, options);
     const database = await openCareerSaveDatabase();
     let transaction;
     return withCareerStorageDeadline(new Promise((resolve, reject) => {
@@ -325,6 +333,7 @@ async function writeCareerStateToIndexedDb(gameState, media = undefined) {
 }
 
 async function readCareerStateFromIndexedDb() {
+    if (typeof ensureCareerSlotMigration === 'function') await ensureCareerSlotMigration();
     const database = await openCareerSaveDatabase();
     return new Promise((resolve, reject) => {
         const transaction = database.transaction(CAREER_INDEXED_DB_STORE, 'readonly');
@@ -332,7 +341,9 @@ async function readCareerStateFromIndexedDb() {
         request.onsuccess = () => {
             careerIndexedDbLastReadTimestamp = Number(request.result?.savedAt) || 0;
             rememberCareerStorageTimestamp(careerIndexedDbLastReadTimestamp);
-            resolve(request.result?.state || null);
+            if (request.result?.slotId && typeof readManagedCareerState === 'function') {
+                readManagedCareerState(request.result.slotId).then(resolve, reject);
+            } else resolve(request.result?.state || null);
         };
         request.onerror = () => reject(request.error || transaction.error || new Error('Odczyt IndexedDB nie powiódł się.'));
     });
@@ -340,6 +351,7 @@ async function readCareerStateFromIndexedDb() {
 
 async function readCareerProfileMediaFromIndexedDb(mediaRefs) {
     if (!mediaRefs || typeof mediaRefs !== 'object') return {};
+    if (mediaRefs.slotId && typeof readManagedCareerMedia === 'function') return readManagedCareerMedia(mediaRefs.slotId);
     const allowedRefs = Object.fromEntries(Object.entries(CAREER_PROFILE_MEDIA_KEYS).map(([kind, key]) => [key, kind]));
     const requestedEntries = Object.entries(mediaRefs)
         .filter(([, key]) => allowedRefs[key]);

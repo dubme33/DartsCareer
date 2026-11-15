@@ -90,6 +90,7 @@ function releaseMatchWalkonAudio(audio) {
 }
 
 function cancelMatchIntro() {
+    if (window.matchCallerCard) window.matchCallerCard.hide();
     // Każda prezentacja ma własny numer: spóźniony odczyt ZIP-a nie uruchomi audio.
     matchIntroGeneration++;
     matchIntroCurrentEntrance = null;
@@ -192,6 +193,7 @@ function startCrowd() {
         }
 
         function startMatchWithoutWalkons() {
+            if (window.matchCallerCard) window.matchCallerCard.show(currentMatch);
             const skipBtn = document.getElementById('t-btn-skip-walkon');
             if (skipBtn) skipBtn.style.display = 'none';
             if (typeof hideCareerEntranceVisual === 'function') hideCareerEntranceVisual();
@@ -423,6 +425,7 @@ function startCrowd() {
             const isCurrent = () => generation === matchIntroGeneration && currentMatch === introMatch;
             if (typeof hideCareerEntranceVisual === 'function') hideCareerEntranceVisual();
             startCrowd();
+            if (window.matchCallerCard) window.matchCallerCard.show(introMatch);
             
             // POPRAWKA: Zmienione ID przycisku na takie ze słownika
             let skipBtn = document.getElementById('t-btn-skip-walkon');

@@ -1,0 +1,19 @@
+.flight-template-tools { display:flex;flex-wrap:wrap;gap:8px;align-items:center;flex-basis:100%;margin-top:8px; }
+.flight-template-tools small { flex-basis:100%;color:#b7cbda;font-size:12px;line-height:1.6; }
+.flight-template-tools button { border:1px solid #579d9a;border-radius:6px;background:#173f51;color:#eefbff;padding:8px 12px;min-height:38px;cursor:pointer;font:inherit; }
+.flight-artwork-dialog { box-sizing:border-box;width:min(780px,94vw);max-height:92vh;overflow:auto;border:1px solid #59808c;border-radius:14px;background:#10243b;color:#eff8ff;padding:22px; }
+.flight-artwork-dialog::backdrop { background:#020e20cc; }
+.flight-artwork-dialog h3 { margin:0 0 10px; }
+.flight-artwork-dialog p { color:#bbd0de;font-size:13px;line-height:1.6; }
+.flight-artwork-layout { display:grid;grid-template-columns:minmax(0,1fr) minmax(160px,.8fr);gap:20px; }
+.flight-artwork-layout canvas { display:block;width:100%;height:auto;border:1px solid #436678;border-radius:9px; }
+.flight-artwork-controls { display:grid;align-content:start;gap:15px;min-width:0; }
+.flight-artwork-controls label { display:grid;gap:7px;font-size:13px; }
+.flight-artwork-controls input[type=range],.flight-artwork-controls select { width:100%;min-width:0;box-sizing:border-box; }
+.flight-artwork-controls select { min-height:40px;background:#193e53;color:#fff;border:1px solid #50798c;border-radius:6px; }
+.flight-artwork-controls .flight-artwork-guide { display:flex;align-items:center;gap:8px; }
+.flight-artwork-dialog button { min-height:40px;padding:8px 13px;border:1px solid #567d8e;border-radius:6px;background:#24455c;color:#f2fbff;cursor:pointer; }
+.flight-artwork-footer { display:flex;justify-content:flex-end;gap:10px;margin-top:18px; }
+.flight-artwork-footer [data-art-apply] { background:#246d59;border-color:#55aa8d;font-weight:700; }
+@media(max-width:560px) { .flight-artwork-dialog { padding:15px; }.flight-artwork-layout { grid-template-columns:1fr;gap:14px; }.flight-artwork-layout canvas { max-width:260px;margin:auto; }.flight-artwork-controls { gap:11px; }.flight-artwork-footer button { flex:1; } }
+#ai-dart-template-tools { flex-basis:100%;min-width:0; }

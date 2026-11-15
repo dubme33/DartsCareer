@@ -1,4 +1,4 @@
-// Share only AI opponents' visual dart setups. Match results and player attributes stay local.
+// Share visual dart setups; matched entries may also update the career player's kit.
 const AI_DART_PACK_FORMAT = 'darts-career-ai-darts-pack';
 const AI_DART_PACK_VERSION = 1;
 const AI_DART_PACK_MAX_BYTES = 64 * 1024 * 1024;
@@ -6,7 +6,7 @@ const AI_DART_PACK_MAX_PLAYERS = 5000;
 const AI_DART_PACK_TEXT = {
     pl: { title: 'Baza lotek AI', intro: 'Wyeksportuj wygląd lotek zawodników AI do pliku JSON lub wczytaj zestawy od innego gracza.',
         export: 'Eksportuj lotki', import: 'Wczytaj lotki', preview: 'Podgląd importu',
-        hint: 'Wybierz lotki do zastąpienia. Oceny, wyniki i finanse zawodników pozostaną bez zmian.',
+        hint: 'Wybierz lotki do zastąpienia. Dopasowany wpis obejmuje także Twoją postać kariery. Oceny, wyniki i finanse zawodników pozostaną bez zmian.',
         cancel: 'Anuluj', apply: 'Zastosuj wybrane lotki', replace: 'Zastąp lotki', skip: 'Pomiń',
         summary: 'Do zastąpienia: {replace} · bez zmian: {same} · brak dopasowania: {missing} · pominięte: {skip}',
         exported: 'Wyeksportowano lotki {count} zawodników.', imported: 'Zmieniono lotki {count} zawodników.',
@@ -17,7 +17,7 @@ const AI_DART_PACK_TEXT = {
         ambiguous: 'Nie można jednoznacznie dopasować zawodnika', same: 'Taki sam wygląd lotek' },
     en: { title: 'AI darts database', intro: 'Export AI players’ dart appearances to JSON or load setups shared by another player.',
         export: 'Export darts', import: 'Load darts', preview: 'Import preview',
-        hint: 'Choose which dart setups to replace. Players’ ratings, results and finances stay unchanged.',
+        hint: 'Choose which dart setups to replace. A matching entry also applies to your career player. Players’ ratings, results and finances stay unchanged.',
         cancel: 'Cancel', apply: 'Apply selected darts', replace: 'Replace darts', skip: 'Skip',
         summary: 'Replace: {replace} · unchanged: {same} · unmatched: {missing} · skipped: {skip}',
         exported: 'Exported darts for {count} players.', imported: 'Changed darts for {count} players.',
@@ -28,7 +28,7 @@ const AI_DART_PACK_TEXT = {
         ambiguous: 'Cannot match player unambiguously', same: 'Same dart appearance' },
     de: { title: 'KI-Darts-Datenbank', intro: 'Dart-Designs der KI-Spieler als JSON exportieren oder geteilte Designs laden.',
         export: 'Darts exportieren', import: 'Darts laden', preview: 'Importvorschau',
-        hint: 'Wähle die zu ersetzenden Darts. Werte, Ergebnisse und Finanzen bleiben unverändert.',
+        hint: 'Wähle die zu ersetzenden Darts. Ein passender Eintrag gilt auch für deinen Karrierespieler. Werte, Ergebnisse und Finanzen bleiben unverändert.',
         cancel: 'Abbrechen', apply: 'Ausgewählte Darts übernehmen', replace: 'Darts ersetzen', skip: 'Überspringen',
         summary: 'Ersetzen: {replace} · unverändert: {same} · nicht gefunden: {missing} · übersprungen: {skip}',
         exported: 'Darts für {count} Spieler exportiert.', imported: 'Darts für {count} Spieler geändert.',
@@ -39,7 +39,7 @@ const AI_DART_PACK_TEXT = {
         ambiguous: 'Spieler kann nicht eindeutig zugeordnet werden', same: 'Gleiches Dart-Design' },
     nl: { title: 'AI-dartsdatabase', intro: 'Exporteer het uiterlijk van AI-darts als JSON of laad gedeelde ontwerpen.',
         export: 'Darts exporteren', import: 'Darts laden', preview: 'Importvoorbeeld',
-        hint: 'Kies welke darts worden vervangen. Scores, resultaten en financiën blijven behouden.',
+        hint: 'Kies welke darts worden vervangen. Een passende vermelding geldt ook voor je carrièrespeler. Scores, resultaten en financiën blijven behouden.',
         cancel: 'Annuleren', apply: 'Gekozen darts toepassen', replace: 'Darts vervangen', skip: 'Overslaan',
         summary: 'Vervangen: {replace} · ongewijzigd: {same} · niet gevonden: {missing} · overgeslagen: {skip}',
         exported: 'Darts voor {count} spelers geëxporteerd.', imported: 'Darts voor {count} spelers gewijzigd.',
@@ -111,15 +111,23 @@ function createAiDartPack() {
             .map(createAiDartPackEntry) });
 }
 function planAiDartPackImport(pack, choices = {}, database = pdcPlayers) {
-    const lookup = createPlayerPackLookup(database);
+    // A selected database player lives outside the AI pool during their career.
+    // Include the actual career object so a matching visual entry can reach it.
+    const candidates = database.filter(candidate => candidate !== player
+        && (!player?.id || candidate?.id !== player.id));
+    if (player?.name) candidates.push(player);
+    const lookup = createPlayerPackLookup(candidates);
     return pack.darts.map(entry => {
         const match = entry.kind === 'newgen'
-            ? { target: database.find(candidate => candidate?.isNewgen && candidate.id === entry.id) || null }
-            : findPlayerPackTarget(entry, database, lookup);
+            ? { target: candidates.find(candidate => candidate?.isNewgen && candidate.id === entry.id) || null }
+            : findPlayerPackTarget(entry, candidates, lookup);
         const target = match.target || null;
-        const reason = match.reason || (isPlayerPackCareer(entry, target) ? 'career'
-            : !target || isPlayerEditorDeleted(target) ? 'missing' : null);
-        const same = !reason && JSON.stringify(getAiDartAppearanceForPlayer(target)) === JSON.stringify(entry.appearance)
+        const reason = match.reason || (!target || isPlayerEditorDeleted(target) ? 'missing'
+            : target === player && typeof applyCareerDartAppearance !== 'function' ? 'career' : null);
+        const currentAppearance = !reason && target === player
+            ? normalizeAiDartAppearance(getDartLoadoutForPlayer(target))
+            : !reason ? getAiDartAppearanceForPlayer(target) : null;
+        const same = !reason && JSON.stringify(currentAppearance) === JSON.stringify(entry.appearance)
             && (!Object.prototype.hasOwnProperty.call(entry, 'dartEntryAngle')
                 || (target.dartEntryAngle ?? null) === entry.dartEntryAngle);
         const action = reason || same ? 'skip' : choices[entry.key] === 'skip' ? 'skip' : 'replace';
@@ -216,7 +224,8 @@ function renderAiDartPackPreview() {
         const description = document.createElement('div');
         const title = document.createElement('strong'); title.textContent = row.entry.name;
         const detail = document.createElement('small');
-        detail.textContent = row.reason ? trAiDartPack(row.reason) : row.entry.country;
+        detail.textContent = row.reason ? trAiDartPack(row.reason)
+            : row.target === player ? trAiDartPack('career') : row.entry.country;
         description.append(title, detail);
         const select = document.createElement('select'); select.setAttribute('aria-label', row.entry.name);
         for (const action of row.available) {
@@ -237,11 +246,12 @@ async function applyStagedAiDartPack() {
     const selected = rows.filter(row => row.action === 'replace' && row.target && !row.reason && !row.same);
     if (!selected.length) { setAiDartPackStatus(trAiDartPack('noChanges'), true); return false; }
     for (const row of selected) {
-        row.target.aiDartAppearance = normalizeAiDartAppearance(row.entry.appearance);
         if (Object.prototype.hasOwnProperty.call(row.entry, 'dartEntryAngle')) {
             if (row.entry.dartEntryAngle === null) delete row.target.dartEntryAngle;
             else row.target.dartEntryAngle = row.entry.dartEntryAngle;
         }
+        if (row.target === player) applyCareerDartAppearance(row.target, row.entry.appearance);
+        else row.target.aiDartAppearance = normalizeAiDartAppearance(row.entry.appearance);
     }
     cancelAiDartPackImport();
     const current = typeof playerEditorCreating !== 'undefined' && !playerEditorCreating

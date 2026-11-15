@@ -3,6 +3,7 @@
 
     const text = {
         pl: {
+            diameterLabel: 'Średnica barrela', resetDiameter: 'Domyślna dla kształtu',
             title: 'Personalizacja lotek', subtitle: 'Zbuduj własny zestaw. Wygląd nie zmienia celności ani statystyk.',
             preview: 'Aktualny zestaw', owned: 'Załóż', selected: 'Wybrane', buy: 'Kup',
             noFunds: 'Nie masz wystarczająco dużo pieniędzy.',
@@ -19,13 +20,14 @@
             trying: 'Przymierzasz: {item}', reset: 'Wróć do zestawu', rotate: 'Przeciągnij, aby obrócić · strzałki na klawiaturze',
             resetView: 'Reset widoku', fallback: 'Podgląd 2D', measurements: 'Grot {tip} mm · barrel {barrel} mm · shaft {shaft} mm · {weight} g',
             weightLabel: 'Waga lotki', lengthLabel: 'Długość barrela', gripZonesTitle: 'Grip w poszczególnych strefach',
-            gripZonesHint: 'Na liście są wszystkie gripy. Niekupione mają podaną cenę i można je kupić przy wyborze. Przód jest przy grocie, tył przy shafcie.',
+            gripZonesHint: 'Dziewięć mniejszych sekcji. Na liście są wszystkie gripy. Niekupione mają podaną cenę i można je kupić przy wyborze. Przód jest przy grocie, tył przy shafcie.',
             gripFront: 'Przód', gripMiddle: 'Środek', gripRear: 'Tył',
             artworkTitle: 'Własna grafika piórka', artworkHint: 'PNG, JPG lub WebP (do 5 MB). Grafika zastępuje nadruk na piórkach i działa także z systemami zintegrowanymi.',
             artworkAdd: 'Wybierz grafikę', artworkChange: 'Zmień grafikę', artworkRemove: 'Usuń grafikę',
             artworkInvalid: 'Nie udało się wczytać obrazu. Wybierz plik PNG, JPG lub WebP do 5 MB.'
         },
         en: {
+            diameterLabel: 'Barrel diameter', resetDiameter: 'Shape default',
             title: 'Dart customisation', subtitle: 'Build your own set. Its appearance does not change accuracy or attributes.',
             preview: 'Current set', owned: 'Equip', selected: 'Selected', buy: 'Buy',
             noFunds: 'You do not have enough money.', confirm: 'Buy “{item}” for £{price}?',
@@ -41,13 +43,14 @@
             trying: 'Trying on: {item}', reset: 'Back to equipped set', rotate: 'Drag to rotate · keyboard arrows',
             resetView: 'Reset view', fallback: '2D preview', measurements: 'Point {tip} mm · barrel {barrel} mm · shaft {shaft} mm · {weight} g',
             weightLabel: 'Dart weight', lengthLabel: 'Barrel length', gripZonesTitle: 'Grip by barrel section',
-            gripZonesHint: 'All grips are listed. Unowned grips show their price and can be bought when selected. Front is near the point; rear is near the shaft.',
+            gripZonesHint: 'Nine smaller sections. All grips are listed. Unowned grips show their price and can be bought when selected. Front is near the point; rear is near the shaft.',
             gripFront: 'Front', gripMiddle: 'Middle', gripRear: 'Rear',
             artworkTitle: 'Custom flight artwork', artworkHint: 'PNG, JPG or WebP (up to 5 MB). The image replaces the flight print and works with integrated systems too.',
             artworkAdd: 'Choose an image', artworkChange: 'Change image', artworkRemove: 'Remove image',
             artworkInvalid: 'Could not load the image. Choose a PNG, JPG or WebP file up to 5 MB.'
         },
         de: {
+            diameterLabel: 'Barrel-Durchmesser', resetDiameter: 'Standard der Form',
             title: 'Dart-Anpassung', subtitle: 'Stelle dein eigenes Set zusammen. Das Aussehen ändert weder Präzision noch Werte.',
             preview: 'Aktuelles Set', owned: 'Ausrüsten', selected: 'Ausgewählt', buy: 'Kaufen',
             noFunds: 'Du hast nicht genug Geld.', confirm: '„{item}“ für £{price} kaufen?',
@@ -63,13 +66,14 @@
             trying: 'Vorschau: {item}', reset: 'Zum aktuellen Set', rotate: 'Ziehen zum Drehen · Pfeiltasten',
             resetView: 'Ansicht zurücksetzen', fallback: '2D-Vorschau', measurements: 'Spitze {tip} mm · Barrel {barrel} mm · Schaft {shaft} mm · {weight} g',
             weightLabel: 'Dartgewicht', lengthLabel: 'Barrel-Länge', gripZonesTitle: 'Grip nach Barrel-Bereich',
-            gripZonesHint: 'Alle Grips stehen zur Wahl. Noch nicht gekaufte Grips zeigen ihren Preis und können direkt gekauft werden. Vorn liegt an der Spitze, hinten am Schaft.',
+            gripZonesHint: 'Neun kleinere Abschnitte. Alle Grips stehen zur Wahl. Noch nicht gekaufte Grips zeigen ihren Preis und können direkt gekauft werden. Vorn liegt an der Spitze, hinten am Schaft.',
             gripFront: 'Vorn', gripMiddle: 'Mitte', gripRear: 'Hinten',
             artworkTitle: 'Eigenes Flight-Motiv', artworkHint: 'PNG, JPG oder WebP (bis 5 MB). Das Bild ersetzt den Flight-Druck und funktioniert auch mit integrierten Systemen.',
             artworkAdd: 'Bild auswählen', artworkChange: 'Bild ändern', artworkRemove: 'Bild entfernen',
             artworkInvalid: 'Bild konnte nicht geladen werden. Wähle eine PNG-, JPG- oder WebP-Datei bis 5 MB.'
         },
         nl: {
+            diameterLabel: 'Barreldiameter', resetDiameter: 'Standaard van de vorm',
             title: 'Darts personaliseren', subtitle: 'Stel je eigen set samen. Het uiterlijk verandert de nauwkeurigheid of eigenschappen niet.',
             preview: 'Huidige set', owned: 'Gebruiken', selected: 'Geselecteerd', buy: 'Kopen',
             noFunds: 'Je hebt niet genoeg geld.', confirm: '„{item}” kopen voor £{price}?',
@@ -85,7 +89,7 @@
             trying: 'Voorbeeld: {item}', reset: 'Terug naar huidige set', rotate: 'Sleep om te draaien · pijltjestoetsen',
             resetView: 'Weergave herstellen', fallback: '2D-voorbeeld', measurements: 'Punt {tip} mm · barrel {barrel} mm · shaft {shaft} mm · {weight} g',
             weightLabel: 'Dartgewicht', lengthLabel: 'Barrellengte', gripZonesTitle: 'Grip per barrelgedeelte',
-            gripZonesHint: 'Alle grips staan in de lijst. Bij niet-gekochte grips staat de prijs; je kunt ze direct kopen. Voor zit bij de punt, achter bij de shaft.',
+            gripZonesHint: 'Negen kleinere delen. Alle grips staan in de lijst. Bij niet-gekochte grips staat de prijs; je kunt ze direct kopen. Voor zit bij de punt, achter bij de shaft.',
             gripFront: 'Voor', gripMiddle: 'Midden', gripRear: 'Achter',
             artworkTitle: 'Eigen flightafbeelding', artworkHint: 'PNG, JPG of WebP (maximaal 5 MB). De afbeelding vervangt de opdruk en werkt ook met geïntegreerde systemen.',
             artworkAdd: 'Afbeelding kiezen', artworkChange: 'Afbeelding wijzigen', artworkRemove: 'Afbeelding verwijderen',
@@ -268,7 +272,14 @@
         tipStyle: Object.freeze([
             item('smooth', 0, null, ['Gładki', 'Smooth', 'Glatt', 'Glad']),
             item('ringed', 220, null, ['Ring grip', 'Ring grip', 'Ring-Grip', 'Ringgrip']),
-            item('etched', 280, null, ['Micro grip', 'Micro grip', 'Micro-Grip', 'Microgrip'])
+            item('etched', 280, null, ['Micro grip', 'Micro grip', 'Micro-Grip', 'Microgrip']),
+            item('ringed-front', 240, null, ['Ringi z przodu', 'Front ring grip', 'Ring-Grip vorne', 'Ringgrip vooraan']),
+            item('ringed-rear', 260, null, ['Ringi przy barrelu', 'Rear ring grip', 'Ring-Grip am Barrel', 'Ringgrip bij de barrel']),
+            item('spiral', 360, null, ['Spiralny', 'Spiral grip', 'Spiral-Grip', 'Spiraalgrip']),
+            item('diamond', 380, null, ['Diamentowy', 'Diamond grip', 'Diamant-Grip', 'Diamantgrip']),
+            item('fluted', 340, null, ['Podłużne nacięcia', 'Fluted', 'Längsrillen', 'Lengtegroeven']),
+            item('dual-grip', 420, null, ['Podwójny grip', 'Dual grip', 'Doppel-Grip', 'Dubbele grip']),
+            item('tapered', 300, null, ['Wydłużone przejście', 'Extended taper', 'Langer Übergang', 'Verlengde overgang'])
         ]),
         shaftLength: Object.freeze([
             item('35', 0, null, ['35 mm — intermediate', '35 mm — intermediate', '35 mm — intermediate', '35 mm — intermediate']),
@@ -312,6 +323,164 @@
     let activePart = 'barrel';
     let previewSelection = null;
 
+    const kitSlotText = {
+        pl: { title: 'Twoje zestawy', hint: '3 wolne sloty na własne zestawy. Zapisujesz założone elementy, wraz z gripem, wymiarami, kolorami i grafiką piórek. Przymierzane elementy nie są zapisywane.',
+            slot: 'Slot {number}', empty: 'Pusty slot', name: 'Własna nazwa (opcjonalnie)', save: 'Zapisz zestaw', load: 'Wczytaj', rename: 'Zmień nazwę', clear: 'Wyczyść',
+            saved: 'Ostatni zapis: {date}', overwrite: 'Zastąpić zestaw w slocie „{name}” aktualnie założonymi lotkami?', remove: 'Wyczyścić slot „{name}”? Założone lotki pozostaną bez zmian.',
+            done: 'Zapisano zestaw w slocie {number}.', loaded: 'Wczytano zestaw ze slotu {number}.', renamed: 'Zmieniono nazwę slotu {number}.', cleared: 'Wyczyszczono slot {number}.',
+            unavailable: 'Nie można wczytać tego zestawu: brakuje zakupionych elementów lub zapis jest nieprawidłowy.', saveFailed: 'Zmiana pozostaje w bieżącej grze, ale zapis w przeglądarce się nie powiódł. Wyeksportuj karierę do JSON, aby ją zachować.' },
+        en: { title: 'Your dart sets', hint: '3 free slots for your own sets. Save equipped parts, including grip, dimensions, colours and flight artwork. Items being tried on are not saved.',
+            slot: 'Slot {number}', empty: 'Empty slot', name: 'Custom name (optional)', save: 'Save set', load: 'Load', rename: 'Rename', clear: 'Clear',
+            saved: 'Last saved: {date}', overwrite: 'Replace the set in “{name}” with your currently equipped darts?', remove: 'Clear “{name}”? Your equipped darts will stay unchanged.',
+            done: 'Set saved in slot {number}.', loaded: 'Set loaded from slot {number}.', renamed: 'Slot {number} renamed.', cleared: 'Slot {number} cleared.',
+            unavailable: 'This set cannot be loaded: purchased parts are missing or the saved set is invalid.', saveFailed: 'The change remains in your current game, but browser saving failed. Export your career to JSON to preserve it.' },
+        de: { title: 'Deine Dartsets', hint: '3 freie Plätze für eigene Sets. Gespeichert werden ausgerüstete Teile mit Grip, Maßen, Farben und Flight-Motiv. Vorschauartikel werden nicht gespeichert.',
+            slot: 'Platz {number}', empty: 'Leerer Platz', name: 'Eigener Name (optional)', save: 'Set speichern', load: 'Laden', rename: 'Umbenennen', clear: 'Leeren',
+            saved: 'Zuletzt gespeichert: {date}', overwrite: 'Das Set in „{name}“ durch deine aktuell ausgerüsteten Darts ersetzen?', remove: '„{name}“ leeren? Deine ausgerüsteten Darts bleiben unverändert.',
+            done: 'Set auf Platz {number} gespeichert.', loaded: 'Set von Platz {number} geladen.', renamed: 'Platz {number} umbenannt.', cleared: 'Platz {number} geleert.',
+            unavailable: 'Dieses Set kann nicht geladen werden: Gekaufte Teile fehlen oder das Set ist ungültig.', saveFailed: 'Die Änderung bleibt im aktuellen Spiel, konnte aber nicht im Browser gespeichert werden. Exportiere deine Karriere als JSON.' },
+        nl: { title: 'Jouw dartsets', hint: '3 vrije slots voor eigen sets. Bewaar gebruikte onderdelen met grip, afmetingen, kleuren en flightafbeelding. Onderdelen in de voorbeeldweergave worden niet opgeslagen.',
+            slot: 'Slot {number}', empty: 'Leeg slot', name: 'Eigen naam (optioneel)', save: 'Set opslaan', load: 'Laden', rename: 'Hernoemen', clear: 'Wissen',
+            saved: 'Laatst opgeslagen: {date}', overwrite: 'De set in “{name}” vervangen door je huidige darts?', remove: '“{name}” wissen? Je huidige darts blijven ongewijzigd.',
+            done: 'Set opgeslagen in slot {number}.', loaded: 'Set uit slot {number} geladen.', renamed: 'Slot {number} hernoemd.', cleared: 'Slot {number} gewist.',
+            unavailable: 'Deze set kan niet worden geladen: gekochte onderdelen ontbreken of de opslag is ongeldig.', saveFailed: 'De wijziging blijft in je huidige spel, maar opslaan in de browser is mislukt. Exporteer je carrière naar JSON om deze te bewaren.' }
+    };
+    let kitSlotNotice = null;
+    const validKitSlotIndex = index => Number.isInteger(index) && index >= 0 && index < 3;
+    const copyKitSelection = selected => ({ ...selected, gripZones: { ...selected.gripZones },
+        gripSections: [...selected.gripSections], gripRegions: selected.gripRegions?.map(region => ({ ...region })) ?? null });
+    function trKitSlot(key, values = {}) {
+        const lang = typeof currentLang === 'string' && kitSlotText[currentLang] ? currentLang : 'pl';
+        return kitSlotText[lang][key].replace(/\{(\w+)\}/g, (_, name) => String(values[name] ?? ''));
+    }
+    function normalizeDartKitConfiguration(raw) {
+        if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return null;
+        const selected = raw.selected;
+        if (!selected || typeof selected !== 'object' || Array.isArray(selected)
+            || categoryKeys.some(key => !catalogue[key].some(item => item.id === selected[key]))
+            || !Number.isInteger(selected.weightGrams) || selected.weightGrams < 12 || selected.weightGrams > 40
+            || !Number.isInteger(selected.barrelLength) || selected.barrelLength < 35 || selected.barrelLength > 55
+            || selected.barrelDiameter !== root.dartModel.normalizeBarrelDiameter(selected.barrelDiameter)
+            || !isDartOptionCompatible('shaftLength', selected.shaftLength, selected)) return null;
+        const validGrip = id => catalogue.barrelPattern.some(item => item.id === id);
+        if (!selected.gripZones || ['front', 'middle', 'rear'].some(zone => !validGrip(selected.gripZones[zone]))
+            || !Array.isArray(selected.gripSections) || selected.gripSections.length !== 9 || !selected.gripSections.every(validGrip)
+            || !root.dartModel.validGripRegions(selected.gripRegions, selected.barrelLength)) return null;
+        if (raw.flightArtwork !== null && !root.dartModel.validFlightArtwork(raw.flightArtwork)) return null;
+        if (raw.dartEntryAngle !== null && (!Number.isInteger(raw.dartEntryAngle) || raw.dartEntryAngle < -10 || raw.dartEntryAngle > 45)) return null;
+        const customColors = {};
+        for (const key of customColorFields) {
+            if (Object.hasOwn(raw.customColors || {}, key)) {
+                if (!validCustomColor(raw.customColors[key])) return null;
+                customColors[key] = raw.customColors[key].toLowerCase();
+            }
+        }
+        const clean = Object.fromEntries(categoryKeys.map(key => [key, selected[key]]));
+        Object.assign(clean, { weightGrams: selected.weightGrams, barrelLength: selected.barrelLength,
+            barrelDiameter: selected.barrelDiameter, gripZones: Object.fromEntries(['front', 'middle', 'rear'].map(zone => [zone, selected.gripZones[zone]])),
+            gripSections: [...selected.gripSections], gripRegions: root.dartModel.normalizeGripRegions(selected.gripRegions, selected.barrelLength) });
+        return { selected: clean, customColors, flightArtwork: raw.flightArtwork,
+            flightArtworkName: raw.flightArtwork ? String(raw.flightArtworkName || '').slice(0, 60) : '', dartEntryAngle: raw.dartEntryAngle };
+    }
+    function normalizeDartKitSlots(candidate) {
+        if (!candidate || typeof candidate !== 'object') return [null, null, null];
+        const previous = Array.isArray(candidate.dartKitSlots) ? candidate.dartKitSlots : [];
+        candidate.dartKitSlots = Array.from({ length: 3 }, (_, index) => {
+            const slot = previous[index];
+            const configuration = slot?.version === 1 ? normalizeDartKitConfiguration(slot.configuration) : null;
+            return configuration ? { version: 1, name: typeof slot.name === 'string' ? slot.name.trim().slice(0, 40) : '',
+                savedAt: Number.isFinite(slot.savedAt) && slot.savedAt > 0 && slot.savedAt <= 8640000000000000 ? slot.savedAt : 0, configuration } : null;
+        });
+        return candidate.dartKitSlots;
+    }
+    function kitSlotChangeAllowed(index) {
+        return validKitSlotIndex(index) && typeof player !== 'undefined' && !!player?.name
+            && !(typeof isCareerSlotOperationBusy === 'function' && isCareerSlotOperationBusy())
+            && !(typeof isTournamentSimulationBusy === 'function' && isTournamentSimulationBusy());
+    }
+    function kitSlotLabel(slot, index) { return slot?.name || trKitSlot('slot', { number: index + 1 }); }
+    function updateKitSlotNotice(key, index, owner = player) {
+        if (typeof player === 'undefined' || player !== owner) return;
+        kitSlotNotice = { owner, key, number: index + 1 };
+        const status = typeof document !== 'undefined' && document.getElementById('dart-kit-slot-status');
+        if (status) status.textContent = trKitSlot(key, { number: index + 1 });
+    }
+    function saveKitSlotChange(key, index) {
+        const owner = player;
+        const finish = success => updateKitSlotNotice(success === false ? 'saveFailed' : key, index, owner);
+        if (typeof saveGame !== 'function') { finish(true); return; }
+        try { Promise.resolve(saveGame(true)).then(finish, () => finish(false)); }
+        catch (_) { finish(false); }
+    }
+    function refreshKitSlotPanel() {
+        if (typeof document === 'undefined') return;
+        const panel = document.getElementById('dart-kit-slots');
+        if (panel) panel.outerHTML = dartKitSlotsMarkup();
+    }
+    function saveDartKitSlot(index, name) {
+        if (!kitSlotChangeAllowed(index)) return false;
+        const slots = normalizeDartKitSlots(player), old = slots[index];
+        if (old && typeof confirm === 'function' && !confirm(trKitSlot('overwrite', { name: kitSlotLabel(old, index) }))) return false;
+        const state = normalizeDartCustomization(player), selected = copyKitSelection(state.selected);
+        // A system change may leave an incompatible, inactive shaft length in the editor.
+        selected.shaftLength = isDartOptionCompatible('shaftLength', selected.shaftLength, selected) ? selected.shaftLength : defaults.shaftLength;
+        const configuration = normalizeDartKitConfiguration({ selected, customColors: { ...state.customColors }, flightArtwork: state.flightArtwork,
+            flightArtworkName: state.flightArtworkName, dartEntryAngle: getDartEntryAngleForPlayer(player) });
+        if (!configuration) return false;
+        slots[index] = { version: 1, name: typeof name === 'string' ? name.trim().slice(0, 40) : old?.name || '', savedAt: Date.now(), configuration };
+        kitSlotNotice = null; refreshKitSlotPanel(); saveKitSlotChange('done', index); return true;
+    }
+    function loadDartKitSlot(index) {
+        if (!kitSlotChangeAllowed(index)) return false;
+        const slot = normalizeDartKitSlots(player)[index];
+        if (!slot) return false;
+        const state = normalizeDartCustomization(player), config = slot.configuration;
+        const grips = [...Object.values(config.selected.gripZones), ...config.selected.gripSections,
+            ...(config.selected.gripRegions || []).map(region => region.pattern)];
+        if (categoryKeys.some(key => !state.owned[key].includes(config.selected[key])) || grips.some(id => !state.owned.barrelPattern.includes(id))) {
+            updateKitSlotNotice('unavailable', index); return false;
+        }
+        state.selected = copyKitSelection(config.selected); state.customColors = { ...config.customColors };
+        state.flightArtwork = config.flightArtwork; state.flightArtworkName = config.flightArtworkName;
+        if (config.dartEntryAngle === null) delete player.dartEntryAngle; else player.dartEntryAngle = config.dartEntryAngle;
+        previewSelection = null; kitSlotNotice = null; notifyChange();
+        if (typeof showShopScreen === 'function') showShopScreen(); else refreshPreview();
+        refreshKitSlotPanel(); saveKitSlotChange('loaded', index); return true;
+    }
+    function renameDartKitSlot(index, name) {
+        if (!kitSlotChangeAllowed(index) || typeof name !== 'string') return false;
+        const slot = normalizeDartKitSlots(player)[index]; if (!slot) return false;
+        slot.name = name.trim().slice(0, 40); kitSlotNotice = null; refreshKitSlotPanel(); saveKitSlotChange('renamed', index); return true;
+    }
+    function clearDartKitSlot(index) {
+        if (!kitSlotChangeAllowed(index)) return false;
+        const slots = normalizeDartKitSlots(player), slot = slots[index]; if (!slot) return false;
+        if (typeof confirm === 'function' && !confirm(trKitSlot('remove', { name: kitSlotLabel(slot, index) }))) return false;
+        slots[index] = null; kitSlotNotice = null; refreshKitSlotPanel(); saveKitSlotChange('cleared', index); return true;
+    }
+    function dartKitSlotsMarkup() {
+        const slots = normalizeDartKitSlots(player), locale = { pl: 'pl-PL', en: 'en-GB', de: 'de-DE', nl: 'nl-NL' }[currentLang] || 'pl-PL';
+        return `<section id="dart-kit-slots" class="dart-kit-slots"><h5>${escapeHtml(trKitSlot('title'))}</h5><p>${escapeHtml(trKitSlot('hint'))}</p>
+            <div class="dart-kit-slot-list">${slots.map((slot, index) => `<article class="dart-kit-slot" data-dart-kit-slot="${index}">
+                <h6>${escapeHtml(trKitSlot('slot', { number: index + 1 }))}</h6><p>${escapeHtml(slot ? trKitSlot('saved', { date: slot.savedAt ? new Date(slot.savedAt).toLocaleString(locale) : '—' }) : trKitSlot('empty'))}</p>
+                ${slot ? dartKitThumbnailMarkup(slot.configuration, index) : '<div class="dart-kit-slot-empty" aria-hidden="true">—</div>'}
+                <label for="dart-kit-name-${index}">${escapeHtml(trKitSlot('name'))}</label><input id="dart-kit-name-${index}" type="text" maxlength="40" value="${escapeHtml(slot?.name || '')}" autocomplete="off"/>
+                <div class="dart-kit-slot-actions"><button type="button" data-kit-save="${index}" onclick="saveDartKitSlot(${index},document.getElementById('dart-kit-name-${index}').value)">${escapeHtml(trKitSlot('save'))}</button>
+                <button type="button" data-kit-load="${index}" onclick="loadDartKitSlot(${index})" ${slot ? '' : 'disabled'}>${escapeHtml(trKitSlot('load'))}</button>
+                <button type="button" data-kit-rename="${index}" onclick="renameDartKitSlot(${index},document.getElementById('dart-kit-name-${index}').value)" ${slot ? '' : 'disabled'}>${escapeHtml(trKitSlot('rename'))}</button>
+                <button type="button" data-kit-clear="${index}" onclick="clearDartKitSlot(${index})" ${slot ? '' : 'disabled'}>${escapeHtml(trKitSlot('clear'))}</button></div></article>`).join('')}</div>
+            <p id="dart-kit-slot-status" role="status" aria-live="polite">${escapeHtml(kitSlotNotice?.owner === player ? trKitSlot(kitSlotNotice.key, kitSlotNotice) : '')}</p></section>`;
+    }
+
+    function dartKitThumbnailMarkup(configuration, index) {
+        const owner = { dartCustomization: configuration };
+        const loadout = buildLoadout(configuration.selected, 'career', owner), dimensions = root.dartModel.dimensions(root.dartModel.normalize(loadout));
+        const measurements = tr('measurements').replace('{tip}', loadout.tipLength).replace('{barrel}', loadout.barrelLength)
+            .replace('{shaft}', loadout.shaftLength).replace('{weight}', loadout.weightGrams) + ` · Ø ${(dimensions.barrelRadius * 2).toFixed(1)} mm`;
+        return `<div class="dart-kit-slot-preview" data-kit-preview="${index}">${previewMarkup(loadout, `kit-slot-${index}`)}</div>
+            <p class="dart-kit-slot-dimensions" data-kit-dimensions="${index}">${escapeHtml(measurements)}</p>`;
+    }
+
     function languageIndex() {
         return { pl: 0, en: 1, de: 2, nl: 3 }[typeof currentLang === 'string' ? currentLang : 'pl'] ?? 0;
     }
@@ -336,7 +505,7 @@
             ? previous.flightArtwork : null;
         const customColors = previous.customColors && typeof previous.customColors === 'object' && !Array.isArray(previous.customColors)
             ? previous.customColors : {};
-        const normalized = { version: 5, selected: {}, owned: {}, customColors: {}, flightArtwork: artwork,
+        const normalized = { version: 8, selected: {}, owned: {}, customColors: {}, flightArtwork: artwork,
             flightArtworkName: artwork ? String(previous.flightArtworkName || '').slice(0, 60) : '' };
         customColorFields.forEach(field => {
             if (Object.hasOwn(customColors, field) && validCustomColor(customColors[field]))
@@ -355,9 +524,18 @@
         const savedZones = selected.gripZones && typeof selected.gripZones === 'object' ? selected.gripZones : {};
         normalized.selected.gripZones = Object.fromEntries(['front', 'middle', 'rear'].map(zone => [zone,
             normalized.owned.barrelPattern.includes(savedZones[zone]) ? savedZones[zone] : normalized.selected.barrelPattern]));
+        const savedSections = Array.isArray(selected.gripSections) && selected.gripSections.length === 9
+            ? selected.gripSections : [];
+        normalized.selected.gripSections = Array.from({ length: 9 }, (_, index) =>
+            normalized.owned.barrelPattern.includes(savedSections[index]) ? savedSections[index]
+                : normalized.selected.gripZones[['front', 'middle', 'rear'][Math.floor(index / 3)]]);
         const weight = Number(selected.weightGrams), length = Number(selected.barrelLength);
         normalized.selected.weightGrams = Number.isInteger(weight) && weight >= 12 && weight <= 40 ? weight : 23;
         normalized.selected.barrelLength = Number.isInteger(length) && length >= 35 && length <= 55 ? length : 50;
+        normalized.selected.barrelDiameter = root.dartModel.normalizeBarrelDiameter(selected.barrelDiameter);
+        normalized.selected.gripRegions = root.dartModel.normalizeGripRegions(selected.gripRegions,normalized.selected.barrelLength);
+        if (normalized.selected.gripRegions) normalized.selected.gripRegions = normalized.selected.gripRegions
+            .filter(region => normalized.owned.barrelPattern.includes(region.pattern));
         candidate.dartCustomization = normalized;
         return normalized;
     }
@@ -415,8 +593,11 @@
             barrelShape: values.barrelShape.id, flightShape: values.flightShape.id,
             barrelPattern: values.barrelPattern.id, patternAccent: values.flightAccentColor.color,
             gripZones: { ...selections.gripZones },
+            gripSections: selections.gripSections ? [...selections.gripSections] : undefined,
+            gripRegions: root.dartModel.normalizeGripRegions(selections.gripRegions,Number(selections.barrelLength) || 50),
             weightGrams: Number(selections.weightGrams) || 23,
             barrelLength: Number(selections.barrelLength) || 50,
+            barrelDiameter: root.dartModel.normalizeBarrelDiameter(selections.barrelDiameter),
             barrelAccentColorId: values.barrelAccentColor.id, barrelAccentColor: values.barrelAccentColor.color,
             barrelAccentStyle: values.barrelAccentStyle.id,
             flightAccentColorId: values.flightAccentColor.id, flightAccentColor: values.flightAccentColor.color,
@@ -447,12 +628,15 @@
         result.shaftLength = root.dartModel.shaftLengths(result.flightSystem).includes(Number(raw.shaftLength)) ? Number(raw.shaftLength) : base.shaftLength;
         result.barrelLength = Number.isInteger(Number(raw.barrelLength)) && Number(raw.barrelLength) >= 35
             && Number(raw.barrelLength) <= 55 ? Number(raw.barrelLength) : base.barrelLength;
+        result.barrelDiameter = root.dartModel.normalizeBarrelDiameter(raw.barrelDiameter);
         result.weightGrams = Number.isInteger(Number(raw.weightGrams)) && Number(raw.weightGrams) >= 12
             && Number(raw.weightGrams) <= 40 ? Number(raw.weightGrams) : base.weightGrams;
         const zones = raw.gripZones && typeof raw.gripZones === 'object' && !Array.isArray(raw.gripZones)
             ? raw.gripZones : {};
         result.gripZones = Object.fromEntries(['front', 'middle', 'rear'].map(zone => [zone,
             catalogue.barrelPattern.some(item => item.id === zones[zone]) ? zones[zone] : result.barrelPattern]));
+        result.gripSections = root.dartModel.normalize({ ...result, gripSections: raw.gripSections }).gripSections;
+        result.gripRegions = root.dartModel.normalizeGripRegions(raw.gripRegions,result.barrelLength);
         result.flightArtwork = root.dartModel.validFlightArtwork(raw.flightArtwork) ? raw.flightArtwork : null;
         return result;
     }
@@ -461,13 +645,54 @@
         const normal = normalizeAiDartAppearance(input);
         const fields = [...aiDartSelectFields, ...aiDartColorFields, 'tipLength', 'shaftLength',
             'barrelLength', 'weightGrams', 'flightArtwork'];
-        if (Object.keys(input).length !== fields.length + 1) return false;
+        const hasSections = Object.prototype.hasOwnProperty.call(input, 'gripSections');
+        const hasDiameter = Object.prototype.hasOwnProperty.call(input, 'barrelDiameter');
+        const hasRegions = Object.prototype.hasOwnProperty.call(input, 'gripRegions');
+        if (Object.keys(input).length !== fields.length + 1 + Number(hasSections) + Number(hasDiameter) + Number(hasRegions)) return false;
+        if (hasRegions && !root.dartModel.validGripRegions(input.gripRegions,normal.barrelLength)) return false;
+        if (hasDiameter && input.barrelDiameter !== normal.barrelDiameter) return false;
+        if (hasSections && (!Array.isArray(input.gripSections) || input.gripSections.length !== 9
+            || input.gripSections.some((grip, index) => grip !== normal.gripSections[index]))) return false;
         if (fields.some(field => !Object.prototype.hasOwnProperty.call(input, field)
             || input[field] !== normal[field])) return false;
         const zones = input.gripZones;
         return !!zones && typeof zones === 'object' && !Array.isArray(zones)
             && Object.keys(zones).length === 3
             && ['front', 'middle', 'rear'].every(zone => zones[zone] === normal.gripZones[zone]);
+    }
+
+    function applyCareerDartAppearance(candidate, input) {
+        if (!isCareerPlayer(candidate) || !isValidAiDartAppearance(input)) return false;
+        const appearance = normalizeAiDartAppearance(input);
+        const state = normalizeDartCustomization(candidate);
+        for (const category of categoryKeys) {
+            const isColor = customColorFields.includes(category);
+            const choice = catalogue[category].find(entry => isColor
+                ? entry.color.toLowerCase() === appearance[category]
+                : entry.id === String(appearance[category]));
+            if (choice) {
+                state.selected[category] = choice.id;
+                if (!state.owned[category].includes(choice.id)) state.owned[category].push(choice.id);
+            }
+            if (isColor) state.customColors[category] = appearance[category];
+        }
+        state.selected.gripZones = { ...appearance.gripZones };
+        state.selected.gripSections = [...appearance.gripSections];
+        state.selected.gripRegions = appearance.gripRegions;
+        for (const pattern of [...Object.values(appearance.gripZones), ...appearance.gripSections,
+            ...(appearance.gripRegions || []).map(region => region.pattern)]) {
+            if (!state.owned.barrelPattern.includes(pattern)) state.owned.barrelPattern.push(pattern);
+        }
+        state.selected.weightGrams = appearance.weightGrams;
+        state.selected.barrelLength = appearance.barrelLength;
+        state.selected.barrelDiameter = appearance.barrelDiameter;
+        state.flightArtwork = appearance.flightArtwork;
+        state.flightArtworkName = '';
+        // The career uses its editable, owned kit rather than the AI override.
+        delete candidate.aiDartAppearance;
+        candidate.dartCustomization = state;
+        notifyChange();
+        return true;
     }
 
     function getDartLoadoutForPlayer(candidate) {
@@ -502,6 +727,7 @@
         const file = input?.files?.[0] || input;
         if (input?.files) input.value = '';
         if (typeof player === 'undefined' || !file) return false;
+        const owner = player;
         if (!['image/png', 'image/jpeg', 'image/webp'].includes(file.type) || file.size > 5 * 1024 * 1024) {
             if (typeof alert === 'function') alert(tr('artworkInvalid'));
             return false;
@@ -517,15 +743,23 @@
             });
             if (!image.naturalWidth || !image.naturalHeight || image.naturalWidth > 8192 || image.naturalHeight > 8192)
                 throw new Error('Invalid artwork dimensions');
-            const canvas = document.createElement('canvas');
-            canvas.width = canvas.height = 256;
-            const ctx = canvas.getContext('2d');
-            const side = Math.min(image.naturalWidth, image.naturalHeight);
-            ctx.drawImage(image, (image.naturalWidth - side) / 2, (image.naturalHeight - side) / 2, side, side, 0, 0, 256, 256);
+            let canvas;
+            if (root.flightArtworkEditor) {
+                canvas = await root.flightArtworkEditor.open(image, {
+                    shape: normalizeDartCustomization(owner).selected.flightShape, filename: file.name
+                });
+                if (!canvas || player !== owner) return false;
+            } else {
+                canvas = document.createElement('canvas');
+                canvas.width = canvas.height = 256;
+                const side = Math.min(image.naturalWidth, image.naturalHeight);
+                canvas.getContext('2d').drawImage(image, (image.naturalWidth - side) / 2,
+                    (image.naturalHeight - side) / 2, side, side, 0, 0, 256, 256);
+            }
             const artwork = canvas.toDataURL('image/png');
             if (!root.dartModel?.validFlightArtwork(artwork)) throw new Error('Artwork exceeds save limit');
             root.dartModel.registerFlightArtwork(artwork, canvas);
-            const state = normalizeDartCustomization(player);
+            const state = normalizeDartCustomization(owner);
             state.flightArtwork = artwork;
             state.flightArtworkName = String(file.name || '').slice(0, 60);
             if (typeof saveGame === 'function') saveGame(true);
@@ -575,7 +809,11 @@
         if (!state.owned[category].includes(id) || !findItem(category, id) || !isDartOptionCompatible(category, id, state.selected)) return false;
         state.selected[category] = id;
         if (customColorFields.includes(category)) delete state.customColors[category];
-        if (category === 'barrelPattern') state.selected.gripZones = { front: id, middle: id, rear: id };
+        if (category === 'barrelPattern') {
+            state.selected.gripZones = { front: id, middle: id, rear: id };
+            state.selected.gripSections = Array(9).fill(id);
+            state.selected.gripRegions = null;
+        }
         notifyChange(category);
         if (typeof showShopScreen === 'function') showShopScreen();
         if (typeof saveGame === 'function') saveGame(true);
@@ -599,7 +837,11 @@
         state.owned[category].push(id);
         state.selected[category] = id;
         if (customColorFields.includes(category)) delete state.customColors[category];
-        if (category === 'barrelPattern') state.selected.gripZones = { front: id, middle: id, rear: id };
+        if (category === 'barrelPattern') {
+            state.selected.gripZones = { front: id, middle: id, rear: id };
+            state.selected.gripSections = Array(9).fill(id);
+            state.selected.gripRegions = null;
+        }
         if (typeof updateHub === 'function') updateHub();
         notifyChange(category);
         if (typeof showShopScreen === 'function') showShopScreen();
@@ -620,26 +862,62 @@
     }
 
     function setDartDimension(kind, value) {
-        if (typeof player === 'undefined' || !['weightGrams', 'barrelLength'].includes(kind)) return false;
+        if (typeof player === 'undefined' || !['weightGrams', 'barrelLength', 'barrelDiameter'].includes(kind)) return false;
+        if (kind === 'barrelDiameter') {
+            const diameter = root.dartModel.normalizeBarrelDiameter(value);
+            if (value !== null && diameter === null) return false;
+            const state = normalizeDartCustomization(player);
+            if (state.selected.barrelDiameter === diameter) return true;
+            state.selected.barrelDiameter = diameter;previewSelection = null;notifyChange(kind);refreshPreview();
+            if (typeof saveGame === 'function') saveGame(true);
+            return true;
+        }
         const number = Number(value), minimum = kind === 'weightGrams' ? 12 : 35, maximum = kind === 'weightGrams' ? 40 : 55;
         if (!Number.isInteger(number) || number < minimum || number > maximum) return false;
         const state = normalizeDartCustomization(player);
         if (state.selected[kind] === number) return true;
+        if (kind === 'barrelLength') state.selected.gripRegions = root.dartModel.rescaleGripRegions(
+            state.selected.gripRegions,state.selected.barrelLength,number);
         state.selected[kind] = number;
         previewSelection = null;
         notifyChange(kind);
-        refreshPreview();
+        if (kind === 'barrelLength' && Array.isArray(state.selected.gripRegions) && typeof showShopScreen === 'function') showShopScreen();
+        else refreshPreview();
+        if (typeof saveGame === 'function') saveGame(true);
+        return true;
+    }
+
+    function setDartGripRegions(input) {
+        if (typeof player === 'undefined') return false;
+        const state = normalizeDartCustomization(player);
+        if (!root.dartModel.validGripRegions(input,state.selected.barrelLength)) return false;
+        const regions = root.dartModel.normalizeGripRegions(input,state.selected.barrelLength);
+        const patterns = [...new Set((regions || []).map(region => region.pattern))];
+        const purchases = patterns.filter(id => !state.owned.barrelPattern.includes(id)).map(id => catalogue.barrelPattern.find(p => p.id === id));
+        const price = purchases.reduce((sum,part) => sum + part.price,0), budget = Math.max(0,Number(player.budget) || 0);
+        if (price > budget) { if (typeof alert === 'function') alert(tr('noFunds'));return false; }
+        if (price && typeof confirm === 'function' && !confirm(tr('confirm').replace('{item}',purchases.map(nameOf).join(', '))
+            .replace('{price}',price.toLocaleString('en-GB')))) return false;
+        if (price) {
+            player.budget = budget - price;purchases.forEach(part => state.owned.barrelPattern.push(part.id));
+            if (typeof updateHub === 'function') updateHub();
+        }
+        state.selected.gripRegions = regions;previewSelection = null;notifyChange('gripRegions');
+        if (typeof showShopScreen === 'function') showShopScreen();else refreshPreview();
         if (typeof saveGame === 'function') saveGame(true);
         return true;
     }
 
     function setDartGripZone(zone, id, control = null) {
-        if (typeof player === 'undefined' || !['front', 'middle', 'rear'].includes(zone)) return false;
+        const zones = ['front', 'middle', 'rear'];
+        const fine = Number.isInteger(zone);
+        if (typeof player === 'undefined' || !(fine ? zone >= 0 && zone < 9 : zones.includes(zone))) return false;
         const state = normalizeDartCustomization(player);
         const product = catalogue.barrelPattern.find(entry => entry.id === id);
-        const restoreSelection = () => { if (control) control.value = state.selected.gripZones[zone]; };
+        const selectedGrip = fine ? state.selected.gripSections[zone] : state.selected.gripZones[zone];
+        const restoreSelection = () => { if (control) control.value = selectedGrip; };
         if (!product) { restoreSelection(); return false; }
-        if (state.selected.gripZones[zone] === id) return true;
+        if (selectedGrip === id && state.selected.gripRegions === null) return true;
         const needsPurchase = !state.owned.barrelPattern.includes(id);
         if (needsPurchase) {
             const budget = Math.max(0, Number(player.budget) || 0);
@@ -657,13 +935,22 @@
             state.owned.barrelPattern.push(id);
             if (typeof updateHub === 'function') updateHub();
         }
-        state.selected.gripZones[zone] = id;
+        state.selected.gripRegions = null;
+        if (fine) {
+            state.selected.gripSections[zone] = id;
+            const group = Math.floor(zone / 3);
+            state.selected.gripZones[zones[group]] = state.selected.gripSections[group * 3 + 1];
+        } else {
+            state.selected.gripZones[zone] = id;
+            const start = zones.indexOf(zone) * 3;
+            state.selected.gripSections.fill(id, start, start + 3);
+        }
         previewSelection = null;
         notifyChange('gripZones');
         refreshPreview();
         if (needsPurchase && typeof showShopScreen === 'function') showShopScreen();
         if (typeof document !== 'undefined') document.querySelectorAll('[data-category="barrelPattern"]').forEach(option => {
-            const selected = ['front', 'middle', 'rear'].every(part => state.selected.gripZones[part] === option.dataset.item);
+            const selected = state.selected.gripSections.every(grip => grip === option.dataset.item);
             option.classList.toggle('selected', selected);
             const button = option.querySelector('button:not(.dart-try-button)');
             if (button) {
@@ -676,14 +963,19 @@
     }
 
 
-    function previewMarkup(loadout) {
+    function previewMarkup(loadout, idPrefix = 'kit') {
+        const prefix = /^[a-z][\w-]*$/i.test(idPrefix) ? idPrefix : 'kit';
         const a = root.dartModel.normalize(loadout), d = root.dartModel.dimensions(a);
         const integrated = a.flightSystem !== 'separate', clear = a.flightSystem === 'integrated-clear' || a.flightSystem === 'integrated-frosted';
         const r = root.dartModel.radiusAt, cut = root.dartModel.gripCutAt;
         const barrel = [];
-        for (let z = 0; z <= a.barrelLength + .001; z += .2) barrel.push([a.tipLength + z, -(r(a.barrelShape, z, a.barrelLength) - cut(a, z))]);
-        for (let z = a.barrelLength; z >= -.001; z -= .2) barrel.push([a.tipLength + z, r(a.barrelShape, z, a.barrelLength) - cut(a, z)]);
+        for (let z = 0; z <= a.barrelLength + .001; z += .2) barrel.push([a.tipLength + z, -(r(a.barrelShape, z, a.barrelLength, a.barrelDiameter) - cut(a, z))]);
+        for (let z = a.barrelLength; z >= -.001; z -= .2) barrel.push([a.tipLength + z, r(a.barrelShape, z, a.barrelLength, a.barrelDiameter) - cut(a, z)]);
         const outline = barrel.map(p => p.join(',')).join(' ');
+        const point = [];
+        for (let z = 0; z < a.tipLength; z += .15) point.push([z, -root.dartModel.tipRadiusAt(a, z)]);
+        point.push([a.tipLength, -1.2], [a.tipLength, 1.2]);
+        for (let z = a.tipLength; z >= 0; z -= .15) point.push([z, root.dartModel.tipRadiusAt(a, z)]);
         const flight = root.dartModel.outlines[a.flightShape];
         const wing = flight.map(([x,z]) => `${d.flightStart + z},${-x}`).concat([...flight].reverse().map(([x,z]) => `${d.flightStart + z},${x}`)).join(' ');
         const print = document.createElement('canvas'); print.width = print.height = 128;
@@ -691,24 +983,27 @@
         const flightPrint = print.toDataURL();
         return `<svg class="dart-preview-fallback" viewBox="-5 -26 ${d.totalLength + 10} 52" role="img" aria-label="${escapeHtml(tr('fallback'))}">
             <defs>
-                <linearGradient id="kit-metal" x1="0" y1="0" x2="0" y2="1" gradientUnits="objectBoundingBox">
+                <linearGradient id="${prefix}-metal" x1="0" y1="0" x2="0" y2="1" gradientUnits="objectBoundingBox">
                     <stop offset="0" stop-color="#fff" stop-opacity=".55"/><stop offset=".2" stop-color="#fff" stop-opacity=".1"/>
                     <stop offset=".4" stop-color="#fff" stop-opacity=".8"/><stop offset=".55" stop-color="#fff" stop-opacity=".1"/>
                     <stop offset="1" stop-color="#000" stop-opacity=".65"/>
                 </linearGradient>
-                <clipPath id="kit-barrel"><polygon points="${outline}"/></clipPath>
-                <clipPath id="kit-flight"><polygon points="${wing}"/></clipPath>
+                <clipPath id="${prefix}-barrel"><polygon points="${outline}"/></clipPath>
+                <clipPath id="${prefix}-flight"><polygon points="${wing}"/></clipPath>
             </defs>
-            <path d="M0 0 Q5 -1 11 -1.05 H${a.tipLength} V1.05 H11 Q5 1 0 0" fill="${a.tipColor}"/>
+            <polygon points="${point.map(p => p.join(',')).join(' ')}" fill="${a.tipColor}"/>
             <polygon points="${outline}" fill="${a.barrelColor}"/>
-            <g clip-path="url(#kit-barrel)" fill="${a.barrelAccentColor}">
+            <g clip-path="url(#${prefix}-barrel)" fill="${a.barrelAccentColor}">
                 ${a.barrelAccentStyle === 'split' ? `<rect x="${a.tipLength}" y="-5" width="${a.barrelLength / 2}" height="10"/>`
                     : a.barrelAccentStyle === 'bands' ? [a.barrelLength * .2, a.barrelLength * .7].map(z => `<rect x="${a.tipLength + z}" y="-5" width="${a.barrelLength * .1}" height="10"/>`).join('')
                         : Array.from({length: Math.ceil((a.barrelLength - 9) * 5)}, (_,i) => i*.2+5).filter(z => cut(a,z) > .16).map(z => `<rect x="${a.tipLength+z}" y="-5" width=".2" height="10"/>`).join('')}
             </g>
-            <polygon points="${outline}" fill="url(#kit-metal)"/>
+            <polygon points="${outline}" fill="url(#${prefix}-metal)"/>
             <path d="M${a.tipLength+a.barrelLength} -2.4 L${d.flightStart} -1.2 L${integrated ? d.totalLength : a.tipLength+a.barrelLength+a.shaftLength} -.6 V.6 L${d.flightStart} 1.2 L${a.tipLength+a.barrelLength} 2.4 Z" fill="${a.shaftColor}" opacity="${clear ? .68 : 1}"/>
-            <image href="${flightPrint}" x="${d.flightStart}" y="-17.5" width="42" height="35" preserveAspectRatio="none" clip-path="url(#kit-flight)"/>
+            <g clip-path="url(#${prefix}-flight)">
+                <image href="${flightPrint}" width="256" height="256" transform="matrix(0 ${-17.5/256} ${-42/256} 0 ${d.flightStart+42} 0)"/>
+                <image href="${flightPrint}" width="256" height="256" transform="matrix(0 ${17.5/256} ${-42/256} 0 ${d.flightStart+42} 0)"/>
+            </g>
             <polygon points="${wing}" fill="${a.flightColor}" transform="scale(1 .24)" stroke="${integrated ? a.flightColor : a.flightAccentColor}" stroke-width=".2" opacity="${clear ? .38 : 1}"/>
             ${clear ? `<polygon points="${wing}" fill="none" stroke="${a.flightColor}" stroke-width=".3" opacity=".7"/>` : ''}
             <path d="M${d.flightStart} 0 H${d.totalLength}" stroke="${a.shaftColor}" stroke-width=".5"/>
@@ -725,13 +1020,22 @@
             if (!Object.keys(previewSelection).length) previewSelection = null;
         }
         const selections = { ...state.selected, ...(previewSelection || {}) };
-        if (previewSelection?.barrelPattern) selections.gripZones = { front: previewSelection.barrelPattern,
-            middle: previewSelection.barrelPattern, rear: previewSelection.barrelPattern };
+        if (previewSelection?.barrelPattern) {
+            selections.gripZones = { front: previewSelection.barrelPattern,
+                middle: previewSelection.barrelPattern, rear: previewSelection.barrelPattern };
+            selections.gripSections = Array(9).fill(previewSelection.barrelPattern);
+            selections.gripRegions = null;
+        }
         const loadout = buildLoadout(selections, 'career', player, previewSelection || {});
+        const diameter = root.dartModel.dimensions(loadout).barrelRadius * 2;
+        document.querySelectorAll('[data-barrel-diameter]').forEach(input => {
+            input.value = diameter;input.nextElementSibling.textContent = diameter.toFixed(1) + ' mm';
+        });
+        document.querySelectorAll('[data-reset-barrel-diameter]').forEach(button => { button.disabled = state.selected.barrelDiameter === null; });
         const integrated = loadout.flightSystem !== 'separate';
         document.querySelectorAll('[data-dart-category]').forEach(section => {
             const category = section.dataset.dartCategory;
-            section.hidden = category === 'integratedColor' ? !integrated
+            section.hidden = category === 'barrelPattern' && Array.isArray(loadout.gripRegions) ? true : category === 'integratedColor' ? !integrated
                 : integrated && ['shaftStyle', 'shaftColor', 'flightColor'].includes(category);
         });
         document.querySelectorAll('[data-integrated-hint]').forEach(hint => { hint.hidden = !integrated; });
@@ -741,6 +1045,7 @@
         document.getElementById('dart-preview-reset').hidden = !tried;
         document.getElementById('dart-preview-measurements').textContent = tr('measurements').replace('{tip}', loadout.tipLength)
             .replace('{barrel}', loadout.barrelLength).replace('{shaft}', loadout.shaftLength).replace('{weight}', loadout.weightGrams)
+            + ` · Ø ${diameter.toFixed(1)} mm`
             + (integrated ? ` · ${nameOf(findItem('flightSystem', loadout.flightSystem))}` : '');
         document.querySelectorAll('.dart-option').forEach(option => {
             option.hidden = !isDartOptionCompatible(option.dataset.category, option.dataset.item, selections);
@@ -795,9 +1100,16 @@
             return `<img class="dart-option-symbol dart-print-sample" src="${canvas.toDataURL()}" alt=""/>`;
         }
         if (category === 'barrelPattern') {
+            if (product.id === 'pixel') return `<svg class="dart-option-symbol" viewBox="0 0 36 16" aria-hidden="true"><rect width="36" height="16" rx="2" fill="#becad4"/><g fill="none" stroke="#374956" stroke-width=".9">${[1, 9].map(y => `<path d="M0 ${y} H36 M0 ${y+1.7} H36"/>${[3, 10, 17, 24, 31].map(x => `<path d="M${x} ${y+2} v3 a1.7 1.7 0 0 0 3.4 0 v-3"/>`).join('')}`).join('')}</g></svg>`;
             let path = '';
             for (let x = 0; x <= 36; x += .25) path += `${x ? 'L' : 'M'}${x} ${3 + root.dartModel.cutAt(product.id, x+6, .7)*9} `;
             return `<svg class="dart-option-symbol" viewBox="0 0 36 16" aria-hidden="true"><path d="${path} L36 13 H0 Z" fill="#becad4"/></svg>`;
+        }
+        if (category === 'tipStyle') {
+            const a = root.dartModel.normalize({ tipStyle: product.id, tipLength: 35 }), points = [];
+            for (let z = 0; z <= 35; z += .2) points.push(`${z},${-root.dartModel.tipRadiusAt(a,z)*2.4}`);
+            for (let z = 35; z >= 0; z -= .2) points.push(`${z},${root.dartModel.tipRadiusAt(a,z)*2.4}`);
+            return `<svg class="dart-option-symbol" viewBox="-1 -4 37 8" aria-hidden="true"><polygon points="${points.join(' ')}" fill="#becad4" stroke="#7293aa" stroke-width=".15"/></svg>`;
         }
         if (category === 'flightShape') {
             const points = root.dartModel.outlines[product.id].map(([x,z]) => `${z},${18-x}`).concat([...root.dartModel.outlines[product.id]].reverse().map(([x,z]) => `${z},${18+x}`)).join(' ');
@@ -813,6 +1125,7 @@
         const state = normalizeDartCustomization(player);
         let html = `<section class="dart-customizer" id="dart-customizer">
             <header class="dart-customizer-header"><h4>${escapeHtml(tr('title'))}</h4><p>${escapeHtml(tr('subtitle'))}</p></header>
+            ${dartKitSlotsMarkup()}
             <div class="dart-customizer-workbench">
                 <div class="dart-customizer-preview">
                     <strong id="dart-preview-status" aria-live="polite">${escapeHtml(tr('preview'))}</strong>
@@ -842,14 +1155,20 @@
                     <input type="range" min="35" max="55" step="1" value="${state.selected.barrelLength}" aria-label="${escapeHtml(tr('lengthLabel'))}"
                         oninput="this.nextElementSibling.textContent=this.value+' mm'" onchange="setDartDimension('barrelLength',this.value)"/>
                     <output>${state.selected.barrelLength} mm</output></span></label>
+                <div class="dart-diameter-control"><label class="dart-dimension">${escapeHtml(tr('diameterLabel'))}<span class="dart-dimension-input">
+                    <input data-barrel-diameter type="range" min="5" max="9" step="0.1" value="${state.selected.barrelDiameter ?? root.dartModel.defaultBarrelDiameter(state.selected.barrelShape)}" aria-label="${escapeHtml(tr('diameterLabel'))}"
+                        oninput="this.nextElementSibling.textContent=Number(this.value).toFixed(1)+' mm'" onchange="setDartDimension('barrelDiameter',this.value)"/>
+                    <output>${(state.selected.barrelDiameter ?? root.dartModel.defaultBarrelDiameter(state.selected.barrelShape)).toFixed(1)} mm</output></span></label>
+                    <button type="button" data-reset-barrel-diameter onclick="setDartDimension('barrelDiameter',null)" ${state.selected.barrelDiameter === null ? 'disabled' : ''}>${escapeHtml(tr('resetDiameter'))}</button></div>
                 <div class="dart-grip-zones"><h5>${escapeHtml(tr('gripZonesTitle'))}</h5>
-                    <p>${escapeHtml(tr('gripZonesHint'))}</p><div class="dart-grip-zone-fields">
-                    ${[['front', 'gripFront'], ['middle', 'gripMiddle'], ['rear', 'gripRear']].map(([zone, label]) => `<label>${escapeHtml(tr(label))}
-                        <select aria-label="${escapeHtml(tr(label))}" onchange="setDartGripZone('${zone}',this.value,this)">
+                    <p ${Array.isArray(state.selected.gripRegions) ? 'hidden' : ''}>${escapeHtml(tr('gripZonesHint'))}</p><div class="dart-grip-zone-fields dart-grip-fine-fields" ${Array.isArray(state.selected.gripRegions) ? 'hidden' : ''}>
+                    ${Array.from({ length: 9 }, (_, index) => { const label = `${tr(['gripFront', 'gripMiddle', 'gripRear'][Math.floor(index / 3)])} ${index % 3 + 1}`;
+                        return `<label>${escapeHtml(label)}
+                        <select data-grip-section="${index}" aria-label="${escapeHtml(label)}" onchange="setDartGripSection(${index},this.value,this)">
                         ${catalogue.barrelPattern.map(entry =>
-                            `<option value="${entry.id}" data-owned="${state.owned.barrelPattern.includes(entry.id)}" ${state.selected.gripZones[zone] === entry.id ? 'selected' : ''}>${escapeHtml(nameOf(entry))}${state.owned.barrelPattern.includes(entry.id) ? '' : ` · £${entry.price.toLocaleString('en-GB')}`}</option>`).join('')}
-                        </select></label>`).join('')}
-                    </div></div></section>`;
+                            `<option value="${entry.id}" data-owned="${state.owned.barrelPattern.includes(entry.id)}" ${state.selected.gripSections[index] === entry.id ? 'selected' : ''}>${escapeHtml(nameOf(entry))}${state.owned.barrelPattern.includes(entry.id) ? '' : ` · £${entry.price.toLocaleString('en-GB')}`}</option>`).join('')}
+                        </select></label>`; }).join('')}
+                    </div>${root.dartGripEditor ? root.dartGripEditor.markup('career',state.selected,state.owned.barrelPattern) : ''}</div></section>`;
             if (part === 'shaft' || part === 'flights') html += `<p class="dart-integrated-hint" data-integrated-hint hidden>${escapeHtml(tr('integratedHint'))}</p>`;
             if (part === 'flights') html += `<section class="dart-artwork"><h5>${escapeHtml(tr('artworkTitle'))}</h5>
                 <p>${escapeHtml(tr('artworkHint'))}</p><div class="dart-artwork-actions">
@@ -857,6 +1176,7 @@
                 <label class="dart-artwork-upload">${escapeHtml(tr(state.flightArtwork ? 'artworkChange' : 'artworkAdd'))}
                     <input type="file" accept="image/png,image/jpeg,image/webp" onchange="uploadDartFlightArtwork(this)"/></label>
                 ${state.flightArtwork ? `<button type="button" onclick="removeDartFlightArtwork()">${escapeHtml(tr('artworkRemove'))}</button>` : ''}
+                ${root.flightArtworkEditor ? root.flightArtworkEditor.controlsMarkup(state.selected.flightShape) : ''}
                 </div></section>`;
             categories.forEach(category => {
                 html += `<section class="dart-customizer-category" data-dart-category="${category}"><h5>${escapeHtml(tr(category))}</h5>`;
@@ -874,7 +1194,7 @@
                     const selectedId = category === 'shaftLength' && !isDartOptionCompatible(category, state.selected[category], state.selected)
                         ? defaults.shaftLength : state.selected[category];
                     const selected = category === 'barrelPattern'
-                        ? ['front', 'middle', 'rear'].every(zone => state.selected.gripZones[zone] === product.id)
+                ? state.selected.gripSections.every(grip => grip === product.id)
                         : selectedId === product.id && !state.customColors[category];
                     const owned = state.owned[category].includes(product.id);
                     const action = owned
@@ -899,10 +1219,23 @@
     }
 
     root.dartCustomizationCatalogue = catalogue;
+    // Read a saved configuration without equipping it or normalizing the career owner.
+    root.getDartConfigurationLoadout = configuration => buildLoadout(configuration.selected, 'career', {dartCustomization:configuration});
+    root.getDartLoadoutSnapshot = candidate => {
+        if (!isCareerPlayer(candidate)) return getDartLoadoutForPlayer(candidate);
+        const configuration=normalizeDartCustomization({dartCustomization:player.dartCustomization});
+        return withDartEntryAngle(buildLoadout(configuration.selected,'career',{dartCustomization:configuration}),player);
+    };
+    root.normalizeDartKitSlots = normalizeDartKitSlots;
+    root.saveDartKitSlot = saveDartKitSlot;
+    root.loadDartKitSlot = loadDartKitSlot;
+    root.renameDartKitSlot = renameDartKitSlot;
+    root.clearDartKitSlot = clearDartKitSlot;
     root.normalizeAiDartAppearance = normalizeAiDartAppearance;
     root.isValidAiDartAppearance = isValidAiDartAppearance;
     root.dartCustomizationPreviewMarkup = previewMarkup;
     root.normalizeDartCustomization = normalizeDartCustomization;
+    root.applyCareerDartAppearance = applyCareerDartAppearance;
     root.getDartLoadoutForPlayer = getDartLoadoutForPlayer;
     root.getDartEntryAngleForPlayer = getDartEntryAngleForPlayer;
     root.setDartEntryAngle = setDartEntryAngle;
@@ -918,9 +1251,11 @@
     root.setDartDimension = setDartDimension;
     root.setDartCustomColor = setDartCustomColor;
     root.setDartGripZone = setDartGripZone;
+    root.setDartGripRegions = setDartGripRegions;
+    root.setDartGripSection = (index, id, control = null) => setDartGripZone(index, id, control);
     root.uploadDartFlightArtwork = uploadDartFlightArtwork;
     root.removeDartFlightArtwork = removeDartFlightArtwork;
     if (typeof root.addEventListener === 'function') root.addEventListener('dart-flight-artwork-ready', () => {
-        if (typeof document !== 'undefined' && document.getElementById('dart-kit-preview')) refreshPreview();
+        if (typeof document !== 'undefined' && document.getElementById('dart-kit-preview')) { refreshKitSlotPanel(); refreshPreview(); }
     });
 })(typeof window !== 'undefined' ? window : globalThis);

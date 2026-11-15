@@ -1,214 +1,141 @@
-/* Basic Consent Mode adapter for Google's published Privacy & messaging CMP.
- * Load this BEFORE the real CMP tag. The CMP alone collects/stores choices and
- * sends consent updates; this adapter only gates Analytics using its purpose API.
- * No publisher ID, CMP loader, ad tag, own consent banner or game storage here.
+/* Analytics-only Basic Consent Mode. Advertising needs a separate certified CMP
+ * before ads are enabled; AdSense ownership verification uses the meta/ads.txt.
+ * This module touches only its preference key and this GA4 property's cookies.
  */
 (function (window, document) {
     'use strict';
     if (window.dartsPrivacy) return;
-    const measurementId = 'G-J5GF9EPVRM';
-    const disableKey = 'ga-disable-' + measurementId;
-    const purposeFields = {
-        analytics_storage: 'analyticsStoragePurposeConsentStatus',
-        ad_storage: 'adStoragePurposeConsentStatus',
-        ad_user_data: 'adUserDataPurposeConsentStatus',
-        ad_personalization: 'adPersonalizationPurposeConsentStatus'
-    };
-    const denied = () => Object.fromEntries(Object.keys(purposeFields).map(key => [key, 'denied']));
-    let purposes = denied(), apiReady = false, listenerRegistered = false, listenerFailed = false;
-    let tagRequested = false, tagLoaded = false, tagFailed = false, pageViewSent = false;
-    let gdprApplies = null, purposeStatuses = {};
-    let waitingForChoice = false, refreshTimer = null, status = 'awaiting-cmp';
-    let settingsTimer = null, revocationPending = false, revocationUiSeen = false;
+    const measurementId = 'G-J5GF9EPVRM', disableKey = 'ga-disable-' + measurementId;
+    const storageKey = 'dartscareer.analytics-consent.v1', lifetime = 180 * 24 * 60 * 60 * 1000;
+    const policyPage = document.documentElement.dataset.privacyPage === 'true';
+    const deny = { analytics_storage:'denied', ad_storage:'denied', ad_user_data:'denied', ad_personalization:'denied' };
+    let choice = null, banner = null, tagRequested = false, tagLoaded = false, tagFailed = false, pageViewSent = false;
+    let saved = false, expiryTimer = null;
     window[disableKey] = true;
     window.dataLayer = window.dataLayer || [];
     window.gtag = window.gtag || function () { window.dataLayer.push(arguments); };
-    window.gtag('consent', 'default', denied());
-    window.googlefc = window.googlefc || {};
-    window.googlefc.callbackQueue = window.googlefc.callbackQueue || [];
+    window.gtag('consent', 'default', { ...deny });
 
-    function suspendAnalytics() { window[disableKey] = true; }
+    function readChoice() {
+        try {
+            const value = JSON.parse(window.localStorage.getItem(storageKey));
+            if (value?.version === 1 && ['granted','denied'].includes(value.analytics)
+                && Number.isFinite(value.updatedAt) && value.updatedAt <= Date.now()
+                && value.expiresAt === value.updatedAt + lifetime && value.expiresAt > Date.now()) return value;
+        } catch (_error) { /* An unavailable preference store must not prevent play. */ }
+        return null;
+    }
+    function cleanAnalyticsCookies() {
+        const names = ['_ga', '_ga_' + measurementId.slice(2)];
+        const hostname = window.location.hostname, parts = hostname.split('.');
+        const domains = new Set(['', hostname, '.' + hostname]);
+        for (let i = 1; i < parts.length - 1; i++) domains.add('.' + parts.slice(i).join('.'));
+        for (const name of names) for (const domain of domains) {
+            document.cookie = name + '=; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT; Path=/'
+                + (domain ? '; Domain=' + domain : '') + '; SameSite=Lax';
+        }
+    }
     function sendPageView() {
         if (tagLoaded && !window[disableKey] && !pageViewSent) {
-            pageViewSent = true;
-            window.gtag('event', 'page_view', { send_to: measurementId });
+            pageViewSent = true; window.gtag('event','page_view',{send_to:measurementId});
         }
     }
     function loadAnalytics() {
+        if (policyPage || window[disableKey]) return;
         if (tagRequested) { sendPageView(); return; }
         tagRequested = true;
-        const script = document.createElement('script');
-        script.id = 'darts-consented-analytics';
-        script.async = true;
+        const script = document.createElement('script');script.id = 'darts-consented-analytics';script.async = true;
         script.src = 'https://www.googletagmanager.com/gtag/js?id=' + measurementId;
-        script.onload = () => { tagLoaded = true; sendPageView(); };
-        script.onerror = () => { tagFailed = true; status = 'analytics-unavailable'; suspendAnalytics(); };
-        window.gtag('js', new Date());
-        window.gtag('config', measurementId, {
-            send_page_view: false,
-            allow_google_signals: false,
-            allow_ad_personalization_signals: false
-        });
+        script.onload = () => { tagLoaded = true;sendPageView(); };
+        script.onerror = () => { tagFailed = true;window[disableKey] = true; };
+        window.gtag('js',new Date());
+        window.gtag('config',measurementId,{send_page_view:false,allow_google_signals:false,
+            allow_ad_personalization_signals:false, cookie_flags:'SameSite=Lax;Secure'});
         document.head.appendChild(script);
     }
-    function purposeStatus(cmp, name) {
-        // Google's enum reference uses short keys; its sample uses prefixed keys.
-        // Resolve the actual enum, never treat a missing API or a numeric guess as consent.
-        const values = cmp.ConsentModePurposeStatusEnum;
-        return values?.[name] ?? values?.['CONSENT_MODE_PURPOSE_STATUS_' + name];
+    function applyChoice() {
+        const granted = choice?.analytics === 'granted';
+        window[disableKey] = !granted || policyPage || tagFailed;
+        window.gtag('consent','update',{...deny,analytics_storage:granted ? 'granted' : 'denied'});
+        if (granted) loadAnalytics();
     }
-    function readCmpPurposes() {
-        if (waitingForChoice || listenerFailed) { suspendAnalytics(); return; }
-        try {
-            const cmp = window.googlefc;
-            if (typeof cmp.getGoogleConsentModeValues !== 'function') { status = 'cmp-unavailable'; suspendAnalytics(); return; }
-            const values = cmp.getGoogleConsentModeValues();
-            const granted = purposeStatus(cmp, 'GRANTED');
-            // UNKNOWN, DENIED, NOT_APPLICABLE and NOT_CONFIGURED all fail closed.
-            // A configured, explicit analytics grant is required independently of ads.
-            purposeStatuses = Object.fromEntries(Object.entries(purposeFields).map(([key, field]) =>
-                [key, values?.[field] ?? null]));
-            purposes = Object.fromEntries(Object.entries(purposeStatuses).map(([key, value]) =>
-                [key, typeof granted === 'number' && granted > 0 && value === granted ? 'granted' : 'denied']));
-            const inapplicable = purposeStatus(cmp, 'NOT_APPLICABLE');
-            status = purposes.analytics_storage !== 'granted' && (gdprApplies === false ||
-                (inapplicable !== undefined && purposeStatuses.analytics_storage === inapplicable))
-                ? 'regional-policy-required' : 'cmp-ready';
-            if (tagFailed) status = 'analytics-unavailable';
-            window[disableKey] = purposes.analytics_storage !== 'granted' || tagFailed;
-            if (!window[disableKey]) loadAnalytics();
-        } catch (_error) { purposes = denied(); status = 'cmp-unavailable'; suspendAnalytics(); }
+    function scheduleExpiry() {
+        if (expiryTimer !== null) window.clearTimeout(expiryTimer);
+        expiryTimer = null;
+        if (!choice) return;
+        expiryTimer = window.setTimeout(() => {
+            expiryTimer = null;
+            if (!choice) return;
+            if (Date.now() < choice.expiresAt) { scheduleExpiry();return; }
+            choice = null;saved = false;applyChoice();cleanAnalyticsCookies();
+            if (!policyPage) openSettings();
+        },Math.min(choice.expiresAt - Date.now(),2147483647));
     }
-    function queuePurposeRead() {
-        window.googlefc.callbackQueue.push({ CONSENT_MODE_DATA_READY: readCmpPurposes });
-    }
-    function registerConsentListener() {
-        apiReady = true;
-        if (listenerRegistered || typeof window.__tcfapi !== 'function') return;
-        listenerRegistered = true;
-        try { window.__tcfapi('addEventListener', 2, (data, success) => {
-            if (!success || data?.cmpStatus === 'error') {
-                listenerFailed = true;
-                purposes = denied(); status = 'cmp-unavailable'; suspendAnalytics(); return;
-            }
-            listenerFailed = false;
-            if (typeof data?.gdprApplies === 'boolean') gdprApplies = data.gdprApplies;
-            if (data?.eventStatus === 'cmpuishown') {
-                waitingForChoice = true;
-                revocationUiSeen = true;
-                if (settingsTimer !== null) window.clearTimeout(settingsTimer);
-                settingsTimer = null;
-                suspendAnalytics();
-                return;
-            }
-            if (data?.eventStatus !== 'useractioncomplete' && data?.eventStatus !== 'tcloaded' && gdprApplies !== false) return;
-            waitingForChoice = false;
-            revocationPending = false;
-            if (settingsTimer !== null) window.clearTimeout(settingsTimer);
-            settingsTimer = null;
-            suspendAnalytics();
-            // Let the CMP finish updating its own Consent Mode purpose values.
-            // No TCF-purpose guessing and no competing gtag consent updates.
-            if (refreshTimer !== null) window.clearTimeout(refreshTimer);
-            refreshTimer = window.setTimeout(() => { refreshTimer = null; queuePurposeRead(); }, 0);
-        }); } catch (_error) {
-            listenerRegistered = false;
-            listenerFailed = true;
-            purposes = denied(); status = 'cmp-unavailable'; suspendAnalytics();
-        }
-    }
-    window.googlefc.callbackQueue.push({ CONSENT_API_READY: registerConsentListener });
-    queuePurposeRead();
-
-    function language() {
-        const gameLanguage = typeof currentLang === 'string' ? currentLang : document.documentElement.lang;
-        return gameLanguage === 'pl' ? 'pl' : 'en';
+    function decide(analytics) {
+        if (!['granted','denied'].includes(analytics)) return false;
+        const now = Date.now();choice = {version:1,analytics,updatedAt:now,expiresAt:now+lifetime};saved = false;
+        try { window.localStorage.setItem(storageKey,JSON.stringify(choice));saved = true; } catch (_error) {}
+        applyChoice();scheduleExpiry();if (analytics === 'denied') cleanAnalyticsCookies();
+        if (banner) banner.hidden = true;
+        return true;
     }
     const copy = {
-        pl: {
-            title: 'Ustawienia prywatności i cookies', close: 'Zamknij', policy: 'Polityka prywatności',
-            unavailable: 'Panel zgód Google jest obecnie niedostępny. Opcjonalne śledzenie Google Analytics jest w tej sesji wstrzymane.',
-            regional: 'Europejski panel zgód Google nie jest dostępny dla Twojego regionu. Brak tego komunikatu nie oznacza zgody na śledzenie. Opcjonalne śledzenie Google Analytics jest w tej sesji wstrzymane.',
-            protected: 'Ustawienia zgód nie usuwają zapisów kariery, modów ani ustawień gry. Lokalne dane niezbędne do rozgrywki pozostają na Twoim urządzeniu.',
-            contact: 'Pytania dotyczące prywatności: dartscareer@gmail.com.'
-        },
-        en: {
-            title: 'Privacy & Cookie Settings', close: 'Close', policy: 'Privacy Policy',
-            unavailable: 'The Google consent panel is currently unavailable. Optional Google Analytics tracking is paused for this session.',
-            regional: 'The European Google consent panel is not available in your region. The absence of that message does not mean consent to tracking. Optional Google Analytics tracking is paused for this session.',
-            protected: 'Consent settings do not delete career saves, mods or game settings. Local data required to play remains on your device.',
-            contact: 'Privacy enquiries: dartscareer@gmail.com.'
-        }
+        pl:{title:'Prywatność i statystyki',body:'Za Twoją zgodą używamy cookies Google Analytics do pomiaru odwiedzin. Dane o korzystaniu ze strony trafiają do Google. Odmowa nie ogranicza gry ani zapisu kariery.',
+            accept:'Zezwól na statystyki',reject:'Tylko niezbędne',policy:'Polityka prywatności',
+            hint:'Wybór pamiętamy przez 180 dni. Możesz go zmienić w ustawieniach prywatności w stopce. Zgoda na statystyki nie jest zgodą na reklamy.',
+            granted:'Obecny wybór: statystyki włączone.',denied:'Obecny wybór: tylko niezbędne.'},
+        en:{title:'Privacy and statistics',body:'With your permission, we use Google Analytics cookies to measure visits. Information about website use is sent to Google. Refusing does not limit the game or career saves.',
+            accept:'Allow statistics',reject:'Necessary only',policy:'Privacy Policy',
+            hint:'We remember your choice for 180 days. Change it in the footer privacy settings. Analytics consent does not grant advertising consent.',
+            granted:'Current choice: statistics enabled.',denied:'Current choice: necessary only.'},
+        de:{title:'Datenschutz und Statistik',body:'Mit deiner Einwilligung verwenden wir Google-Analytics-Cookies zur Besuchsmessung. Nutzungsdaten werden an Google gesendet. Eine Ablehnung schränkt das Spiel und Spielstände nicht ein.',
+            accept:'Statistik erlauben',reject:'Nur notwendige',policy:'Datenschutzerklärung',
+            hint:'Wir speichern deine Auswahl 180 Tage. Du kannst sie über die Datenschutzeinstellungen im Seitenfuß ändern. Die Einwilligung gilt nicht für Werbung.',
+            granted:'Aktuelle Auswahl: Statistik aktiviert.',denied:'Aktuelle Auswahl: nur notwendige.'},
+        nl:{title:'Privacy en statistieken',body:'Met je toestemming gebruiken we Google Analytics-cookies om bezoeken te meten. Gegevens over websitegebruik worden naar Google verzonden. Weigeren beperkt het spel en carrièreopslag niet.',
+            accept:'Statistieken toestaan',reject:'Alleen noodzakelijk',policy:'Privacybeleid',
+            hint:'We onthouden je keuze 180 dagen. Wijzig deze via de privacyinstellingen onderaan de pagina. Toestemming voor statistieken is geen toestemming voor advertenties.',
+            granted:'Huidige keuze: statistieken ingeschakeld.',denied:'Huidige keuze: alleen noodzakelijk.'}
     };
-    function showUnavailable() {
-        let dialog = document.getElementById('privacy-settings-status');
-        if (!dialog) {
-            dialog = document.createElement('dialog');
-            dialog.id = 'privacy-settings-status';
-            dialog.className = 'privacy-settings-dialog';
-            dialog.setAttribute('aria-labelledby', 'privacy-settings-title');
-            const heading = document.createElement('h2'); heading.id = 'privacy-settings-title';
-            dialog.appendChild(heading);
-            for (const key of ['unavailable', 'protected', 'contact']) {
-                const paragraph = document.createElement('p'); paragraph.dataset.privacyCopy = key; dialog.appendChild(paragraph);
-            }
-            const link = document.createElement('a'); link.dataset.privacyCopy = 'policy'; dialog.appendChild(link);
-            const form = document.createElement('form'); form.method = 'dialog';
-            const button = document.createElement('button'); button.type = 'submit'; button.dataset.privacyCopy = 'close';
-            form.appendChild(button); dialog.appendChild(form); document.body.appendChild(dialog);
-            dialog.addEventListener('click', event => {
-                if (event.target !== dialog) return;
-                const bounds = dialog.getBoundingClientRect();
-                if (event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom) dialog.close();
-            });
-        }
-        const lang = language(), text = copy[lang];
-        dialog.lang = lang;
-        dialog.querySelector('h2').textContent = text.title;
-        dialog.querySelectorAll('[data-privacy-copy]').forEach(element => { element.textContent = text[element.dataset.privacyCopy]; });
-        if (status === 'regional-policy-required') dialog.querySelector('[data-privacy-copy="unavailable"]').textContent = text.regional;
-        dialog.querySelector('a').href = (document.documentElement.dataset.privacyPage === 'true' ? 'index.html' : 'privacy-policy/index.html') + '?lang=' + lang;
-        if (!dialog.open) dialog.showModal();
+    function language() {
+        const lang = typeof currentLang === 'string' ? currentLang
+            : new URL(window.location.href).searchParams.get('lang') || window.navigator?.language || document.documentElement.lang;
+        return Object.hasOwn(copy,String(lang).slice(0,2)) ? String(lang).slice(0,2) : 'en';
+    }
+    function refresh() {
+        if (!banner) return;
+        const lang = language(), text = copy[lang];banner.lang = lang;
+        banner.querySelectorAll('[data-privacy-copy]').forEach(el => { el.textContent = text[el.dataset.privacyCopy]; });
+        const current = banner.querySelector('[data-privacy-current]');
+        current.textContent = choice ? text[choice.analytics] : '';current.hidden = !choice;
+        banner.querySelector('a').href = (policyPage ? 'index.html' : 'privacy-policy/index.html') + '?lang=' + (lang === 'pl' ? 'pl' : 'en');
+    }
+    function ensureBanner() {
+        if (banner || !document.body) return;
+        banner = document.createElement('section');banner.id = 'privacy-banner';banner.className = 'privacy-banner';
+        banner.hidden = true;banner.tabIndex = -1;banner.setAttribute('role','region');banner.setAttribute('aria-labelledby','privacy-banner-title');
+        banner.innerHTML = '<div class="privacy-banner-copy"><h2 id="privacy-banner-title" data-privacy-copy="title"></h2><p data-privacy-copy="body"></p><small data-privacy-copy="hint"></small><p data-privacy-current class="privacy-current"></p></div><div class="privacy-banner-actions"><button type="button" data-privacy-reject data-privacy-copy="reject"></button><button type="button" data-privacy-accept data-privacy-copy="accept"></button><a data-privacy-copy="policy"></a></div>';
+        banner.querySelector('[data-privacy-accept]').addEventListener('click',() => decide('granted'));
+        banner.querySelector('[data-privacy-reject]').addEventListener('click',() => decide('denied'));
+        document.body.appendChild(banner);refresh();
     }
     function openSettings() {
-        suspendAnalytics();
-        if (revocationPending) return false;
-        const cmp = window.googlefc;
-        const inapplicable = purposeStatus(cmp, 'NOT_APPLICABLE');
-        if (gdprApplies === false || (inapplicable !== undefined && purposeStatuses.analytics_storage === inapplicable)) {
-            status = 'regional-policy-required'; showUnavailable(); return false;
-        }
-        if (!apiReady || typeof cmp.showRevocationMessage !== 'function' || typeof cmp.callbackQueue?.push !== 'function') {
-            status = 'cmp-unavailable'; showUnavailable(); return false;
-        }
-        waitingForChoice = true;
-        revocationPending = true;
-        revocationUiSeen = false;
-        function unavailableSettings() {
-            revocationPending = false; waitingForChoice = false;
-            status = 'cmp-unavailable'; showUnavailable();
-        }
-        // Opening the panel requires the API, not an existing consent decision.
-        cmp.callbackQueue.push({ CONSENT_API_READY: () => {
-            if (!revocationPending) return;
-            try {
-                if (typeof window.googlefc.showRevocationMessage !== 'function') throw new Error('CMP unavailable');
-                window.googlefc.showRevocationMessage();
-            } catch (_error) { unavailableSettings(); }
-        } });
-        // An available API is not proof that Google can serve the account's panel.
-        // If its queue/message never opens, keep GA paused and explain the failure.
-        if (revocationPending && !revocationUiSeen) settingsTimer = window.setTimeout(() => {
-            settingsTimer = null;
-            if (revocationPending && !revocationUiSeen) unavailableSettings();
-        }, 6000);
-        return false;
+        ensureBanner();refresh();if (banner) { banner.hidden = false;banner.focus(); }return false;
     }
-    window.dartsPrivacy = Object.freeze({
-        openSettings,
-        getStatus: () => ({ measurementId, status, apiReady, gdprApplies, purposes: { ...purposes },
-            purposeStatuses: { ...purposeStatuses }, outsideEuropePolicy: 'explicit-analytics-consent',
-            analyticsRequested: tagRequested, analyticsLoaded: tagLoaded,
-            analyticsEnabled: !window[disableKey], awaitingChoice: waitingForChoice, adsEnabled: false })
+    window.dartsPrivacy = Object.freeze({openSettings,refresh,
+        getStatus:() => ({measurementId,status:tagFailed ? 'analytics-unavailable' : policyPage ? 'policy-page'
+            : !choice ? 'awaiting-choice' : choice.analytics === 'denied' ? 'analytics-denied' : tagLoaded ? 'analytics-ready' : 'analytics-requested',
+            purposes:{...deny,analytics_storage:choice?.analytics === 'granted' ? 'granted' : 'denied'},
+            analyticsRequested:tagRequested,analyticsLoaded:tagLoaded,analyticsEnabled:!window[disableKey],
+            awaitingChoice:!choice,preferenceSaved:saved,expiresAt:choice?.expiresAt ?? null,adsEnabled:false})});
+    choice = readChoice();saved = !!choice;
+    if (choice) { applyChoice();scheduleExpiry(); }
+    function ready() { ensureBanner();if (!choice && !policyPage) openSettings(); }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded',ready,{once:true});else ready();
+    window.addEventListener('storage',event => {
+        if (event.key !== storageKey && event.key !== null) return;
+        choice = readChoice();saved = !!choice;applyChoice();scheduleExpiry();
+        if (choice?.analytics !== 'granted') cleanAnalyticsCookies();
+        refresh();if (banner) banner.hidden = !!choice || policyPage;
     });
-})(window, document);
+})(window,document);

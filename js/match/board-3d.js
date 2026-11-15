@@ -21,6 +21,8 @@
     };
     const status = document.getElementById('board-view-status');
     const reducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const coarsePointer = window.matchMedia('(pointer: coarse)');
+    const mobileRenderBudget = createMobileRenderBudget(() => coarsePointer.matches);
     const resources = new Set();
     const dartModels = [];
     const spiderMeshes = [];
@@ -30,7 +32,8 @@
     if (mode !== '2d' && mode !== '3d') mode = '3d';
     let cameraView = readPreference('dartsCareer.boardCamera', 'side') === 'front' ? 'front' : 'side';
     let THREE, renderer, scene, camera, dartFactory;
-    let boardFace, defaultBoardTexture, modBoardTexture = null, skinSource = null;
+    let venueModel=null, venueWide=false, venueKeyLight=null, venueSurround=null;
+    let boardFace, boardBody, defaultBoardTexture, modBoardTexture = null, skinSource = null;
     let surroundFace, surroundRim, modSurroundTexture = null, surroundSkinSource = null;
     const surroundPanels = [];
     let loading = false, failed = false, initialization = null;
@@ -42,6 +45,39 @@
     let restorePending = true, suspendedAt = null, frameCount = 0;
     let previousMotionFrame = null, motionFrameMs = null;
     let preparedMatch = null, preparedStyles = null, preparedDarts = [];
+
+    function createMobileRenderBudget(isMobile) {
+        let limit = 2, pending = null, previous = null, samples = [], reductions = 0;
+        return {
+            sample(now, moving) {
+                if (!isMobile() || !moving) { previous = null; return; }
+                const interval = previous === null ? 0 : now - previous;
+                previous = now;
+                if (interval <= 0 || pending !== null || limit <= 1.25) return;
+                // Require sustained slow presentation; an isolated GC/layout
+                // pause must not lower a phone's rendering resolution.
+                samples.push(Math.min(100, interval));
+                if (samples.length > 24) samples.shift();
+                if (samples.length < 24) return;
+                const average = samples.reduce((sum, value) => sum + value, 0) / samples.length;
+                if (average > 28 && samples.filter(value => value > 24).length >= 18) {
+                    pending = limit > 1.5 ? 1.5 : 1.25;
+                }
+            },
+            applyPending() {
+                if (!isMobile() || pending === null) return false;
+                limit = pending; pending = null; samples = []; previous = null; reductions++;
+                return true;
+            },
+            limit() { return isMobile() ? limit : 2; },
+            getState() { return { mobile: isMobile(), pixelRatioLimit: this.limit(), pending, reductions }; }
+        };
+    }
+
+    function freezeLocalTransforms(root) {
+        // These local transforms are fixed; animated dart roots stay dynamic.
+        root.traverse(part => { part.updateMatrix(); part.matrixAutoUpdate = false; });
+    }
 
     function readPreference(key, fallback) {
         try { return localStorage.getItem(key) || fallback; } catch (_error) { return fallback; }
@@ -70,6 +106,9 @@
         buttons.camera.textContent = cameraView === 'side' ? copy.side : copy.front;
         buttons.camera.title = copy.camera;
         buttons.camera.setAttribute('aria-label', `${copy.camera}: ${buttons.camera.textContent}`);
+        const wide=active()&&venueWide;
+        if(matchScreen.classList.contains('match-venue-wide')!==wide)matchScreen.classList.toggle('match-venue-wide',wide);
+        window.matchVenue?.updateUI?.();
         stage.hidden = !active();
         canvas2D.hidden = active();
         document.getElementById('match-board-view').dataset.view = active() ? '3d' : '2d';
@@ -86,9 +125,10 @@
 
     function boardTextures() {
         const surface = document.createElement('canvas');
-        surface.width = surface.height = 2048;
+        const textureSize = coarsePointer.matches ? 2048 : Math.min(4096, renderer.capabilities.maxTextureSize);
+        surface.width = surface.height = textureSize;
         const ctx = surface.getContext('2d');
-        ctx.scale(2048 / 340, 2048 / 340);
+        ctx.scale(textureSize / 340, textureSize / 340);
         ctx.fillStyle = '#14171a'; ctx.fillRect(0, 0, 340, 340);
         const colors = { black: '#151817', white: '#e8d9b7', red: '#bf202c', green: '#008c4e' };
         const { innerBull, outerBull, trebleInner, trebleOuter, doubleInner } = matchBoardLayout.radii;
@@ -126,7 +166,7 @@
         });
         const texture = track(new THREE.CanvasTexture(surface));
         texture.colorSpace = THREE.SRGBColorSpace;
-        texture.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+        texture.anisotropy = Math.min(16, renderer.capabilities.getMaxAnisotropy());
 
         const bumpCanvas = document.createElement('canvas');
         bumpCanvas.width = bumpCanvas.height = 1024;
@@ -203,6 +243,25 @@
         return batch;
     }
 
+    function refreshVenue(value = null) {
+        if(!scene||!renderer||!window.matchVenue3D)return false;
+        const data=['tv','floor'].includes(value?.type)?value:window.matchVenue?.snapshot?.();if(!data)return false;
+        const appearanceKey=data.type==='tv'?JSON.stringify(data.palette||null):null;
+        if(venueModel?.type!==data.type||venueModel.appearanceKey!==appearanceKey){venueModel?.dispose();venueModel=window.matchVenue3D.create(THREE,{type:data.type,boardTexture:boardFace?.material.map,board:{body:boardBody,face:boardFace},surround:venueSurround,textureLimit:Math.min(coarsePointer.matches?2048:4096,renderer.capabilities.maxTextureSize),anisotropy:Math.min(16,renderer.capabilities.getMaxAnisotropy()),data});scene.add(venueModel.root);scene.background=new THREE.Color(data.type==='tv'?(data.palette?.stage||0x07131f):0x11181e);if(venueKeyLight){venueKeyLight.color.setHex(data.type==='floor'?0xf3f9ff:0xfff4e5);venueKeyLight.intensity=data.type==='floor'?2.8:3.1;}refreshVenueLighting();updateCamera();requestRender();}
+        venueModel.setBoardTexture(boardFace?.material.map);if(venueModel.updateScore(data))requestRender();return true;
+    }
+    function setVenueWide(value) {
+        const next=Boolean(value);if(venueWide===next)return false;venueWide=next;
+        if(next){cameraFocus=null;replayShot=null;}
+        refreshVenueLighting();refreshUI();resize();updateCamera();window.dispatchEvent(new Event('match-venue-view-change'));return true;
+    }
+    function refreshVenueLighting() {
+        // Wide floor shots use identical lighting on every target. Fine generated
+        // wires return in the playable close-up instead of sparkling on one station.
+        if (venueKeyLight) venueKeyLight.castShadow = !venueWide;
+        spiderMeshes.forEach(mesh => { mesh.visible = !skinSource && !(venueWide && venueModel?.type === 'floor'); });
+    }
+
     function createScene() {
         renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true, powerPreference: 'high-performance' });
         renderer.setPixelRatio(Math.min(Math.max(window.devicePixelRatio || 1, 1), 2));
@@ -217,9 +276,10 @@
         stage.appendChild(renderer.domElement);
         scene = new THREE.Scene();
         scene.environment = track(window.dartModel.studioEnvironment(THREE));
-        camera = new THREE.PerspectiveCamera(30, 1, .1, 30);
+        camera = new THREE.PerspectiveCamera(30, 1, .1, 240);
         scene.add(new THREE.HemisphereLight(0xe8f4ff, 0x526051, 1.8));
         const key = new THREE.DirectionalLight(0xfff4e5, 3.1);
+        venueKeyLight=key;
         key.position.set(-2.5, 3.5, 5); key.castShadow = true;
         key.shadow.mapSize.set(1024, 1024);
         Object.assign(key.shadow.camera, { left: -1.7, right: 1.7, top: 1.7, bottom: -1.7, near: .1, far: 12 });
@@ -229,30 +289,19 @@
         fill.position.set(3, -.5, 3); scene.add(fill);
 
         // A standard surround is roughly 1.6 times the board diameter.
-        const rubber = material({ color: 0x111718, roughness: .98 });
-        const surround = addMesh(track(new THREE.CylinderGeometry(2.1, 2.1, .14, 128)), rubber);
-        surround.rotation.x = Math.PI / 2; surround.position.z = -.13; surround.receiveShadow = true;
-        const surroundPanel = material({ color: 0x303638, roughness: .98 });
-        for (let i = 0; i < 8; i++) {
-            const panel = addMesh(track(new THREE.RingGeometry(1.65, 1.91, 8, 1,
-                i * Math.PI / 4 + .18, .38)), surroundPanel);
-            panel.position.z = -.049;
-            surroundPanels.push(panel);
-        }
-        const panelBatch = batchStaticMeshes(surroundPanels);
-        surroundPanels.splice(0, surroundPanels.length, panelBatch);
-        surroundRim = addMesh(track(new THREE.TorusGeometry(2.07, .014, 6, 128)),
-            material({ color: 0x262c2e, roughness: .95 }));
-        surroundRim.position.z = -.05;
-        surroundFace = addMesh(track(new THREE.CircleGeometry(2.1, 128)),
-            material({ color: 0xffffff, roughness: .98, transparent: true, alphaTest: .01 }));
-        surroundFace.position.z = -.047; surroundFace.receiveShadow = true; surroundFace.visible = false;
+        venueSurround = window.matchVenue3D.createSurround(THREE, track);
+        Object.values(venueSurround).forEach(mesh => scene.add(mesh));
+        surroundPanels.push(venueSurround.panels);
+        surroundRim = venueSurround.rim;
+        surroundFace = venueSurround.face;
         refreshSurroundSkin();
-        const boardBody = addMesh(track(new THREE.CylinderGeometry(170 / 130, 170 / 130, .16, 96)), material({ color: 0x111415, roughness: .87 }));
+        boardBody = addMesh(track(new THREE.CylinderGeometry(170 / 130, 170 / 130, .16, 96)), material({ color: 0x111415, roughness: .87 }));
+        boardBody.name = 'board-body';
         boardBody.rotation.x = Math.PI / 2; boardBody.position.z = -.08; boardBody.castShadow = true;
         const { texture, bump } = boardTextures();
         defaultBoardTexture = texture;
         boardFace = addMesh(track(new THREE.CircleGeometry(170 / 130, 192)), material({ map: texture, bumpMap: bump, bumpScale: .003, roughness: .94 }));
+        boardFace.name = 'board-face';
         boardFace.position.z = .003; boardFace.receiveShadow = true;
         refreshSkin();
 
@@ -273,6 +322,8 @@
         }
         const spiderBatch = batchStaticMeshes(spiderMeshes);
         spiderMeshes.splice(0, spiderMeshes.length, spiderBatch);
+        refreshVenue();
+        freezeLocalTransforms(scene);
         dartFactory = window.dartModel.createFactory(THREE, { detail: 'match' });
         updateCamera();
     }
@@ -286,14 +337,15 @@
         if (surface) {
             modBoardTexture = track(new THREE.CanvasTexture(surface));
             modBoardTexture.colorSpace = THREE.SRGBColorSpace;
-            modBoardTexture.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+            modBoardTexture.anisotropy = Math.min(16, renderer.capabilities.getMaxAnisotropy());
         }
         boardFace.material.map = modBoardTexture || defaultBoardTexture;
         boardFace.material.bumpScale = surface ? .0008 : .003;
         boardFace.material.needsUpdate = true;
+        venueModel?.setBoardTexture(boardFace.material.map);
         // A photographic skin already contains its own spider. Hiding the generated
         // one prevents parallax from drawing a second wire over doubles and trebles.
-        spiderMeshes.forEach(mesh => { mesh.visible = !surface; });
+        refreshVenueLighting();
         refreshUI(); requestRender();
     }
 
@@ -306,11 +358,12 @@
         if (surface) {
             modSurroundTexture = track(new THREE.CanvasTexture(surface));
             modSurroundTexture.colorSpace = THREE.SRGBColorSpace;
-            modSurroundTexture.anisotropy = Math.min(8, renderer.capabilities.getMaxAnisotropy());
+            modSurroundTexture.anisotropy = Math.min(16, renderer.capabilities.getMaxAnisotropy());
         }
         surroundFace.material.map = modSurroundTexture; surroundFace.material.needsUpdate = true;
         surroundFace.visible = !!surface;
         surroundPanels.forEach(mesh => { mesh.visible = !surface; }); surroundRim.visible = !surface;
+        venueModel?.syncSurround();
         requestRender();
     }
 
@@ -367,6 +420,7 @@
         const pointInset = robinHoodContact ? 0 : embeddedPointLengthMm * window.dartModel.scale
             + (group.position.z - boardFace.position.z) / Math.max(.1, axis.z);
         group.children.forEach(part => { part.position.z -= pointInset; });
+        group.children.forEach(freezeLocalTransforms);
         scene.add(group);
         const dart = { group, data, appearance, x, y, rotation: group.rotation.clone() };
         dartModels.push(dart); return dart;
@@ -433,6 +487,7 @@
         if (bullOff && !bullOff.hidden && bullOff.contains(stage)) {
             return { position: new THREE.Vector3(0, 0, 5.65 / narrow), look: new THREE.Vector3(0, 0, .08) };
         }
+        if(venueWide&&venueModel)return venueModel.widePose(camera.aspect);
         if (!target) {
             // Keep the TV board readable while leaving room for its surround;
             // regular play uses the closer framing chosen for the match panel.
@@ -463,6 +518,7 @@
     }
 
     function applyCameraPose(pose) {
+        if(camera.fov!==(pose.fov||30)){camera.fov=pose.fov||30;camera.updateProjectionMatrix();}
         camera.position.copy(pose.position);
         cameraLookAt = pose.look.clone();
         camera.lookAt(cameraLookAt);
@@ -484,6 +540,7 @@
 
     function animateCamera(target, duration = 520) {
         if (!camera) return false;
+        if(target&&venueWide)setVenueWide(false);
         cameraFocus = target && Number.isFinite(Number(target.sector))
             ? { sector: Number(target.sector), mult: Number(target.mult) || 1 }
             : null;
@@ -492,6 +549,7 @@
 
     function setReplayShot(name, target, duration = 460) {
         if (!active() || !camera || !['front-tight', 'left-tight', 'left-low'].includes(name)) return false;
+        if(venueWide)setVenueWide(false);
         const clean = target && Number.isFinite(Number(target.sector))
             ? { sector: Number(target.sector), mult: Number(target.mult) || 1 } : { sector: 25, mult: 2 };
         replayShot = { name, target: clean };
@@ -530,7 +588,8 @@
         const dimensions = renderer.getSize(new THREE.Vector2());
         // Native resolution with antialiasing; avoid forcing 2.25x pixel work on
         // ordinary desktop monitors. High-DPI screens retain the pixel budget.
-        const ratio = Math.min(2, Math.max(window.devicePixelRatio || 1, 1), Math.sqrt(1800000 / (width * height)));
+        const detailedVenue = venueWide && !coarsePointer.matches;
+        const ratio = Math.min(mobileRenderBudget.limit(), Math.max(window.devicePixelRatio || 1, detailedVenue ? 1.5 : 1), Math.sqrt((detailedVenue ? 8500000 : 1800000) / (width * height)));
         if (renderer.getPixelRatio() !== ratio) renderer.setPixelRatio(ratio);
         if (dimensions.x !== width || dimensions.y !== height) {
             renderer.setSize(width, height, false);
@@ -544,6 +603,7 @@
         if (!running) {
             if (suspendedAt === null) suspendedAt = performance.now();
             previousMotionFrame = null;
+            mobileRenderBudget.sample(0, false);
             if (frameId !== null) cancelAnimationFrame(frameId);
             frameId = null; return;
         }
@@ -588,6 +648,7 @@
             }
         }
         previousMotionFrame = moving ? now : null;
+        mobileRenderBudget.sample(now, moving);
         updateCameraMotion(now);
         dartModels.forEach(dart => dart.group.rotation.copy(dart.rotation));
         animations = animations.filter(animation => {
@@ -643,6 +704,9 @@
         if (replayBoard) replayBoard.liveVisibility.forEach((_visible, group) => { group.visible = false; });
         try { renderer.render(scene, camera); frameCount++; }
         catch (_error) { fallback(); return; }
+        // Resize only after motion finishes, so a throw never reallocates its
+        // framebuffer halfway to the board. Geometry and timing stay intact.
+        if (!animations.length && !cameraMotion && mobileRenderBudget.applyPending()) resize();
         if (animations.length || cameraMotion) requestRender();
     }
 
@@ -673,14 +737,15 @@
         if (frameId !== null) cancelAnimationFrame(frameId);
         frameId = null;
         clear();
+        venueModel?.dispose(); venueModel=null; venueWide=false;
         if (renderer) {
             try { renderer.dispose(); } catch (_error) { /* The context may already be lost. */ }
         }
         resources.forEach(resource => resource.dispose()); resources.clear();
         dartFactory?.dispose(); dartFactory = null; renderer = null; scene = null; camera = null;
         preparedMatch = null; preparedStyles = null; preparedDarts = [];
-        boardFace = null; defaultBoardTexture = null; modBoardTexture = null; skinSource = null; spiderMeshes.length = 0; replayShot = null;
-        surroundFace = null; surroundRim = null; modSurroundTexture = null; surroundSkinSource = null; surroundPanels.length = 0;
+        boardFace = null; boardBody = null; defaultBoardTexture = null; modBoardTexture = null; skinSource = null; spiderMeshes.length = 0; replayShot = null;
+        surroundFace = null; surroundRim = null; modSurroundTexture = null; surroundSkinSource = null; surroundPanels.length = 0; venueSurround = null;
         stage.replaceChildren(); refreshUI(); drawDartboard();
     }
 
@@ -701,7 +766,9 @@
     function sync(darts) {
         if (mode !== '3d' || failed) return false;
         if (!renderer) { if (visible()) ensureScene(); return false; }
+        refreshVenue();
         const currentDarts = darts.slice(-3);
+        if(venueWide&&currentDarts.length>seenDarts.length)setVenueWide(false);
         // Warm at match/visit setup, never on the critical path of a live throw.
         if (restorePending || currentDarts.length === 0) {
             try { prepareDartLoadouts(); }
@@ -721,6 +788,7 @@
 
     function bounceOut(result) {
         if (!active() || !visible()) return false;
+        if(venueWide)setVenueWide(false);
         const point = result.boardPoint || getDartboardHitPoint(result.bouncedSector, result.bouncedMult, result.bouncedSector, result.bouncedMult, () => .5);
         const side = typeof currentMatch !== 'undefined' && currentMatch?.turn === 'p2' ? 'p2' : 'p1';
         const color = side === 'p2' ? '#ecf0f1' : '#f1c40f';
@@ -812,7 +880,8 @@
     }
 
     window.matchBoard3D = {
-        sync, clear, bounceOut, setView,
+        sync, clear, bounceOut, setView, setVenueWide,
+        refreshVenueScore(data){refreshVenue(data);},
         refreshLayout() { resize(); updateCamera(); },
         focusTarget(sector, mult = 1) { return active() && animateCamera({ sector, mult }); },
         clearFocus() { return active() && animateCamera(null, 620); },
@@ -837,6 +906,7 @@
         },
         getState() {
             return { mode: active() ? '3d' : '2d', camera: cameraView, loading, failed, failureReason,
+                venueWide, venue:venueModel?.getState()||null,
                 dartFlightMotion: typeof getDartFlightMotionPreference === 'function' ? getDartFlightMotionPreference() : 'enabled',
                 systemReducedMotion: reducedMotion.matches,
                 cameraPosition: camera?.position.toArray(), cameraFocus: cameraFocus ? { ...cameraFocus } : null,
@@ -849,10 +919,16 @@
                 })) : null,
                 frames: frameCount, animationFps: motionFrameMs ? Math.round(1000 / motionFrameMs) : null,
                 pixelRatio: renderer?.getPixelRatio(), drawCalls: renderer?.info.render.calls,
+                renderQuality: mobileRenderBudget.getState(),
                 triangles: renderer?.info.render.triangles,
                 geometries: renderer?.info.memory.geometries, textures: renderer?.info.memory.textures,
                 boardSkin: skinSource ? window.matchBoardSkin.getState().name : null, boardSurfaceZ: boardFace?.position.z,
                 surroundSkin: surroundSkinSource ? window.matchSurroundSkin.getState().name : null,
+                surroundColor: venueSurround?.body.material.color.getHexString(),
+                boardTextureSize: boardFace?.material.map?.image.width,
+                surroundTextureSize: modSurroundTexture?.image.width || null,
+                venueShadows: venueKeyLight?.castShadow,
+                boardScreenDiameter: camera && renderer ? Math.abs(new THREE.Vector3(0,170/130,.003).project(camera).y-new THREE.Vector3(0,-170/130,.003).project(camera).y)*renderer.getSize(new THREE.Vector2()).y/2 : null,
                 spider: { source: skinSource ? 'photographic' : 'generated', generated: spiderMeshes.length,
                     generatedVisible: spiderMeshes.filter(mesh => mesh.visible).length, ...spiderDetail },
                 viewport: renderer ? renderer.getSize(new THREE.Vector2()).toArray() : null,
@@ -871,6 +947,7 @@
     };
     window.getMatchBoardAnimationDelay = delay => window.matchBoard3D.animationDelay(delay);
     window.refreshMatchBoardViewTranslations = refreshUI;
+    window.addEventListener('match-venue-change',refreshVenue);
     window.addEventListener('dartboard-skin-change', refreshSkin);
     window.addEventListener('surround-skin-change', refreshSurroundSkin);
     buttons.two.addEventListener('click', () => setView('2d'));

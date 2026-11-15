@@ -277,8 +277,9 @@ function getModMediaBlobByUrl(assets, url) {
 }
 
 async function getModCareerProfileMedia(assets, name) {
+    const permanentPhoto = typeof getPermanentPlayerPhoto === 'function' ? getPermanentPlayerPhoto(name) : '';
     const photoUrl = assets?.photos?.[name] || '';
-    const result = { photo: getModMediaBlobByUrl(assets, photoUrl) || photoUrl, walkon: null };
+    const result = { photo: permanentPhoto || getModMediaBlobByUrl(assets, photoUrl) || photoUrl, walkon: null };
     try {
         const music = await acquireModMusicAsset(assets, name);
         try { result.walkon = music.blob || music.url || null; }

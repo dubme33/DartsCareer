@@ -234,8 +234,11 @@ function findHistoricalCareerTournament(history) {
         // Numbered calendar slots do not identify the same event across years.
         // Match only a named ET event, never a newer World Series namesake.
         return tournamentDatabase.find(event => typeof isEuropeanTourTournament === 'function'
-            && isEuropeanTourTournament(event) && isCareerChampionship(event)
-            && [event?.name, event?.sourceName].some(name => normalizeHistoricalChampionName(name) === target)) || null;
+            && isEuropeanTourTournament(event)
+            && [event?.name, event?.sourceName].some(name => normalizeHistoricalChampionName(name) === target)
+            // Resolve championship aliases only for an actual name match. Doing
+            // this for every calendar slot turns title/news lookup quadratic.
+            && isCareerChampionship(event)) || null;
     }
     return tournamentDatabase.find(event => history.specialType && event?.specialType === history.specialType)
         || tournamentDatabase.find(event => [event?.name, event?.sourceName]
@@ -307,15 +310,34 @@ function applyHistoricalChampionModData(modData = {}) {
     );
 }
 
-function getCareerRecordTournament(tournament) {
-    const name = tournament?.sourceName || tournament?.name || '';
-    const normalize = value => String(value || '').trim().replace(/\s+/g, ' ').toLowerCase();
-    return (typeof tournamentDatabase !== 'undefined' ? tournamentDatabase : []).find(event =>
-        [event.name, event.sourceName].some(alias => alias && normalize(alias) === normalize(name))) || tournament;
+function normalizeCareerRecordTournamentName(value) {
+    return String(value || '').trim().replace(/\s+/g, ' ').toLowerCase();
 }
 
-function isCareerChampionship(tournament) {
-    const event = getCareerRecordTournament(tournament);
+function createCareerRecordTournamentLookup() {
+    // One rendering pass owns this index. Rebuild it after edits, imports or
+    // reordering so the first matching alias retains its original precedence.
+    const lookup = new Map();
+    (typeof tournamentDatabase !== 'undefined' ? tournamentDatabase : []).forEach(event => {
+        [event.name, event.sourceName].forEach(alias => {
+            if (!alias) return;
+            const key = normalizeCareerRecordTournamentName(alias);
+            if (!lookup.has(key)) lookup.set(key, event);
+        });
+    });
+    return lookup;
+}
+
+function getCareerRecordTournament(tournament, lookup = null) {
+    const name = tournament?.sourceName || tournament?.name || '';
+    const normalizedName = normalizeCareerRecordTournamentName(name);
+    if (lookup instanceof Map) return lookup.get(normalizedName) || tournament;
+    return (typeof tournamentDatabase !== 'undefined' ? tournamentDatabase : []).find(event =>
+        [event.name, event.sourceName].some(alias => alias && normalizeCareerRecordTournamentName(alias) === normalizedName)) || tournament;
+}
+
+function isCareerChampionship(tournament, lookup = null) {
+    const event = getCareerRecordTournament(tournament, lookup);
     return Boolean(event?.name) && !event.qualifierFor
         && !/qualif|kwalifikac|q.?school|pro card trials|night\s*\d|wiecz[oó]r\s*\d/i.test(`${event.name} ${event.sourceName || ''} ${event.specialType || ''}`);
 }

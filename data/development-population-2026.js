@@ -5468,7 +5468,7 @@ const DEVELOPMENT_POPULATION_VERIFIED_BIRTH_DATES=Object.freeze([
   {
     "templateIndex": 397,
     "name": "Kian Baynes",
-    "country": "Anglia",
+    "country": "Turcja",
     "birthDate": "2010-07-02"
   },
   {

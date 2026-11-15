@@ -175,7 +175,7 @@ const pdcPlayers = [
     { name: "Timo Harju", country: "Finlandia", ovr: 55, scoring: 56, doubles: 54, prizeMoney: 2000, proTourPrizeMoney: 2000, pcPrizeMoney: 0 },
     { name: "George Jehirszki", country: "Węgry", ovr: 55, scoring: 56, doubles: 54, prizeMoney: 2000, proTourPrizeMoney: 2000, pcPrizeMoney: 0 },
     { name: "Liam Lawrence", country: "Niemcy", ovr: 55, scoring: 56, doubles: 54, prizeMoney: 2000, proTourPrizeMoney: 2000, pcPrizeMoney: 0 },
-    { name: "Arthur Hardy", country: "Anglia", ovr: 55, scoring: 56, doubles: 54, prizeMoney: 2000, proTourPrizeMoney: 2000, pcPrizeMoney: 0 },
+    { name: "Arthur Hardy", country: "Austria", ovr: 55, scoring: 56, doubles: 54, prizeMoney: 2000, proTourPrizeMoney: 2000, pcPrizeMoney: 0 },
 
     // Zawodniczki i junior potrzebni do niezależnych ścieżek kwalifikacji MŚ.
     { name: "Fallon Sparks", country: "Anglia", gender: "female", birthYear: 1994, ovr: 64, scoring: 65, doubles: 63, prizeMoney: 0, proTourPrizeMoney: 0, pcPrizeMoney: 0 },
@@ -489,7 +489,7 @@ const developmentTour2026PlayerAdditions = Object.freeze([
     [12, "Arjen Bosman", "Holandia", 2003],
     [17, "Lennard Schulte", "Niemcy", 2008],
     [19, "Dalibor Fiala", "Czechy", 2004],
-    [27, "Kian Baynes", "Anglia", 2010],
+    [27, "Kian Baynes", "Turcja", 2010],
     [28, "Lewis Croft", "Anglia", 2009],
     [29, "Iwan Henshall", "Walia", 2005],
     [30, "Toby Banes", "Anglia", 2006],
@@ -737,11 +737,30 @@ function applyPlayerRatingUpdate(candidate, { preserveProgress = false, careerPl
     candidate.ratingUpdate = { key: update.key, ovr: update.ovr };
 }
 
+// Match displayed identities, never an unrelated mod replacement sharing a slot.
+// Country corrections also apply when an older mod/save is loaded.
+const playerCountryCorrections = new Map([
+    ['Arthur Hardy', 'Austria'], ['Aaron Hardy', 'Austria'],
+    ['Kian Baynes', 'Turcja'], ['Kaya Baysal', 'Turcja'],
+    ['Emily Robinson', 'Anglia'], ['Angela Kirkwood', 'Anglia'],
+    ['Ava Harris', 'Anglia'], ['Sue Lowther', 'Anglia'],
+    ['Charlotte White', 'Anglia'], ['Lauren Hall', 'Anglia'],
+    ['Sophie Evans', 'Szkocja'], ['Hollie McKain', 'Szkocja'],
+    ['Isla Robinson', 'Anglia'], ['Tracey Dean', 'Anglia'],
+    ['Hannah Brown', 'Anglia'], ['Donna Ralph', 'Anglia'],
+    ['Amelia Edwards', 'Anglia'], ['Rowena Sidley', 'Anglia'],
+    ['Emily Walker', 'Anglia'], ['Jane Hawtin', 'Anglia'],
+    ['Jessica Baker', 'Anglia'], ['Millie Jolley', 'Anglia']
+].map(([name, country]) => [normalizePlayerRatingName(name), country]));
+
 function applyKnownPlayerCorrections(players, options = {}) {
     if (!Array.isArray(players)) return;
     players.forEach(candidate => {
         if (!candidate || candidate.isBye) return;
         const displayName = String(candidate.name || '').trim().toLocaleLowerCase('pl');
+        const correctedCountry = playerCountryCorrections.get(normalizePlayerRatingName(candidate.name));
+        if (correctedCountry && !candidate.isNewgen && !candidate.editorCreated
+            && candidate.playerEditorProfileOverride !== true) candidate.country = correctedCountry;
         // Korekta jest celowo oparta na aktualnej nazwie zawodnika, a nie na
         // sourceName. Dzięki temu obejmuje bazowego Micka Manbuya i prawdziwe
         // nazwisko z moda, ale nie zmienia narodowości innych modowych zamienników

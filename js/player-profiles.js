@@ -188,12 +188,17 @@ function getPlayerCareerTitleData(tournamentOrName) {
     const tournament = tournamentOrName && typeof tournamentOrName === 'object' ? tournamentOrName : null;
     const name = String(tournament?.name || tournamentOrName || '').trim();
     const sourceName = String(tournament?.sourceName || name).trim();
+    const tourId = tournament?.careerTourId || (tournament && typeof getCareerEditorTourId === 'function'
+        ? getCareerEditorTourId(tournament) : '');
+    const tour = typeof getCareerCalendarEditorState === 'function'
+        ? getCareerCalendarEditorState().tours.find(item => item.id === tourId) : null;
     return {
         key: normalizePlayerCareerTitle(sourceName || name),
         name,
         sourceName,
         specialType: typeof isWomensWorldMatchplayTournament==='function'&&isWomensWorldMatchplayTournament(tournament)?'womensWorldMatchplay':tournament?.specialType || '',
-        worldMastersEvent: tournament?.worldMastersEvent || ''
+        worldMastersEvent: tournament?.worldMastersEvent || '',
+        ...(tourId?.startsWith('custom:') ? { careerTourId: tourId, careerTourName: tour?.name || tournament?.careerTourName || '' } : {})
     };
 }
 
@@ -247,6 +252,7 @@ function upsertPlayerCareerTitle(titleList, titleData, count = 1, timestamp = 0,
     if (titleData.sourceName) entry.sourceName = titleData.sourceName;
     if (titleData.specialType) entry.specialType = titleData.specialType;
     if (titleData.worldMastersEvent) entry.worldMastersEvent = titleData.worldMastersEvent;
+    if (titleData.careerTourId) { entry.careerTourId = titleData.careerTourId; entry.careerTourName = titleData.careerTourName; }
     const firstWonAt = Math.max(0, Number(history?.firstWonAt) || wonAt);
     if (!entry.firstWonAt || (firstWonAt && firstWonAt < entry.firstWonAt)) entry.firstWonAt = firstWonAt;
     if (wonAt > (Number(entry.lastWonAt) || 0)) entry.lastWonAt = wonAt;
@@ -261,7 +267,8 @@ function sanitisePlayerCareerTitles(candidate) {
             name: entry.name,
             sourceName: entry.sourceName || entry.key || entry.name,
             specialType: entry.specialType,
-            worldMastersEvent: entry.worldMastersEvent
+            worldMastersEvent: entry.worldMastersEvent,
+            careerTourId: entry.careerTourId, careerTourName: entry.careerTourName
         });
         upsertPlayerCareerTitle(mergedTitles, titleData, entry.count, entry.lastWonAt || entry.firstWonAt, entry);
     });
@@ -487,6 +494,10 @@ function getPlayerCareerTitleDisplayName(title) {
 
 function getPlayerCareerTitleSeries(title) {
     const tournament = getPlayerCareerTitleTournament(title);
+    const tourId = title.careerTourId || (typeof getCareerEditorTourId === 'function' ? getCareerEditorTourId(tournament) : '');
+    const tour = typeof getCareerCalendarEditorState === 'function'
+        ? getCareerCalendarEditorState().tours.find(item => item.id === tourId) : null;
+    if (tour?.groupTitles === true && !tour.removed) return tour.name;
     if(typeof isWomensWorldMatchplayTournament==='function'&&isWomensWorldMatchplayTournament(tournament))return typeof competitionName==='function'?competitionName('womensWorldMatchplay'):"Women's Global Matchplay";
     if (typeof isWomensSeriesTournament==='function'&&isWomensSeriesTournament(tournament))return typeof competitionName==='function'?competitionName('womensSeries'):"Women's Pro Circuit";
     const names = `${tournament.name} ${tournament.sourceName || ''} ${tournament.specialType || ''}`;
@@ -623,6 +634,7 @@ function recordSeasonTournamentResult(candidate, tournament, details = {}) {
     }
     stats.results.push(result);
     if (typeof recordTournamentFinanceResult === 'function') recordTournamentFinanceResult(candidate, tournament, result);
+    if (typeof recordCareerTravelResult === 'function') recordCareerTravelResult(candidate, tournament, result);
     if (typeof recordSponsorGoalTournament === 'function') recordSponsorGoalTournament(candidate, tournament, result);
     if (won) {
         addPlayerCareerTitle(candidate, tournament, timestamp);
@@ -698,6 +710,8 @@ function formatPlayerProfileDate(timestamp) {
 }
 
 function getPlayerProfilePhoto(candidate) {
+    const permanentPhoto = typeof getPermanentPlayerPhoto === 'function' ? getPermanentPlayerPhoto(candidate) : '';
+    if (permanentPhoto) return permanentPhoto;
     if (candidate && candidate.photo) return candidate.photo;
     if (typeof moddedAssets !== 'undefined' && moddedAssets.photos && candidate && candidate.name) {
         return moddedAssets.photos[candidate.name] || moddedAssets.photos[candidate.sourceName] || '';
@@ -725,7 +739,8 @@ function renderSeasonResult(result) {
 }
 
 function openPlayerProfile(playerId, rankingType = 'main') {
-    const selectedPlayer = getCareerProfilePlayers().find(candidate => String(candidate.id) === String(playerId));
+    const selectedPlayer = typeof player !== 'undefined' && player?.name && String(player.id) === String(playerId)
+        ? player : getCareerProfilePlayers().find(candidate => String(candidate.id) === String(playerId));
     if (!selectedPlayer) return;
 
     playerProfileReturnRanking = rankingType;
@@ -763,7 +778,7 @@ function openPlayerProfile(playerId, rankingType = 'main') {
     const careerTitlesMarkup = renderPlayerCareerTitles(selectedPlayer);
 
     const content = document.getElementById('player-profile-content');
-    content.innerHTML = `<section class="player-profile-hero">
+    content.innerHTML = `${typeof renderCareerCardProfileAction === 'function' ? renderCareerCardProfileAction(selectedPlayer) : ''}<section class="player-profile-hero">
         <img id="player-profile-photo" class="player-profile-photo" alt="${escapeHtml(trPlayerProfile('photoAlt'))}">
         <div class="player-profile-identity">
             <p class="profile-eyebrow">${trPlayerProfile('profile')}</p>
@@ -809,7 +824,7 @@ function openPlayerProfile(playerId, rankingType = 'main') {
 
 function updatePlayerProfileStaticStrings() {
     const button = document.getElementById('player-profile-back');
-    if (button) button.innerText = playerProfileReturnRanking === 'world-news' && typeof trWorldNews === 'function'
+    if (button) button.innerText = playerProfileReturnRanking === 'career' ? (typeof t === 'function' ? t('t-back-train') : trPlayerProfile('back')) : playerProfileReturnRanking === 'world-news' && typeof trWorldNews === 'function'
         ? trWorldNews('backToNews') : trPlayerProfile('back');
 }
 
@@ -822,6 +837,7 @@ function refreshPlayerProfileTranslations() {
 }
 
 function closePlayerProfile() {
+    if (playerProfileReturnRanking === 'career') { showScreen('screen-hub'); return; }
     if (playerProfileReturnRanking === 'world-news' && typeof returnToWorldNews === 'function') {
         returnToWorldNews();
         return;

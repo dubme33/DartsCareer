@@ -4,6 +4,7 @@ const AI_DART_EDITOR_TEXT = {
         entryAngleReset: 'Przywróć domyślny kąt', shaftLengthsHint: 'Długości 50, 55 i 65 mm są dostępne przy systemie „Osobny shaft i piórko”.',
         barrel: 'Barrel i grip', point: 'Grot', shaft: 'Shaft i system', flights: 'Piórka',
         barrelShape: 'Kształt barrela', barrelPattern: 'Grip bazowy', barrelLength: 'Długość barrela', weightGrams: 'Waga lotki',
+        barrelDiameter: 'Średnica barrela', resetDiameter: 'Domyślna dla kształtu',
         barrelColor: 'Kolor barrela', barrelAccentColor: 'Drugi kolor barrela', barrelAccentStyle: 'Rozmieszczenie koloru',
         front: 'Grip z przodu', middle: 'Grip na środku', rear: 'Grip z tyłu',
         tipLength: 'Długość grota', tipStyle: 'Wykończenie grota', tipColor: 'Kolor grota',
@@ -19,6 +20,7 @@ const AI_DART_EDITOR_TEXT = {
         entryAngleReset: 'Restore default angle', shaftLengthsHint: 'Lengths of 50, 55 and 65 mm are available with “Separate shaft and flight”.',
         barrel: 'Barrel and grip', point: 'Point', shaft: 'Shaft and system', flights: 'Flights',
         barrelShape: 'Barrel shape', barrelPattern: 'Base grip', barrelLength: 'Barrel length', weightGrams: 'Dart weight',
+        barrelDiameter: 'Barrel diameter', resetDiameter: 'Shape default',
         barrelColor: 'Barrel colour', barrelAccentColor: 'Barrel accent colour', barrelAccentStyle: 'Colour placement',
         front: 'Front grip', middle: 'Middle grip', rear: 'Rear grip',
         tipLength: 'Point length', tipStyle: 'Point finish', tipColor: 'Point colour',
@@ -34,6 +36,7 @@ const AI_DART_EDITOR_TEXT = {
         entryAngleReset: 'Standardwinkel wiederherstellen', shaftLengthsHint: '50, 55 und 65 mm sind mit „Schaft und Flight getrennt“ verfügbar.',
         barrel: 'Barrel und Grip', point: 'Spitze', shaft: 'Schaft und System', flights: 'Flights',
         barrelShape: 'Barrel-Form', barrelPattern: 'Basis-Grip', barrelLength: 'Barrel-Länge', weightGrams: 'Dartgewicht',
+        barrelDiameter: 'Barrel-Durchmesser', resetDiameter: 'Standard der Form',
         barrelColor: 'Barrel-Farbe', barrelAccentColor: 'Zweite Barrel-Farbe', barrelAccentStyle: 'Farbverteilung',
         front: 'Grip vorn', middle: 'Grip mittig', rear: 'Grip hinten',
         tipLength: 'Spitzenlänge', tipStyle: 'Spitzenoberfläche', tipColor: 'Spitzenfarbe',
@@ -49,6 +52,7 @@ const AI_DART_EDITOR_TEXT = {
         entryAngleReset: 'Standaardhoek herstellen', shaftLengthsHint: '50, 55 en 65 mm zijn beschikbaar met “Losse shaft en flight”.',
         barrel: 'Barrel en grip', point: 'Punt', shaft: 'Shaft en systeem', flights: 'Flights',
         barrelShape: 'Barrelvorm', barrelPattern: 'Basisgrip', barrelLength: 'Barrellengte', weightGrams: 'Dartgewicht',
+        barrelDiameter: 'Barreldiameter', resetDiameter: 'Standaard van de vorm',
         barrelColor: 'Barrelkleur', barrelAccentColor: 'Tweede barrelkleur', barrelAccentStyle: 'Kleurverdeling',
         front: 'Grip voor', middle: 'Grip midden', rear: 'Grip achter',
         tipLength: 'Puntlengte', tipStyle: 'Puntafwerking', tipColor: 'Puntkleur',
@@ -61,8 +65,8 @@ const AI_DART_EDITOR_TEXT = {
         editReady: 'Uiterlijk staat klaar. Sla de spelerswijzigingen op.', preview: 'Voorbeeld van AI-darts' }
 };
 const AI_DART_EDITOR_GROUPS = [
-    { title: 'barrel', fields: ['barrelShape', 'barrelPattern', 'barrelLength', 'weightGrams',
-        'barrelColor', 'barrelAccentColor', 'barrelAccentStyle', 'front', 'middle', 'rear'] },
+    { title: 'barrel', fields: ['barrelShape', 'barrelPattern', 'barrelLength', 'barrelDiameter', 'weightGrams',
+        'barrelColor', 'barrelAccentColor', 'barrelAccentStyle', ...Array.from({ length: 9 }, (_, i) => `grip${i}`)] },
     { title: 'point', fields: ['tipLength', 'tipStyle', 'tipColor'] },
     { title: 'shaft', fields: ['flightSystem', 'shaftLength', 'shaftStyle', 'shaftColor', 'integratedColor'] },
     { title: 'flights', fields: ['flightShape', 'flightPattern', 'flightColor', 'flightAccentColor'] }
@@ -129,12 +133,21 @@ function resetAiDartEntryAngle() {
     if (typeof setPlayerEditorStatus === 'function') setPlayerEditorStatus(trAiDartEditor('editReady'));
 }
 function aiDartFieldValue(field) {
+    if (/^grip[0-8]$/.test(field)) return aiDartEditorPending.gripSections[Number(field.slice(4))];
     if (['front', 'middle', 'rear'].includes(field)) return aiDartEditorPending.gripZones[field];
     return aiDartEditorPending[field];
 }
 function aiDartEditorControl(field) {
-    const label = aiDartEditorEscape(trAiDartEditor(field));
+    const section = /^grip[0-8]$/.test(field) ? Number(field.slice(4)) : null;
+    const label = aiDartEditorEscape(section === null ? trAiDartEditor(field)
+        : `${trAiDartEditor(['front', 'middle', 'rear'][Math.floor(section / 3)])} ${section % 3 + 1}`);
     const value = aiDartFieldValue(field);
+    if (field === 'barrelDiameter') {
+        const diameter = dartModel.dimensions(aiDartEditorPending).barrelRadius * 2;
+        return `<div class="ai-dart-diameter-control"><label data-ai-dart-field="barrelDiameter"><span>${label}: <output>${diameter.toFixed(1)} mm</output></span>
+            <input type="range" min="5" max="9" step="0.1" value="${diameter}" oninput="this.parentNode.querySelector('output').textContent=Number(this.value).toFixed(1)+' mm'" onchange="changeAiDartSetting('barrelDiameter',Number(this.value))"></label>
+            <button type="button" data-ai-reset-diameter onclick="changeAiDartSetting('barrelDiameter',null)" ${value === null ? 'disabled' : ''}>${aiDartEditorEscape(trAiDartEditor('resetDiameter'))}</button></div>`;
+    }
     if (AI_DART_COLOR_FIELDS.has(field)) return `<label data-ai-dart-field="${field}"><span>${label}</span>
         <input type="color" value="${value}" onchange="changeAiDartSetting('${field}',this.value)"></label>`;
     if (field === 'weightGrams' || field === 'barrelLength') {
@@ -145,7 +158,7 @@ function aiDartEditorControl(field) {
                 oninput="this.parentNode.querySelector('output').textContent=this.value+' ${unit}'"
                 onchange="changeAiDartSetting('${field}',this.value)"></label>`;
     }
-    const category = ['front', 'middle', 'rear'].includes(field) ? 'barrelPattern' : field;
+    const category = section !== null || ['front', 'middle', 'rear'].includes(field) ? 'barrelPattern' : field;
     const items = dartCustomizationCatalogue[category].filter(item => category !== 'shaftLength'
         || dartModel.shaftLengths(aiDartEditorPending.flightSystem).includes(Number(item.id)));
     const langIndex = { pl: 0, en: 1, de: 2, nl: 3 }[typeof currentLang === 'string' ? currentLang : 'pl'] ?? 0;
@@ -158,7 +171,8 @@ function renderAiDartEditorControls() {
     if (!host || !aiDartEditorPending) return;
     host.innerHTML = AI_DART_EDITOR_GROUPS.map(group => `<div class="ai-dart-control-group">
         <h5>${aiDartEditorEscape(trAiDartEditor(group.title))}</h5><div class="ai-dart-control-grid">
-        ${group.fields.map(aiDartEditorControl).join('')}</div>${group.title === 'shaft'
+        ${group.fields.filter(field => !/^grip[0-8]$/.test(field) && !(field === 'barrelPattern' && Array.isArray(aiDartEditorPending.gripRegions))).map(aiDartEditorControl).join('')}</div>
+        ${group.title === 'barrel' ? `<div class="ai-dart-fine-grips" ${Array.isArray(aiDartEditorPending.gripRegions) ? 'hidden' : ''}>${group.fields.filter(field => /^grip[0-8]$/.test(field)).map(aiDartEditorControl).join('')}</div>${typeof dartGripEditor !== 'undefined' ? dartGripEditor.markup('ai',aiDartEditorPending) : ''}` : ''}${group.title === 'shaft'
             ? `<p class="dart-integrated-hint">${aiDartEditorEscape(trAiDartEditor('shaftLengthsHint'))}</p>` : ''}</div>`).join('');
     const integrated = aiDartEditorPending.flightSystem !== 'separate';
     for (const field of ['shaftStyle', 'shaftColor', 'integratedColor']) {
@@ -175,7 +189,11 @@ function refreshAiDartEditorPreview() {
         ? dartCustomizationPreviewMarkup(appearance) : '';
     const measurements = document.getElementById('ai-dart-editor-measurements');
     if (measurements) measurements.textContent = `${appearance.tipLength} mm · ${appearance.barrelLength} mm · ${appearance.shaftLength} mm · ${appearance.weightGrams} g`;
+    if (measurements) measurements.textContent += ` · Ø ${(dartModel.dimensions(appearance).barrelRadius*2).toFixed(1)} mm`;
     document.getElementById('ai-dart-editor-artwork-remove').disabled = !aiDartEditorPending.flightArtwork;
+    const templateTools = document.getElementById('ai-dart-template-tools');
+    if (templateTools && typeof flightArtworkEditor !== 'undefined')
+        templateTools.innerHTML = flightArtworkEditor.controlsMarkup(aiDartEditorPending.flightShape);
     if (typeof dartPreview !== 'undefined' && host.getClientRects().length)
         dartPreview.mount(host, appearance, trAiDartEditor('preview'));
 }
@@ -199,11 +217,30 @@ function populateAiDartEditor(candidate) {
     refreshAiDartEditorPreview();
 }
 function changeAiDartSetting(field, value) {
-    if (!aiDartEditorPending || !(AI_DART_COLOR_FIELDS.has(field) || AI_DART_EDITOR_GROUPS.some(group => group.fields.includes(field)))) return false;
-    if (['front', 'middle', 'rear'].includes(field)) aiDartEditorPending.gripZones[field] = value;
+    if (!aiDartEditorPending || !(AI_DART_COLOR_FIELDS.has(field) || ['front', 'middle', 'rear'].includes(field)
+        || AI_DART_EDITOR_GROUPS.some(group => group.fields.includes(field)))) return false;
+    if (field === 'barrelDiameter' && value !== null && dartModel.normalizeBarrelDiameter(value) === null) return false;
+    if (field === 'barrelLength') {
+        if (!Number.isInteger(Number(value)) || Number(value) < 35 || Number(value) > 55) return false;
+        aiDartEditorPending.gripRegions = dartModel.rescaleGripRegions(aiDartEditorPending.gripRegions,aiDartEditorPending.barrelLength,Number(value));
+    }
+    if (/^grip[0-8]$/.test(field) || ['front','middle','rear','barrelPattern'].includes(field)) aiDartEditorPending.gripRegions = null;
+    if (/^grip[0-8]$/.test(field)) {
+        if (!dartCustomizationCatalogue.barrelPattern.some(item => item.id === value)) return false;
+        const index = Number(field.slice(4)), group = Math.floor(index / 3);
+        aiDartEditorPending.gripSections[index] = value;
+        aiDartEditorPending.gripZones[['front', 'middle', 'rear'][group]] = aiDartEditorPending.gripSections[group * 3 + 1];
+    } else if (['front', 'middle', 'rear'].includes(field)) {
+        aiDartEditorPending.gripZones[field] = value;
+        const start = ['front', 'middle', 'rear'].indexOf(field) * 3;
+        aiDartEditorPending.gripSections.fill(value, start, start + 3);
+    }
     else {
         aiDartEditorPending[field] = value;
-        if (field === 'barrelPattern') aiDartEditorPending.gripZones = { front: value, middle: value, rear: value };
+        if (field === 'barrelPattern') {
+            aiDartEditorPending.gripZones = { front: value, middle: value, rear: value };
+            aiDartEditorPending.gripSections = Array(9).fill(value);
+        }
     }
     aiDartEditorPending = normalizeAiDartAppearance(aiDartEditorPending);
     aiDartEditorChanged = true;
@@ -221,6 +258,14 @@ function resetAiDartAppearance() {
     renderAiDartEditorControls();
     refreshAiDartEditorPreview();
     setAiDartEditorStatus(trAiDartEditor('resetReady'));
+}
+function getAiDartGripEditorState() { return aiDartEditorPending; }
+function changeAiDartGripRegions(input) {
+    if (!aiDartEditorPending || !dartModel.validGripRegions(input,aiDartEditorPending.barrelLength)) return false;
+    aiDartEditorPending.gripRegions = dartModel.normalizeGripRegions(input,aiDartEditorPending.barrelLength);
+    aiDartEditorChanged = true;aiDartEditorReset = false;
+    renderAiDartEditorControls();refreshAiDartEditorPreview();setAiDartEditorStatus(trAiDartEditor('editReady'));
+    return true;
 }
 async function uploadAiDartArtwork(event) {
     const input = event?.target;
@@ -243,10 +288,16 @@ async function uploadAiDartArtwork(event) {
         if (generation !== aiDartEditorGeneration) return false;
         if (!image.naturalWidth || !image.naturalHeight || image.naturalWidth > 8192 || image.naturalHeight > 8192)
             throw new Error('Invalid artwork dimensions');
-        const canvas = document.createElement('canvas'); canvas.width = canvas.height = 256;
-        const side = Math.min(image.naturalWidth, image.naturalHeight);
-        canvas.getContext('2d').drawImage(image, (image.naturalWidth - side) / 2,
-            (image.naturalHeight - side) / 2, side, side, 0, 0, 256, 256);
+        let canvas;
+        if (typeof flightArtworkEditor !== 'undefined') {
+            canvas = await flightArtworkEditor.open(image, { shape: aiDartEditorPending.flightShape, filename: file.name });
+            if (!canvas || generation !== aiDartEditorGeneration) return false;
+        } else {
+            canvas = document.createElement('canvas'); canvas.width = canvas.height = 256;
+            const side = Math.min(image.naturalWidth, image.naturalHeight);
+            canvas.getContext('2d').drawImage(image, (image.naturalWidth - side) / 2,
+                (image.naturalHeight - side) / 2, side, side, 0, 0, 256, 256);
+        }
         const artwork = canvas.toDataURL('image/png');
         if (!dartModel.validFlightArtwork(artwork)) throw new Error('Artwork exceeds save limit');
         dartModel.registerFlightArtwork(artwork, canvas);

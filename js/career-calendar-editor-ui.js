@@ -1,4 +1,5 @@
 const CAREER_CALENDAR_EDITOR_TEXT = {
+    groupTitles: ['Licz tytuły cyklu wspólnie (np. Asian Tour ×8)', 'Group cycle titles (e.g. Asian Tour ×8)', 'Zyklustitel zusammenfassen (z. B. Asian Tour ×8)', 'Tel cyclustitels samen (bijv. Asian Tour ×8)'],
     pl: {
         manage: 'Cykle i karty', manageHint: 'Zbuduj własny system rozgrywek. Zasady cyklu obowiązują we wszystkich jego turniejach.',
         clear: 'Wyczyść cały kalendarz', clearConfirm: 'Usunąć wszystkie turnieje i kwalifikacje z tej kariery? Kalendarz pozostanie pusty także po wczytaniu gry i w kolejnych sezonach. Wyniki historyczne zostaną zachowane.', cleared: 'Kalendarz został wyczyszczony.',
@@ -229,6 +230,7 @@ function populateCareerTourManager(id) {
     document.getElementById('ce-tour-form').innerHTML = `<form onsubmit="saveCareerTourManager(event)"><div class="tournament-editor-fields">
         ${careerEditorLabel('name', `<input id="ce-tour-name" value="${careerEditorHtml(tour.name)}" maxlength="80" required>`)}
         ${careerEditorLabel('ranking', `<select id="ce-tour-ranking">${options}</select>`)}
+        ${careerEditorLabel('groupTitles', `<input id="ce-tour-group-titles" type="checkbox"${tour.groupTitles ? ' checked' : ''}>`)}
         ${careerEditorLabel('entry', `<select id="ce-tour-entry" onchange="updateCareerTourManagerFields()">${careerEditorOptions(['native', 'open', 'card', 'fixed'].map((value, index) => [value, trCareerEditor(['nativeEntry', 'openEntry', 'cardEntry', 'fixedEntry'][index])]), tour.entry)}</select>`)}
         <div id="ce-tour-size-wrap">${careerEditorLabel('size', `<select id="ce-tour-size">${careerEditorOptions(CAREER_EDITOR_FIELD_SIZES.map(size => [String(size), String(size)]), String(tour.fieldSize))}</select>`)}</div>
         <div id="ce-tour-card-wrap">${careerEditorLabel('card', `<select id="ce-tour-card">${careerEditorOptions(cards, tour.requiredCardId)}</select>`)}</div></div>
@@ -265,6 +267,7 @@ async function saveCareerTourManager(event) {
         const events = tournamentDatabase.filter(tournament => getCareerEditorTourId(tournament) === id);
         if (events.some(isTournamentEditorActive)) throw new Error(trTournamentEditor('inUse'));
         const tour = { id, name, ranking: document.getElementById('ce-tour-ranking').value,
+            groupTitles: document.getElementById('ce-tour-group-titles').checked === true,
             entry: document.getElementById('ce-tour-entry').value, fieldSize: Number(document.getElementById('ce-tour-size').value),
             playerKeys: careerEditorSelectedPlayers('ce-tour-roster'), requiredCardId: document.getElementById('ce-tour-card').value, removed: false,
             promotion: typeof getCareerTourPromotionFormData === 'function' ? getCareerTourPromotionFormData() : undefined };

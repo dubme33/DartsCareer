@@ -33,7 +33,7 @@ function startMatch(vsAI) {
                 // --- WCZYTYWANIE ZDJĘCIA RYWALA ---
                 let p2Img = document.getElementById('score-photo-p2');
             // Zamiast korzystać z domyślnych plików, używamy tych z wybranego moda (jeśli są)
-            p2Img.src = moddedAssets.photos[currentMatch.opponent.name] || `zdjecia/${currentMatch.opponent.name}.png`;
+            p2Img.src = (typeof getPermanentPlayerPhoto === 'function' && getPermanentPlayerPhoto(currentMatch.opponent)) || moddedAssets.photos[currentMatch.opponent.name] || `zdjecia/${currentMatch.opponent.name}.png`;
                 p2Img.onerror = function() { this.onerror=null; this.src='https://placehold.co/100/16213e/FFFFFF?text=AI'; };
                 
             } else {

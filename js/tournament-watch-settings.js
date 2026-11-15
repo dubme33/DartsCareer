@@ -118,31 +118,43 @@ function changeAllTournamentWatching(watched) {
     return saveTournamentWatchSettings();
 }
 
+const tournamentWatchListRenderCache = new WeakMap();
+
 function refreshTournamentWatchSettingsUI() {
     if (typeof document === 'undefined') return;
     const text = getTournamentWatchText();
     ['title', 'intro', 'hint', 'all', 'none'].forEach(key => {
         const element = document.getElementById(`tournament-watch-${key}`);
-        if (element) element.textContent = text[key];
+        if (element && element.textContent !== text[key]) element.textContent = text[key];
     });
     const list = document.getElementById('tournament-watch-list');
     if (!list) return;
+    const escape = value => String(value).replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character]));
+    const entries = getTournamentWatchEntries();
+    const rows = entries.map((tournament, index) => ({
+        index, group: getTournamentWatchGroup(tournament),
+        name: String(typeof getTournamentDisplayName === 'function' ? getTournamentDisplayName(tournament) : tournament.name),
+        watched: isTournamentSelectedForWatching(tournament),
+        day: String(tournament.day).padStart(2, '0'), month: String(Number(tournament.month) + 1).padStart(2, '0')
+    }));
+    const count = (selected, total) => text.count.replace('{selected}', selected).replace('{total}', total);
+    const summary = document.getElementById('tournament-watch-count');
+    const countText = count(rows.filter(row => row.watched).length, rows.length);
+    if (summary && summary.textContent !== countText) summary.textContent = countText;
+    // Compare all rendered inputs before touching DOM/layout. Repeated hub
+    // refreshes must not recreate hundreds of unchanged checkboxes.
+    const signature = JSON.stringify([text.groups, text.select, text.clear, text.empty, rows]);
+    if (list.childElementCount !== 0 && tournamentWatchListRenderCache.get(list) === signature) return;
     const previousGroups = Array.from(list.querySelectorAll?.('details') || []);
     const openGroups = new Set(previousGroups.filter(element => element.open).map(element => element.dataset.watchGroup));
     const scrollPositions = new Map(previousGroups.map(element => [element.dataset.watchGroup, element.querySelector('.tournament-watch-events')?.scrollTop || 0]));
     const focusedIndex = document.activeElement?.dataset?.watchIndex;
-    const escape = value => String(value).replace(/[&<>"']/g, character => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[character]));
-    const entries = getTournamentWatchEntries();
-    const count = (selected, total) => text.count.replace('{selected}', selected).replace('{total}', total);
-    const summary = document.getElementById('tournament-watch-count');
-    if (summary) summary.textContent = count(entries.filter(tournament => isTournamentSelectedForWatching(tournament)).length, entries.length);
-    list.innerHTML = entries.length ? text.groups.map((label, group) => {
-        const members = entries.map((tournament, index) => ({ tournament, index })).filter(entry => getTournamentWatchGroup(entry.tournament) === group);
+    list.innerHTML = rows.length ? text.groups.map((label, group) => {
+        const members = rows.filter(row => row.group === group);
         if (!members.length) return '';
-        const selected = members.filter(entry => isTournamentSelectedForWatching(entry.tournament)).length;
-        return `<details data-watch-group="${group}"${openGroups.has(String(group)) ? ' open' : ''}><summary><strong>${escape(label)}</strong><span>${selected} / ${members.length}</span></summary><div class="tournament-watch-group-actions"><button type="button" onclick="changeTournamentWatchGroup(${group}, true)">${escape(text.select)}</button><button type="button" onclick="changeTournamentWatchGroup(${group}, false)">${escape(text.clear)}</button></div><div class="tournament-watch-events">${members.map(({ tournament, index }) => {
-            const name = typeof getTournamentDisplayName === 'function' ? getTournamentDisplayName(tournament) : tournament.name;
-            return `<label><input type="checkbox" data-watch-index="${index}" onchange="changeTournamentWatching(${index}, this.checked)"${isTournamentSelectedForWatching(tournament) ? ' checked' : ''}><span>${escape(name)}</span><small>${String(tournament.day).padStart(2, '0')}.${String(Number(tournament.month) + 1).padStart(2, '0')}</small></label>`;
+        const selected = members.filter(row => row.watched).length;
+        return `<details data-watch-group="${group}"${openGroups.has(String(group)) ? ' open' : ''}><summary><strong>${escape(label)}</strong><span>${selected} / ${members.length}</span></summary><div class="tournament-watch-group-actions"><button type="button" onclick="changeTournamentWatchGroup(${group}, true)">${escape(text.select)}</button><button type="button" onclick="changeTournamentWatchGroup(${group}, false)">${escape(text.clear)}</button></div><div class="tournament-watch-events">${members.map(({ name, index, watched, day, month }) => {
+            return `<label><input type="checkbox" data-watch-index="${index}" onchange="changeTournamentWatching(${index}, this.checked)"${watched ? ' checked' : ''}><span>${escape(name)}</span><small>${day}.${month}</small></label>`;
         }).join('')}</div></details>`;
     }).join('') : `<p>${escape(text.empty)}</p>`;
     Array.from(list.querySelectorAll?.('details') || []).forEach(element => {
@@ -150,6 +162,7 @@ function refreshTournamentWatchSettingsUI() {
         if (events) events.scrollTop = scrollPositions.get(element.dataset.watchGroup) || 0;
     });
     if (focusedIndex !== undefined) list.querySelector?.(`[data-watch-index="${Number(focusedIndex)}"]`)?.focus({ preventScroll: true });
+    tournamentWatchListRenderCache.set(list, signature);
 }
 
 if (typeof document !== 'undefined' && document.addEventListener) document.addEventListener('DOMContentLoaded', refreshTournamentWatchSettingsUI);

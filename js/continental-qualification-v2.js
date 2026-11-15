@@ -196,8 +196,9 @@ function repairMigratedContinentalCardQualification(mainTournament, state) {
     delete state.migratedLegacyQualification;
 }
 
-function buildContinentalAutomaticField(candidates) {
-    const allPlayers = candidates.filter(isContinentalQualificationPlayerEligible);
+function buildContinentalAutomaticField(candidates, mainTournament = null) {
+    const allPlayers = candidates.filter(isContinentalQualificationPlayerEligible)
+        .filter(candidate => typeof isTournamentPlayerAbsent !== 'function' || !isTournamentPlayerAbsent(mainTournament, candidate));
     const cardHolders = allPlayers.filter(candidate => candidate.hasTourCard === true);
     const oomPlayers = [...cardHolders]
         .sort((first, second) => sortContinentalQualificationRank(first, second, 'prizeMoney'))
@@ -226,7 +227,7 @@ function ensureContinentalQualificationState(mainTournament, candidates = getCon
         repairMigratedContinentalCardQualification(mainTournament, existing);
         return refreshContinentalQualificationAggregate(existing);
     }
-    const { oomPlayers, proTourPlayers } = buildContinentalAutomaticField(candidates);
+    const { oomPlayers, proTourPlayers } = buildContinentalAutomaticField(candidates, mainTournament);
     const state = {
         version: CONTINENTAL_QUALIFICATION_VERSION,
         year: season,
@@ -250,6 +251,46 @@ function ensureContinentalQualificationState(mainTournament, candidates = getCon
     return refreshContinentalQualificationAggregate(state);
 }
 
+// Before the card qualifier, an absent automatic entrant is replaced from the
+// entry rankings. This never completes a qualifier or invents a reserve list.
+function prepareContinentalTourEarlyAbsences(main, date = currentDate) {
+    if (typeof isContinentalAbsenceEntryOpen !== 'function' || !isContinentalAbsenceEntryOpen(main, date)
+        || hasContinentalTournamentStarted(main) || main.completed || main.editorNativeRoutes?.length) return false;
+    const candidates = getContinentalQualificationPlayers(), state = ensureContinentalQualificationState(main, candidates);
+    const absent = candidate => typeof isTournamentPlayerAbsent === 'function' && isTournamentPlayerAbsent(main, candidate, date);
+    const cards = candidates.filter(candidate => candidate.hasTourCard === true && isContinentalQualificationPlayerEligible(candidate));
+    const byKey = new Map(cards.map(candidate => [getContinentalQualificationPlayerKey(candidate), candidate]));
+    const before = [...state.oomPlayerIds, ...state.proTourPlayerIds];
+    if (!before.some(key => absent(byKey.get(key)))) return false;
+    if (!state.entryRankingPlayerIds) {
+        const ranking = (keys, property) => [...new Set([...keys, ...[...cards]
+            .sort((a,b) => sortContinentalQualificationRank(a,b,property)).map(getContinentalQualificationPlayerKey)])];
+        state.entryRankingPlayerIds = { oom: ranking(state.oomPlayerIds,'prizeMoney'),
+            proTour: ranking(state.proTourPlayerIds,'proTourPrizeMoney') };
+    }
+    const available = keys => keys.filter(key => byKey.has(key) && !absent(byKey.get(key)));
+    const oom = available(state.entryRankingPlayerIds.oom).slice(0,16), selected = new Set(oom);
+    const proTour = available(state.entryRankingPlayerIds.proTour).filter(key => !selected.has(key)).slice(0,16);
+    const after = [...oom, ...proTour], added = after.filter(key => !before.includes(key));
+    state.earlyWithdrawals ||= [];
+    for (const key of before.filter(key => absent(byKey.get(key)))) {
+        if (state.earlyWithdrawals.some(entry => entry.withdrawnPlayerId === key)) continue;
+        const replacement = added.shift() || null;
+        state.earlyWithdrawals.push({ withdrawnPlayerId: key, replacementPlayerId: replacement,
+            withdrawnPlayerName: byKey.get(key)?.name || '', replacementPlayerName: byKey.get(replacement)?.name || '',
+            announcedOn: typeof tournamentAbsenceDateKey === 'function' ? tournamentAbsenceDateKey(date) : '',
+            entryRound: oom.includes(replacement) ? 32 : 64, phase: 'before-qualifier' });
+    }
+    state.oomPlayerIds = oom;
+    state.proTourPlayerIds = proTour;
+    const card = state.paths.card;
+    if (card && !card.completed) {
+        card.initialized = false;
+        card.participantIds = [];
+    }
+    return true;
+}
+
 function getCompletedContinentalQualifierKeys(state, exceptPath = '') {
     const keys = new Set([...state.oomPlayerIds, ...state.proTourPlayerIds]);
     Object.keys(CONTINENTAL_QUALIFIER_PATHS).forEach(path => {
@@ -262,6 +303,7 @@ function getCompletedContinentalQualifierKeys(state, exceptPath = '') {
 function isContinentalQualifierPathEligible(candidate, mainTournament, path) {
     if (typeof isTournamentEditorGenderEligible === 'function' && !isTournamentEditorGenderEligible(mainTournament, candidate)) return false;
     if (!isContinentalQualificationPlayerEligible(candidate)) return false;
+    if (typeof isTournamentPlayerAbsent === 'function' && isTournamentPlayerAbsent(mainTournament, candidate)) return false;
     // Automatyczne miejsca OOM i ProTour wynikają z rankingu, nawet gdy gracz
     // jest chwilowo kontuzjowany. Kontuzja wyklucza dopiero udział w kwalifikatorze.
     if (typeof isPlayerInjured === 'function' && isPlayerInjured(candidate)) return false;
@@ -329,12 +371,14 @@ function getContinentalTourQualifierParticipants(qualifierTournament) {
     const excludedKeys = getCompletedContinentalQualifierKeys(state, path);
     return resolveContinentalQualificationPlayers(pathState.participantIds, candidates)
         .filter(candidate => !excludedKeys.has(getContinentalQualificationPlayerKey(candidate)))
-        .filter(candidate => isContinentalQualifierPathEligible(candidate, mainTournament, path));
+        .filter(candidate => isContinentalQualifierPathEligible(candidate, mainTournament, path))
+        .filter(candidate => typeof isTournamentPlayerAbsent !== 'function' || !isTournamentPlayerAbsent(qualifierTournament, candidate));
 }
 
 // Project the same field as the draw without freezing rankings or initializing
 // qualification paths while refreshing the hub or checking training access.
 function isPlayerInContinentalQualifierField(qualifierTournament, candidate = player) {
+    if (typeof isTournamentPlayerAbsent === 'function' && isTournamentPlayerAbsent(qualifierTournament,candidate)) return false;
     const mainTournament = getLinkedContinentalTour(qualifierTournament);
     if (!mainTournament || !candidate) return false;
     const path = getContinentalQualifierPath(qualifierTournament);
@@ -347,7 +391,7 @@ function isPlayerInContinentalQualifierField(qualifierTournament, candidate = pl
         state = JSON.parse(JSON.stringify(existing));
         repairMigratedContinentalCardQualification(mainTournament, state);
     } else {
-        const automatic = buildContinentalAutomaticField(candidates);
+        const automatic = buildContinentalAutomaticField(candidates, mainTournament);
         state = { oomPlayerIds: automatic.oomPlayers.map(getContinentalQualificationPlayerKey),
             proTourPlayerIds: automatic.proTourPlayers.map(getContinentalQualificationPlayerKey), paths: {} };
     }
@@ -435,6 +479,7 @@ function completeContinentalTourQualifier(qualifierTournament, qualifiedPlayers)
             .sort((first, second) => sortContinentalQualificationRank(first, second, 'prizeMoney'))
             .map(getContinentalQualificationPlayerKey);
     }
+    if (typeof processTournamentAbsences === 'function') processTournamentAbsences(currentDate, { generate: false });
     return refreshContinentalQualificationAggregate(state);
 }
 
@@ -488,6 +533,61 @@ function getContinentalEffectivePlayerIds(keys, state) {
     });
 }
 
+function getContinentalTourEntryPlayerIds(state) {
+    // Qualification rights stay unchanged. The draw owns a separate, saved
+    // entry allocation so promoted seeds are not recalculated after play starts.
+    const entries = state?.drawEntryPlayerIds || state?.nativeEntryPlayerIds;
+    return {
+        oomPlayerIds: getContinentalEffectivePlayerIds(entries?.oomPlayerIds || state?.oomPlayerIds, state),
+        proTourPlayerIds: getContinentalEffectivePlayerIds(entries?.proTourPlayerIds || state?.proTourPlayerIds, state),
+        paths: Object.fromEntries(Object.keys(CONTINENTAL_QUALIFIER_PATHS).map(path => [path,
+            getContinentalEffectivePlayerIds(entries?.paths?.[path] || state?.paths?.[path]?.qualifiedPlayerIds, state)
+        ]))
+    };
+}
+
+function allocateContinentalTourPreDrawSeeds(main, state, candidates) {
+    if (main.completed || hasContinentalTournamentStarted(main)
+        || (isActiveContinentalTournament(main)
+            && typeof tournamentBracket !== 'undefined' && tournamentBracket?.length > 0)) return;
+    const entries = getContinentalTourEntryPlayerIds(state);
+    const byKey = new Map(candidates.map(candidate => [getContinentalQualificationPlayerKey(candidate), candidate]));
+    const replacements = new Set((state.withdrawals || []).map(entry => entry.replacementPlayerId));
+    const firstRoundPools = [entries.proTourPlayerIds, ...Object.values(entries.paths)];
+    let promoted = false;
+    (state.withdrawals || []).forEach(entry => {
+        if (entry.entryRound !== 32 || !(state.drawEntryPlayerIds?.oomPlayerIds
+            || state.nativeEntryPlayerIds?.oomPlayerIds || state.oomPlayerIds).includes(entry.withdrawnPlayerId)) return;
+        const seedIndex = entries.oomPlayerIds.indexOf(entry.replacementPlayerId);
+        const ranked = firstRoundPools.flat().filter(key => {
+            const candidate = byKey.get(key);
+            return candidate && !replacements.has(key)
+                && !(typeof isPlayerInjured === 'function' && isPlayerInjured(candidate,new Date(state.year,main.month,main.day)))
+                && !(typeof isTournamentPlayerAbsent === 'function' && isTournamentPlayerAbsent(main, candidate));
+        }).sort((first, second) => sortContinentalQualificationRank(byKey.get(first), byKey.get(second)));
+        const promotedKey = ranked[0];
+        if (seedIndex < 0 || !promotedKey) return;
+        const source = firstRoundPools.find(pool => pool.includes(promotedKey));
+        source[source.indexOf(promotedKey)] = entry.replacementPlayerId;
+        entries.oomPlayerIds[seedIndex] = promotedKey;
+        entry.entryRound = 64;
+        entry.promotedPlayerId = promotedKey;
+        promoted = true;
+    });
+    if (!promoted) return;
+    // A replacement may be announced while regional qualifiers are still pending.
+    // Leave their entry pools open so later real winners are not masked by [].
+    for (const path of Object.keys(CONTINENTAL_QUALIFIER_PATHS)) {
+        if (!state.paths?.[path]?.completed) delete entries.paths[path];
+    }
+    entries.oomPlayerIds.sort((first, second) => {
+        if (!byKey.has(first)) return byKey.has(second) ? 1 : 0;
+        if (!byKey.has(second)) return -1;
+        return sortContinentalQualificationRank(byKey.get(first), byKey.get(second));
+    });
+    state.drawEntryPlayerIds = entries;
+}
+
 function getContinentalTourReservePlayers(main, state = main?.continentalQualification,
     candidates = getContinentalQualificationPlayers()) {
     if (state?.year !== getContinentalQualificationSeason() || !state.paths?.card?.completed) return [];
@@ -495,6 +595,8 @@ function getContinentalTourReservePlayers(main, state = main?.continentalQualifi
     const originalField = [...(state.oomPlayerIds || []), ...(state.proTourPlayerIds || []),
         ...Object.values(state.paths || {}).flatMap(path => path.qualifiedPlayerIds || [])];
     const excluded = new Set([...originalField, ...getContinentalEffectivePlayerIds(originalField, state),
+        ...(state.nativeEntryPlayerIds ? [...state.nativeEntryPlayerIds.oomPlayerIds, ...state.nativeEntryPlayerIds.proTourPlayerIds,
+            ...Object.values(state.nativeEntryPlayerIds.paths).flat()] : []),
         ...(state.withdrawals || []).map(entry => entry.withdrawnPlayerId)]);
     const ids = Array.isArray(card.reservePlayerIds) ? card.reservePlayerIds
         : recoverContinentalReservePlayerIds(main, state, candidates);
@@ -503,13 +605,23 @@ function getContinentalTourReservePlayers(main, state = main?.continentalQualifi
             && !excluded.has(getContinentalQualificationPlayerKey(candidate)));
 }
 
-function prepareContinentalTourWithdrawals(main, { skipCareerPlayer = false, random = Math.random } = {}) {
+function prepareContinentalTourWithdrawals(main, { skipCareerPlayer = false, refreshInjuries = false, includeRandom = true, completeMissing = true, random = Math.random } = {}) {
     if (!isContinentalTourTournament(main)) return null;
-    const field = getContinentalTourMainField(main);
+    const field = getContinentalTourMainField(main, { completeMissing });
     if (!field || main.completed || hasContinentalTournamentStarted(main)) return field;
     const state = field.state;
-    if (state.withdrawalsProcessed) return field;
+    if (main.editorNativeRoutes?.length && !state.nativeEntryPlayerIds) {
+        state.nativeEntryPlayerIds = { oomPlayerIds: field.oomPlayers.map(getContinentalQualificationPlayerKey),
+            proTourPlayerIds: field.proTourPlayers.map(getContinentalQualificationPlayerKey),
+            paths: Object.fromEntries(Object.entries(field.qualifierPaths).map(([path, entrants]) =>
+                [path, entrants.map(getContinentalQualificationPlayerKey)])) };
+    }
     const candidates = getContinentalQualificationPlayers();
+    const alreadyProcessed = state.withdrawalsProcessed === true;
+    if (alreadyProcessed && !refreshInjuries) {
+        allocateContinentalTourPreDrawSeeds(main, state, candidates);
+        return getContinentalTourMainField(main, { completeMissing });
+    }
     const own = candidate => typeof isCurrentPlayer === 'function' && isCurrentPlayer(candidate);
     const reserves = getContinentalTourReservePlayers(main, state, candidates)
         .filter(candidate => !skipCareerPlayer || !own(candidate));
@@ -517,10 +629,11 @@ function prepareContinentalTourWithdrawals(main, { skipCareerPlayer = false, ran
         state.paths.card.reservePlayerIds = getContinentalTourReservePlayers(main, state, candidates)
             .map(getContinentalQualificationPlayerKey);
     }
-    state.withdrawals = [];
+    if (!Array.isArray(state.withdrawals)) state.withdrawals = [];
+    const previousWithdrawalCount = state.withdrawals.length;
     const fieldKeys = new Set([...field.oomPlayers, ...field.proTourPlayers, ...field.qualifiedPlayers]
         .map(getContinentalQualificationPlayerKey));
-    const usedReplacementKeys = new Set();
+    const usedReplacementKeys = new Set(state.withdrawals.map(entry => entry.replacementPlayerId).filter(Boolean));
     const pathReserves = path => resolveContinentalQualificationPlayers(
         getContinentalQualificationPathState(state, path).participantIds, candidates)
         .filter(candidate => isContinentalQualifierPathEligible(candidate, main, path)
@@ -547,13 +660,17 @@ function prepareContinentalTourWithdrawals(main, { skipCareerPlayer = false, ran
             withdrawnPlayerPrizeMoney: Number(candidate.prizeMoney) || 0,
             entryRound });
     };
+    const injuryDate = completeMissing ? currentDate : new Date(state.year,main.month,main.day);
     const injured = candidate => candidate && !candidate.isBye
-        && typeof isPlayerInjured === 'function' && isPlayerInjured(candidate);
-    field.oomPlayers.filter(injured).forEach(candidate => replace(candidate, 32, true, cardInjuryReserves));
-    field.proTourPlayers.filter(injured).forEach(candidate => replace(candidate, 64, true, cardInjuryReserves));
+        && ((typeof isPlayerInjured === 'function' && isPlayerInjured(candidate,injuryDate))
+            || (typeof isTournamentPlayerAbsent === 'function' && isTournamentPlayerAbsent(main, candidate)));
+    const absencePool = (candidate, fallback) => typeof isTournamentPlayerAbsent === 'function'
+        && isTournamentPlayerAbsent(main,candidate) ? reserves : fallback;
+    field.oomPlayers.filter(injured).forEach(candidate => replace(candidate, 32, true, absencePool(candidate,cardInjuryReserves)));
+    field.proTourPlayers.filter(injured).forEach(candidate => replace(candidate, 64, true, absencePool(candidate,cardInjuryReserves)));
     Object.entries(field.qualifierPaths).forEach(([path, entrants]) => {
         const pool = path === 'card' ? cardInjuryReserves : pathReserves(path);
-        entrants.filter(injured).forEach(candidate => replace(candidate, 64, true, pool));
+        entrants.filter(injured).forEach(candidate => replace(candidate, 64, true, absencePool(candidate,pool)));
     });
     // A deliberate career-player withdrawal uses the same queue, never a random outsider.
     if (skipCareerPlayer) {
@@ -562,21 +679,22 @@ function prepareContinentalTourWithdrawals(main, { skipCareerPlayer = false, ran
             replace(careerEntrant, field.oomPlayers.includes(careerEntrant) ? 32 : 64, true);
         }
     }
-    field.oomPlayers.forEach(candidate => {
+    if (!alreadyProcessed && includeRandom && !(typeof hasGeneratedTournamentAbsences === 'function' && hasGeneratedTournamentAbsences(main,'late'))) field.oomPlayers.forEach(candidate => {
         if (candidate && !candidate.isBye && !own(candidate) && !injured(candidate)
             && !state.withdrawals.some(entry => entry.withdrawnPlayerId === getContinentalQualificationPlayerKey(candidate))
             && reserves.length
             && random() < CONTINENTAL_TOP_16_WITHDRAWAL_CHANCE) replace(candidate, 32);
     });
-    state.withdrawalsProcessed = true;
-    const careerEntry = state.withdrawals.find(entry => entry.replacementPlayerId
+    if (includeRandom) state.withdrawalsProcessed = true;
+    allocateContinentalTourPreDrawSeeds(main, state, candidates);
+    const careerEntry = state.withdrawals.slice(previousWithdrawalCount).find(entry => entry.replacementPlayerId
         && entry.replacementPlayerId === getContinentalQualificationPlayerKey(typeof player !== 'undefined' ? player : null));
     if (careerEntry && typeof addEmail === 'function' && typeof escapeHtml === 'function') {
         addEmail('European Tour', trContinentalQualifier('replacementSubject'),
             `<p>${escapeHtml(trContinentalQualifier('replacementBody', { withdrawn: careerEntry.withdrawnPlayerName,
                 tournament: main.name, round: careerEntry.entryRound === 32 ? 2 : 1 }))}</p>`);
     }
-    return getContinentalTourMainField(main);
+    return getContinentalTourMainField(main, { completeMissing });
 }
 
 function automaticallyCompleteContinentalQualifierPath(mainTournament, path, candidates) {
@@ -595,11 +713,11 @@ function automaticallyCompleteContinentalQualifierPath(mainTournament, path, can
     return pathState;
 }
 
-function getContinentalTourMainField(mainTournament) {
+function getContinentalTourMainField(mainTournament, { completeMissing = true } = {}) {
     const candidates = getContinentalQualificationPlayers();
     const state = ensureContinentalQualificationState(mainTournament, candidates);
     if (!state) return null;
-    Object.keys(CONTINENTAL_QUALIFIER_PATHS).forEach(path => automaticallyCompleteContinentalQualifierPath(mainTournament, path, candidates));
+    if (completeMissing) Object.keys(CONTINENTAL_QUALIFIER_PATHS).forEach(path => automaticallyCompleteContinentalQualifierPath(mainTournament, path, candidates));
     if (typeof getTournamentEditorNativeQualifierWinners === 'function') {
         const host = getContinentalQualificationPathState(state, 'host');
         const winners = getTournamentEditorNativeQualifierWinners(mainTournament, candidates);
@@ -622,15 +740,25 @@ function getContinentalTourMainField(mainTournament) {
         }
     }
     const byKey = new Map(candidates.map(candidate => [getContinentalQualificationPlayerKey(candidate), candidate]));
-    const resolveField = ids => getContinentalEffectivePlayerIds(ids, state).flatMap(key => key === null
+    const entryIds = getContinentalTourEntryPlayerIds(state);
+    const resolveField = ids => ids.flatMap(key => key === null
         ? [createContinentalQualifierBye()] : byKey.has(key) ? [byKey.get(key)] : []);
     const paths = Object.fromEntries(Object.keys(CONTINENTAL_QUALIFIER_PATHS).map(path => [
         path,
-        resolveField(getContinentalQualificationPathState(state, path).qualifiedPlayerIds)
+        resolveField(entryIds.paths[path])
     ]));
+    let oomPlayers = resolveField(entryIds.oomPlayerIds);
+    let proTourPlayers = resolveField(entryIds.proTourPlayerIds);
+    if (mainTournament.editorNativeRoutes?.length && !state.nativeEntryPlayerIds) {
+        const groups = applyTournamentEditorNativeQualificationGroups(mainTournament, [
+            { key: 'oom16', places: 16, players: oomPlayers }, { key: 'pt16', places: 16, players: proTourPlayers },
+            ...Object.entries(paths).map(([path, players]) => ({ key: path, places: CONTINENTAL_QUALIFIER_PATHS[path].places, players }))
+        ], candidates);
+        const groupPlayers = key => groups.filter(group => group.nativeKey === key).flatMap(group => group.players);
+        oomPlayers = groupPlayers('oom16'); proTourPlayers = groupPlayers('pt16');
+        Object.keys(paths).forEach(path => { paths[path] = groupPlayers(path); });
+    }
     const qualifiedPlayers = Object.values(paths).flat();
-    const oomPlayers = resolveField(state.oomPlayerIds);
-    const proTourPlayers = resolveField(state.proTourPlayerIds);
     const fieldSize = [...oomPlayers, ...proTourPlayers, ...qualifiedPlayers].filter(candidate => !candidate.isBye).length;
     return {
         state,

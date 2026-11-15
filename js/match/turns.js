@@ -208,13 +208,13 @@ function playerThrow() {
             return visit.streak >= 2 ? 12 : 8;
         }
 
-        function calculateVisitThrow(targetSector, targetMult, stats, visit, remainingScore = null) {
+        function calculateVisitThrow(targetSector, targetMult, stats, visit, remainingScore = null, context = null) {
             let result = calculateThrow(targetSector, targetMult, stats, visit, remainingScore);
             if (typeof dartPhysics !== 'undefined' && typeof getDartboardHitPoint === 'function') {
                 const point = getDartboardHitPoint(result.sector, result.mult, targetSector, targetMult);
                 const side = visit?.side || (typeof currentMatch !== 'undefined' ? currentMatch?.turn : 'p1');
-                const dartStyle = typeof window !== 'undefined' && typeof window.getMatchDartLoadout === 'function'
-                    ? window.getMatchDartLoadout(side) : null;
+                const dartStyle = context?.dartStyle || (typeof window !== 'undefined' && typeof window.getMatchDartLoadout === 'function'
+                    ? window.getMatchDartLoadout(side) : null);
                 result = dartPhysics.resolve(result, point, visit?.physicsDarts || [], Math.random,
                     typeof areBounceOutsEnabled !== 'function' || areBounceOutsEnabled(), dartStyle);
             }

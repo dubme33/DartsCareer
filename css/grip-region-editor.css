@@ -1,0 +1,20 @@
+.grip-region-editor { margin-top:12px;min-width:0; }
+.grip-region-editor p,.grip-region-editor small { color:#b9cfdf;font-size:12px;line-height:1.6;margin:8px 0; }
+.grip-region-toolbar { display:flex;flex-wrap:wrap;gap:7px; }
+.grip-region-editor button { min-height:34px;border:1px solid #567e97;border-radius:5px;background:#1c4056;color:#edf7ff;padding:6px 10px;font:inherit;font-size:12px;cursor:pointer; }
+.grip-region-editor button:disabled { opacity:.45;cursor:default; }
+.grip-region-editor button:focus-visible,.grip-region-editor input:focus-visible,.grip-region-editor select:focus-visible { outline:2px solid #a9dcff;outline-offset:3px; }
+.grip-region-list { display:grid;gap:10px;margin:10px 0; }
+.grip-region-row { border:1px solid #345b74;border-left:3px solid var(--region-color);border-radius:7px;padding:12px;background:#102d41;min-width:0; }
+.grip-region-row header { display:flex;justify-content:space-between;align-items:center;gap:8px;margin:0 0 10px;padding:0;background:transparent;border:0;box-shadow:none;position:static;width:auto;color:#e5f3fc; }
+.grip-region-row header>div { display:flex;gap:5px;flex-wrap:wrap; }
+.grip-region-editor label { display:grid;gap:6px;color:#d8e8f3;font-size:12px;min-width:0; }
+.grip-region-pattern { grid-template-columns:65px minmax(0,1fr);align-items:center; }
+.grip-region-editor select,.grip-region-editor input[type=number] { box-sizing:border-box;min-height:35px;padding:6px;border:1px solid #4b7390;border-radius:5px;background:#1c4056;color:#fff;font:inherit;min-width:0;width:100%; }
+.grip-region-track { position:relative;height:10px;background:#081c2e;border-radius:4px;margin:12px 0;overflow:hidden; }
+.grip-region-track span { position:absolute;height:100%;background:var(--region-color);border-radius:3px; }
+.grip-region-bounds { display:grid;grid-template-columns:1fr 1fr;gap:16px; }
+.grip-region-bounds label>span { display:flex;align-items:center;gap:6px; }
+.grip-region-editor input[type=range] { width:100%;min-width:0;margin:4px 0;accent-color:#4ac0a6; }
+.dart-grip-fine-fields[hidden],.ai-dart-fine-grips[hidden] { display:none!important; }
+@media(max-width:480px) { .grip-region-row { padding:10px; }.grip-region-row header { align-items:flex-start;flex-wrap:wrap; }.grip-region-bounds { gap:10px; }.grip-region-pattern { grid-template-columns:1fr; } }

@@ -6,7 +6,7 @@ const PUBLIC_INTRO_COPY = Object.freeze({
         existing: 'Choose a player', custom: 'Create a player', guide: 'How to Play',
         newTab: 'opens in a new tab',
         featureCareer: 'A career across seasons', featureAI: 'AI rivals that develop', featureEditors: 'Editors and customisation',
-        changelogDescription: "Tour Cards, women's and youth events, editors and match viewing.",
+        changelogDescription: 'Match venues, planned absences, career tools and dart customisation.',
         showMore: 'Show more', showLess: 'Show less', featuresLabel: 'Game features', startLabel: 'Start and help', historyLabel: 'Full changelog'
     },
     pl: {
@@ -15,7 +15,7 @@ const PUBLIC_INTRO_COPY = Object.freeze({
         existing: 'Wybierz zawodnika', custom: 'Stwórz zawodnika', guide: 'Jak grać',
         newTab: 'otwiera się w nowej karcie',
         featureCareer: 'Wielosezonowa kariera', featureAI: 'Rozwój rywali AI', featureEditors: 'Edytory i personalizacja',
-        changelogDescription: 'Karty PDC, rozgrywki kobiet i młodzieży, edytory oraz oglądanie meczów.',
+        changelogDescription: 'Scenerie meczów, planowane absencje, narzędzia kariery i personalizacja lotek.',
         showMore: 'Pokaż więcej', showLess: 'Pokaż mniej', featuresLabel: 'Możliwości gry', startLabel: 'Rozpocznij grę i pomoc', historyLabel: 'Pełna historia zmian'
     },
     de: {
@@ -24,7 +24,7 @@ const PUBLIC_INTRO_COPY = Object.freeze({
         existing: 'Spieler wählen', custom: 'Spieler erstellen', guide: 'Spielanleitung',
         newTab: 'öffnet sich in einem neuen Tab',
         featureCareer: 'Eine Karriere über viele Saisons', featureAI: 'KI-Rivalen entwickeln sich', featureEditors: 'Editoren und Anpassungen',
-        changelogDescription: 'Tour Cards, Frauen- und Nachwuchsturniere, Editoren und Matches zum Zuschauen.',
+        changelogDescription: 'Spielumgebungen, geplante Abwesenheiten, Karrierewerkzeuge und Dart-Anpassungen.',
         showMore: 'Mehr anzeigen', showLess: 'Weniger anzeigen', featuresLabel: 'Spielfunktionen', startLabel: 'Spielstart und Hilfe', historyLabel: 'Vollständiger Änderungsverlauf'
     },
     nl: {
@@ -33,7 +33,7 @@ const PUBLIC_INTRO_COPY = Object.freeze({
         existing: 'Kies een speler', custom: 'Maak een speler', guide: 'Speluitleg',
         newTab: 'opent in een nieuw tabblad',
         featureCareer: 'Een carrière over vele seizoenen', featureAI: 'AI-tegenstanders groeien', featureEditors: 'Editors en personalisatie',
-        changelogDescription: 'Tour Cards, vrouwen- en jeugdtoernooien, editors en wedstrijden bekijken.',
+        changelogDescription: 'Wedstrijdomgevingen, geplande afwezigheid, carrièremiddelen en dartaanpassingen.',
         showMore: 'Meer tonen', showLess: 'Minder tonen', featuresLabel: 'Spelmogelijkheden', startLabel: 'Beginnen en hulp', historyLabel: 'Volledige wijzigingsgeschiedenis'
     }
 });

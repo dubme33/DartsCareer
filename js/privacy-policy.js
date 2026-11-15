@@ -17,6 +17,7 @@
         url.searchParams.set('lang', lang);
         if (url.hash.startsWith('#policy-')) url.hash = url.hash.replace(/policy-(?:en|pl)-/, 'policy-' + lang + '-');
         window.history.replaceState(null, '', url);
+        window.dartsPrivacy?.refresh();
         if (retainScroll && anchor) {
             const target = document.getElementById('policy-' + lang + '-' + anchor.dataset.section);
             window.scrollBy(0, target.getBoundingClientRect().top - offset);

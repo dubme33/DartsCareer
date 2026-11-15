@@ -527,6 +527,7 @@ async function applyStagedPlayerPack() {
     try {
         const changing = validatePlayerPackPlan(planPlayerPackImport(stagedPlayerPack, playerPackChoices));
         if (!changing.length) { setPlayerPackStatus(trPlayerPack('noChanges')); return false; }
+        if (typeof checkpointCareerSlotBeforeImport === 'function' && !await checkpointCareerSlotBeforeImport()) return false;
         for (const row of changing) {
             if (row.action === 'remove') {
                 rememberPlayerEditorDeletion(row.target);
@@ -560,6 +561,8 @@ async function applyStagedPlayerPack() {
                 if (typeof initPlayerSeasonStats === 'function') initPlayerSeasonStats(candidate);
             }
         }
+        if (typeof ensurePermanentPlayersInRoster === 'function') ensurePermanentPlayersInRoster(pdcPlayers, { careerPlayer: player });
+        if (typeof deduplicatePdcPlayers === 'function') deduplicatePdcPlayers();
         if (typeof normalizePlayerIds === 'function') normalizePlayerIds(pdcPlayers, player);
         if (typeof initializeAiDevelopmentFoundation === 'function') initializeAiDevelopmentFoundation();
         if (typeof invalidatePlayerLifecycleCache === 'function') invalidatePlayerLifecycleCache();

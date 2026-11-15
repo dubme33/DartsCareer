@@ -69,7 +69,9 @@
 
         // Niezmienny wzorzec bazowej listy. Umożliwia bezpieczne dopisywanie nowych
         // zawodników do istniejących zapisów kariery po aktualizacji gry.
-        const defaultPdcPlayerTemplates = pdcPlayers.map(candidate => ({ ...candidate }));
+        const defaultPdcPlayerTemplates = pdcPlayers
+            .filter(candidate => typeof getPermanentPlayerDefinition !== 'function' || !getPermanentPlayerDefinition(candidate))
+            .map(candidate => ({ ...candidate }));
         
         function getFlagImg(country) {
             if(!flags[country]) return "";
@@ -128,6 +130,13 @@
                 ? getWomensAgeBirthContext(candidate, date) : candidate)?.birthYear;
 
             if (!Number.isInteger(birthYear) || Number.isNaN(date.getTime())) return null;
+            if (candidate?.birthDateSource === 'project-confirmed') {
+                const birth = /^(\d{4})-(\d{2})-(\d{2})$/.exec(candidate.birthDate || '');
+                if (birth && Number(birth[1]) === birthYear) {
+                    return date.getFullYear() - birthYear - Number(date.getMonth() + 1 < Number(birth[2])
+                        || date.getMonth() + 1 === Number(birth[2]) && date.getDate() < Number(birth[3]));
+                }
+            }
             return date.getFullYear() - birthYear;
         }
 
@@ -419,6 +428,7 @@
 
         function changeVolume(val) {
             globalVolume = parseFloat(val);
+            window.matchVenue?.refresh?.();
             if (typeof window !== 'undefined' && window.matchCrowd) window.matchCrowd.setVolume();
             else if (crowdAudio) crowdAudio.volume = 0.08 * globalVolume;
             if (postMatchAudio) postMatchAudio.volume = 0.5 * globalVolume;

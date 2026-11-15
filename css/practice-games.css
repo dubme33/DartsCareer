@@ -1,0 +1,12 @@
+.practice-screen{max-width:1100px;margin:auto;box-sizing:border-box;padding:22px 18px;line-height:1.6}
+.practice-screen button{background:#20516e;color:#f1f6ff;border:1px solid #64889e;border-radius:6px;padding:10px 16px;min-height:40px;font:inherit;cursor:pointer}
+.practice-screen button:disabled{opacity:.45;cursor:default}.practice-screen button:focus-visible,.practice-screen select:focus-visible{outline:2px solid #83d3ff;outline-offset:3px}
+.practice-screen select{padding:9px;max-width:100%;background:#153448;color:white;border:1px solid #64889e;border-radius:6px;font:inherit}
+.practice-modes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px}.practice-modes>section,.practice-session,.practice-records>div{padding:16px;background:#102a3e;border:1px solid #64889e66;border-radius:9px;min-width:0}
+.practice-modes h3,.practice-session h3{margin-top:0}.practice-modes p{font-size:13px}.practice-modes select{display:block;margin:8px 0}.practice-session{margin:20px 0}
+.practice-layout{display:grid;grid-template-columns:minmax(0,370px) minmax(0,1fr);gap:24px;align-items:center}.practice-layout canvas{width:100%;max-width:340px;height:auto;display:block;margin:auto;border-radius:50%}
+.practice-target{font-size:22px}.practice-aim{display:flex;flex-wrap:wrap;align-items:center;gap:10px;margin:12px 0}.practice-layout button{margin:5px 8px 5px 0}
+.practice-darts{display:flex;justify-content:center;flex-wrap:wrap;gap:10px;min-height:36px;margin-top:12px}.practice-darts>span{background:#214760;color:white;border-radius:5px;padding:3px 10px}.practice-fallen{text-decoration:line-through}
+.practice-records{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:12px}.practice-records strong{font-size:13px}.practice-records p{margin-bottom:0;color:#9fe3be}
+.practice-history{margin:20px 0}.practice-history summary{cursor:pointer;font-weight:bold}.practice-table{overflow:auto;max-width:100%}.practice-table td{padding:10px;border-bottom:1px solid #64889e66;white-space:nowrap}.practice-screen #practice-save-status{color:#ffd390}
+@media(max-width:700px){.practice-screen{padding:16px 12px}.practice-modes,.practice-layout{grid-template-columns:1fr}.practice-records{grid-template-columns:1fr 1fr}.practice-screen button{max-width:100%}}

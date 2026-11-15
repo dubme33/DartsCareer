@@ -262,11 +262,13 @@ function getPlayerEditorDeletedPlayers() {
 
 function isPlayerEditorDeleted(candidate, templateIndex = null) {
     if (!candidate) return false;
+    const deleted = getPlayerEditorDeletedPlayers();
+    if (!deleted.length) return false;
     const id = typeof candidate.id === 'string' ? candidate.id : '';
     const resolvedTemplateIndex = Number.isInteger(templateIndex) ? templateIndex : getPlayerEditorTemplateIndex(candidate);
     const identity = getPlayerEditorDeletionIdentity(candidate);
     const canMatchDatabaseIdentity = !candidate.editorCreated && !candidate.isNewgen;
-    return getPlayerEditorDeletedPlayers().some(record => record && (
+    return deleted.some(record => record && (
         (id && record.id === id)
         || (Number.isInteger(resolvedTemplateIndex) && record.defaultTemplateIndex === resolvedTemplateIndex)
         || (canMatchDatabaseIdentity && record.identity && identity && record.identity === identity)
@@ -359,6 +361,8 @@ function getPlayerEditorCandidate(id = playerEditorSelectedId) {
 
 function getPlayerEditorPhotoSource(candidate) {
     if (!candidate) return '';
+    const permanentPhoto = typeof getPermanentPlayerPhoto === 'function' ? getPermanentPlayerPhoto(candidate) : '';
+    if (permanentPhoto) return permanentPhoto;
     if (typeof candidate.photo === 'string' && candidate.photo) return candidate.photo;
     if (typeof moddedAssets !== 'undefined' && moddedAssets?.photos) {
         const modPhoto = moddedAssets.photos[candidate.name] || moddedAssets.photos[candidate.sourceName];

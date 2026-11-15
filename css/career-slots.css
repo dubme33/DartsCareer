@@ -1,0 +1,20 @@
+.career-slots-screen{max-width:1100px;margin:0 auto;padding:22px 18px;box-sizing:border-box;line-height:1.55}
+.career-slots-note{font-size:13px;color:#bfd0e3}
+.career-slots-toolbar{display:flex;flex-wrap:wrap;gap:9px;margin:14px 0}
+.career-slots-screen button{padding:10px 14px;border:1px solid #52718f;border-radius:6px;background:#163b5d;color:white;font:inherit;cursor:pointer}
+.career-slots-screen button:disabled{opacity:.5;cursor:default}
+.career-slot-list{display:grid;gap:18px}
+.career-slot-card{padding:18px;border:1px solid #41637e;border-radius:10px;background:#101f35;min-width:0;overflow-wrap:anywhere}
+.career-slot-heading{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
+.career-slot-heading h3{margin:0}
+.career-slot-active{color:#8ee5ad;font-weight:bold}
+.career-slot-rename{display:grid;grid-template-columns:auto minmax(120px,1fr) auto;align-items:center;gap:10px;margin:16px 0}
+.career-slot-rename input{width:100%;min-width:0;box-sizing:border-box;background:#152d49;border:1px solid #52718f;border-radius:6px;color:white;padding:10px;font:inherit}
+.career-slot-backups{border-top:1px solid #41637e;padding-top:12px}
+.career-slot-backups summary{cursor:pointer;font-weight:bold;color:#a9d7ff}
+.career-slot-backup{margin-top:14px;padding:12px;background:#0c1829;border-radius:6px}
+.career-slot-backup h4{margin:0 0 10px}
+.career-slot-card [data-slot-action=delete]{background:#653039;border-color:#a05e64}
+#career-slots-status{color:#ffdb99;white-space:pre-line}
+#career-slot-busy{position:fixed;inset:0;z-index:100000;display:flex;align-items:center;justify-content:center;box-sizing:border-box;padding:30px;background:rgba(6,15,29,.88);font-size:20px;line-height:1.6;text-align:center;color:white;cursor:wait}
+@media(max-width:600px){.career-slots-screen{padding:18px 12px}.career-slot-card{padding:14px}.career-slot-rename{grid-template-columns:1fr}.career-slots-toolbar button{flex:1 1 145px}}

@@ -28,6 +28,58 @@
     const gripPatterns = new Set(['rings', 'micro', 'shark', 'smooth', 'knurled', 'pixel', 'axial', 'hybrid',
         'double-rings', 'razor', 'wave', 'cross-cut', 'spiral', 'scalloped-rings']);
     const gripZoneNames = ['front', 'middle', 'rear'];
+    const maxGripRegions = 24;
+    function normalizeGripRegions(input, barrelLength = 50) {
+        if (!Array.isArray(input)) return null;
+        const end = barrelLength - 4;
+        return input.slice(0,maxGripRegions).flatMap(region => {
+            if (!region || typeof region !== 'object' || !gripPatterns.has(region.pattern) || region.pattern === 'smooth'
+                || !Number.isFinite(region.start) || !Number.isFinite(region.end)) return [];
+            const start = Math.max(5,Math.min(end,region.start)), finish = Math.max(5,Math.min(end,region.end));
+            return finish > start ? [{start,end:finish,pattern:region.pattern}] : [];
+        });
+    }
+    function validGripRegions(input, barrelLength = 50) {
+        if (input === null) return true;
+        if (!Array.isArray(input) || input.length > maxGripRegions) return false;
+        const normal = normalizeGripRegions(input,barrelLength);
+        return input.length === normal.length && input.every((region,index) => Object.keys(region).length === 3
+            && ['start','end','pattern'].every(key => Object.hasOwn(region,key) && region[key] === normal[index][key]));
+    }
+    function sectionGap(sections,index) {
+        return sections[index] !== sections[index - 1] ? (index % 3 === 0 ? .6 : .3)
+            : index % 3 === 0 && sections[index] !== 'pixel' ? .6 : 0;
+    }
+    function legacyGripRegions(input) {
+        const a = normalize(input), regions = [], span = (a.barrelLength - 9) / 9;
+        for (let index = 0; index < 9; index++) {
+            const pattern = a.gripSections[index];if (pattern === 'smooth') continue;
+            const start = 5 + index * span + (index ? sectionGap(a.gripSections,index) : 0), end = 5 + (index + 1) * span;
+            const previous = regions[regions.length - 1];
+            if (previous?.pattern === pattern && Math.abs(previous.end - start) < 1e-9) previous.end = end;
+            else regions.push({start,end,pattern});
+        }
+        return normalizeGripRegions(regions,a.barrelLength);
+    }
+    function rescaleGripRegions(regions, oldLength, newLength) {
+        if (!Array.isArray(regions)) return null;
+        const ratio = (newLength - 9) / (oldLength - 9);
+        return normalizeGripRegions(regions.map(region => ({pattern:region.pattern,
+            start:5 + (region.start - 5) * ratio,end:5 + (region.end - 5) * ratio})),newLength);
+    }
+    const tipStyles = Object.freeze(['smooth', 'ringed', 'etched', 'ringed-front', 'ringed-rear',
+        'spiral', 'diamond', 'fluted', 'dual-grip', 'tapered']);
+    const tipProfiles = new Map();
+    const barrelDiameterRange = Object.freeze({ min:5, max:9, step:.1 });
+    function normalizeBarrelDiameter(value) {
+        if (value === null || value === undefined || value === '') return null;
+        const n = Number(value);
+        return Number.isFinite(n) && n >= barrelDiameterRange.min && n <= barrelDiameterRange.max
+            && Math.abs(n * 10 - Math.round(n * 10)) < 1e-8 ? Math.round(n * 10) / 10 : null;
+    }
+    function defaultBarrelDiameter(shape = 'straight') {
+        return Math.max(...(Object.hasOwn(profiles,shape) ? profiles[shape] : profiles.straight).map(p => p[1])) * 2;
+    }
     const defaults = Object.freeze({ barrelShape: 'straight', barrelPattern: 'rings', barrelLength: 50,
         weightGrams: 23, barrelColor: '#c7cdd1',
         barrelAccentColor: '#263640', barrelAccentStyle: 'grooves', shaftColor: '#263640', shaftLength: 35,
@@ -84,24 +136,35 @@
         if (!gripPatterns.has(a.barrelPattern)) a.barrelPattern = defaults.barrelPattern;
         a.barrelLength = Number.isInteger(Number(a.barrelLength)) && Number(a.barrelLength) >= 35 && Number(a.barrelLength) <= 55
             ? Number(a.barrelLength) : defaults.barrelLength;
+        a.barrelDiameter = normalizeBarrelDiameter(a.barrelDiameter);
         a.weightGrams = Number.isInteger(Number(a.weightGrams)) && Number(a.weightGrams) >= 12 && Number(a.weightGrams) <= 40
             ? Number(a.weightGrams) : defaults.weightGrams;
         const zones = a.gripZones && typeof a.gripZones === 'object' ? a.gripZones : {};
         a.gripZones = Object.fromEntries(gripZoneNames.map(zone =>
             [zone, gripPatterns.has(zones[zone]) ? zones[zone] : a.barrelPattern]));
+        const sections = Array.isArray(a.gripSections) && a.gripSections.length === 9 ? a.gripSections : [];
+        a.gripSections = Array.from({ length: 9 }, (_, index) => gripPatterns.has(sections[index])
+            ? sections[index] : a.gripZones[gripZoneNames[Math.floor(index / 3)]]);
+        a.gripRegions = normalizeGripRegions(a.gripRegions,a.barrelLength);
         const pointLength = ({ 32: 30, 38: 40, 45: 50 })[Number(a.tipLength)] || Number(a.tipLength);
         a.tipLength = [26, 30, 35, 40, 50].includes(pointLength) ? pointLength : 30;
+        if (!tipStyles.includes(a.tipStyle)) a.tipStyle = defaults.tipStyle;
         if (!['separate', 'integrated-solid', 'integrated-clear', 'integrated-ribbed', 'integrated-frosted'].includes(a.flightSystem)) a.flightSystem = 'separate';
         a.shaftLength = shaftLengths(a.flightSystem).includes(Number(a.shaftLength)) ? Number(a.shaftLength) : 35;
         if (!validFlightArtwork(a.flightArtwork)) a.flightArtwork = null;
         if (a.flightSystem !== 'separate') a.shaftColor = a.flightColor = a.integratedColor;
         return a;
     }
-    function radiusAt(shape, z, barrelLength = 50) {
+    function radiusAt(shape, z, barrelLength = 50, barrelDiameter = null) {
         const profile = profiles[shape] || profiles.straight;
+        const diameter = normalizeBarrelDiameter(barrelDiameter), ratio = diameter === null ? 1 : diameter / defaultBarrelDiameter(shape);
+        // Scale the machined body while preserving the point and shaft joints.
+        // All internal control radii stay within the requested maximum diameter.
+        const radius = index => diameter === null || index === 0 || index === profile.length - 1 ? profile[index][1]
+            : clamp(profile[index][1] * ratio, profile[index][0] >= 44 ? 2.4 : 1.2, diameter / 2);
         z = z * 50 / barrelLength;
         for (let i = 1; i < profile.length; i++) if (z <= profile[i][0]) {
-            const [start, r0] = profile[i - 1], [end, r1] = profile[i];
+            const start = profile[i - 1][0], end = profile[i][0], r0 = radius(i - 1), r1 = radius(i);
             const t = clamp((z - start) / (end - start), 0, 1);
             const eased = t * t * (3 - 2 * t);
             return r0 + (r1 - r0) * eased;
@@ -126,7 +189,20 @@
             case 'micro': return ring(.85, .18, .25);
             case 'shark': { const t = fract((z - 5) / 2.2); return .48 * (t < .22 ? t / .22 : (1 - t) / .78); }
             case 'knurled': return diamond();
-            case 'pixel': return (fract(z / 1.5) < .3 || fract(angle / (Math.PI * 2) * 16) < .3) ? .3 : 0;
+            case 'pixel': {
+                // Rounded U-shaped channels open into a ring above each row.
+                // Twelve cells around the barrel and a 4.2 mm axial pitch leave
+                // broad polished lands, rather than the former checkerboard.
+                const row = fract((5 - z) / 4.2) * 4.2;
+                const x = Math.abs((fract(angle / (Math.PI * 2) * 12 + .5) - .5) * (Math.PI * 6.4 / 12));
+                const distance = row <= 2.6 ? Math.hypot(x - .5, Math.max(.95 - row, 0))
+                    : x >= .33 ? Math.abs(Math.hypot(x - .33, row - 2.6) - .17)
+                        : Math.abs(row - 2.77);
+                const channel = .42 * (1 - clamp((distance - .055) / .10, 0, 1));
+                const separator = .34 * (1 - clamp((Math.abs(row - .34) - .15) / .12, 0, 1));
+                const fineRing = .18 * (1 - clamp((Math.abs(row - .88) - .055) / .07, 0, 1));
+                return Math.max(channel, separator, fineRing);
+            }
             case 'axial': return Math.max(ring(3.2, .22, .13), .42 * clamp((Math.cos(angle * 10) - .65) / .35, 0, 1));
             case 'hybrid': return z < barrelLength / 2 ? ring(2.1, .4, .18) : diamond();
             case 'double-rings': return Math.min(.48, ring(3.5, .4, .14) + ring(3.5, .16, .1) * (fract((z - 5) / 3.5) > .5 ? 1 : 0));
@@ -142,19 +218,76 @@
         const a = input?.gripZones && Number.isFinite(input?.barrelLength) ? input : normalize(input);
         const start = 5, end = a.barrelLength - 4;
         if (z < start || z > end) return 0;
-        const zoneLength = (end - start) / 3;
-        const zoneIndex = Math.min(2, Math.floor((z - start) / zoneLength));
-        const localStart = start + zoneIndex * zoneLength;
-        if (zoneIndex && z - localStart < .6) return 0;
-        const zone = gripZoneNames[zoneIndex];
-        return cutAt(a.gripZones[zone], z, angle, a.barrelLength, false);
+        if (Array.isArray(a.gripRegions)) {
+            let cut = 0;
+            for (const region of a.gripRegions) if (z >= region.start && (z < region.end || z === end && region.end === end))
+                cut = Math.max(cut,cutAt(region.pattern,z,angle,a.barrelLength,false));
+            return cut;
+        }
+        const sections = a.gripSections || normalize(a).gripSections;
+        const sectionLength = (end - start) / 9;
+        const index = Math.min(8, Math.floor((z - start) / sectionLength));
+        const localStart = start + index * sectionLength;
+        const gap = sectionGap(sections,index);
+        if (index && z - localStart < gap) return 0;
+        return cutAt(sections[index], z, angle, a.barrelLength, false);
     }
     function dimensions(input) {
         const a = normalize(input), flightStart = a.tipLength + a.barrelLength + a.shaftLength - 10;
         return { tipLength: a.tipLength, barrelLength: a.barrelLength, shaftLength: a.shaftLength, flightStart,
-            totalLength: flightStart + 42, barrelRadius: Math.max(...profiles[a.barrelShape].map(p => p[1])),
+            totalLength: flightStart + 42, barrelRadius: (a.barrelDiameter ?? defaultBarrelDiameter(a.barrelShape)) / 2,
             shaftRadius: 2.4, flightWings: 4, wingAngleDegrees: 90,
             flightSystem: a.flightSystem, flightThickness: a.flightSystem === 'separate' ? .15 : .4 };
+    }
+    function legacyTipProfile(a) {
+        const key = `${a.tipLength}:${a.tipStyle}`;
+        if (tipProfiles.has(key)) return tipProfiles.get(key);
+        const profile = [[0, .015], [.8, .13], [3, .4], [7, .75], [11, 1.05],
+            [a.tipLength - (a.tipStyle === 'tapered' ? 7 : 1), 1.05], [a.tipLength, 1.2]];
+        if (a.tipStyle === 'ringed' || a.tipStyle === 'etched') {
+            for (let z = 12; z < a.tipLength - 3; z += a.tipStyle === 'ringed' ? 1.4 : .8)
+                profile.push([z, 1.05], [z + .18, .9], [z + .4, 1.05]);
+            profile.sort((p, q) => p[0] - q[0]);
+        }
+        tipProfiles.set(key, profile);return profile;
+    }
+    function tipRadiusAt(input, z, angle = 0) {
+        const a = input?.gripSections && Number.isFinite(input.tipLength) ? input : normalize(input);
+        if (!Number.isFinite(z) || !Number.isFinite(angle)) return 0;
+        z = clamp(z, 0, a.tipLength);
+        if (['smooth', 'ringed', 'etched', 'tapered'].includes(a.tipStyle)) {
+            const profile = legacyTipProfile(a);
+            for (let i = 1; i < profile.length; i++) if (z <= profile[i][0]) {
+                const [from, r0] = profile[i - 1], [to, r1] = profile[i];
+                return r0 + (r1 - r0) * (z - from) / (to - from);
+            }
+            return 1.2;
+        }
+        const shoulder = a.tipLength - (a.tipStyle === 'tapered' ? 7 : 1);
+        const radius = z <= .8 ? .015 + .115 * z / .8
+            : z <= 3 ? .13 + .27 * (z - .8) / 2.2
+                : z <= 7 ? .4 + .35 * (z - 3) / 4
+                    : z <= 11 ? .75 + .3 * (z - 7) / 4
+                        : z <= shoulder ? 1.05 : 1.05 + .15 * (z - shoulder) / (a.tipLength - shoulder);
+        const window = (from, to) => clamp((z - from) / .45, 0, 1) * clamp((to - z) / .45, 0, 1);
+        const ring = (pitch, depth, width) => depth * (1 - clamp((Math.abs(fract((z - 8) / pitch) - .5) - width) / .12, 0, 1));
+        const front = window(8, Math.min(18, a.tipLength * .58));
+        const rear = window(a.tipLength - 12, a.tipLength - 2.5);
+        const body = window(11, a.tipLength - 2.5);
+        let cut = 0;
+        switch (a.tipStyle) {
+            case 'ringed-front': cut = ring(1.25, .16, .11) * front; break;
+            case 'ringed-rear': cut = ring(1.55, .19, .12) * rear; break;
+            case 'spiral': cut = .18 * (1 - clamp((Math.abs(fract(z / 2.4 - angle / (Math.PI * 2)) - .5) - .10) / .12, 0, 1)) * body; break;
+            case 'diamond': {
+                const u = angle / (Math.PI * 2) * 12;
+                const distance = Math.min(Math.abs(fract(u + z / 1.4) - .5), Math.abs(fract(u - z / 1.4) - .5));
+                cut = .16 * (1 - clamp(distance / .18, 0, 1)) * body; break;
+            }
+            case 'fluted': cut = .22 * clamp((Math.cos(angle * 8) - .45) / .55, 0, 1) * body; break;
+            case 'dual-grip': cut = Math.max(ring(.9, .12, .09) * front, ring(1.65, .19, .12) * rear); break;
+        }
+        return Math.max(.015, radius - cut);
     }
     function drawFlight(ctx, a, size) {
         ctx.save();
@@ -320,13 +453,16 @@
             });
         }
         function barrelGeometry(a) {
-            const key = ['barrel', a.barrelShape, a.barrelLength, ...Object.values(a.gripZones), a.barrelColor, a.barrelAccentColor, a.barrelAccentStyle].join(':');
+            const key = ['barrel', a.barrelShape, a.barrelLength, a.barrelDiameter, ...a.gripSections, JSON.stringify(a.gripRegions), a.barrelColor, a.barrelAccentColor, a.barrelAccentStyle].join(':');
             return asset(key, () => {
                 // Axially symmetric grips need fewer angular samples. At a 4.2 mm radius,
                 // 64 sides deviate from a circle by about 0.005 mm, even in close-ups.
-                const directionalGrip = Object.values(a.gripZones).some(grip =>
+                const patterns = a.gripRegions === null ? a.gripSections : a.gripRegions.map(region => region.pattern);
+                const directionalGrip = patterns.some(grip =>
                     ['knurled', 'pixel', 'axial', 'hybrid', 'wave', 'cross-cut', 'spiral'].includes(grip));
-                const around = directionalGrip ? (matchDetail ? 48 : 96) : (matchDetail ? 32 : 64);
+                const pixelGrip = patterns.includes('pixel');
+                const around = pixelGrip ? (matchDetail ? 60 : 120)
+                    : directionalGrip ? (matchDetail ? 48 : 96) : (matchDetail ? 32 : 64);
                 const along = matchDetail ? 256 : 500, stride = around + 1;
                 const vertices = new Float32Array((along + 1) * stride * 3);
                 const colors = new Float32Array(vertices.length);
@@ -338,16 +474,10 @@
                 const base = new THREE.Color(a.barrelColor), accent = new THREE.Color(a.barrelAccentColor), color = new THREE.Color();
                 for (let j = 0; j <= along; j++) {
                     const z = j * a.barrelLength / along;
-                    const radius = radiusAt(a.barrelShape, z, a.barrelLength);
-                    const gripStart = 5, gripEnd = a.barrelLength - 4;
-                    const zoneLength = (gripEnd - gripStart) / 3;
-                    const zoneIndex = Math.min(2, Math.floor((z - gripStart) / zoneLength));
-                    const localStart = gripStart + zoneIndex * zoneLength;
-                    const grip = z < gripStart || z > gripEnd || (zoneIndex && z - localStart < .6)
-                        ? null : a.gripZones[gripZoneNames[zoneIndex]];
+                    const radius = radiusAt(a.barrelShape, z, a.barrelLength, a.barrelDiameter);
                     for (let i = 0; i <= around; i++) {
                         const { angle, x, y } = directions[i];
-                        const cut = grip ? cutAt(grip, z, angle, a.barrelLength, false) : 0;
+                        const cut = gripCutAt(a, z, angle);
                         const r = radius - cut, vertex = (j * stride + i) * 3;
                         vertices[vertex] = x * r * scale;
                         vertices[vertex + 1] = y * r * scale;
@@ -378,6 +508,34 @@
                 g.computeVertexNormals(); return g;
             });
         }
+        function pointGeometry(a) {
+            if (['smooth', 'ringed', 'etched', 'tapered'].includes(a.tipStyle))
+                return lathe(`point:${a.tipLength}:${a.tipStyle}`, legacyTipProfile(a));
+            return asset(`point-surface:${a.tipLength}:${a.tipStyle}`, () => {
+                const directional = ['spiral', 'diamond', 'fluted'].includes(a.tipStyle);
+                const around = directional ? (matchDetail ? 30 : 60) : (matchDetail ? 20 : 32);
+                const along = Math.ceil(a.tipLength * (matchDetail ? 7 : 14)), stride = around + 1;
+                const vertices = new Float32Array((along + 1) * stride * 3);
+                const indices = new Uint16Array(along * around * 6);
+                for (let j = 0; j <= along; j++) {
+                    const z = j * a.tipLength / along;
+                    for (let i = 0; i <= around; i++) {
+                        const angle = i / around * Math.PI * 2, radius = tipRadiusAt(a, z, angle) * scale;
+                        const v = j * stride + i;
+                        vertices[v * 3] = Math.cos(angle) * radius;
+                        vertices[v * 3 + 1] = Math.sin(angle) * radius;
+                        vertices[v * 3 + 2] = z * scale;
+                        if (i < around && j < along) {
+                            const offset = (j * around + i) * 6;
+                            indices.set([v, v + 1, v + stride, v + 1, v + stride + 1, v + stride], offset);
+                        }
+                    }
+                }
+                const g = new THREE.BufferGeometry();
+                g.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+                g.setIndex(new THREE.BufferAttribute(indices, 1));g.computeVertexNormals();return g;
+            });
+        }
         function create(input) {
             const a = normalize(input), d = dimensions(a), group = new THREE.Group();
             const integrated = a.flightSystem !== 'separate', clear = a.flightSystem === 'integrated-clear' || a.flightSystem === 'integrated-frosted';
@@ -388,15 +546,7 @@
                 m.castShadow = true; group.add(m); return m;
             };
             const metal = paint('steel', a.tipColor, { metalness: .82, roughness: .24 });
-            // A cylindrical steel point with a short, smoothly ground needle end.
-            const tipProfile = [[0, .015], [.8, .13], [3, .4], [7, .75], [11, 1.05], [a.tipLength - 1, 1.05], [a.tipLength, 1.2]];
-            if (a.tipStyle !== 'smooth') {
-                for (let z = 12; z < a.tipLength - 3; z += a.tipStyle === 'ringed' ? 1.4 : .8) {
-                    tipProfile.push([z, 1.05], [z + .18, .9], [z + .4, 1.05]);
-                }
-                tipProfile.sort((p, q) => p[0] - q[0]);
-            }
-            mesh(lathe(`point:${a.tipLength}:${a.tipStyle}`, tipProfile), metal);
+            mesh(pointGeometry(a), metal).name = 'dart-point';
             mesh(barrelGeometry(a), paint('barrel', '#ffffff', { vertexColors: true, metalness: .8, roughness: .29 }), a.tipLength);
             const shaftZ = a.tipLength + a.barrelLength;
             const polymerOptions = { metalness: 0, roughness: a.flightSystem === 'integrated-frosted' ? .7 : clear ? .16 : .3,
@@ -533,6 +683,6 @@
         }).catch(error => { libraryPromise = null; throw error; });
         return libraryPromise;
     }
-    root.dartModel = Object.freeze({ normalize, dimensions, shaftLengths, radiusAt, cutAt, gripCutAt, profiles, outlines, scale, createFactory, loadThree, studioEnvironment, drawFlight,
+    root.dartModel = Object.freeze({ normalize, dimensions, shaftLengths, radiusAt, cutAt, gripCutAt, tipRadiusAt, tipStyles, profiles, outlines, scale, maxGripRegions, normalizeGripRegions, validGripRegions, legacyGripRegions, rescaleGripRegions, barrelDiameterRange, normalizeBarrelDiameter, defaultBarrelDiameter, createFactory, loadThree, studioEnvironment, drawFlight,
         validFlightArtwork, registerFlightArtwork });
 })(typeof window !== 'undefined' ? window : globalThis);

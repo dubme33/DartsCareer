@@ -1,5 +1,9 @@
 // Wspólna, bezstanowa selekcja dla drabinki i podglądu kwalifikacji.
-function getRankingQualificationGroups(tournament, candidates) {
+function getRankingQualificationGroups(tournament, candidates, nativeOnly = false) {
+    if (!nativeOnly && tournament?.editorNativeRoutes?.length) {
+        const groups = getRankingQualificationGroups(tournament, candidates, true);
+        if (groups) return applyTournamentEditorNativeQualificationGroups(tournament, groups, candidates);
+    }
     if(typeof isWomensWorldMatchplayTournament==='function'&&isWomensWorldMatchplayTournament(tournament)){const e=freezeWomensWorldMatchplayField(tournament);return [{key:'womensWorldMatchplay',places:8,players:(e?.seeds||[]).map(id=>resolveWomensWorldMatchplayPlayer(id,candidates)).filter(Boolean)}];}
     const name = String(tournament?.name || '').toLowerCase();
     const rank = property => [...candidates].sort((a, b) => (Number(b[property]) || 0) - (Number(a[property]) || 0));

@@ -1,5 +1,5 @@
 // Calibrated presentation texture. Board size, scoring and dart physics are independent.
-function renderSurroundSkin(image, config, size = 1024) {
+function renderSurroundSkin(image, config, size = 2048) {
     const width = image.naturalWidth, height = image.naturalHeight;
     if (width < 2 || height < 2 || !width || !height || width * height > 25000000) throw new Error('Niepoprawny rozmiar obrazu opony.');
     const source = document.createElement('canvas'); source.width = width; source.height = height;

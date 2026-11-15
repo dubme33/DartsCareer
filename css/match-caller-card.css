@@ -1,0 +1,6 @@
+.match-caller-card { position:fixed;left:22px;bottom:22px;z-index:10020;display:flex;align-items:center;gap:13px;max-width:calc(100vw - 44px);box-sizing:border-box;padding:13px 22px 13px 16px;border-left:4px solid #52c89c;border-radius:7px;background:linear-gradient(110deg,#102c45f5,#1b4159f5);color:#f5fbff;box-shadow:0 7px 25px #0006;pointer-events:none; }
+.match-caller-card[hidden] { display:none; }
+.match-caller-icon { font-size:29px; }
+.match-caller-label { display:block;margin-bottom:3px;font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:#a8ceda; }
+.match-caller-name { display:block;font-size:19px;line-height:1.25; }
+@media(max-width:600px) { .match-caller-card { left:12px;bottom:12px;max-width:calc(100vw - 24px);padding:10px 16px 10px 12px;gap:10px; }.match-caller-name { font-size:17px; }.match-caller-icon { font-size:24px; } }

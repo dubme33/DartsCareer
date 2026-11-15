@@ -1,0 +1,44 @@
+.scenario-entries { display: grid; gap: 14px; margin: 20px 0; }
+.scenario-entry { min-width: 0; border: 1px solid var(--border-color, #34495e); border-radius: 10px; padding: 16px; background: #101f35; }
+.scenario-entry legend { padding: 0 8px; color: #9fd7ff; font-weight: 700; }
+.scenario-entry > label:not(.scenario-checkbox) { display: block; margin: 10px 0 5px; }
+.scenario-entry select, #scenario-target { box-sizing: border-box; max-width: 100%; width: 100%; padding: 10px; color: #fff; background: #152d49; border: 1px solid #52718f; border-radius: 6px; }
+.scenario-checkbox { display: flex; gap: 10px; align-items: flex-start; margin: 12px 0; line-height: 1.5; }
+.scenario-checkbox input { width: auto; flex: 0 0 auto; }
+.scenario-actions { display: flex; flex-wrap: wrap; gap: 10px; margin: 16px 0; }
+.scenario-actions button, .scenario-entry button, .mod-diagnostics-screen button { border: 1px solid #52718f; border-radius: 6px; padding: 10px 14px; color: #fff; background: #163b5d; cursor: pointer; font: inherit; }
+.scenario-actions button:disabled { opacity: .55; cursor: default; }
+#scenario-calculate { background: #146342; border-color: #2ecc71; }
+#scenario-error { color: #ffca95; min-height: 1.5em; }
+.scenario-comparison { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; }
+.scenario-comparison .planning-status { margin: 0 0 16px; }
+.scenario-comparison h4 { margin: 0 0 10px; }
+#scenario-report .planning-table { width: 100%; }
+#scenario-report ul { overflow-wrap: anywhere; }
+.mod-diagnostics-screen { max-width: 1100px; margin: 0 auto; padding: 24px 18px; box-sizing: border-box; }
+.mod-diagnostics-screen > p, .diagnostic-issue { line-height: 1.6; }
+.diagnostic-filters { display: grid; grid-template-columns: 2fr 1fr; gap: 14px; margin: 22px 0; }
+.diagnostic-filters label { display: grid; gap: 6px; min-width: 0; }
+.diagnostic-filters input, .diagnostic-filters select { min-width: 0; width: 100%; box-sizing: border-box; padding: 10px; color: #fff; background: #152d49; border: 1px solid #52718f; border-radius: 6px; }
+.diagnostic-counts { display: flex; flex-wrap: wrap; gap: 16px; }
+.diagnostic-issue { background: #111e32; border: 1px solid #34495e; border-left-width: 4px; border-radius: 8px; margin-bottom: 14px; padding: 16px; overflow-wrap: anywhere; }
+.diagnostic-error { border-left-color: #ff8a80; }
+.diagnostic-warning { border-left-color: #ffcf70; }
+.diagnostic-info { border-left-color: #85c7ff; }
+.diagnostic-counts .diagnostic-error { color: #ffaaa4; }
+.diagnostic-counts .diagnostic-warning { color: #ffda91; }
+.diagnostic-counts .diagnostic-info { color: #a9d7ff; }
+.diagnostic-badge { font-weight: 700; }
+.diagnostic-issue code { display: block; color: #a9d7ff; font-size: 13px; }
+.diagnostic-issue summary { cursor: pointer; padding: 8px 0; }
+.diagnostic-issue pre { max-height: 350px; overflow: auto; white-space: pre-wrap; word-break: break-word; padding: 12px; background: #071426; color: #d7e9fa; border-radius: 6px; }
+.diagnostic-issue button { margin-top: 10px; }
+#diagnostic-status { color: #ffda91; }
+#diagnostic-back { margin-top: 22px; }
+@media (max-width: 600px) {
+    .scenario-comparison, .diagnostic-filters { grid-template-columns: 1fr; }
+    .scenario-entry { padding: 12px; }
+    .scenario-actions button { flex: 1 1 160px; }
+    #scenario-report .planning-table { font-size: 12px; }
+    #scenario-report .planning-table td, #scenario-report .planning-table th { padding: 9px 5px; }
+}
