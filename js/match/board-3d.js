@@ -462,8 +462,8 @@
         const baseFlight = replay ? (dart.data.collision ? 480 : 340) : (dart.data.collision ? 300 : 260);
         const flight = Math.max(45, baseFlight * impactProgress * durationScale / speed);
         const start = Math.max(now, queueUntil);
-        const settle = bouncing ? Math.max(80, 420 * durationScale / speed)
-            : Math.max(35, (replay ? 180 : 120) * durationScale / speed);
+        // A lodged dart is fixed at impact. Only bounce-outs need a falling phase.
+        const settle = bouncing ? Math.max(80, 420 * durationScale / speed) : 0;
         const animation = { dart, bouncing, replay, droppedDarts, start, flight, settle, end: start + flight + settle,
             path: createFlightPath(dart, bouncing), impacted: false, impactCallbacks: [] };
         animations.push(animation);
@@ -656,7 +656,7 @@
             const age = now - start;
             if (age < 0) return true;
             dart.group.visible = true;
-            const { collision, plannedRotation, startPoint, impact, earlyBounce, contactAt,
+            const { collision, plannedRotation, startPoint, impact, contactAt,
                 end, controlA, controlB, bounceOrigin } = animation.path;
             if (age < flight) {
                 const t = age / flight;
@@ -670,7 +670,6 @@
                     dart.group.rotation.set(plannedRotation.x + (dart.rotation.x - plannedRotation.x) * turn,
                         plannedRotation.y + (dart.rotation.y - plannedRotation.y) * turn,
                         plannedRotation.z + (dart.rotation.z - plannedRotation.z) * turn);
-                    shakeContactedDart(dart, Math.sin(Math.PI * after) * .035);
                 } else {
                     dart.group.position.copy(startPoint).lerp(impact || end, t / contactAt);
                     dart.group.rotation.copy(plannedRotation);
@@ -686,7 +685,6 @@
                     fallen.group.position.set(fallen.x + side * .3 * t, fallen.y - 2.1 * t * t, .008 + .4 * t);
                     fallen.group.rotation.z = fallen.rotation.z + t * 4;
                 }
-                if (earlyBounce) shakeContactedDart(dart, Math.sin(Math.PI * t) * .045 * (1 - t));
                 if (t === 1) {
                     releaseDart(dart); animation.droppedDarts.forEach(releaseDart); return false;
                 }
@@ -694,10 +692,7 @@
                 completeImpact(animation);
                 dart.group.position.copy(end);
                 dart.group.rotation.copy(dart.rotation);
-                const t = Math.min(1, (age - flight) / settle);
-                dart.group.rotation.x += Math.sin(t * Math.PI * 5) * .07 * (1 - t);
-                if (collision) shakeContactedDart(dart, Math.sin(t * Math.PI * 5) * .015 * (1 - t));
-                if (t === 1) return false;
+                return false;
             }
             return true;
         });
@@ -708,18 +703,6 @@
         // framebuffer halfway to the board. Geometry and timing stay intact.
         if (!animations.length && !cameraMotion && mobileRenderBudget.applyPending()) resize();
         if (animations.length || cameraMotion) requestRender();
-    }
-
-    function shakeContactedDart(incoming, amount) {
-        if (incoming.contactedDart) {
-            if (dartModels.includes(incoming.contactedDart)) incoming.contactedDart.group.rotation.z += amount;
-            return;
-        }
-        const index = incoming.data.collision?.obstacle;
-        const previous = replayBoard ? replayBoard.darts
-            : dartModels.filter(dart => dart !== incoming && seenDarts.includes(dart.data));
-        const contacted = previous[index];
-        if (contacted) contacted.group.rotation.z += amount;
     }
 
     function clear() {
@@ -794,13 +777,11 @@
         const color = side === 'p2' ? '#ecf0f1' : '#f1c40f';
         const dartStyle = typeof window.getMatchDartLoadout === 'function' ? window.getMatchDartLoadout(side) : null;
         const indices = result.knockedOutDartIndices || [];
-        const contactedDart = dartModels.filter(dart => seenDarts.includes(dart.data))[result.collision?.obstacle];
         const droppedDarts = dartModels.filter(dart => seenDarts.includes(dart.data) && indices.includes(dart.data.visitDartIndex));
         seenDarts = seenDarts.filter(dart => !indices.includes(dart.visitDartIndex));
         animations = animations.filter(animation => !droppedDarts.includes(animation.dart));
         const dart = createDart({ ...point, color, dartSide: side, ...(dartStyle ? { dartStyle } : {}),
             dartPose: result.dartPose, collision: result.collision });
-        dart.contactedDart = contactedDart;
         enqueue(dart, true, 1, false, droppedDarts); return true;
     }
 
@@ -848,8 +829,8 @@
             ...(dartStyle ? { dartStyle } : {}), ...(data.dartPose ? { dartPose: data.dartPose } : {}),
             ...(data.collision ? { collision: data.collision } : {}),
             ...(data.robinHood ? { robinHood: true } : {}) });
+        dart.replay = true;
         const droppedDarts = replayBoard?.darts.filter(entry => data.knockedOutDartIndices?.includes(entry.data.visitDartIndex)) || [];
-        dart.contactedDart = replayBoard?.darts[data.collision?.obstacle];
         enqueue(dart, Boolean(data.bounced), Math.max(1, Number(slowMotion) || 1), true, droppedDarts);
         return true;
     }
@@ -867,6 +848,11 @@
                 animation.dart.group.rotation.copy(animation.dart.rotation);
             }
             stopped = true; return false;
+        });
+        // A completed replay still owns its temporary dart until the replay ends.
+        // Remove it before restoring live darts, otherwise overlapping models flicker.
+        dartModels.filter(dart => dart.replay).forEach(dart => {
+            releaseDart(dart); stopped = true;
         });
         if (replayBoard) {
             replayBoard.darts.forEach(dart => {
