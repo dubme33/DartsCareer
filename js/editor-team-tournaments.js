@@ -30,11 +30,11 @@ function resolveEditorTeamPlayer(reference, pool) {
         || null;
 }
 
-function buildEditorTeamField(event) {
+function buildEditorTeamField(event, entryOptions = {}) {
     if (!event.editorTeamMode) {
         const fixedLeague = typeof isEditorSeasonLeague === 'function' && isEditorSeasonLeague(event)
             && typeof getCareerEditorTour === 'function' && getCareerEditorTour(event)?.entry === 'fixed';
-        const options = { ignoreAvailability: typeof isEditorSeasonLeague === 'function' && isEditorSeasonLeague(event) };
+        const options = { ...entryOptions, ignoreAvailability: typeof isEditorSeasonLeague === 'function' && isEditorSeasonLeague(event) };
         const participants = fixedLeague ? getCareerTourEntryGroups(event, undefined, currentDate, options).flatMap(group => group.players)
             : getTournamentEditorParticipants(event, undefined, currentDate, options);
         return participants.map(candidate => ({
@@ -53,7 +53,8 @@ function buildEditorTeamField(event) {
         const countries = Array.isArray(event.editorTeamEntries) && event.editorTeamEntries.length
             ? event.editorTeamEntries.map(entry => entry.country)
             : [...countryCounts].filter(([, count]) => count >= 2).map(([country]) => country);
-        const eligibleCountries = [...new Set(countries)].filter(country => !event.editorGender || (countryCounts.get(country) || 0) >= 2);
+        const eligibleCountries = [...new Set(countries)].filter(country =>
+            !(event.editorGender || event.editorStructure?.teamSeries) || (countryCounts.get(country) || 0) >= 2);
         const teams = buildWorldCupTeams(eligibleCountries.slice(0, size), { candidates: pool, event })
             .filter(team => team.players.every(candidate => Number(candidate.ovr ?? candidate.overall) >= minOvr));
         teams.sort((a, b) => getWorldCupTeamRating(b) - getWorldCupTeamRating(a));
@@ -98,8 +99,13 @@ function buildEditorTeamRound(teams, roundSize) {
 }
 
 function getEditorTeamMatchFormat() {
-    if (typeof isEditorSeasonLeague === 'function' && isEditorSeasonLeague(activeTournament) && editorTeamState()?.phase === 'league')
-        return { type: 'legs', legsToWin: getEditorLeagueRoot().editorStructure.league.legsToWin };
+    if (typeof isEditorSeasonLeague === 'function' && isEditorSeasonLeague(activeTournament) && editorTeamState()?.phase === 'league') {
+        const rules = getEditorLeagueRoot().editorStructure.league;
+        if (!rules.split) return { type: 'legs', legsToWin: rules.legsToWin };
+        const opening = (activeTournament.editorLeagueRound || 0) < rules.split.openingField - 1;
+        const drawAt = (opening ? rules.split.firstLegLimit : rules.split.secondLegLimit) / 2;
+        return { type: 'legs', legsToWin: drawAt + 1, drawAt };
+    }
     if (editorTeamState()?.phase === 'groups') return { type: 'legs', legsToWin: activeTournament.editorStructure.groups.legsToWin };
     const format = activeTournament?.editorMatchFormat;
     if (format?.type === 'rounds') return format.rounds[editorTeamState()?.roundSize] || { type: 'legs', legsToWin: 6 };
@@ -117,7 +123,7 @@ function getEditorTeamPendingMatch() {
 function startEditorTeamTournament() {
     if (!(isEditorTeamTournament() || typeof isEditorGroupTournament === 'function' && isEditorGroupTournament(activeTournament)) || activeTournament.completed) return false;
     if (!editorTeamState()) {
-        const teams = buildEditorTeamField(activeTournament);
+        const teams = buildEditorTeamField(activeTournament, { resolvePlayIn: true });
         if (teams.length < 2) {
             const cancelled = activeTournament;
             cancelled.completed = true;
@@ -201,9 +207,9 @@ function showEditorTeamOverview() {
     return true;
 }
 
-function editorTeamPayout(team, round, won) {
+function editorTeamPayout(team, round, won, amount) {
     if (!team || !activeTournament) return;
-    const prize = Number(getPrizeMoney(activeTournament, round, won)) || 0;
+    const prize = Number(amount ?? getPrizeMoney(activeTournament, round, won)) || 0;
     team.players.forEach(candidate => {
         if (candidate.isWorldCupGuest) return;
         if (prize > 0) awardPrizeMoney(candidate, prize / team.players.length, activeTournament.name,
@@ -224,14 +230,51 @@ function finishEditorTeamStateMatch(match, winnerId, score1, score2) {
     return true;
 }
 
+function getEditorTeamSeriesRubber(match) {
+    const first = editorTeamById(match.team1Id), second = editorTeamById(match.team2Id);
+    const pair = [[0, 0], [1, 1], null, [0, 1], [1, 0]][match.seriesRubbers?.length || 0];
+    if (!pair) return [first, second];
+    return [{ ...first, players: [first.players[pair[0]]] }, { ...second, players: [second.players[pair[1]]] }];
+}
+function recordEditorTeamSeriesRubber(match, winnerId, firstScore, secondScore) {
+    const results = match.seriesRubbers ||= [];
+    results.push({ winnerId, firstScore, secondScore });
+    const first = results.filter(result => result.winnerId === match.team1Id).length;
+    const second = results.length - first;
+    const needed = editorTeamState().roundSize === 2 ? 3 : 2;
+    if (first === needed || second === needed) finishEditorTeamStateMatch(match, winnerId, first, second);
+    else { match.score1 = first; match.score2 = second; }
+}
+function simulateEditorTeamSeriesRubber(match) {
+    const [first, second] = getEditorTeamSeriesRubber(match);
+    const format = { type: 'legs', legsToWin: 4 };
+    if (first.players.length === 1) {
+        const result = simulateAImatch(first.players[0], second.players[0], format);
+        recordEditorTeamSeriesRubber(match, result.winner === first.players[0] ? first.id : second.id, result.p1Score, result.p2Score);
+        return;
+    }
+    const [p1, p2] = simulateEditorDoublesScore(first, second, format);
+    recordEditorTeamSeriesRubber(match, p1 > p2 ? first.id : second.id, p1, p2);
+}
 function simulateEditorTeamMatch(match) {
+    if (activeTournament.editorStructure?.teamSeries) {
+        while (!match.played) simulateEditorTeamSeriesRubber(match);
+        return;
+    }
     const team1 = editorTeamById(match.team1Id), team2 = editorTeamById(match.team2Id);
     const format = getEditorTeamMatchFormat();
     if (!activeTournament.editorTeamMode && typeof simulateAImatch === 'function') {
         const result = simulateAImatch(team1.players[0], team2.players[0], format);
-        finishEditorTeamStateMatch(match, result.winner === team1.players[0] ? team1.id : team2.id, result.p1Score, result.p2Score);
+        const winner = format.drawAt && result.p1Score === result.p2Score ? null
+            : result.winner === team1.players[0] ? team1.id : team2.id;
+        finishEditorTeamStateMatch(match, winner, result.p1Score, result.p2Score);
         return;
     }
+    const [score1, score2] = simulateEditorDoublesScore(team1, team2, format);
+    finishEditorTeamStateMatch(match, score1 > score2 ? team1.id : team2.id, score1, score2);
+}
+
+function simulateEditorDoublesScore(team1, team2, format) {
     const chance = Math.max(0.08, Math.min(0.92,
         1 / (1 + Math.exp((getWorldCupTeamRating(team2) - getWorldCupTeamRating(team1)) / 7))));
     let score1 = 0, score2 = 0;
@@ -248,7 +291,7 @@ function simulateEditorTeamMatch(match) {
     const winner = score1 > score2 ? team1 : team2;
     recordWorldCupTeamAverage(team1, getWorldCupSimulatedAverage(team1, winner === team1));
     recordWorldCupTeamAverage(team2, getWorldCupSimulatedAverage(team2, winner === team2));
-    finishEditorTeamStateMatch(match, winner.id, score1, score2);
+    return [score1, score2];
 }
 
 function advanceEditorTeamRound() {
@@ -322,20 +365,36 @@ function simulateEditorTeamTournament() {
 
 function startEditorTeamMatch(match) {
     if (!match || match.played || currentMatch || !activeTournament) return false;
-    const first = editorTeamById(match.team1Id), second = editorTeamById(match.team2Id);
+    let first = editorTeamById(match.team1Id), second = editorTeamById(match.team2Id);
     if (!first || !second) return false;
-    const careerTeam = editorTeamHasCareerPlayer(first) ? first : second;
-    if (!editorTeamHasCareerPlayer(careerTeam)) return false;
+    if (![first, second].some(editorTeamHasCareerPlayer)) return false;
     if (typeof isPlayerInjured === 'function' && isPlayerInjured(player)) {
         return typeof showPlayerInjuryBlocked === 'function' ? showPlayerInjuryBlocked() : false;
     }
+    const teamSeries = Boolean(activeTournament.editorStructure?.teamSeries);
+    if (teamSeries) {
+        [first, second] = getEditorTeamSeriesRubber(match);
+        while (!match.played && ![first, second].some(editorTeamHasCareerPlayer)) {
+            simulateEditorTeamSeriesRubber(match);
+            if (!match.played) [first, second] = getEditorTeamSeriesRubber(match);
+        }
+        if (match.played) {
+            const state = editorTeamState();
+            while (!state.completed && state.matches.every(candidate => candidate.played)) advanceEditorTeamRound();
+            if (activeTournament) showEditorTeamOverview();
+            if (typeof saveGame === 'function') saveGame(true);
+            return true;
+        }
+    }
+    const careerTeam = editorTeamHasCareerPlayer(first) ? first : second;
+    if (!editorTeamHasCareerPlayer(careerTeam)) return false;
     const opponent = careerTeam === first ? second : first;
-    const format = getEditorTeamMatchFormat();
+    const format = teamSeries ? { type: 'legs', legsToWin: 4 } : getEditorTeamMatchFormat();
     const starter = Math.random() < 0.5 ? 'p1' : 'p2';
     if (typeof chargeTournamentParticipationStamina === 'function') chargeTournamentParticipationStamina(activeTournament);
     const doubles = careerTeam.players.length === 2;
     currentMatch = { vsAI: true, isTournament: true, isEditorTeamTournament: true, isDoubles: doubles,
-        opponent: opponent.players[0], editorTeamMatchId: match.id,
+        opponent: opponent.players[0], editorTeamMatchId: match.id, editorTeamSeries: teamSeries,
         worldCupTeamP1: careerTeam, worldCupTeamP2: opponent,
         doublesThrower: { p1: Math.max(0, careerTeam.players.findIndex(isCurrentPlayer)), p2: 0 },
         p1Score: 501, p2Score: 501, p1Legs: 0, p2Legs: 0, p1Sets: 0, p2Sets: 0, totalLegsPlayed: 0,
@@ -363,9 +422,10 @@ function startEditorTeamMatch(match) {
                 : team.players[0].photo) || 'https://placehold.co/100/16213e/FFFFFF?text=TEAM';
         photo.classList.toggle('world-cup-flag-photo', doubles && Boolean(team.flagCountry));
     }
-    document.getElementById('match-title').textContent = `${activeTournament.name} — ${editorTeamState().phase === 'groups'
+    document.getElementById('match-title').textContent = `${activeTournament.name} - ${editorTeamState().phase === 'groups'
         ? `${trEditorStructure('group')} ${editorTeamState().groups[match.groupIndex].label}` : editorTeamState().phase === 'league'
             ? trEditorStructure('matchday', { round: (activeTournament.editorLeagueRound || 0) + 1 }) : editorTeamRoundLabel(editorTeamState().roundSize)}`;
+    if (teamSeries) document.getElementById('match-title').textContent += ` · ${editorTeamText('Mecz', 'Rubber')} ${(match.seriesRubbers?.length || 0) + 1}`;
     if (typeof applyMatchPlayerPresentationThemes === 'function') applyMatchPlayerPresentationThemes(player, opponent);
     ['visit', 'leg', 'match'].forEach(item => { document.getElementById(`t-btn-sim-${item}`).style.display = ''; });
     updateScores(); updateMatchStatsUI(); setTurnUI();
@@ -385,8 +445,10 @@ function finishEditorTeamTournamentMatch() {
     recordWorldCupTeamAverage(first, getPlayedWorldCupAverage(true));
     recordWorldCupTeamAverage(second, getPlayedWorldCupAverage(false));
     const firstWasDrawnFirst = match.team1Id === first.id;
-    finishEditorTeamStateMatch(match, p1 > p2 ? first.id : second.id,
-        firstWasDrawnFirst ? p1 : p2, firstWasDrawnFirst ? p2 : p1);
+    const winnerId = currentMatch.matchFormat?.drawAt && p1 === p2 ? null : p1 > p2 ? first.id : second.id;
+    const score1 = firstWasDrawnFirst ? p1 : p2, score2 = firstWasDrawnFirst ? p2 : p1;
+    if (currentMatch.editorTeamSeries) recordEditorTeamSeriesRubber(match, winnerId, score1, score2);
+    else finishEditorTeamStateMatch(match, winnerId, score1, score2);
     currentMatch = null;
     showScreen('screen-hub');
     if (typeof isEditorSeasonLeague === 'function' && isEditorSeasonLeague(activeTournament)) {

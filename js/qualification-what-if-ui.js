@@ -120,7 +120,7 @@ function bindQualificationScenario() {
 function renderQualificationScenarioReport(report) {
     const heading = trQualificationScenario('at', { date: getPlanningDate(report.date) });
     const status = (preview, key) => `<section class="planning-status planning-${preview.status}"><h4>${escapeHtml(trQualificationScenario(key))}</h4><strong>${escapeHtml(['in', 'confirmed'].includes(preview.status) ? trQualificationScenario('inField') : trPlanning(preview.status))}</strong><p>${escapeHtml(preview.route)}</p></section>`;
-    const names = { main: 'Order of Merit', protour: 'ProTour OOM', pc: 'Players Championship OOM', europeanTour: 'European Tour OOM', challengeTour: 'Challenge Tour OOM', developmentTour: 'Development Tour OOM' };
+    const names = { main: 'Order of Merit', protour: 'ProTour OOM', pc: 'Players Championship OOM', europeanTour: 'European Tour OOM', challengeTour: 'Challenge Tour OOM', developmentTour: 'Development Tour OOM', womensSeries: "Women's Series OOM" };
     const rows = report.rankingsAfter.map((row, index) => {
         const before = report.rankingsBefore[index];
         const tour = row.id.startsWith('tour:') ? getCareerCalendarEditorState().tours.find(tour => tour.id === row.id.slice(5)) : null;

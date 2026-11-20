@@ -173,7 +173,11 @@ function getTournamentPrizePreview(tournament) {
     const series = typeof isWorldMastersName === 'function' && isWorldMastersName(name)
         && !crownMasters && !crownMastersQualifier;
     const managedTour = typeof getCareerEditorTour === 'function' ? getCareerEditorTour(event) : null;
-    if (typeof isWorldYouthTournament === 'function' && isWorldYouthTournament(event)) {
+    const selected = typeof getTournamentEditorPrizeRankings === 'function' ? getTournamentEditorPrizeRankings(event) : null;
+    if (selected) {
+        const options = getTournamentEditorPrizeRankingOptions();
+        for (const id of new Set(selected)) if (options.has(id)) rankings.push(options.get(id));
+    } else if (typeof isWorldYouthTournament === 'function' && isWorldYouthTournament(event)) {
         // Youth remains non-ranking even when assigned to an editor cycle.
     } else if (womensSeries) {
         rankings.push((typeof competitionName==='function'?competitionName('womensSeries'):"Women's Pro Circuit") + " OOM");

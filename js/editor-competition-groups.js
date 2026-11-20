@@ -65,8 +65,10 @@ function completeEditorCompetitionGroups() {
         .slice(0, rules.extra).forEach((row, index) => qualified.push({ ...editorTeamById(row.id), qualificationCode: `X${index + 1}` }));
     const advancing = new Set(qualified.map(team => team.id));
     if (!state.groupPrizesPaid) {
+        const thirdPlaces = rules.thirdPlacePrize == null ? new Set() : new Set(state.groups.map((group, index) =>
+            getEditorCompetitionStandings(index)[2]?.id));
         state.teams.filter(team => !advancing.has(team.id)).forEach(team => team.players.forEach(candidate => {
-            const prize = rules.eliminationPrize / team.players.length;
+            const prize = (thirdPlaces.has(team.id) ? rules.thirdPlacePrize : rules.eliminationPrize) / team.players.length;
             if (prize > 0) awardPrizeMoney(candidate, prize, activeTournament.name, { countTowardsRankings: activeTournament.rankingOverride === true });
             if (typeof recordSeasonTournamentResult === 'function') recordSeasonTournamentResult(candidate, activeTournament,
                 { round: activeTournament.editorFieldSize, prizeMoney: prize, won: false, countTowardsRankings: activeTournament.rankingOverride === true });

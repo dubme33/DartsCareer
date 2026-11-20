@@ -444,6 +444,38 @@ function applyTournamentEditorNativeQualifierDraw(main, draw, candidates, refere
     return result;
 }
 
+function resolveTournamentEditorPlayIn(tournament, route, pool, index, year, resolve) {
+    const history = tournament.editorPlayIn?.year === year ? tournament.editorPlayIn.routes : null;
+    const cached = history?.[index];
+    if (cached) {
+        const byKey = new Map(pool.map(candidate => [getTournamentEditorPlayerKey(candidate), candidate]));
+        return cached.qualified.map(key => byKey.get(key)).filter(Boolean);
+    }
+    const ranked = getTournamentEditorRanking(pool, 'oom');
+    const champions = route.source === 'champions' ? ranked.filter(candidate => candidate.seasonStats?.year === year
+        && candidate.seasonStats.results?.some(result => result.won)).slice(0, route.places) : [];
+    let remaining = ranked.filter(candidate => !champions.includes(candidate));
+    const seats = route.places - champions.length;
+    if (!resolve) return champions.concat(remaining.slice(0, seats));
+    const results = [];
+    while (seats > 0 && remaining.length > seats) {
+        remaining = shuffle(remaining);
+        const count = Math.min(remaining.length - seats, Math.floor(remaining.length / 2));
+        const next = remaining.slice(count * 2);
+        for (let index = 0; index < count * 2; index += 2) {
+            const first = remaining[index], second = remaining[index + 1];
+            const result = simulateAImatch(first, second, { type: 'legs', legsToWin: 6 });
+            if (result.winner && !result.winner.isBye) next.push(result.winner);
+            results.push({ first: getTournamentEditorPlayerKey(first), second: getTournamentEditorPlayerKey(second),
+                score: [result.p1Score, result.p2Score] });
+        }
+        remaining = next;
+    }
+    const selected = champions.concat(seats ? remaining : []);
+    if (!history) tournament.editorPlayIn = { year, routes: {} };
+    tournament.editorPlayIn.routes[index] = { qualified: selected.map(getTournamentEditorPlayerKey), results };
+    return selected;
+}
 function getTournamentEditorQualificationGroups(tournament, candidates, referenceDate = currentDate, options = {}) {
     if (typeof hasCareerTourEntryOverride === 'function' && hasCareerTourEntryOverride(tournament)) return getCareerTourEntryGroups(tournament, candidates, referenceDate, options);
     if (!hasTournamentEditorQualification(tournament)) return [];
@@ -501,7 +533,13 @@ function getTournamentEditorQualificationGroups(tournament, candidates, referenc
         } else {
             pool = eligible.filter(candidate => !reservedKeys.has(getTournamentEditorPlayerKey(candidate))
                 && (route.source !== 'country' || matchesTournamentEditorCountry(candidate, route.country)));
-            players = route.source === 'tourRanking' ? getTournamentEditorCycleRankingPool(route, pool, referenceDate)
+            if (['playIn', 'champions'].includes(route.source)) {
+                pool = pool.filter(candidate => !used.has(getTournamentEditorPlayerKey(candidate)));
+                const year = referenceDate.getFullYear();
+                players = resolveTournamentEditorPlayIn(tournament, route, pool, index, year, options.resolvePlayIn === true);
+                pending = !(tournament.editorPlayIn?.year === year && tournament.editorPlayIn.routes[index]);
+                confirmed = !pending;
+            } else players = route.source === 'tourRanking' ? getTournamentEditorCycleRankingPool(route, pool, referenceDate)
                 : getTournamentEditorRanking(pool, route.source === 'country' ? route.ranking || 'oom' : route.source);
         }
         // Earlier routes take priority; ranking places roll down without duplicates.
@@ -515,13 +553,41 @@ function getTournamentEditorQualificationGroups(tournament, candidates, referenc
 
 function getTournamentEditorParticipants(tournament, candidates, referenceDate = currentDate, options = {}) {
     const participants = getTournamentEditorQualificationGroups(tournament, candidates, referenceDate, options).flatMap(group => group.players);
-    return typeof applyTournamentEditorInvitations === 'function'
+    const selected = typeof applyTournamentEditorInvitations === 'function'
         ? applyTournamentEditorInvitations(tournament, participants, candidates, referenceDate, options) : participants;
+    return selected.slice(0, tournament.editorStructure?.seededDraw?.entrants ?? selected.length);
 }
 
+function buildTournamentEditorSeededDraw(real, size, rules) {
+    const entrants = real.slice(0, rules.entrants);
+    const seeds = (rules.source === 'oom' ? getTournamentEditorRanking(entrants, 'oom') : entrants).slice(0, rules.seeds);
+    const remaining = entrants.filter(candidate => !seeds.includes(candidate));
+    const randomOrder = values => typeof shuffle === 'function' ? shuffle(values) : values;
+    const byes = size - entrants.length, pairs = [];
+    if (rules.splitOpening) {
+        const first = randomOrder(remaining.slice(0, rules.seeds));
+        const second = randomOrder(remaining.slice(rules.seeds));
+        seeds.forEach(seed => pairs.push([seed, null]));
+        first.forEach((candidate, index) => pairs.push([candidate, second[index]]));
+    } else {
+        const opponents = randomOrder(remaining);
+        seeds.forEach((seed, index) => pairs.push([seed, index < byes ? null : opponents.shift()]));
+        while (opponents.length) pairs.push([opponents.shift(), opponents.shift()]);
+    }
+    const draw = Array.from({ length: size }, () => ({ name: '(BYE)', isBye: true, country: 'Brak', ovr: 0, overall: 0 }));
+    const bits = Math.log2(size / 2);
+    pairs.forEach((pair, index) => {
+        let slot = 0;
+        for (let bit = 0; bit < bits; bit++) slot = slot * 2 + ((index >> bit) & 1);
+        pair.forEach((candidate, side) => { if (candidate) draw[slot * 2 + side] = candidate; });
+    });
+    return draw;
+}
 function buildTournamentEditorDraw(tournament, participants) {
     const size = typeof getCareerTourFieldSize === 'function' ? getCareerTourFieldSize(tournament) : Number(tournament.editorFieldSize) || 32;
     const real = participants.filter(candidate => candidate && !candidate.isBye);
+    const seeded = tournament.editorStructure?.seededDraw;
+    if (seeded && real.length >= seeded.entrants) return buildTournamentEditorSeededDraw(real, size, seeded);
     const manual = typeof applyEditorManualDraw === 'function' ? applyEditorManualDraw(tournament, real, size) : null;
     if (manual) return manual.map(candidate => candidate || { name: '(BYE)', isBye: true, country: 'Brak', ovr: 0, overall: 0 });
     const shuffled = typeof shuffle === 'function' ? shuffle([...real]) : [...real];

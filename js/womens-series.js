@@ -80,7 +80,24 @@ function claimWomensSeriesPrize(p,amount,event){
  p.womensSeriesPrizeMoney=getWomensSeriesPrizeMoney(p,state.year);p.womensSeriesPrizeEarnings=(Number(p.womensSeriesPrizeEarnings)||0)+amount;
  if(typeof invalidatePlayerRankingCache==='function')invalidatePlayerRankingCache('womensSeries');return true;
 }
-function getWomensSeriesPrizeMoney(p,year=womensSeriesYear()){return (p?.womensSeriesPrizeHistory||[]).reduce((s,r)=>s+(r.year===year?Number(r.rankingAmount)||0:0),0);}
+function getWomensSeriesPrizeMoney(p,year=womensSeriesYear()){
+ const additional=Number(p?.editorTourRankings?.womensSeries?.[year])||0;
+ return (p?.womensSeriesPrizeHistory||[]).reduce((s,r)=>s+(r.year===year?Number(r.rankingAmount)||0:0),additional);
+}
+function awardWomensSeriesEditorRankingPrize(candidate,amount,date,updateSeason){
+ if(!isWomensSeriesWoman(candidate))return;
+ const year=womensSeriesYear(date);
+ awardCareerTourRankingPrizeMoney(candidate,amount,'womensSeries',year);
+ candidate.womensSeriesPrizeMoney=getWomensSeriesPrizeMoney(candidate,year);
+ if(typeof invalidatePlayerRankingCache==='function')invalidatePlayerRankingCache('womensSeries');
+ if(!updateSeason)return;
+ const season=womensSeriesSeason(year,false);
+ if(!season?.closed)return;
+ const id=womensSeriesKey(candidate), existing=season.finalRanking.find(row=>row.id===id);
+ if(existing)existing.money=candidate.womensSeriesPrizeMoney;
+ else season.finalRanking.push({id,name:candidate.name,country:candidate.country,money:candidate.womensSeriesPrizeMoney});
+ season.finalRanking.sort((a,b)=>b.money-a.money);
+}
 function compareWomensSeriesCountback(a,b,year=womensSeriesYear(),numbers=null){
  const events=numbers||Object.values(womensSeriesSeason(year,false)?.events||{}).filter(e=>e.completed).sort((a,b)=>(b.date||0)-(a.date||0)||b.number-a.number).map(e=>e.number);
  const money=(p,n)=>Number((p.womensSeriesPrizeHistory||[]).find(r=>r.year===year&&r.event===n)?.rankingAmount)||0;
@@ -116,7 +133,8 @@ function completeWomensSeriesTournament(event,winner){
 }
 function closeWomensSeriesSeason(year=womensSeriesYear()){
  const season=womensSeriesSeason(year);if(season.closed)return season;
- let ranked=getWomensSeriesOrderOfMerit(null,{year,includeZero:true}).filter(p=>Object.values(season.events).some(e=>e.draw?.includes(womensSeriesKey(p))));
+ let ranked=getWomensSeriesOrderOfMerit(null,{year,includeZero:true}).filter(p=>Number(p.editorTourRankings?.womensSeries?.[year])>0
+  ||Object.values(season.events).some(e=>e.draw?.includes(womensSeriesKey(p))));
  const groups=[];for(const p of ranked){const last=groups.at(-1);if(last&&compareWomensSeriesCountback(last[0],p,year)===0)last.push(p);else groups.push([p]);}
  season.countbackPlayoffs ||= [];
  ranked=groups.flatMap(group=>{

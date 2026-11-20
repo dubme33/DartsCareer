@@ -76,7 +76,8 @@ function editorStructureFormGroups() {
     return { count: Number(tournamentEditorValue('te-groups-count')), advance: Number(tournamentEditorValue('te-groups-advance')),
         extra: Number(tournamentEditorValue('te-groups-extra')), legsToWin: Number(tournamentEditorValue('te-groups-legs')),
         winPoints: Number(tournamentEditorValue('te-groups-points')), tie: tournamentEditorValue('te-groups-tie'),
-        eliminationPrize: Number(tournamentEditorValue('te-groups-prize')) };
+        eliminationPrize: Number(tournamentEditorValue('te-groups-prize')),
+        thirdPlacePrize: tournamentEditorSelected?.editorStructure?.groups?.thirdPlacePrize };
 }
 function editorStructureFormEntrants() {
     const size = Number(tournamentEditorValue('te-field-size')) || 32;
@@ -206,12 +207,16 @@ function getEditorStructureFormData(values) {
     if (!tournamentEditorElement('te-structure-panel') || tournamentEditorElement('te-structure-content').hidden) return { editorInvitations: null, editorStructure: null };
     const team = Boolean(values.editorTeamMode), groups = editorStructureFormGroups();
     const league = tournamentEditorValue('te-structure-phase') === 'league' ? {
+        ...(tournamentEditorSelected?.editorStructure?.league?.split ? { split: tournamentEditorSelected.editorStructure.league.split } : {}),
         cycles: Number(tournamentEditorValue('te-league-cycles')), playoffs: Number(tournamentEditorValue('te-league-playoffs')),
         legsToWin: Number(tournamentEditorValue('te-league-legs')), winPoints: Number(tournamentEditorValue('te-league-points')), tie: tournamentEditorValue('te-league-tie') } : null;
     if (league && (team || !tournamentEditorCreating && !tournamentEditorSelected?.isEditorTournament)) throw new Error(trEditorStructure('leagueInvalid'));
     if (groups && tournamentEditorValue('te-event-kind') === 'qualifier' && !team) throw new Error(trEditorStructure('invalid'));
     const assignmentKeys = new Set(editorStructureFormEntrants().map(editorStructureKey));
     const editorStructure = normalizeEditorStructure({ draw: tournamentEditorValue('te-structure-draw'), groups, league,
+        seededDraw: !groups && !league && tournamentEditorValue('te-structure-draw') === 'auto'
+            ? tournamentEditorSelected?.editorStructure?.seededDraw : null,
+        teamSeries: team && !groups ? tournamentEditorSelected?.editorStructure?.teamSeries : null,
         slots: tournamentEditorValue('te-structure-draw') === 'manual' ? [...editorStructureDraft.slots] : [],
         assignments: groups ? editorStructureDraft.assignments.filter(entry => assignmentKeys.has(entry.key)) : [] }, values.editorFieldSize);
     const references = new Map(editorInvitationDraft);

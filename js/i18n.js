@@ -2256,6 +2256,7 @@ const translations = {
             if(typeof refreshMatchDoubleInStats === 'function') refreshMatchDoubleInStats();
             if(typeof refreshPlayerNicknameUI === 'function') refreshPlayerNicknameUI();
             if(typeof refreshTournamentWatchSettingsUI === 'function') refreshTournamentWatchSettingsUI();
+    if(typeof refreshMatchScoreboardSettings === 'function') refreshMatchScoreboardSettings();
             if(typeof refreshBounceOutSettingsUI === 'function') refreshBounceOutSettingsUI();
             if(typeof refreshMatchBullOffSettingsUI === 'function') refreshMatchBullOffSettingsUI();
             if(typeof refreshMatchIncidentSettingsUI === 'function') refreshMatchIncidentSettingsUI();

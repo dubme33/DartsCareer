@@ -107,6 +107,19 @@
         if (panel) panel.dataset.broadcastTheme = theme;
         clearCustomPalette(screen);
         if (theme === 'custom') applyCustomPalette(screen, tournament);
+        const colors = root.matchScoreboardColors;
+        const color = (match?.isTournament !== false && colors?.forTournament(tournament)) || '';
+        if (color !== (screen.dataset.scoreboardColor || '')) {
+            if (color) {
+                screen.dataset.scoreboardColor = color;
+                screen.style.setProperty('--scoreboard-color', color);
+                screen.style.setProperty('--scoreboard-color-text', colors.textColor(color));
+            } else {
+                delete screen.dataset.scoreboardColor;
+                screen.style.removeProperty('--scoreboard-color');
+                screen.style.removeProperty('--scoreboard-color-text');
+            }
+        }
         return theme;
     }
 

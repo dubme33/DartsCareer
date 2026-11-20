@@ -253,6 +253,8 @@ const checkoutGuide = {
         }
 
         function isMatchFinished(match = currentMatch) {
+            if (match.matchFormat?.drawAt && match.p1Legs === match.matchFormat.drawAt
+                && match.p2Legs === match.matchFormat.drawAt) return true;
             if (match.matchFormat && match.matchFormat.type === 'sets') {
                 return match.p1Sets >= match.matchFormat.setsToWin || match.p2Sets >= match.matchFormat.setsToWin;
             }

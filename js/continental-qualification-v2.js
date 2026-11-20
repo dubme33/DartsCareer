@@ -598,7 +598,7 @@ function getContinentalTourReservePlayers(main, state = main?.continentalQualifi
         ...(state.nativeEntryPlayerIds ? [...state.nativeEntryPlayerIds.oomPlayerIds, ...state.nativeEntryPlayerIds.proTourPlayerIds,
             ...Object.values(state.nativeEntryPlayerIds.paths).flat()] : []),
         ...(state.withdrawals || []).map(entry => entry.withdrawnPlayerId)]);
-    const ids = Array.isArray(card.reservePlayerIds) ? card.reservePlayerIds
+    const ids = Array.isArray(card.reservePlayerIds) && card.reservePlayerIds.length ? card.reservePlayerIds
         : recoverContinentalReservePlayerIds(main, state, candidates);
     return resolveContinentalQualificationPlayers([...new Set(ids)], candidates)
         .filter(candidate => isContinentalQualifierPathEligible(candidate, main, 'card')
@@ -625,9 +625,9 @@ function prepareContinentalTourWithdrawals(main, { skipCareerPlayer = false, ref
     const own = candidate => typeof isCurrentPlayer === 'function' && isCurrentPlayer(candidate);
     const reserves = getContinentalTourReservePlayers(main, state, candidates)
         .filter(candidate => !skipCareerPlayer || !own(candidate));
-    if (!Array.isArray(state.paths.card.reservePlayerIds)) {
-        state.paths.card.reservePlayerIds = getContinentalTourReservePlayers(main, state, candidates)
-            .map(getContinentalQualificationPlayerKey);
+    const card = state.paths.card;
+    if (!Array.isArray(card.reservePlayerIds) || !card.reservePlayerIds.length) {
+        card.reservePlayerIds = recoverContinentalReservePlayerIds(main, state, candidates);
     }
     if (!Array.isArray(state.withdrawals)) state.withdrawals = [];
     const previousWithdrawalCount = state.withdrawals.length;

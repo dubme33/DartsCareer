@@ -70,7 +70,13 @@
    // Side panels are geometric colour bands rather than animated/video walls.
    for(const sign of [-1,1]){wallBox(sign*9,-4,-1.48,16,.4,.1,palette.accent,true,sign*.44);wallBox(sign*11,-1.5,-1.46,10,.3,.1,palette.secondary,true,-sign*.6);wallPlane(logoTexture,5,2.5,sign*6.8,-4.5,-1.2);}
    wallPlane(logoTexture,6.4,3.2,0,5.0,-1.25);
-   scoreCanvas=document.createElement('canvas');scoreCanvas.width=Math.min(4096,textureLimit);scoreCanvas.height=scoreCanvas.width/2;scoreCanvas.getContext('2d').scale(scoreCanvas.width/768,scoreCanvas.height/384);scoreTexture=configureTexture(track(new T.CanvasTexture(scoreCanvas)));
+   // Small in-scene displays still need sharp text, but upload a new texture
+   // whenever the score changes.
+   scoreCanvas=document.createElement('canvas');
+   scoreCanvas.width=Math.min(1024,textureLimit);
+   scoreCanvas.height=scoreCanvas.width/2;
+   scoreCanvas.getContext('2d').scale(scoreCanvas.width/768,scoreCanvas.height/384);
+   scoreTexture=configureTexture(track(new T.CanvasTexture(scoreCanvas)));
    const screens=track(new T.MeshBasicMaterial({map:scoreTexture,toneMapped:false}));for(const sign of [-1,1]){wallBox(sign*6.8,1.1,-1.23,7.15,4.15,.55,0x09151f);mesh(new T.PlaneGeometry(6.8,3.85),screens,sign*6.8,1.1,-.94+wallOffset);}
    wallBox(0,9.4,-.9,36,.35,.5,0x454c55);for(const sign of [-1,1])wallBox(sign*17.6,-.4,-.9,.35,19.6,.5,0x454c55);
    for(let i=0;i<16;i++)wallBox(-17+i*2.2,9.4,-.57,1.7,.10,.12,0x79818b,false,i%2?.4:-.4);

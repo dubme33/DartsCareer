@@ -51,8 +51,31 @@ function normalizeEditorSeasonLeague(raw, size) {
     const integer = (value, min, max) => { if (!Number.isInteger(value) || value < min || value > max) fail(); return value; };
     if (!raw || ![8, 16, 32].includes(size) || !['difference', 'head'].includes(raw.tie)
         || ![0, 2, 4, 8, 16, 32].includes(raw.playoffs) || raw.playoffs > size) fail();
-    return { cycles: integer(raw.cycles, 1, 2), playoffs: raw.playoffs, legsToWin: integer(raw.legsToWin, 1, 30),
+    const rules = { cycles: integer(raw.cycles, 1, 2), playoffs: raw.playoffs, legsToWin: integer(raw.legsToWin, 1, 30),
         winPoints: integer(raw.winPoints, 1, 10), tie: raw.tie };
+    if (raw.split == null) return rules;
+    const split = raw.split;
+    const openingField = integer(split.openingField, 4, size);
+    const survivingField = integer(split.survivingField, 4, openingField - 2);
+    const firstLegLimit = integer(split.firstLegLimit, 2, 30), secondLegLimit = integer(split.secondLegLimit, 2, 30);
+    if (rules.playoffs !== 4 || openingField % 2 || survivingField % 2 || firstLegLimit % 2 || secondLegLimit % 2) fail();
+    const secondNights = integer(split.secondNights, survivingField - 2, survivingField - 1);
+    if (!Array.isArray(split.schedule) || split.schedule.length !== openingField + secondNights
+        || !Array.isArray(split.placementPrizes) || split.placementPrizes.length !== openingField - rules.playoffs) fail();
+    const label = value => {
+        if (typeof value !== 'string' || !value.trim() || value.length > 120 || /[\u0000-\u001f\u007f]/.test(value)) fail();
+        return value.trim();
+    };
+    let previousDate = 0;
+    const schedule = split.schedule.map(day => {
+        const month = integer(day?.month, 0, 11), date = integer(day?.day, 1, 31);
+        const at = new Date(2027, month, date);
+        if (at.getMonth() !== month || at.getTime() <= previousDate) fail();
+        previousDate = at.getTime();
+        return { month, day: date, name: label(day.name), city: label(day.city), country: label(day.country) };
+    });
+    return { ...rules, split: { openingField, survivingField, secondNights, firstLegLimit, secondLegLimit,
+        placementPrizes: split.placementPrizes.map(prize => integer(prize, 0, 999999999)), schedule } };
 }
 function editorStructureKey(entrant) {
     if (entrant?.players?.length === 1) return getTournamentEditorPlayerKey(entrant.players[0]);
@@ -96,7 +119,8 @@ function normalizeEditorStructure(raw, size) {
         const advance = integer(g.advance, 1, groupSize - 1), extra = integer(g.extra, 0, count - 1);
         if (count * advance + extra < 2 || !['difference', 'head'].includes(g.tie)) fail();
         groups = { count, advance, extra, legsToWin: integer(g.legsToWin, 1, 30), winPoints: integer(g.winPoints, 1, 10),
-            tie: g.tie, eliminationPrize: integer(g.eliminationPrize ?? 0, 0, 999999999) };
+            tie: g.tie, eliminationPrize: integer(g.eliminationPrize ?? 0, 0, 999999999),
+            ...(g.thirdPlacePrize == null ? {} : { thirdPlacePrize: integer(g.thirdPlacePrize, 0, 999999999) }) };
     }
     const drawSize = groups ? 2 ** Math.ceil(Math.log2(groups.count * groups.advance + groups.extra)) : size;
     if (!Array.isArray(raw.slots) || raw.slots.length > drawSize) fail();
@@ -120,7 +144,18 @@ function normalizeEditorStructure(raw, size) {
     if (new Set(assignments.map(entry => entry.key)).size !== assignments.length) fail();
     if (groups && Array.from({ length: groups.count }, (_, index) => assignments.filter(entry => entry.group === index).length)
         .some(count => count > size / groups.count)) fail();
-    return groups || raw.draw === 'manual' ? { draw: raw.draw, slots: raw.draw === 'manual' ? slots : [], groups, assignments } : null;
+    let seededDraw;
+    if (raw.seededDraw != null) {
+        const spec = raw.seededDraw;
+        const entrants = integer(spec.entrants, 2, size), seeds = integer(spec.seeds, 1, entrants);
+        if (raw.draw !== 'auto' || groups || !['oom', 'entry'].includes(spec.source)
+            || size - entrants > seeds || seeds > size / 2
+            || spec.splitOpening && (entrants !== seeds * 3 || size !== seeds * 4)) fail();
+        seededDraw = { entrants, seeds, source: spec.source, splitOpening: spec.splitOpening === true };
+    }
+    if (raw.teamSeries != null && (raw.teamSeries !== 'singles-doubles' || groups || seededDraw)) fail();
+    return groups || seededDraw || raw.teamSeries || raw.draw === 'manual' ? { draw: raw.draw, slots: raw.draw === 'manual' ? slots : [], groups, assignments,
+        ...(seededDraw ? { seededDraw } : {}), ...(raw.teamSeries ? { teamSeries: raw.teamSeries } : {}) } : null;
 }
 function editorStructureQualifierCodes(groups) {
     const codes = [];

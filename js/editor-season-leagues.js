@@ -19,9 +19,16 @@ function getEditorLeagueRoot(event = activeTournament) {
 }
 function getEditorLeagueRoundCount(event) {
     const rules = event.editorStructure.league;
+    if (rules.split) return rules.split.schedule.length;
     return (event.editorFieldSize - 1) * rules.cycles + (rules.playoffs ? Math.log2(rules.playoffs) : 0);
 }
+function getEditorLeagueRegularNights(event) {
+    const rules = event.editorStructure.league;
+    return rules.split ? rules.split.schedule.length - 1 : (event.editorFieldSize - 1) * rules.cycles;
+}
 function getEditorLeagueCalendarDates(event, year = currentDate.getFullYear()) {
+    const split = event.editorStructure.league.split;
+    if (split) return split.schedule.map(day => new Date(Date.UTC(year, day.month, day.day)));
     const start = Date.UTC(year, event.month, event.day), end = Date.UTC(year, event.endMonth ?? event.month, event.endDay ?? event.day);
     const count = getEditorLeagueRoundCount(event), span = Math.round((end - start) / 86400000);
     if (span < count - 1) throw new Error(trEditorStructure('leagueInvalid'));
@@ -31,18 +38,25 @@ function validateEditorLeagueEvent(event) {
     if (!isEditorSeasonLeague(event)) return;
     if (!event.isEditorTournament || event.editorTeamMode || event.qualifierFor || event.editorQualification?.kind === 'qualifier')
         throw new Error(trEditorStructure('leagueInvalid'));
+    const split = event.editorStructure.league.split;
+    if (split && (split.schedule[0].month !== event.month || split.schedule[0].day !== event.day
+        || split.schedule.at(-1).month !== event.endMonth || split.schedule.at(-1).day !== event.endDay)) {
+        throw new Error(trEditorStructure('leagueInvalid'));
+    }
     getEditorLeagueCalendarDates(event);
 }
 function rebuildEditorLeagueCalendar(root) {
     const key = tournamentEditorKey(root);
     tournamentDatabase.splice(0, tournamentDatabase.length, ...tournamentDatabase.filter(event => event.editorLeagueParentKey !== key));
     if (!isEditorSeasonLeague(root)) return;
-    const dates = getEditorLeagueCalendarDates(root), regular = (root.editorFieldSize - 1) * root.editorStructure.league.cycles;
+    const dates = getEditorLeagueCalendarDates(root), regular = getEditorLeagueRegularNights(root);
+    const split = root.editorStructure.league.split;
     dates.slice(1).forEach((date, offset) => {
         const round = offset + 1, title = round < regular ? `Round ${round + 1}` : `Playoffs ${round - regular + 1}`;
         const name = `${root.name} · ${title}`;
         tournamentDatabase.push({ ...root, name, sourceName: `${key} · league-round-${round}`, month: date.getUTCMonth(), day: date.getUTCDate(),
-            endMonth: date.getUTCMonth(), endDay: date.getUTCDate(), completed: root.editorLeagueState?.completed === true, historyLogs: '', editorLeagueState: undefined,
+            ...split?.schedule[round], endMonth: date.getUTCMonth(), endDay: date.getUTCDate(),
+            completed: root.editorLeagueState?.completed === true, historyLogs: '', editorLeagueState: undefined,
             editorLeagueParentKey: key, editorLeagueRound: round });
     });
 }
@@ -60,19 +74,23 @@ function prepareEditorLeagueTourUpdate(events, tour) {
 function editorLeagueStateView(event = activeTournament) {
     const root = getEditorLeagueRoot(event), state = root?.editorLeagueState;
     if (!state) return null;
-    const round = event.editorLeagueRound || 0, regular = (root.editorFieldSize - 1) * root.editorStructure.league.cycles;
-    return { teams: state.teams, matches: state.fixtures.filter(match => match.matchday === round),
+    const round = event.editorLeagueRound || 0, regular = getEditorLeagueRegularNights(root);
+    const splitFinals = root.editorStructure.league.split && round === regular;
+    const playoffSize = state.splitFinalSize || 4;
+    return { teams: state.teams, matches: state.fixtures.filter(match => match.matchday === round
+            && (!splitFinals || match.playoffSize === playoffSize)),
         phase: round < regular ? 'league' : 'knockout', roundSize: round < regular ? root.editorFieldSize
-            : Math.max(2, root.editorStructure.league.playoffs / 2 ** (round - regular)),
+            : splitFinals ? playoffSize : Math.max(2, root.editorStructure.league.playoffs / 2 ** (round - regular)),
         completed: event.completed === true };
 }
 function initializeEditorSeasonLeague(root) {
     const size = root.editorFieldSize, rules = root.editorStructure.league;
-    const teams = buildEditorTeamField(root).slice(0, size).map(team => ({ ...team, players: team.players.map(editorTeamReference) }));
+    const field = rules.split?.openingField || size;
+    const teams = buildEditorTeamField(root).slice(0, field).map(team => ({ ...team, players: team.players.map(editorTeamReference) }));
     // A nominal field keeps matchday dates stable when an invitation or roster member is unavailable.
-    const ids = Array.from({ length: size }, (_, index) => teams[index]?.id || `league-bye-${index}`);
+    const ids = Array.from({ length: field }, (_, index) => teams[index]?.id || `league-bye-${index}`);
     const firstHalf = createEditorRoundRobin(ids), fixtures = [];
-    for (let cycle = 0; cycle < rules.cycles; cycle++) for (const pair of firstHalf) {
+    for (let cycle = 0; cycle < (rules.split ? 1 : rules.cycles); cycle++) for (const pair of firstHalf) {
         const a = teams.find(team => team.id === pair.first), b = teams.find(team => team.id === pair.second);
         const matchday = cycle * (size - 1) + pair.round;
         if (a && b) fixtures.push({ ...createEditorTeamMatch(cycle ? b : a, cycle ? a : b, size, fixtures.length),
@@ -88,7 +106,7 @@ function resolveEditorLeaguePlayers(root) {
 function getEditorLeagueStandings(root = getEditorLeagueRoot()) {
     const state = root?.editorLeagueState;
     if (!state) return [];
-    const rules = state.rules || root.editorStructure.league, regular = ((state.fieldSize || root.editorFieldSize) - 1) * rules.cycles;
+    const rules = state.rules || root.editorStructure.league, regular = getEditorLeagueRegularNights(root);
     const matches = state.fixtures.filter(match => match.matchday < regular && match.played);
     const rows = state.teams.map((team, seed) => ({ id: team.id, key: editorStructureKey(team), played: 0, wins: 0, points: 0,
         legsWon: 0, legsLost: 0, seed, headPoints: 0, headDifference: 0, headWon: 0 }));
@@ -98,7 +116,9 @@ function getEditorLeagueStandings(root = getEditorLeagueRoot()) {
         if (!a || !b) continue;
         a.played++; b.played++; a.legsWon += match.score1; a.legsLost += match.score2;
         b.legsWon += match.score2; b.legsLost += match.score1;
-        const winner = byId.get(match.winnerId); if (winner) { winner.points += rules.winPoints; winner.wins++; }
+        const winner = byId.get(match.winnerId);
+        if (winner) { winner.points += rules.winPoints; winner.wins++; }
+        else if (rules.split && match.score1 > 0 && match.score1 === match.score2) { a.points++; b.points++; }
     }
     if (rules.tie === 'head') for (const row of rows) {
         const tied = new Set(rows.filter(other => other.points === row.points).map(other => other.id));
@@ -108,11 +128,30 @@ function getEditorLeagueStandings(root = getEditorLeagueRoot()) {
             if (match.team2Id === row.id) { row.headDifference += match.score2 - match.score1; row.headWon += match.score2; }
         }
     }
-    return rows.sort((a, b) => b.points - a.points || b.headPoints - a.headPoints || b.headDifference - a.headDifference
+    return rows.sort((a, b) => Number(state.splitEliminated?.includes(a.id) || false) - Number(state.splitEliminated?.includes(b.id) || false)
+        || b.points - a.points || b.headPoints - a.headPoints || b.headDifference - a.headDifference
         || b.headWon - a.headWon || b.legsWon - b.legsLost - (a.legsWon - a.legsLost) || b.legsWon - a.legsWon || a.seed - b.seed);
 }
+function buildEditorLeagueSplitSecondPhase(root) {
+    const state = root.editorLeagueState, split = root.editorStructure.league.split;
+    if (state.splitEliminated) return;
+    const rows = getEditorLeagueStandings(root);
+    state.splitEliminated = rows.slice(split.survivingField).map(row => row.id);
+    const teamsById = new Map(state.teams.map(team => [team.id, team]));
+    const ids = Array.from({ length: split.survivingField }, (_, index) => rows[index]?.id || `split-bye-${index}`);
+    const firstNight = split.openingField - 1;
+    let extra = 0;
+    for (const pair of createEditorRoundRobin(ids)) {
+        const first = teamsById.get(pair.first), second = teamsById.get(pair.second);
+        const night = pair.round >= split.secondNights ? extra++ % split.secondNights : pair.round;
+        if (!first || !second) continue;
+        const index = state.fixtures.length;
+        state.fixtures.push({ ...createEditorTeamMatch(first, second, root.editorFieldSize, index),
+            id: `league-split-${index}`, matchday: firstNight + night });
+    }
+}
 function buildEditorLeaguePlayoff(root, round) {
-    const state = root.editorLeagueState, regular = (root.editorFieldSize - 1) * root.editorStructure.league.cycles;
+    const state = root.editorLeagueState, regular = getEditorLeagueRegularNights(root);
     if (state.fixtures.some(match => match.matchday === round)) return;
     const size = root.editorStructure.league.playoffs / 2 ** (round - regular);
     let teams;
@@ -125,7 +164,7 @@ function buildEditorLeaguePlayoff(root, round) {
         teams = slots;
     } else teams = state.fixtures.filter(match => match.matchday === round - 1).map(match => state.teams.find(team => team.id === match.winnerId) || null);
     for (let index = 0; index < size / 2; index++) state.fixtures.push({ ...createEditorTeamMatch(teams[index * 2], teams[index * 2 + 1], size, index),
-        id: `league-playoff-${round}-${index}`, matchday: round });
+        id: `league-playoff-${round}-${index}`, matchday: round, playoffSize: size });
 }
 function renderEditorLeagueTable(root = getEditorLeagueRoot()) {
     const state = root.editorLeagueState;
@@ -140,9 +179,13 @@ function isEditorLeaguePlayerPending(event, identity = isCurrentPlayer) {
     if (!view || event.completed) return false;
     const team = view.teams.find(candidate => candidate.players.some(identity));
     if (!team) return false;
+    const root = getEditorLeagueRoot(event), round = event.editorLeagueRound || 0;
+    const split = root.editorStructure.league.split;
+    if (split && round >= split.openingField - 1 && !root.editorLeagueState.splitEliminated) {
+        return getEditorLeagueStandings(root).slice(0, split.survivingField).some(row => row.id === team.id);
+    }
     if (view.phase === 'knockout' && !view.matches.length) {
-        const root = getEditorLeagueRoot(event), round = event.editorLeagueRound || 0;
-        const regular = (root.editorFieldSize - 1) * root.editorStructure.league.cycles;
+        const regular = getEditorLeagueRegularNights(root);
         return round === regular ? getEditorLeagueStandings(root).slice(0, root.editorStructure.league.playoffs).some(row => row.id === team.id)
             : root.editorLeagueState.fixtures.some(match => match.matchday === round - 1 && match.winnerId === team.id);
     }
@@ -153,7 +196,9 @@ function startEditorSeasonLeague() {
     if (!root || !isEditorSeasonLeague(root) || event.completed) return false;
     if (!root.editorLeagueState || root.editorLeagueState.year !== currentDate.getFullYear()) initializeEditorSeasonLeague(root);
     resolveEditorLeaguePlayers(root);
-    const round = event.editorLeagueRound || 0, regular = (root.editorFieldSize - 1) * root.editorStructure.league.cycles;
+    const round = event.editorLeagueRound || 0, regular = getEditorLeagueRegularNights(root);
+    const split = root.editorStructure.league.split;
+    if (split && round >= split.openingField - 1) buildEditorLeagueSplitSecondPhase(root);
     if (round >= regular) buildEditorLeaguePlayoff(root, round);
     for (const match of editorTeamState().matches.filter(match => !match.played)) forfeitEditorLeagueMatch(match);
     prepareTournamentSimulationForm(root.editorLeagueState.teams.flatMap(team => team.players));
@@ -191,8 +236,13 @@ async function simulateEditorLeagueMatchday(includeCareer = false, withdrawCaree
         }
         await runTournamentSimulationSteps(iterate(), trEditorStructure('league'), editorTeamState().matches.length,
             () => { if (activeTournament !== event) throw new Error('League matchday changed during simulation'); });
-        if (editorTeamState().matches.every(match => match.played)) completeEditorLeagueMatchday();
-        else showEditorTeamOverview();
+        while (activeTournament === event && editorTeamState().matches.every(match => match.played)) {
+            const previousSize = editorTeamState().roundSize;
+            completeEditorLeagueMatchday();
+            if (activeTournament !== event || editorTeamState().roundSize === previousSize) break;
+            await runTournamentSimulationSteps(iterate(), trEditorStructure('league'), editorTeamState().matches.length);
+        }
+        if (activeTournament === event) showEditorTeamOverview();
         return true;
     });
 }
@@ -200,17 +250,30 @@ function completeEditorLeagueMatchday() {
     const event = activeTournament, root = getEditorLeagueRoot(), state = root?.editorLeagueState;
     if (!state || event.completed || editorTeamState().matches.some(match => !match.played)) return false;
     const round = event.editorLeagueRound || 0, last = getEditorLeagueRoundCount(root) - 1;
+    const split = root.editorStructure.league.split;
+    if (split && round === last && !state.splitFinalSize) {
+        const finalists = editorTeamState().matches.map(match => editorTeamById(match.winnerId));
+        state.splitFinalSize = 2;
+        state.fixtures.push({ ...createEditorTeamMatch(finalists[0], finalists[1], 2, 0),
+            id: `league-playoff-${round}-final`, matchday: round, playoffSize: 2 });
+        return true;
+    }
     if (round === last && !state.prizesPaid) {
         const standings = getEditorLeagueStandings(root), rules = root.editorStructure.league;
         let winnerId = rules.playoffs ? editorTeamState().matches[0]?.winnerId : standings[0]?.id;
         // No remaining entrant is a valid completed league with no champion or payout.
         if (state.teams.length < 2) winnerId = null;
         const places = new Map(standings.map((row, index) => [row.id, index === 0 ? 2 : 2 ** Math.ceil(Math.log2(index + 1))]));
-        if (rules.playoffs) for (const match of state.fixtures.filter(match => match.matchday >= (root.editorFieldSize - 1) * rules.cycles)) {
-            const size = rules.playoffs / 2 ** (match.matchday - (root.editorFieldSize - 1) * rules.cycles);
+        const regular = getEditorLeagueRegularNights(root);
+        if (rules.playoffs) for (const match of state.fixtures.filter(match => match.matchday >= regular)) {
+            const size = match.playoffSize || rules.playoffs / 2 ** (match.matchday - regular);
             for (const id of [match.team1Id, match.team2Id]) if (id && id !== match.winnerId) places.set(id, size);
         }
-        if (winnerId) state.teams.forEach(team => editorTeamPayout(team, team.id === winnerId ? 2 : Math.max(2, places.get(team.id) || root.editorFieldSize), team.id === winnerId));
+        if (winnerId) state.teams.forEach(team => {
+            const place = standings.findIndex(row => row.id === team.id);
+            editorTeamPayout(team, team.id === winnerId ? 2 : Math.max(2, places.get(team.id) || root.editorFieldSize),
+                team.id === winnerId, split && place >= 4 ? split.placementPrizes[place - 4] : undefined);
+        });
         state.prizesPaid = true; state.completed = true; state.winnerId = winnerId;
         const winner = state.teams.find(team => team.id === winnerId);
         root.editorTeamWinner = winner?.country || '';

@@ -70,6 +70,10 @@ TOURNAMENT_EDITOR_QUALIFICATION_TEXT.invalidQualifier = [
 ];
 Object.entries(TOURNAMENT_EDITOR_QUALIFICATION_TEXT).forEach(([key, texts]) =>
     ['pl', 'en', 'de', 'nl'].forEach((language, index) => { TOURNAMENT_EDITOR_TEXT[language][key] = texts[index]; }));
+Object.entries({
+    playIn: ['Rozgrywane eliminacje', 'Qualifying matches', 'Qualifikationsspiele', 'Kwalificatiewedstrijden'],
+    champions: ['Zwycięzcy sezonu i eliminacje', 'Season winners and qualifying matches', 'Saisonsieger und Qualifikation', 'Seizoenswinnaars en kwalificatie']
+}).forEach(([key, labels]) => ['pl', 'en', 'de', 'nl'].forEach((language, index) => { TOURNAMENT_EDITOR_TEXT[language][key] = labels[index]; }));
 
 function appendTournamentEditorOption(select, value, label) {
     const option = document.createElement('option');
@@ -108,7 +112,7 @@ function addTournamentEditorRoute(route = { source: 'oom', places: 8 }) {
     const source = document.createElement('select');
     source.className = 'te-route-source';
     source.setAttribute('aria-label', trTournamentEditor('routeSource'));
-    Object.keys(TOURNAMENT_EDITOR_RANKINGS).concat('tourRanking', 'country', 'qualifier', 'tournament').forEach(key =>
+    Object.keys(TOURNAMENT_EDITOR_RANKINGS).concat('tourRanking', 'country', 'qualifier', 'tournament', 'playIn', 'champions').forEach(key =>
         appendTournamentEditorOption(source, key, trTournamentEditor(key === 'country' ? 'countryRoute' : key)));
     source.value = route.source;
     const qualifier = document.createElement('select');
@@ -284,7 +288,7 @@ function getTournamentEditorQualificationFormData(values) {
     };
     const routes = [...document.querySelectorAll('#te-routes .te-route')].map(row => {
         const source = row.querySelector('.te-route-source').value;
-        if (!Object.hasOwn(TOURNAMENT_EDITOR_RANKINGS, source) && !['qualifier', 'country', 'tourRanking', 'tournament'].includes(source)) throw new Error(trTournamentEditor('invalidQualification'));
+        if (!Object.hasOwn(TOURNAMENT_EDITOR_RANKINGS, source) && !['qualifier', 'country', 'tourRanking', 'tournament', 'playIn', 'champions'].includes(source)) throw new Error(trTournamentEditor('invalidQualification'));
         const route = { source, places: integer(row.querySelector('.te-route-places').value, 1, 256) };
         if (source === 'qualifier') route.qualifierKey = row.querySelector('.te-route-qualifier').value;
         if (source === 'tournament') route.tournamentKey = row.querySelector('.te-route-tournament').value;

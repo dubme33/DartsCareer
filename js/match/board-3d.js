@@ -28,6 +28,7 @@
     const spiderMeshes = [];
     const spiderDetail = Object.freeze({ wireRadius: .00145, faceZ: .0054, bladeWidth: .003, bladeDepth: .004 });
     const embeddedPointLengthMm = 7;
+    const shadowRefreshInterval = 50;
     let mode = readPreference('dartsCareer.boardView', '3d');
     if (mode !== '2d' && mode !== '3d') mode = '3d';
     let cameraView = readPreference('dartsCareer.boardCamera', 'side') === 'front' ? 'front' : 'side';
@@ -44,7 +45,8 @@
     let cameraTvLayout = matchScreen.classList.contains('match-tv-mode');
     let restorePending = true, suspendedAt = null, frameCount = 0;
     let previousMotionFrame = null, motionFrameMs = null;
-    let preparedMatch = null, preparedStyles = null, preparedDarts = [];
+    let lastShadowRefresh = -Infinity;
+    let preparedStyles = null, preparedDarts = [];
 
     function createMobileRenderBudget(isMobile) {
         let limit = 2, pending = null, previous = null, samples = [], reductions = 0;
@@ -259,7 +261,23 @@
         // Wide floor shots use identical lighting on every target. Fine generated
         // wires return in the playable close-up instead of sparkling on one station.
         if (venueKeyLight) venueKeyLight.castShadow = !venueWide;
+        invalidateBoardShadows();
         spiderMeshes.forEach(mesh => { mesh.visible = !skinSource && !(venueWide && venueModel?.type === 'floor'); });
+    }
+
+    function invalidateBoardShadows() {
+        if (venueKeyLight) venueKeyLight.shadow.needsUpdate = true;
+    }
+
+    function refreshMovingDartShadows(now, movingDarts) {
+        if (!venueKeyLight?.castShadow) return;
+        const shadow = venueKeyLight.shadow;
+        // Camera motion reuses the light-space map. During dart motion, update
+        // it less often and always render the final resting pose.
+        if (movingDarts && (!animations.length || now - lastShadowRefresh >= shadowRefreshInterval)) {
+            shadow.needsUpdate = true;
+        }
+        if (shadow.needsUpdate) lastShadowRefresh = now;
     }
 
     function createScene() {
@@ -281,6 +299,8 @@
         const key = new THREE.DirectionalLight(0xfff4e5, 3.1);
         venueKeyLight=key;
         key.position.set(-2.5, 3.5, 5); key.castShadow = true;
+        key.shadow.autoUpdate = false;
+        key.shadow.needsUpdate = true;
         key.shadow.mapSize.set(1024, 1024);
         Object.assign(key.shadow.camera, { left: -1.7, right: 1.7, top: 1.7, bottom: -1.7, near: .1, far: 12 });
         key.shadow.bias = -.00015; key.shadow.normalBias = .004;
@@ -372,8 +392,9 @@
         const styles = ['p1', 'p2'].map(side => window.dartModel.normalize(
             typeof window.getMatchDartLoadout === 'function' ? window.getMatchDartLoadout(side) : null));
         const key = JSON.stringify(styles);
-        if (preparedMatch === currentMatch && preparedStyles === key) return;
+        if (preparedStyles === key) return;
         const models = [];
+        const castShadow = venueKeyLight.castShadow;
         try {
             for (const style of styles) {
                 const group = dartFactory.create(style);
@@ -383,18 +404,24 @@
                 group.traverse(part => { if (part.isMesh) part.frustumCulled = false; });
                 models.push(group); scene.add(group);
             }
+            // The match can open on a wide shot with no shadows. Prepare the
+            // lit dart shaders for the board close-up before the first throw.
+            venueKeyLight.castShadow = true;
+            invalidateBoardShadows();
             renderer.compile(scene, camera);
             renderer.render(scene, camera);
             preparedDarts.forEach(group => dartFactory.release(group));
             preparedDarts = models;
-            preparedMatch = currentMatch; preparedStyles = key;
+            preparedStyles = key;
         } finally {
+            venueKeyLight.castShadow = castShadow;
             models.forEach(group => {
                 scene.remove(group);
                 if (preparedDarts !== models) dartFactory.release(group);
             });
             // The visible frame is painted after preparation in the same task.
             // Temporary models never enter dartModels or any scoring state.
+            invalidateBoardShadows();
             renderer.render(scene, camera);
         }
     }
@@ -422,6 +449,7 @@
         group.children.forEach(part => { part.position.z -= pointInset; });
         group.children.forEach(freezeLocalTransforms);
         scene.add(group);
+        invalidateBoardShadows();
         const dart = { group, data, appearance, x, y, rotation: group.rotation.clone() };
         dartModels.push(dart); return dart;
     }
@@ -460,15 +488,18 @@
         const impactProgress = earlyBounce ? Math.max(.55, 1 - (dart.data.collision.contact[2] - .008) / 2.7) : 1;
         // The standard throw lasts about 0.3 s; replay timing stays slower for readable close-ups.
         const baseFlight = replay ? (dart.data.collision ? 480 : 340) : (dart.data.collision ? 300 : 260);
-        const flight = Math.max(45, baseFlight * impactProgress * durationScale / speed);
+        const tvFlightScale = !replay && matchScreen.classList.contains('match-tv-mode') ? 1.2 : 1;
+        const flight = Math.max(45, baseFlight * tvFlightScale * impactProgress * durationScale / speed);
         const start = Math.max(now, queueUntil);
-        // A lodged dart is fixed at impact. Only bounce-outs need a falling phase.
-        const settle = bouncing ? Math.max(80, 420 * durationScale / speed) : 0;
+        // Keep the original brief settling motion for the dart that just landed.
+        const settle = bouncing ? Math.max(80, 420 * durationScale / speed)
+            : Math.max(35, (replay ? 180 : 120) * durationScale / speed);
         const animation = { dart, bouncing, replay, droppedDarts, start, flight, settle, end: start + flight + settle,
             path: createFlightPath(dart, bouncing), impacted: false, impactCallbacks: [] };
         animations.push(animation);
         queueUntil = start + flight + (bouncing ? settle : 0);
         dart.group.visible = false;
+        invalidateBoardShadows();
         requestRender();
     }
 
@@ -479,6 +510,14 @@
         const radius = target.mult === 2 ? .965 : target.mult === 3 ? .58 : .78;
         const angle = Math.PI / 2 - index * Math.PI / 10;
         return new THREE.Vector3(Math.cos(angle) * radius, Math.sin(angle) * radius, .08);
+    }
+
+    function frameBoardCloseUp(position, look) {
+        // A longer lens keeps the same crop while reducing perspective enlargement.
+        const fov = 10;
+        const distanceScale = Math.tan(Math.PI / 12) / Math.tan(fov * Math.PI / 360);
+        position.sub(look).multiplyScalar(distanceScale).add(look);
+        return { position, look, fov };
     }
 
     function cameraPose(target = cameraFocus) {
@@ -501,24 +540,31 @@
                     (television ? 6.87 : 5.25) / narrow / boardScale), look: new THREE.Vector3(0, 0, .08) };
         }
         const look = focusPoint(target);
-        return cameraView === 'front'
-            ? { position: new THREE.Vector3(look.x + .04 / narrow, look.y + .04 / narrow, 2.58 / narrow), look }
-                : { position: new THREE.Vector3(look.x - 1.18 / narrow, look.y + .34 / narrow, 2.42 / narrow), look };
+        const position = cameraView === 'front'
+            ? new THREE.Vector3(look.x + .04 / narrow, look.y + .04 / narrow, 2.58 / narrow)
+            : new THREE.Vector3(look.x - 1.18 / narrow, look.y + .34 / narrow, 2.42 / narrow);
+        return frameBoardCloseUp(position, look);
     }
 
     function replayCameraPose(name, target) {
         const narrow = Math.min(1, camera.aspect || 1), look = focusPoint(target);
         if (name === 'front-tight') {
-            return { position: new THREE.Vector3(look.x + .025 / narrow, look.y + .025 / narrow, 1.92 / narrow), look };
+            return frameBoardCloseUp(new THREE.Vector3(look.x + .025 / narrow, look.y + .025 / narrow, 1.92 / narrow), look);
         }
         if (name === 'left-low') {
-            return { position: new THREE.Vector3(look.x - .78 / narrow, look.y - .52 / narrow, 1.82 / narrow), look };
+            return frameBoardCloseUp(new THREE.Vector3(look.x - .78 / narrow, look.y - .52 / narrow, 1.82 / narrow), look);
         }
-        return { position: new THREE.Vector3(look.x - 1.08 / narrow, look.y + .30 / narrow, 1.98 / narrow), look };
+        return frameBoardCloseUp(new THREE.Vector3(look.x - 1.08 / narrow, look.y + .30 / narrow, 1.98 / narrow), look);
+    }
+
+    function setCameraFov(fov) {
+        if (camera.fov === fov) return;
+        camera.fov = fov;
+        camera.updateProjectionMatrix();
     }
 
     function applyCameraPose(pose) {
-        if(camera.fov!==(pose.fov||30)){camera.fov=pose.fov||30;camera.updateProjectionMatrix();}
+        setCameraFov(pose.fov ?? 30);
         camera.position.copy(pose.position);
         cameraLookAt = pose.look.clone();
         camera.lookAt(cameraLookAt);
@@ -533,6 +579,7 @@
             fromPosition: camera.position.clone(),
             fromLook: (cameraLookAt || new THREE.Vector3(0, 0, .08)).clone(),
             toPosition: pose.position, toLook: pose.look,
+            fromFov: camera.fov, toFov: pose.fov ?? 30,
             start: performance.now(), duration
         };
         requestRender(); return true;
@@ -567,6 +614,7 @@
         if (!cameraMotion) return false;
         const progress = Math.min(1, Math.max(0, (now - cameraMotion.start) / cameraMotion.duration));
         const eased = 1 - Math.pow(1 - progress, 3);
+        setCameraFov(cameraMotion.fromFov + (cameraMotion.toFov - cameraMotion.fromFov) * eased);
         camera.position.copy(cameraMotion.fromPosition).lerp(cameraMotion.toPosition, eased);
         cameraLookAt = cameraMotion.fromLook.clone().lerp(cameraMotion.toLook, eased);
         camera.lookAt(cameraLookAt);
@@ -624,6 +672,7 @@
     function completeImpact(animation) {
         if (!animation || animation.impacted) return;
         animation.impacted = true;
+        invalidateBoardShadows();
         const callbacks = animation.impactCallbacks.splice(0);
         callbacks.forEach(callback => queueMicrotask(() => {
             try { callback(); } catch (_error) { /* Presentation callbacks cannot break rendering. */ }
@@ -634,6 +683,7 @@
         const index = dartModels.indexOf(dart);
         if (index < 0) return;
         scene.remove(dart.group); dartFactory.release(dart.group); dartModels.splice(index, 1);
+        invalidateBoardShadows();
         if (replayBoard) replayBoard.darts = replayBoard.darts.filter(entry => entry !== dart);
     }
 
@@ -651,6 +701,7 @@
         mobileRenderBudget.sample(now, moving);
         updateCameraMotion(now);
         dartModels.forEach(dart => dart.group.rotation.copy(dart.rotation));
+        const movingDarts = animations.length > 0;
         animations = animations.filter(animation => {
             const { dart, start, flight, settle, bouncing } = animation;
             const age = now - start;
@@ -692,11 +743,14 @@
                 completeImpact(animation);
                 dart.group.position.copy(end);
                 dart.group.rotation.copy(dart.rotation);
-                return false;
+                const t = Math.min(1, (age - flight) / settle);
+                dart.group.rotation.x += Math.sin(t * Math.PI * 5) * .07 * (1 - t);
+                if (t === 1) return false;
             }
             return true;
         });
         if (replayBoard) replayBoard.liveVisibility.forEach((_visible, group) => { group.visible = false; });
+        refreshMovingDartShadows(now, movingDarts);
         try { renderer.render(scene, camera); frameCount++; }
         catch (_error) { fallback(); return; }
         // Resize only after motion finishes, so a throw never reallocates its
@@ -710,6 +764,7 @@
         if (scene) dartModels.forEach(dart => { scene.remove(dart.group); dartFactory.release(dart.group); });
         dartModels.length = 0; seenDarts = []; animations = []; queueUntil = 0;
         replayBoard = null;
+        invalidateBoardShadows();
         requestRender();
     }
 
@@ -861,7 +916,11 @@
             replayBoard.liveVisibility.forEach((wasVisible, group) => { group.visible = wasVisible; });
             replayBoard = null; stopped = true;
         }
-        if (stopped) { queueUntil = performance.now(); requestRender(); }
+        if (stopped) {
+            queueUntil = performance.now();
+            invalidateBoardShadows();
+            requestRender();
+        }
         return stopped;
     }
 

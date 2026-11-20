@@ -143,11 +143,44 @@ function payCareerTournamentPrizeMoney(candidate, amount, tournament) {
     return payout;
 }
 
+function awardSelectedTournamentRankingPrizes(candidate, amount, tournament, rankings, referenceDate, updateSeason = false) {
+    for (const id of new Set(rankings)) {
+        switch (id) {
+            case 'oom': awardMainOrderOfMeritPrizeMoney(candidate, amount, tournament, referenceDate); break;
+            case 'protour': awardProTourOrderOfMeritPrizeMoney(candidate, amount, tournament, referenceDate); break;
+            case 'pc':
+                candidate.pcPrizeMoney = (Number(candidate.pcPrizeMoney) || 0) + amount;
+                if (typeof invalidatePlayerRankingCache === 'function') invalidatePlayerRankingCache('pc');
+                break;
+            case 'europeanTour': awardEuropeanTourOrderOfMeritPrizeMoney(candidate, amount, tournament); break;
+            case 'challengeTour': awardChallengeTourPrizeMoney(candidate, amount); break;
+            case 'developmentTour': awardDevelopmentTourPrizeMoney(candidate, amount); break;
+            case 'womensSeries': awardWomensSeriesEditorRankingPrize(candidate, amount, referenceDate, updateSeason); break;
+            default: {
+                const tour = typeof id === 'string' && id.startsWith('tour:') && getCareerCalendarEditorState().tours
+                    .find(item => item.id === id.slice(5) && item.ranking === 'own' && !item.removed);
+                if (tour && tour.id !== 'womensSeries') {
+                    awardCareerTourRankingPrizeMoney(candidate, amount, tour.id, referenceDate.getFullYear());
+                }
+            }
+        }
+    }
+}
+
         function awardPrizeMoney(p, amount, tName, { countTowardsRankings = true } = {}) {
             if (!p || !Number.isFinite(amount) || amount <= 0) return;
             tName = String(tName || '');
             const tournament = getTournamentForPrizeRules(tName);
             const ruleName = String(tournament?.sourceName || tName);
+            const selected = typeof getTournamentEditorPrizeRankings === 'function' ? getTournamentEditorPrizeRankings(tournament) : null;
+            if (selected) {
+                payCareerTournamentPrizeMoney(p, amount, tName);
+                if (typeof recordSeasonArchivePrize === 'function') {
+                    recordSeasonArchivePrize(p, amount, tournament, { countTowardsRankings: countTowardsRankings && selected.includes('oom') });
+                }
+                if (countTowardsRankings) awardSelectedTournamentRankingPrizes(p, amount, tournament, selected, currentDate, true);
+                return;
+            }
             if(typeof isWomensWorldMatchplayTournament==='function'&&isWomensWorldMatchplayTournament(tournament||tName)){
                 if(!claimWomensWorldMatchplayPrize(p,amount,tournament))return;
                 payCareerTournamentPrizeMoney(p,amount,tName);

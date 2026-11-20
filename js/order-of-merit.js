@@ -118,6 +118,8 @@ function isMainOrderOfMeritRankingTournament(tournamentOrName) {
         : (typeof tournamentDatabase !== 'undefined' && Array.isArray(tournamentDatabase)
             ? tournamentDatabase.find(candidate => candidate?.name === tournamentOrName
                 || candidate?.sourceName === tournamentOrName) : null);
+    const selected = typeof getTournamentEditorPrizeRankings === 'function' ? getTournamentEditorPrizeRankings(editorTournament) : null;
+    if (selected) return selected.includes('oom');
     if (typeof getCareerEditorTour === 'function') {
         const tour = getCareerEditorTour(editorTournament);
         if (tour?.removed || tour && tour.ranking !== 'native') return false;

@@ -193,7 +193,7 @@ function getHubUpcomingTournament() {
         const held = typeof getParkedCalendarTournament === 'function' && getParkedCalendarTournament(tournament);
         const date = held ? new Date(held.readyAt) : new Date(year, tournament.month, tournament.day);
         const end = tournament.editorStructure?.league ? new Date(year, tournament.month, tournament.day)
-            : new Date(year, tournament.endMonth ?? tournament.month, tournament.endDay ?? tournament.day);
+            : new Date(year + (tournament.endYearOffset || 0), tournament.endMonth ?? tournament.month, tournament.endDay ?? tournament.day);
         if (end < today || (typeof isTournamentScheduledForCareerYear === 'function'
             && !isTournamentScheduledForCareerYear(tournament, year))) return;
         upcoming.push({ tournament, index, date, end });

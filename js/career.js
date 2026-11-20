@@ -110,6 +110,7 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
                 if (typeof clearCareerProfileMediaRuntime === 'function') clearCareerProfileMediaRuntime();
                 player = {
                     ...selectedPlayer,
+                    scoreboardColors: {},
                     id: selectedPlayer.id,
                     gender: selectedPlayer.gender || 'male',
                     womensSeriesEligible: selectedPlayer.womensSeriesEligible,
@@ -383,6 +384,7 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
             if (typeof refreshPlayerNicknameUI === 'function') refreshPlayerNicknameUI();
             if (typeof refreshWorldNewsSettingsUI === 'function') refreshWorldNewsSettingsUI();
             if (typeof refreshTournamentWatchSettingsUI === 'function') refreshTournamentWatchSettingsUI();
+            if (typeof refreshMatchScoreboardSettings === 'function') refreshMatchScoreboardSettings();
             if (typeof refreshBounceOutSettingsUI === 'function') refreshBounceOutSettingsUI();
             if (typeof refreshMatchBullOffSettingsUI === 'function') refreshMatchBullOffSettingsUI();
             if (typeof refreshMatchIncidentSettingsUI === 'function') refreshMatchIncidentSettingsUI();
@@ -581,6 +583,9 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
             if (typeof hasCareerTourEntryOverride === 'function' && hasCareerTourEntryOverride(tournament)) return getTournamentEditorParticipants(tournament, undefined, currentDate).some(isCareerPlayer);
             const name = String(tournament.name || '').toLowerCase();
             if (typeof hasTournamentEditorQualification === 'function' && hasTournamentEditorQualification(tournament)) {
+                if (tournament.editorQualification.routes?.some(route => route.source === 'playIn' || route.source === 'champions')
+                    && getTournamentEditorQualificationGroups(tournament, undefined, currentDate).some(group =>
+                        ['playIn', 'champions'].includes(group.source) && group.pending && group.eligible.some(isCareerPlayer))) return true;
                 return getTournamentEditorParticipants(tournament, undefined, currentDate).some(isCareerPlayer);
             }
             const isLeague = name.includes('premier') || name.includes('global darts league');
@@ -957,7 +962,8 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
                 || equipmentWear?.changed === true || playerEvents?.changed === true || tournamentAbsences?.changed === true;
 
             // --- Kwalifikacje do Ligi (1 lutego) ---
-            if (currentDate.getMonth() === 1 && currentDate.getDate() === 1) {
+            if (currentDate.getMonth() === 1 && currentDate.getDate() === 1
+                && !(typeof hasDeclinedPremierLeagueInvitation === 'function' && hasDeclinedPremierLeagueInvitation(player, currentDate))) {
                 let oomRanked = [...pdcPlayers, player]
                     .filter(candidate => typeof isPdcTourCardEligiblePlayer !== 'function' || isPdcTourCardEligiblePlayer(candidate))
                     .sort((a,b) => b.prizeMoney - a.prizeMoney);
@@ -974,7 +980,8 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
                 let bodyStr = isMeSelected 
                     ? t('t-email-league-qual-yes').replace('{league}', leagueName)
                     : t('t-email-league-qual-no').replace('{league}', leagueName);
-                addEmail(t('t-sender-league'), t('t-email-league-qual-sub').replace('{league}', leagueName), bodyStr);
+                addEmail(t('t-sender-league'), t('t-email-league-qual-sub').replace('{league}', leagueName), bodyStr,
+                    { action: isMeSelected ? 'premierLeagueInvitation' : undefined });
             }
             // -----------------------------------------------------
 
@@ -1236,7 +1243,7 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
             kind: 'system',
             category: options.category === 'retirement' ? 'retirement' : undefined,
             read: false,
-            action: options.action === 'tutorial' ? 'tutorial' : undefined
+            action: ['tutorial', 'premierLeagueInvitation'].includes(options.action) ? options.action : undefined
         });
         unreadMailsCount++;
         updateMailBadge();
@@ -1257,11 +1264,15 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
         function renderMailboxEmails() {
     const list = document.getElementById('email-list');
     const nextEmails = emails.slice(mailboxRenderedCount, mailboxRenderedCount + MAILBOX_PAGE_SIZE);
+    const leagueInvitation = typeof getOpenPremierLeagueInvitation === 'function'
+        && nextEmails.some(e => e.action === 'premierLeagueInvitation') ? getOpenPremierLeagueInvitation() : null;
     const mailboxHtml = nextEmails.map(e => `<div style="background:#0f3460; padding:10px; margin-bottom:10px; border-radius:5px; border-left:4px solid var(--accent-green);">
             <small style="color:#bdc3c7;">${escapeHtml(e.date)} | ${t('t-from')}: <strong>${escapeHtml(e.sender)}</strong></small>
             <h4 style="margin:5px 0;">${escapeHtml(e.subject)}</h4>
             <p style="margin:0; font-size:13px;">${sanitizeEmailHtml(e.body)}</p>
             ${typeof getTutorialEmailActionHtml === 'function' ? getTutorialEmailActionHtml(e) : ''}
+            ${leagueInvitation && e.action === 'premierLeagueInvitation' && new Date(e.createdAt).getFullYear() === leagueInvitation.year
+                ? getPremierLeagueInvitationButtonHtml(leagueInvitation.year) : ''}
         </div>`).join('');
     if (mailboxHtml) list.insertAdjacentHTML('beforeend', mailboxHtml);
     mailboxRenderedCount += nextEmails.length;
@@ -1313,6 +1324,7 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
             }
             const careerRecordLookup = typeof createCareerRecordTournamentLookup === 'function'
                 ? createCareerRecordTournamentLookup() : null;
+            const leagueInvitation = typeof getOpenPremierLeagueInvitation === 'function' ? getOpenPremierLeagueInvitation() : null;
 
             visibleEntries
                 .sort((first, second) => first.tour.month - second.tour.month || first.tour.day - second.tour.day || first.idx - second.idx)
@@ -1323,11 +1335,14 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
                     
                 const planningButton = !tour.completed && typeof getPlanningTournamentKind === 'function' && getPlanningTournamentKind(tour)
                     ? `<button type="button" class="btn-sign planning-event-link" onclick="showCareerPlanning('qualification', ${idx})">${escapeHtml(trPlanning('qualification'))}</button>` : '';
+                const reserveButton = typeof renderContinentalReserveCalendarButton === 'function' ? renderContinentalReserveCalendarButton(tour, idx) : '';
                 const championsButton = typeof isCareerChampionship === 'function' && isCareerChampionship(tour, careerRecordLookup)
                     ? `<button type="button" class="btn-sign records-event-link" onclick="showTournamentChampions(${idx})">${escapeHtml(trCareerRecords('champions'))}</button>` : '';
                 const financeButton = typeof trTournamentFinance === 'function'
                     ? `<button type="button" class="btn-sign finance-event-link" onclick="showTournamentFinance(${idx})">${escapeHtml(trTournamentFinance('link'))}</button>` : '';
                 const absenceButton = typeof getTournamentAbsenceCalendarHtml === 'function' ? getTournamentAbsenceCalendarHtml(tour,idx) : '';
+                const leagueInvitationButton = leagueInvitation?.openingNight === tour
+                    ? getPremierLeagueInvitationButtonHtml(leagueInvitation.year) : '';
                 const year = currentDate.getFullYear();
                 const startMonth = (tour.month + 1).toString().padStart(2, '0');
                 const endMonth = ((Number.isInteger(tour.endMonth) ? tour.endMonth : tour.month) + 1).toString().padStart(2, '0');
@@ -1344,7 +1359,7 @@ const PANEL_TOP_BACK_EXCLUDED_SCREENS = new Set([
                             📍 ${escapeHtml(t(tour.city))}, ${getFlagImg(tour.country)} ${escapeHtml(t(tour.country))}
                         </small>
                     </div>
-                    <div${championsButton || financeButton || absenceButton ? ' class="calendar-event-actions"' : ''}>${statusBadge}${planningButton}${championsButton}${financeButton}${absenceButton}</div>
+                    <div${reserveButton || championsButton || financeButton || absenceButton || leagueInvitationButton ? ' class="calendar-event-actions"' : ''}>${statusBadge}${planningButton}${reserveButton}${championsButton}${financeButton}${absenceButton}${leagueInvitationButton}</div>
                 </div>`;
             });
             list.innerHTML = calendarHtml || (scheduledEntries.length > 0 && typeof trCalendarFilter === 'function'

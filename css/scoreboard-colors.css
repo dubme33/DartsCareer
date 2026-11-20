@@ -1,0 +1,66 @@
+.scoreboard-color-settings summary {
+    cursor: pointer;
+    font-weight: 800;
+}
+.scoreboard-color-settings form {
+    display: grid;
+    gap: 12px;
+    margin-top: 12px;
+}
+.scoreboard-color-settings form[hidden] { display: none; }
+.scoreboard-color-settings label { display: grid; gap: 4px; }
+.scoreboard-color-settings select { width: 100%; min-width: 0; }
+.scoreboard-color-controls, .scoreboard-color-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: end;
+    gap: 8px;
+}
+.scoreboard-color-controls input { box-sizing: border-box; height: 42px; }
+#scoreboard-color-picker {
+    width: 54px;
+    padding: 3px;
+    border: 1px solid #69819a;
+    border-radius: 5px;
+    background: #17283d;
+    cursor: pointer;
+}
+#scoreboard-color-hex { width: 108px; font-family: ui-monospace, monospace; }
+.scoreboard-color-actions button { margin: 0; }
+.scoreboard-color-preview {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    overflow: hidden;
+    color: #fff;
+    background: color-mix(in srgb, var(--scoreboard-color) 30%, #0c1420);
+    border: 1px solid #69819a;
+    border-radius: 5px;
+    font-size: .87rem;
+    font-weight: 800;
+}
+.scoreboard-color-preview span { padding: 7px 10px; }
+.scoreboard-color-preview strong {
+    padding: 7px 12px;
+    background: var(--scoreboard-color);
+    color: var(--scoreboard-color-text);
+    font-variant-numeric: tabular-nums;
+}
+
+#screen-match[data-scoreboard-color] .score-board {
+    background: color-mix(in srgb, var(--scoreboard-color) 55%, #101521);
+    box-shadow: inset 0 0 0 1px var(--scoreboard-color), 0 6px 12px #0005;
+}
+#screen-match[data-scoreboard-color] .score-board .score-col.active-turn {
+    border-color: var(--scoreboard-color);
+    box-shadow: 0 0 12px color-mix(in srgb, var(--scoreboard-color) 60%, transparent);
+}
+#screen-match[data-scoreboard-color] .broadcast-scoreboard {
+    --broadcast-accent: var(--scoreboard-color);
+    --broadcast-header-bg: color-mix(in srgb, var(--scoreboard-color) 32%, #0c1420);
+    --broadcast-checkout-bg: color-mix(in srgb, var(--scoreboard-color) 24%, #08101c);
+    --broadcast-mid: color-mix(in srgb, var(--scoreboard-color) 30%, #0c1420);
+    --broadcast-active: var(--scoreboard-color);
+    --broadcast-active-text: var(--scoreboard-color-text);
+    --broadcast-counter: color-mix(in srgb, var(--scoreboard-color) 28%, #08101c);
+}

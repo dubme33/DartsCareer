@@ -188,3 +188,9 @@
     .tournament-pack-row { align-items: stretch; flex-direction: column; gap: 6px; }
     .tournament-pack-row select { max-width: none; width: 100%; }
 }
+.te-prize-ranking-fields:not([hidden]) { display: grid; gap: 8px; }
+#te-prize-ranking-choices:not([hidden]) {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 220px), 1fr));
+    gap: 6px 12px;
+}

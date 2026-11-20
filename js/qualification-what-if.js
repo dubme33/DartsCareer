@@ -6,7 +6,7 @@ function cloneQualificationScenario(value) {
 function qualificationScenarioKey(candidate) { return getPdcTourCardPlayerKey(candidate); }
 function qualificationScenarioEventKey(event) { return String(event?.sourceName || event?.name || ''); }
 function qualificationScenarioDate(event, year, end = false) {
-    return new Date(year, end ? event.endMonth ?? event.month : event.month, end ? event.endDay ?? event.day : event.day);
+    return new Date(year + (end ? event.endYearOffset || 0 : 0), end ? event.endMonth ?? event.month : event.month, end ? event.endDay ?? event.day : event.day);
 }
 function getQualificationScenarioSize(event) {
     if (event.editorFieldSize) return event.editorFieldSize;
@@ -27,6 +27,8 @@ function isQualificationScenarioSource(event) {
     if (typeof isWomensSeriesTournament === 'function' && isWomensSeriesTournament(event)) return false;
     if (typeof isWorldYouthTournament === 'function' && isWorldYouthTournament(event)) return false;
     if (typeof isWomensWorldMatchplayTournament === 'function' && isWomensWorldMatchplayTournament(event)) return false;
+    const selected = typeof getTournamentEditorPrizeRankings === 'function' ? getTournamentEditorPrizeRankings(event) : null;
+    if (selected) return selected.length > 0;
     const tour = typeof getCareerEditorTour === 'function' ? getCareerEditorTour(event) : null;
     return Boolean(tour?.ranking === 'own' || event.rankingOverride !== false
         && (isMainOrderOfMeritRankingTournament(event) || isProTourRankingTournament(event)
@@ -48,6 +50,8 @@ function qualificationScenarioHasEtSeedException(event) {
 }
 function applyQualificationScenarioPrize(candidate, event, amount, date, noRanking = false) {
     if (!amount || noRanking || event.rankingOverride === false) return;
+    const selected = typeof getTournamentEditorPrizeRankings === 'function' ? getTournamentEditorPrizeRankings(event) : null;
+    if (selected) return awardSelectedTournamentRankingPrizes(candidate, amount, event, selected, date);
     const tour = typeof getCareerEditorTour === 'function' ? getCareerEditorTour(event) : null;
     if (tour && tour.ranking !== 'native') {
         if (tour.ranking === 'own' && !tour.removed) {
@@ -65,10 +69,11 @@ function applyQualificationScenarioPrize(candidate, event, amount, date, noRanki
     if (isPlayersChampionshipTournament(event)) candidate.pcPrizeMoney = (Number(candidate.pcPrizeMoney) || 0) + amount;
     awardEuropeanTourOrderOfMeritPrizeMoney(candidate, amount, event);
 }
-function qualificationScenarioRankings(candidates, ownKey, tourIds = []) {
+function qualificationScenarioRankings(candidates, ownKey, tourIds = [], includeWomensSeries = false) {
     const definitions = [['main', 'prizeMoney'], ['protour', 'proTourPrizeMoney'], ['pc', 'pcPrizeMoney'],
         ['europeanTour', 'europeanTourPrizeMoney'], ['challengeTour', 'challengeTourPrizeMoney'], ['developmentTour', 'developmentTourPrizeMoney']];
     return [...definitions.map(([id, field]) => ({ id, amount: p => Number(p[field]) || 0 })),
+        ...(includeWomensSeries ? [{ id: 'womensSeries', amount: p => getWomensSeriesPrizeMoney(p) }] : []),
         ...tourIds.map(id => ({ id: `tour:${id}`, amount: p => Number(p.editorTourRankings?.[id]?.[currentDate.getFullYear()]) || 0 }))]
         .map(definition => {
             const tour = definition.id.startsWith('tour:') && typeof getCareerCalendarEditorState === 'function'
@@ -76,10 +81,12 @@ function qualificationScenarioRankings(candidates, ownKey, tourIds = []) {
             const compare = definition.id === 'europeanTour' ? compareEuropeanTourOrderOfMerit
                 : definition.id === 'challengeTour' ? compareChallengeTourOrderOfMerit
                     : definition.id === 'developmentTour' ? compareDevelopmentTourOrderOfMerit
+                        : definition.id === 'womensSeries' ? compareWomensSeriesCountback
                         : tour ? (a, b) => definition.amount(b) - definition.amount(a)
                             || String(getTournamentEditorPlayerKey(a)).localeCompare(String(getTournamentEditorPlayerKey(b))) : null;
             const pool = tour ? candidates.filter(p => !p.retired && (definition.amount(p) > 0
-                || tour.playerKeys?.includes(getTournamentEditorPlayerKey(p)))) : candidates;
+                || tour.playerKeys?.includes(getTournamentEditorPlayerKey(p)))) : definition.id === 'womensSeries'
+                    ? candidates.filter(isWomensSeriesWoman) : candidates;
             const sorted = [...pool].sort(compare || ((a, b) => definition.amount(b) - definition.amount(a)));
             const index = sorted.findIndex(p => qualificationScenarioKey(p) === ownKey);
             return { id: definition.id, position: index + 1, amount: index < 0 ? 0 : definition.amount(sorted[index]) };
@@ -133,11 +140,17 @@ function calculateQualificationScenario({ target, entries = [], candidates, care
             .filter(tour => tour?.ranking === 'own').map(tour => tour.id).concat(
                 [...(target.editorNativeRoutes || []), ...(target.editorQualification?.routes || [])]
                     .filter(route => route.source === 'tourRanking').map(route => route.tourId)))];
+        const selectedRankings = typeof getTournamentEditorPrizeRankings === 'function'
+            ? prepared.flatMap(entry => getTournamentEditorPrizeRankings(entry.event) || []) : [];
+        for (const id of selectedRankings) if (id.startsWith('tour:') && !tours.includes(id.slice(5))
+            && getCareerCalendarEditorState().tours.some(tour => tour.id === id.slice(5) && tour.ranking === 'own' && !tour.removed)) tours.push(id.slice(5));
+        const includeWomensSeries = selectedRankings.includes('womensSeries');
         const baseline = qualificationScenarioSummary(buildQualificationPreview(cloneQualificationScenario(target), before, targetDate, ownBefore), ownKey, target, year);
         const projected = qualificationScenarioSummary(buildQualificationPreview(cloneQualificationScenario(target), after, targetDate, ownAfter), ownKey, target, year);
         const oldKeys = new Set(baseline.players.map(p => p.key)), newKeys = new Set(projected.players.map(p => p.key));
         return { date: targetDate.getTime(), targetName: target.name, baseline, projected,
-            rankingsBefore: qualificationScenarioRankings(before, ownKey, tours), rankingsAfter: qualificationScenarioRankings(after, ownKey, tours),
+            rankingsBefore: qualificationScenarioRankings(before, ownKey, tours, includeWomensSeries),
+            rankingsAfter: qualificationScenarioRankings(after, ownKey, tours, includeWomensSeries),
             gained: projected.players.filter(p => !oldKeys.has(p.key)), lost: baseline.players.filter(p => !newKeys.has(p.key)),
             entries: prepared.map(entry => ({ name: byKey.get(entry.playerKey).name, eventName: entry.event.name,
                 result: entry.result, amount: entry.amount, noRanking: entry.noRanking })) };

@@ -74,6 +74,8 @@ function hasCareerEditorCard(candidate, id, date = currentDate) {
     });
 }
 function isCareerEditorAccessEligible(event, candidate, date = currentDate) {
+    if (typeof isPremierLeagueSeasonEvent === 'function' && isPremierLeagueSeasonEvent(event)
+        && hasDeclinedPremierLeagueInvitation(candidate, date)) return false;
     if (typeof isTournamentPlayerAbsent === 'function' && isTournamentPlayerAbsent(event, candidate, date)) return false;
     if (typeof isTournamentEditorCityEligible === 'function' && !isTournamentEditorCityEligible(event, candidate)) return false;
     if (typeof isPdcRestrictedEventEligible === 'function' && !isPdcRestrictedEventEligible(event, candidate, date)) return false;
@@ -109,6 +111,14 @@ function getCareerTourRanking(id, candidates = getTournamentEditorCandidates(), 
         .sort((a, b) => getCareerTourPrizeMoney(b, id, year) - getCareerTourPrizeMoney(a, id, year)
             || String(getTournamentEditorPlayerKey(a)).localeCompare(String(getTournamentEditorPlayerKey(b))));
 }
+function awardCareerTourRankingPrizeMoney(candidate, amount, tourId, year) {
+    candidate.editorTourRankings ||= {};
+    if (!Object.hasOwn(candidate.editorTourRankings, tourId)) {
+        Object.defineProperty(candidate.editorTourRankings, tourId, { value: {}, writable: true, enumerable: true, configurable: true });
+    }
+    const seasons = candidate.editorTourRankings[tourId];
+    seasons[year] = (Number(seasons[year]) || 0) + amount;
+}
 function awardCareerTourPrizeMoney(candidate, amount, event, countTowardsRankings = true) {
     if(typeof isWomensWorldMatchplayTournament==='function'&&isWomensWorldMatchplayTournament(event))return true;
     if (typeof isWomensSeriesTournament === 'function' && isWomensSeriesTournament(event)) return true;
@@ -116,10 +126,7 @@ function awardCareerTourPrizeMoney(candidate, amount, event, countTowardsRanking
     const tour = getCareerEditorTour(event);
     if (!tour || tour.ranking === 'native') return false;
     if (tour.ranking === 'own' && countTowardsRankings && event?.rankingOverride !== false && !tour.removed) {
-        const year = currentDate.getFullYear();
-        candidate.editorTourRankings ||= {};
-        candidate.editorTourRankings[tour.id] ||= {};
-        candidate.editorTourRankings[tour.id][year] = getCareerTourPrizeMoney(candidate, tour.id, year) + amount;
+        awardCareerTourRankingPrizeMoney(candidate, amount, tour.id, currentDate.getFullYear());
     }
     return true;
 }

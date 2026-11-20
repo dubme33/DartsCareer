@@ -1,4 +1,11 @@
 const TOURNAMENT_EDITOR_PRIZE_ROUNDS = ['winner', '2', '4', '8', '16', '32', '64', '128', '256'];
+const TOURNAMENT_EDITOR_PRIZE_RANKINGS = ['oom', 'protour', 'pc', 'europeanTour', 'challengeTour', 'developmentTour', 'womensSeries'];
+const TOURNAMENT_EDITOR_RANKING_COPY = {
+    pl: ['Zaliczaj nagrody do', 'Rankingi wynikające z zasad turnieju', 'Wybrane rankingi', 'Wybierz co najmniej jeden ranking.', 'Niedostępny ranking'],
+    en: ['Count prize money towards', 'Rankings set by tournament rules', 'Selected rankings', 'Select at least one ranking.', 'Unavailable ranking'],
+    de: ['Preisgeld anrechnen für', 'Ranglisten gemäß Turnierregeln', 'Ausgewählte Ranglisten', 'Wähle mindestens eine Rangliste aus.', 'Nicht verfügbare Rangliste'],
+    nl: ['Prijzengeld telt mee voor', 'Ranglijsten volgens toernooiregels', 'Geselecteerde ranglijsten', 'Selecteer minstens één ranglijst.', 'Niet-beschikbare ranglijst']
+};
 const TOURNAMENT_EDITOR_CYCLES = ['auto', 'major', 'proTour', 'playersChampionship', 'europeanTour',
     'challengeTour', 'developmentTour', 'womensSeries', 'worldSeries', 'premierLeague', 'worldCup', 'qualifier', 'custom', 'other'];
 const TOURNAMENT_EDITOR_TEXT = {
@@ -140,9 +147,9 @@ function createTournamentEditorCopy(tournament) {
     const copy = { name: getTournamentEditorCopyName(tournament), completed: false, historyLogs: '',
         isEditorTournament: true, isCustomTournament: true };
     copy.sourceName = copy.name;
-    for (const field of ['month', 'day', 'endMonth', 'endDay', 'city', 'country', 'minOvr', 'format',
+    for (const field of ['month', 'day', 'endMonth', 'endDay', 'endYearOffset', 'city', 'country', 'minOvr', 'format',
         'editorCycle', 'editorTourName', 'editorFieldSize', 'editorMatchFormat', 'editorRequiredCardId',
-        'editorGender', 'editorCities', 'editorTeamMode', 'editorTeamEntries', 'editorInvitations', 'editorStructure', 'editorQualification']) {
+        'editorGender', 'editorCities', 'editorTeamMode', 'editorTeamEntries', 'editorInvitations', 'editorStructure', 'editorQualification', 'editorPrizeRankings']) {
         if (tournament[field] != null) copy[field] = JSON.parse(JSON.stringify(tournament[field]));
     }
     const cycle = typeof getCareerEditorTourId === 'function' ? getCareerEditorTourId(tournament) : 'other';
@@ -311,9 +318,63 @@ function getTournamentEditorDefaultRanking(tournament) {
     if (typeof isWomensSeriesTournament === 'function' && isWomensSeriesTournament(tournament)) return false;
     if (typeof isWorldYouthTournament === 'function' && isWorldYouthTournament(tournament)) return false;
     if (typeof tournament?.rankingOverride === 'boolean') return tournament.rankingOverride;
+    if (tournament?.isEditorTournament && tournament.editorPrizeRankings?.length) return true;
     if (['challengeTour', 'developmentTour'].includes(tournament?.specialType)) return true;
     return typeof isMainOrderOfMeritRankingTournament === 'function'
         && isMainOrderOfMeritRankingTournament(tournament);
+}
+function isTournamentEditorPrizeRankingId(id) {
+    return typeof id === 'string' && (TOURNAMENT_EDITOR_PRIZE_RANKINGS.includes(id)
+        || id.startsWith('tour:') && id.length > 5 && id.length <= 1005);
+}
+function getTournamentEditorPrizeRankings(event) {
+    if (typeof event === 'string' && typeof getTournamentForPrizeRules === 'function') event = getTournamentForPrizeRules(event);
+    if (!event?.isEditorTournament || !Array.isArray(event.editorPrizeRankings)) return null;
+    return event.rankingOverride === false ? [] : event.editorPrizeRankings.filter(isTournamentEditorPrizeRankingId);
+}
+function getTournamentEditorPrizeRankingOptions() {
+    const labels = new Map(TOURNAMENT_EDITOR_PRIZE_RANKINGS.map(id => [id, id === 'womensSeries'
+        ? `${typeof competitionName === 'function' ? competitionName('womensSeries') : "Women's Series"} OOM`
+        : trTournamentEditor(id)]));
+    if (typeof getCareerCalendarEditorState === 'function') {
+        for (const tour of getCareerCalendarEditorState().tours) {
+            if (tour.ranking === 'own' && !tour.removed && tour.id !== 'womensSeries') labels.set(`tour:${tour.id}`, tour.name);
+        }
+    }
+    return labels;
+}
+function updateTournamentEditorPrizeRankingFields(initial = null) {
+    const fields = tournamentEditorElement('te-prize-ranking-fields');
+    if (!fields?.querySelectorAll) return;
+    const mode = tournamentEditorElement('te-prize-ranking-mode');
+    const choices = tournamentEditorElement('te-prize-ranking-choices');
+    const labels = TOURNAMENT_EDITOR_RANKING_COPY[typeof currentLang === 'string' ? currentLang : 'pl'] || TOURNAMENT_EDITOR_RANKING_COPY.en;
+    const selected = initial ? new Set(initial.rankings || [])
+        : new Set([...choices.querySelectorAll('input:checked')].map(input => input.value));
+    if (initial) {
+        mode.value = initial.rankings?.length ? 'selected' : 'auto';
+        choices.replaceChildren();
+    }
+    fields.hidden = !(tournamentEditorCreating || tournamentEditorSelected?.isEditorTournament)
+        || !tournamentEditorElement('te-ranking').checked;
+    choices.hidden = mode.value !== 'selected';
+    tournamentEditorElement('te-prize-ranking-label').textContent = labels[0];
+    mode.options[0].textContent = labels[1];
+    mode.options[1].textContent = labels[2];
+    choices.setAttribute('aria-label', labels[2]);
+    if (fields.hidden || choices.hidden) return;
+    const options = getTournamentEditorPrizeRankingOptions();
+    for (const id of selected) if (!options.has(id)) options.set(id, `${labels[4]} (${id.slice(5)})`);
+    choices.replaceChildren(...Array.from(options, ([id, name]) => {
+        const label = document.createElement('label');
+        label.className = 'te-checkbox';
+        const input = document.createElement('input');
+        input.type = 'checkbox'; input.value = id; input.checked = selected.has(id);
+        const text = document.createElement('span');
+        text.textContent = name;
+        label.append(input, text);
+        return label;
+    }));
 }
 function updateTournamentEditorMatchFields() {
     if (typeof document === 'undefined') return;
@@ -353,7 +414,7 @@ function populateTournamentEditorForm(tournament) {
     tournamentEditorElement('te-name').value = tournament.name || '';
     tournamentEditorElement('te-start').value = tournamentEditorDate(tournament.month, tournament.day, year);
     tournamentEditorElement('te-end').value = tournamentEditorDate(tournament.endMonth ?? tournament.month,
-        tournament.endDay ?? tournament.day, year);
+        tournament.endDay ?? tournament.day, year + (tournament.endYearOffset || 0));
     tournamentEditorElement('te-city').value = tournament.city || '';
     tournamentEditorElement('te-country').value = tournament.country || '';
     tournamentEditorElement('te-cycle').value = tournament.editorCycle
@@ -381,6 +442,7 @@ function populateTournamentEditorForm(tournament) {
     tournamentEditorElement('te-sets').value = tournament.editorMatchFormat?.setsToWin || 3;
     tournamentEditorElement('te-legs-per-set').value = tournament.editorMatchFormat?.legsPerSet || 3;
     tournamentEditorElement('te-ranking').checked = getTournamentEditorDefaultRanking(tournament);
+    updateTournamentEditorPrizeRankingFields({ rankings: getTournamentEditorPrizeRankings(tournament) });
     TOURNAMENT_EDITOR_PRIZE_ROUNDS.forEach(round => {
         const amount = typeof getPrizeMoney === 'function' ? getPrizeMoney(tournament, Number(round) || 2, round === 'winner') : 0;
         tournamentEditorElement(`te-prize-${round}`).value = Number.isFinite(amount) && amount >= 0 ? amount : 0;
@@ -418,6 +480,7 @@ function startAddingTournament() {
     if (typeof refreshCareerEditorEventCards === 'function') refreshCareerEditorEventCards();
     if (tournamentEditorElement('te-required-card')) tournamentEditorElement('te-required-card').value = '';
     tournamentEditorElement('te-ranking').checked = true;
+    updateTournamentEditorPrizeRankingFields({ rankings: null });
     const defaults = { winner: 35000, 2: 15000, 4: 10000, 8: 8000, 16: 5000, 32: 2000, 64: 0, 128: 0, 256: 0 };
     TOURNAMENT_EDITOR_PRIZE_ROUNDS.forEach(round => { tournamentEditorElement(`te-prize-${round}`).value = defaults[round]; });
     populateTournamentEditorQualification(null);
@@ -520,6 +583,7 @@ function refreshTournamentEditorTranslations() {
     if (typeof refreshTournamentPackTranslations === 'function') refreshTournamentPackTranslations();
     if (typeof refreshCareerCalendarManagerTranslations === 'function') refreshCareerCalendarManagerTranslations();
     if (typeof refreshTournamentEditorRoundTranslations === 'function') refreshTournamentEditorRoundTranslations();
+    updateTournamentEditorPrizeRankingFields();
     refreshTournamentEditorFormText();
     renderTournamentEditorList();
 }
@@ -546,7 +610,9 @@ function getTournamentEditorFormData() {
     const country = tournamentEditorValue('te-country').trim().replace(/\s+/g, ' ');
     const start = parseTournamentEditorDate(tournamentEditorValue('te-start'));
     const end = parseTournamentEditorDate(tournamentEditorValue('te-end'));
-    if (!name || !city || !country || !start || !end || start.year !== end.year || end.date < start.date) {
+    const endYearOffset = end && start ? end.year - start.year : 0;
+    if (!name || !city || !country || !start || !end || end.date < start.date || endYearOffset > 1
+        || endYearOffset === 1 && end.month * 32 + end.day >= start.month * 32 + start.day) {
         throw new Error(trTournamentEditor('invalidDate'));
     }
     if (tournamentDatabase.some(other => other !== tournamentEditorSelected
@@ -580,11 +646,20 @@ function getTournamentEditorFormData() {
     try { editorCities = normalizeTournamentEditorCities(tournamentEditorElement('te-cities')?.value || ''); }
     catch (_) { throw new Error(trTournamentEditor('invalidCities')); }
     const values = { name, month: start.month, day: start.day, endMonth: end.month, endDay: end.day,
+        endYearOffset,
         city, country, minOvr, matchVenue:['tv','floor'].includes(tournamentEditorValue('te-match-venue'))?tournamentEditorValue('te-match-venue'):null, format: ['DIDO','masterOut'].includes(tournamentEditorValue('te-game-format')) ? tournamentEditorValue('te-game-format') : 'legs',
         ...(editorCities.length ? { editorCities } : {}),
         editorGender: gender === 'all' ? null : gender,
         editorFieldSize, editorMatchFormat, editorRequiredCardId, rankingOverride: tournamentEditorElement('te-ranking').checked, editorPrizes,
         editorCycle: cycle === 'auto' ? null : cycle, editorTourName: cycle === 'custom' ? customTour : null };
+    if (values.rankingOverride && (tournamentEditorCreating || tournamentEditorSelected?.isEditorTournament)
+        && tournamentEditorElement('te-prize-ranking-mode')?.value === 'selected') {
+        const fields = tournamentEditorElement('te-prize-ranking-choices');
+        values.editorPrizeRankings = [...fields.querySelectorAll('input:checked')].map(input => input.value);
+        if (!values.editorPrizeRankings.length || !values.editorPrizeRankings.every(isTournamentEditorPrizeRankingId)) {
+            throw new Error((TOURNAMENT_EDITOR_RANKING_COPY[currentLang] || TOURNAMENT_EDITOR_RANKING_COPY.en)[3]);
+        }
+    }
     if (typeof isWorldYouthTournament === 'function' && isWorldYouthTournament(tournamentEditorSelected)) values.rankingOverride = false;
     if(typeof isWomensSeriesTournament==='function'&&isWomensSeriesTournament(tournamentEditorSelected)){
         values.rankingOverride=false;values.format='legs';values.editorGender='female';values.editorMatchFormat=null;
@@ -634,6 +709,8 @@ async function saveTournamentEditor(event) {
     const previousCity = tournament.city;
     if (!creating && !tournament.sourceName) tournament.sourceName = tournament.name;
     Object.assign(tournament, values, { editorModified: true });
+    if (!values.endYearOffset) delete tournament.endYearOffset;
+    if (!values.editorPrizeRankings) delete tournament.editorPrizeRankings;
     if (tournament.isEditorTournament === true) {
         if (values.editorTeamMode) tournament.isDoubles = true;
         else delete tournament.isDoubles;

@@ -19,6 +19,91 @@ function getPremierLeaguePlayerKey(candidate) {
         : `name:${String(candidate.name || '').trim()}|${String(candidate.country || '').trim()}`;
 }
 
+function isPremierLeagueSeasonEvent(event) {
+    return Boolean(event && !event.isEditorTournament && (getPremierLeagueNightNumber(event)
+        || [event.sourceName, event.name].some(name => /^(?:premier league|global darts league)\s*[-–—]?\s*play-offs?$/i.test(name || ''))));
+}
+
+function hasDeclinedPremierLeagueInvitation(candidate, date) {
+    return candidate?.premierLeagueDeclinedYear === date.getFullYear();
+}
+
+function getOpenPremierLeagueInvitation() {
+    const year = currentDate.getFullYear();
+    if (!player?.name || hasDeclinedPremierLeagueInvitation(player, currentDate)) return null;
+    const invitedIndex = gdlTable.findIndex(row => isCurrentPlayer(row.player));
+    if (invitedIndex < 0) return null;
+
+    const events = tournamentDatabase.filter(event => isPremierLeagueSeasonEvent(event)
+        && isTournamentScheduledForCareerYear(event, year));
+    if (events.some(event => tournamentAbsenceDrawStarted(event) || event.premierLeagueOpeningPairs?.length
+        || hasCareerTourEntryOverride(event) || hasTournamentEditorQualification(event))) return null;
+    const openingNight = events.filter(getPremierLeagueNightNumber)
+        .sort((a, b) => a.month - b.month || a.day - b.day)[0];
+    return openingNight ? { year, invitedIndex, openingNight } : null;
+}
+
+function declinePremierLeagueInvitation(year) {
+    const invitation = getOpenPremierLeagueInvitation();
+    if (!invitation || invitation.year !== year) return null;
+
+    const invited = new Set(gdlTable.map(row => getPremierLeaguePlayerKey(row.player)));
+    const replacement = getPdcTourCardPlayers(false)
+        .filter(candidate => !isCurrentPlayer(candidate) && !invited.has(getPremierLeaguePlayerKey(candidate))
+            && isPlayerAvailableForPlay(candidate)
+            && isCareerEditorAccessEligible(invitation.openingNight, candidate, currentDate))
+        .sort((a, b) => (Number(b.prizeMoney) || 0) - (Number(a.prizeMoney) || 0))[0];
+
+    player.premierLeagueDeclinedYear = year;
+    if (replacement) {
+        gdlTable[invitation.invitedIndex] = { player: replacement, points: 0, nightsWon: 0, legsWon: 0, legsLost: 0 };
+    } else {
+        gdlTable.splice(invitation.invitedIndex, 1);
+    }
+    return { replacement };
+}
+
+function premierLeagueInvitationText(key, name = '') {
+    const copy = {
+        decline: ['Odrzuć zaproszenie do ligi', 'Decline league invitation', 'Liga-Einladung ablehnen', 'Competitie-uitnodiging weigeren'],
+        confirm: ['Odrzucić zaproszenie na cały sezon, łącznie z play-offami? Miejsce otrzyma kolejny uprawniony zawodnik z rankingu. Tej decyzji nie można cofnąć.',
+            'Decline the invitation for the entire season, including the play-offs? The next eligible player in the rankings will be offered your place. This decision is final.',
+            'Die Einladung für die gesamte Saison einschließlich der Play-offs ablehnen? Der nächste berechtigte Spieler in der Rangliste erhält den Platz. Die Entscheidung ist endgültig.',
+            'De uitnodiging voor het hele seizoen inclusief de play-offs weigeren? De eerstvolgende speelgerechtigde speler op de ranglijst krijgt je plek. Deze beslissing is definitief.'],
+        replaced: ['Zaproszenie odrzucone. Twoje miejsce zajmuje {name}.', 'Invitation declined. {name} takes your place.',
+            'Einladung abgelehnt. {name} übernimmt deinen Platz.', 'Uitnodiging geweigerd. {name} neemt je plek over.'],
+        vacant: ['Zaproszenie odrzucone. Nie ma obecnie uprawnionego zastępcy.', 'Invitation declined. No eligible replacement is currently available.',
+            'Einladung abgelehnt. Derzeit steht kein berechtigter Ersatzspieler zur Verfügung.', 'Uitnodiging geweigerd. Er is momenteel geen speelgerechtigde vervanger.'],
+        saveError: ['Nie udało się zapisać kariery. Zapisz ją ręcznie przed wyjściem z gry.', 'The career could not be saved. Save manually before leaving the game.',
+            'Die Karriere konnte nicht gespeichert werden. Speichere sie vor dem Verlassen manuell.', 'De carrière kon niet worden opgeslagen. Sla handmatig op voordat je het spel afsluit.']
+    };
+    const lang = typeof currentLang === 'string' ? ['pl', 'en', 'de', 'nl'].indexOf(currentLang) : 0;
+    return copy[key][Math.max(0, lang)].replace('{name}', () => name);
+}
+
+function getPremierLeagueInvitationButtonHtml(year) {
+    return `<button type="button" class="btn-sign" onclick="confirmPremierLeagueInvitationDecline(${year})">${escapeHtml(premierLeagueInvitationText('decline'))}</button>`;
+}
+
+async function confirmPremierLeagueInvitationDecline(year) {
+    if (!window.confirm(premierLeagueInvitationText('confirm'))) return false;
+    const decision = declinePremierLeagueInvitation(year);
+    if (!decision) return false;
+
+    let message = decision.replacement
+        ? premierLeagueInvitationText('replaced', decision.replacement.name) : premierLeagueInvitationText('vacant');
+    try {
+        if (await saveGame(true, { immediate: true }) === false) message += `\n${premierLeagueInvitationText('saveError')}`;
+    } catch (_error) {
+        message += `\n${premierLeagueInvitationText('saveError')}`;
+    }
+    if (document.getElementById('screen-mailbox')?.classList.contains('active')) showMailbox();
+    if (document.getElementById('screen-calendar')?.classList.contains('active')) showCalendar();
+    updateTournamentEntrySimulationButton('t-btn-sim-to-match-hub');
+    window.alert(message);
+    return true;
+}
+
 function getPremierLeaguePairKey(first, second) {
     return [first, second].sort().join('\u0000');
 }

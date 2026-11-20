@@ -26,6 +26,11 @@
 .planning-route li > span:first-child { overflow-wrap: anywhere; }
 .planning-route li > span:last-child { white-space: nowrap; font-size: 12px; color: #b5c4d3; }
 .planning-route li.planning-me, .planning-route li.planning-me > span { color: #f1c40f; font-weight: bold; }
+.planning-reserve-dialog { box-sizing: border-box; width: min(640px, calc(100vw - 24px)); max-height: calc(100dvh - 32px); overflow: auto; margin: auto; padding: 20px; border: 1px solid #536b87; border-radius: 10px; background: #14213a; color: #ecf0f1; }
+.planning-reserve-dialog::backdrop { background: #020912c9; }
+.planning-reserve-dialog h2 { margin: 0 0 16px; font-size: 20px; overflow-wrap: anywhere; }
+.planning-reserve-dialog form { margin-top: 16px; text-align: right; }
+.planning-reserve-dialog :focus-visible { outline: 3px solid #f1c40f; outline-offset: -3px; }
 .planning-card { padding: 18px; border: 1px solid #3a506d; border-radius: 8px; background: #14213a; min-width: 0; }
 .planning-card h3 { margin: 0 0 14px; border: 0; font-size: 16px; color: #edf0f3; }
 .planning-card > span, .planning-card small { color: #b9c8d5; font-size: 13px; }

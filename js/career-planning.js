@@ -36,6 +36,9 @@ const CAREER_PLANNING_TEXT = {
     ukOpenNote: ['UK Open obejmuje 128 posiadaczy kart PDC według ich kolejności w OOM oraz po 16 najwyżej sklasyfikowanych graczy bez karty z Rising Stars i Future Champions. Zawodnik spełniający obie ścieżki zajmuje jedno miejsce, a druga tabela przekazuje miejsce kolejnej uprawnionej osobie.', 'The UK Open field contains 128 Tour Card holders in OOM order plus the highest-ranked 16 non-card players from both Rising Stars and Future Champions. A player qualifying through both routes takes one place and the second ranking passes its place to the next eligible player.', 'Das UK-Open-Feld umfasst 128 Tour-Card-Inhaber nach OOM sowie je 16 bestplatzierte Spieler ohne Karte aus Rising Stars und Future Champions. Wer beide Wege erfüllt, belegt nur einen Platz; die zweite Rangliste rückt nach.', 'Het UK Open-veld bestaat uit 128 Tour Card-houders volgens de OOM plus de beste 16 spelers zonder kaart uit zowel Rising Stars als Future Champions. Wie via beide routes kwalificeert, bezet één plek; de andere ranglijst schuift door.'],
     reserves: ['Uzupełnienie: zawodnicy bez karty według OOM', 'Reserves: non-card players by OOM', 'Nachrücker ohne Tour Card nach OOM', 'Reserves zonder Tour Card volgens OOM'],
     etReserves: ['Lista rezerwowa European Tour', 'European Tour reserve list', 'European-Tour-Nachrückerliste', 'European Tour-reservelijst'],
+    etReserveButton: ['Lista rezerwowa', 'Reserve list', 'Nachrückerliste', 'Reservelijst'],
+    etReservePending: ['Lista pojawi się po kwalifikacjach kartowiczów.', 'The list will be available after the Tour Card qualifier.', 'Die Liste ist nach der Tour-Card-Qualifikation verfügbar.', 'De lijst is beschikbaar na de Tour Card-kwalificatie.'],
+    etReserveClose: ['Zamknij', 'Close', 'Schließen', 'Sluiten'],
     reserve: ['Jesteś na liście rezerwowej', 'You are on the reserve list', 'Du stehst auf der Nachrückerliste', 'Je staat op de reservelijst'],
     reserveReason: ['Pozycja na liście: {position}. Czekasz na wycofanie zakwalifikowanego zawodnika.', 'Reserve position: {position}. You are waiting for a qualified player to withdraw.', 'Listenplatz: {position}. Du wartest auf die Absage eines qualifizierten Spielers.', 'Reservepositie: {position}. Je wacht tot een geplaatste speler zich terugtrekt.'],
     etReserveNote: ['Przegrani finałów kwalifikacji kartowiczów, według OOM z końca kwalifikatora. Przed losowaniem miejsce rozstawionego przejmuje najwyżej notowany pozostały uczestnik, a rezerwowy wchodzi do pierwszej rundy. Po losowaniu zachowuje rundę zwolnionego miejsca. Brak zapisanych wyników finałów oznacza brak rezerwowych.', 'Tour Card qualifier final-round losers, ordered by OOM at qualifier completion. Before the draw, the highest-ranked remaining entrant takes a vacant seed and the reserve starts in round one. After the draw, the vacant slot retains its entry round. Without recorded final results there are no reserves.', 'Verlierer der letzten Tour-Card-Qualifikationsrunde nach OOM bei Qualifikationsende. Vor der Auslosung rückt der bestplatzierte übrige Teilnehmer in die Setzliste auf; der Nachrücker beginnt in Runde eins. Nach der Auslosung bleibt die Einstiegsrunde des freien Platzes bestehen. Ohne gespeicherte Finalergebnisse gibt es keine Nachrücker.', 'Verliezers van de laatste Tour Card-kwalificatieronde, op OOM bij afloop. Voor de loting neemt de hoogst geklasseerde overgebleven deelnemer de vrije geplaatste positie over; de reserve begint in ronde één. Na de loting behoudt de vrije plaats zijn instapronde. Zonder opgeslagen finaleresultaten zijn er geen reserves.'],
@@ -149,7 +152,7 @@ function buildQualificationPreview(tournament, candidates, referenceDate = curre
     const add = (route, places, players, confirmed = false, pending = false, eligible = []) => {
         groups.push({ key: route, places, players, confirmed, pending, eligible });
     };
-    let note = '', size = 0, reservePlayers = [], withdrawals = [];
+    let note = '', size = 0, reservePlayers = [], withdrawals = [], cardQualifierCompleted = false;
     if (kind === 'editor') {
         getTournamentEditorQualificationGroups(tournament, all, referenceDate).forEach(group => {
             add(group.key, group.places, group.players, group.confirmed, group.pending, group.eligible);
@@ -242,6 +245,7 @@ function buildQualificationPreview(tournament, candidates, referenceDate = curre
             groups.splice(0, groups.length, ...replacements);
         }
         reservePlayers = getContinentalTourReservePlayers(tournament, state, all);
+        cardQualifierCompleted = state.paths?.card?.completed === true;
         withdrawals = [...(state.earlyWithdrawals || []), ...(state.withdrawals || [])].map(entry => ({ ...entry,
             withdrawn: resolve([entry.withdrawnPlayerId])[0], replacement: resolve([entry.replacementPlayerId])[0] }));
     } else if (kind === 'slam') {
@@ -343,7 +347,8 @@ function buildQualificationPreview(tournament, candidates, referenceDate = curre
     const pendingGroup = groups.find(group => group.pending && group.eligible.some(p => key(p) === ownKey));
     const reservePosition = reservePlayers.findIndex(candidate => key(candidate) === ownKey) + 1;
     const status = selectedGroup ? (selectedGroup.confirmed ? 'confirmed' : 'in') : pendingGroup ? 'pending' : reservePosition ? 'reserve' : 'out';
-    return { groups, size, kind, note, status, reservePlayers, reservePosition, withdrawals, route: selectedGroup?.key || pendingGroup?.key || '',
+    return { groups, size, kind, note, status, reservePlayers, reservePosition, withdrawals, cardQualifierCompleted,
+        route: selectedGroup?.key || pendingGroup?.key || '',
         count: new Set(groups.flatMap(group => group.players.map(key))).size };
 }
 
@@ -362,7 +367,7 @@ function getPlanningTournaments() {
     return tournamentDatabase.map((tournament, index) => ({ tournament, index,
         date: new Date(year, tournament.month, tournament.day),
         end: tournament.editorStructure?.league ? new Date(year, tournament.month, tournament.day)
-            : new Date(year, tournament.endMonth ?? tournament.month, tournament.endDay ?? tournament.day)
+        : new Date(year + (tournament.endYearOffset || 0), tournament.endMonth ?? tournament.month, tournament.endDay ?? tournament.day)
     })).filter(entry => !entry.tournament.completed && entry.end >= currentDate && getPlanningTournamentKind(entry.tournament))
         .sort((a, b) => a.date - b.date || a.index - b.index);
 }
@@ -447,8 +452,29 @@ function renderPlanningQualification(candidates) {
         <section class="planning-status planning-${preview.status}" aria-live="polite"><strong>${escapeHtml(trPlanning(preview.status))}</strong><p>${escapeHtml(reason)}</p></section>
         <p class="planning-note">${escapeHtml(trPlanning('notice'))}</p>
         ${preview.note ? `<p class="planning-rule">${escapeHtml(trPlanning(preview.note))}</p>` : ''}
-        <h3 class="planning-field-count">${escapeHtml(trPlanning('field', { count: preview.count, total: preview.size }))}</h3>${groups}
-        ${renderPlanningContinentalReserves(preview)}`;
+        ${renderPlanningContinentalReserves(preview)}
+        <h3 class="planning-field-count">${escapeHtml(trPlanning('field', { count: preview.count, total: preview.size }))}</h3>${groups}`;
+}
+
+function renderContinentalReserveCalendarButton(tournament, index) {
+    if (!isContinentalTourTournament(tournament)) return '';
+    return `<button type="button" class="btn-sign planning-event-link" data-et-reserves onclick="showContinentalReserveList(${index})">${escapeHtml(trPlanning('etReserveButton'))}</button>`;
+}
+
+function showContinentalReserveList(index) {
+    const tournament = tournamentDatabase[index];
+    if (!isContinentalTourTournament(tournament) || document.getElementById('planning-et-reserve-dialog')) return;
+    const preview = buildQualificationPreview(tournament, getContinentalQualificationPlayers());
+    const dialog = document.createElement('dialog');
+    dialog.id = 'planning-et-reserve-dialog';
+    dialog.className = 'planning-reserve-dialog';
+    dialog.setAttribute('aria-labelledby', 'planning-et-reserve-title');
+    dialog.innerHTML = `<h2 id="planning-et-reserve-title">${escapeHtml(getTournamentDisplayName(tournament))}</h2>
+        ${renderPlanningContinentalReserves(preview)}
+        <form method="dialog"><button class="btn-sign" autofocus>${escapeHtml(trPlanning('etReserveClose'))}</button></form>`;
+    dialog.addEventListener('close', () => dialog.remove(), { once: true });
+    document.body.appendChild(dialog);
+    dialog.showModal();
 }
 
 function renderPlanningContinentalReserves(preview) {
@@ -461,7 +487,7 @@ function renderPlanningContinentalReserves(preview) {
     }))}</span></li>`).join('');
     return `<details class="planning-route" open><summary>${escapeHtml(trPlanning('etReserves'))}<span>${preview.reservePlayers.length}</span></summary>
         <p class="planning-note">${escapeHtml(trPlanning('etReserveNote'))}</p>
-        ${rows ? `<ul>${rows}</ul>` : `<p class="planning-note">${escapeHtml(trPlanning('etReserveEmpty'))}</p>`}</details>
+        ${rows ? `<ul>${rows}</ul>` : `<p class="planning-note">${escapeHtml(trPlanning(preview.cardQualifierCompleted ? 'etReserveEmpty' : 'etReservePending'))}</p>`}</details>
         ${replacements ? `<details class="planning-route" open><summary>${escapeHtml(trPlanning('etWithdrawals'))}</summary><ul>${replacements}</ul></details>` : ''}`;
 }
 

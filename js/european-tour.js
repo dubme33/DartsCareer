@@ -50,6 +50,8 @@ function isPlayersChampionshipTournament(tournamentOrName) {
 }
 
 function isProTourRankingTournament(tournamentOrName) {
+    const selected = typeof getTournamentEditorPrizeRankings === 'function' ? getTournamentEditorPrizeRankings(tournamentOrName) : null;
+    if (selected) return selected.includes('protour');
     return isEuropeanTourTournament(tournamentOrName) || isPlayersChampionshipTournament(tournamentOrName);
 }
 
@@ -85,7 +87,8 @@ function getEuropeanTourOrderOfMerit(candidates) {
 }
 
 function awardEuropeanTourOrderOfMeritPrizeMoney(candidate, amount, tournamentOrName) {
-    if (!candidate || !isEuropeanTourTournament(tournamentOrName)) return;
+    const selected = typeof getTournamentEditorPrizeRankings === 'function' ? getTournamentEditorPrizeRankings(tournamentOrName) : null;
+    if (!candidate || !(selected ? selected.includes('europeanTour') : isEuropeanTourTournament(tournamentOrName))) return;
     candidate.europeanTourPrizeMoney = getEuropeanTourPrizeMoney(candidate) + Math.max(0, Number(amount) || 0);
     if (typeof invalidatePlayerRankingCache === 'function') invalidatePlayerRankingCache('europeanTour');
 }

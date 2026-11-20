@@ -979,7 +979,7 @@ function skipActiveTournament() {
                 participants = prepareSecondaryTourWithdrawals(activeTournament,getWomensSeriesEligiblePlayers(availablePlayers,currentDate,activeTournament));
                 tournamentRound = getPdcQSchoolOpeningRound(participants.length);
             } else if (editorRules) {
-                participants = getTournamentEditorParticipants(activeTournament, allPlayers, currentDate);
+                participants = getTournamentEditorParticipants(activeTournament, allPlayers, currentDate, { resolvePlayIn: true });
                 tournamentRound = typeof getCareerTourFieldSize === 'function' ? getCareerTourFieldSize(activeTournament) : activeTournament.editorFieldSize;
             } else if (activeTournament.isEditorTournament === true) {
                 const fieldSize = [8, 16, 32, 64, 128, 256].includes(activeTournament.editorFieldSize)
@@ -1889,7 +1889,8 @@ function skipActiveTournament() {
                     break;
                 }
             } else {
-                if (p1Legs >= targetLegs || p2Legs >= targetLegs) break;
+                if (p1Legs >= targetLegs || p2Legs >= targetLegs
+                    || matchFormat.drawAt && p1Legs === matchFormat.drawAt && p2Legs === matchFormat.drawAt) break;
             }
         }
     }
