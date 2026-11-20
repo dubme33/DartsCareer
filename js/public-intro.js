@@ -6,7 +6,7 @@ const PUBLIC_INTRO_COPY = Object.freeze({
         existing: 'Choose a player', custom: 'Create a player', guide: 'How to Play',
         newTab: 'opens in a new tab',
         featureCareer: 'A career across seasons', featureAI: 'AI rivals that develop', featureEditors: 'Editors and customisation',
-        changelogDescription: 'Custom scoreboard colours and ranking options for created tournaments.',
+        changelogDescription: 'Custom scoreboards, tournament rankings and smoother 3D matches.',
         showMore: 'Show more', showLess: 'Show less', featuresLabel: 'Game features', startLabel: 'Start and help', historyLabel: 'Full changelog'
     },
     pl: {
@@ -15,7 +15,7 @@ const PUBLIC_INTRO_COPY = Object.freeze({
         existing: 'Wybierz zawodnika', custom: 'Stwórz zawodnika', guide: 'Jak grać',
         newTab: 'otwiera się w nowej karcie',
         featureCareer: 'Wielosezonowa kariera', featureAI: 'Rozwój rywali AI', featureEditors: 'Edytory i personalizacja',
-        changelogDescription: 'Kolory tablicy wyników i wybór rankingów dla własnych turniejów.',
+        changelogDescription: 'Własne kolory tablicy wyników, wybór rankingów i płynniejsze mecze 3D.',
         showMore: 'Pokaż więcej', showLess: 'Pokaż mniej', featuresLabel: 'Możliwości gry', startLabel: 'Rozpocznij grę i pomoc', historyLabel: 'Pełna historia zmian'
     },
     de: {
@@ -24,7 +24,7 @@ const PUBLIC_INTRO_COPY = Object.freeze({
         existing: 'Spieler wählen', custom: 'Spieler erstellen', guide: 'Spielanleitung',
         newTab: 'öffnet sich in einem neuen Tab',
         featureCareer: 'Eine Karriere über viele Saisons', featureAI: 'KI-Rivalen entwickeln sich', featureEditors: 'Editoren und Anpassungen',
-        changelogDescription: 'Eigene Farben für die Ergebnisanzeige und Ranglistenwahl für eigene Turniere.',
+        changelogDescription: 'Eigene Farben für die Ergebnisanzeige, Turnierranglisten und flüssigere 3D-Matches.',
         showMore: 'Mehr anzeigen', showLess: 'Weniger anzeigen', featuresLabel: 'Spielfunktionen', startLabel: 'Spielstart und Hilfe', historyLabel: 'Vollständiger Änderungsverlauf'
     },
     nl: {
@@ -33,7 +33,7 @@ const PUBLIC_INTRO_COPY = Object.freeze({
         existing: 'Kies een speler', custom: 'Maak een speler', guide: 'Speluitleg',
         newTab: 'opent in een nieuw tabblad',
         featureCareer: 'Een carrière over vele seizoenen', featureAI: 'AI-tegenstanders groeien', featureEditors: 'Editors en personalisatie',
-        changelogDescription: 'Eigen scorebordkleuren en ranglijstkeuze voor eigen toernooien.',
+        changelogDescription: 'Eigen scorebordkleuren, toernooiranglijsten en soepelere 3D-wedstrijden.',
         showMore: 'Meer tonen', showLess: 'Minder tonen', featuresLabel: 'Spelmogelijkheden', startLabel: 'Beginnen en hulp', historyLabel: 'Volledige wijzigingsgeschiedenis'
     }
 });

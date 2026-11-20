@@ -152,23 +152,53 @@
             <details id="start-changelog-details" open>
                 <summary class="start-changelog-summary">
                     <span class="start-changelog-version">v1.5.2</span>
-                    <span id="start-changelog-description">Custom scoreboard colours and ranking options for created tournaments.</span>
+                    <span id="start-changelog-description">Custom scoreboards, tournament rankings and smoother 3D matches.</span>
                     <span class="start-changelog-action start-changelog-more" id="start-changelog-more">Show more</span>
                     <span class="start-changelog-action start-changelog-less" id="start-changelog-less">Show less</span>
                 </summary>
                 <div class="changelog-history" id="start-changelog-history" tabindex="0" role="region" aria-label="Full changelog">
             <!-- UPDATE V1.5.2 -->
-            <div class="changelog-version-badge">v1.5.2 • Scoreboard Colours &amp; Tournament Rankings</div>
+            <div class="changelog-version-badge">v1.5.2 · Scoreboards, Tournament Tools &amp; Smoother 3D</div>
             <div class="changelog-grid">
                 <div class="cl-item">
                     <span class="cl-tag feature">Customisation</span>
                     <span class="cl-title">Custom Scoreboard Colours</span>
-                    <p class="cl-desc">Open More → Scoreboard colours in your career hub. Pick a colour or enter a HEX code for each circuit, including your own, and preview it before saving. Colours apply in both regular matches and TV mode. Restore the default for any circuit at any time.</p>
+                    <p class="cl-desc">Open More → Scoreboard colours in your career hub. Pick a colour or enter a HEX code for each circuit, including your own, and preview it before saving. Colours apply in both regular matches and TV mode, and are stored with each career. Restore the default for any circuit at any time.</p>
                 </div>
                 <div class="cl-item">
                     <span class="cl-tag feature">Tournament Editor</span>
                     <span class="cl-title">Choose Rankings for Custom Tournaments</span>
-                    <p class="cl-desc">Choose which rankings receive the prize money from each custom tournament. Select one or more built-in or custom rankings. Your choices carry over when you duplicate or export the tournament.</p>
+                    <p class="cl-desc">Open a ranking event in the tournament editor and choose Selected rankings. Each selected built-in or custom ranking receives the full eligible prize money. Your choices carry over when you duplicate or export the tournament.</p>
+                </div>
+                <div class="cl-item">
+                    <span class="cl-tag fix">European Tour</span>
+                    <span class="cl-title">European Tour Reserve Lists in the Calendar</span>
+                    <p class="cl-desc">Open Reserve list next to a European Tour event to see available reserves and replacements. Existing saves can recover a missing list from recorded Tour Card qualifier results. When a seed withdraws before the draw, the highest-ranked eligible entrant moves into the seeded round and the reserve starts in round one.</p>
+                </div>
+                <div class="cl-item">
+                    <span class="cl-tag tweak">Tournament Packs</span>
+                    <span class="cl-title">Support for the Community 2015 Calendar</span>
+                    <p class="cl-desc">Tournament packs now support Civic's 66-event 2015 calendar, including a split Premier League season, World Cup team ties and events that cross into the next calendar year. Load the calendar JSON from Tournament packs in the tournament editor.</p>
+                </div>
+                <div class="cl-item">
+                    <span class="cl-tag tweak">3D Performance</span>
+                    <span class="cl-title">Smoother 3D Match Rendering</span>
+                    <p class="cl-desc">Dart shaders are prepared before the first throw. The renderer reuses shadows during camera moves and refreshes them at a lower rate during dart motion, with updates at impact and when the dart settles. In-venue TV screens update a smaller score texture.</p>
+                </div>
+                <div class="cl-item">
+                    <span class="cl-tag tweak">TV Mode</span>
+                    <span class="cl-title">Easier-to-Follow TV Throws</span>
+                    <p class="cl-desc">Live dart flight in TV mode lasts 20% longer at the same playback speed. The score appears when the dart reaches the board.</p>
+                </div>
+                <div class="cl-item">
+                    <span class="cl-tag fix">Match Visuals</span>
+                    <span class="cl-title">More Natural Barrel Width in 3D Close-Ups</span>
+                    <p class="cl-desc">A longer camera lens reduces perspective distortion in board close-ups and replays, so slim barrels look closer to their selected diameter.</p>
+                </div>
+                <div class="cl-item">
+                    <span class="cl-tag fix">Match Visuals</span>
+                    <span class="cl-title">Stable Darts After Impact</span>
+                    <p class="cl-desc">After settling briefly, a landed dart holds its final position and entry angle. Resting darts stay stable when another dart lands nearby or a slow-motion replay plays.</p>
                 </div>
             </div>
 
@@ -4580,7 +4610,7 @@
     <script src="js/tournament-editor-teams.js?v=1.5.2&editor-structure=1&team-tournaments=1&tournament-gender=1"></script>
     <script src="js/tournament-pack.js?v=1.5.2&editor-structure=1&tournament-packs=1&qualifier-seats=1&editor-cycles=1&calendar-manager=1&tournament-gender=1&season-leagues=1&hometowns=1&master-out=1&multi-source-qualification=1&career-slots=1&venues=1&prize-rankings=1&calendar-2015=1"></script>
 
-    <script src="js/public-intro.js?v=1.5.2&ui=2&guides=4&final-ui=1&prize-rankings=1"></script>
+    <script src="js/public-intro.js?v=1.5.2&ui=2&guides=4&final-ui=1&prize-rankings=1&changelog=1"></script>
     <script src="js/site-footer.js?v=1.5.2&footer-pages=5"></script>
     <script src="js/womens-series-match-save.js?v=1.5.2&womens-series=1&wwm=1"></script>
     <script src="js/qualification-what-if.js?v=1.5.2&whatif=1&prize-rankings=1&calendar-2015=1"></script>
