@@ -31,3 +31,7 @@ A longer camera lens reduces perspective distortion in board close-ups and repla
 ## Stable Darts After Impact
 
 After settling briefly, a landed dart holds its final position and entry angle. Resting darts stay stable when another dart lands nearby or a slow-motion replay plays.
+
+## 💖 Lenny7504 Joins the Hall of Fame
+
+Welcome Lenny7504 to the Supporters Hall of Fame. Thank you for supporting Darts Career!
